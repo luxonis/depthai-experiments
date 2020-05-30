@@ -80,7 +80,7 @@ class VideoStreamHandler(BaseHTTPRequestHandler):
 			self.send_header('Content-length',str(stream_file.getbuffer().nbytes))
 			self.end_headers()
 			JPG.save(self.wfile,'JPEG')
-			sleep(0.01)
+# 			sleep(0.01)
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 	"""Handle requests in a separate thread."""
