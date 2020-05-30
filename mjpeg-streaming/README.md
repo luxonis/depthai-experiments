@@ -5,3 +5,6 @@ Steps to use:
 2. Replace with the current `depthai.py` under `depthai`
 3. Run the file with commend `python3 test.py`
 4. Open chrome with address: http://localhost:8090 and now you can see the video stream via web browser
+
+The video below shows this code in action on macOS:
+[![MJPEG Streaming DepthAI](https://img.youtube.com/vi/695o0EO1Daw/0.jpg)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
