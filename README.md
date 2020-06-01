@@ -5,7 +5,7 @@ Experimental projects we've done with DepthAI.
 
 The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list), but here are some as of June 1st 2020:
 
-## - [MJPEG and JSON streaming](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming)
+## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
 
 [![MJPEG Streaming DepthAI](https://img.youtube.com/vi/695o0EO1Daw/0.jpg)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
 
