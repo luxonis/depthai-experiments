@@ -108,7 +108,7 @@ class DepthAIDebug(DepthAI):
                 cv2.rectangle(frame, (box['left'], box['top']), (box['right'], box['bottom']), (0, 255, 0), 2)
                 cv2.putText(frame, "x: {}".format(round(box['distance_x'], 1)), (box['left'], box['top'] + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, "y: {}".format(round(box['distance_y'], 1)), (box['left'], box['top'] + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, "z: {}".format(round(box['distance_z'])), (box['left'], box['top'] + 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "z: {}".format(round(box['distance_z'], 1)), (box['left'], box['top'] + 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, "conf: {}".format(round(box['conf'], 1)), (box['left'], box['top'] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             yield frame, boxes
 
