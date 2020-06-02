@@ -1,6 +1,7 @@
 import logging
 
 import cv2
+import numpy as np
 
 from alerting import AlertingGate, AlertingGateDebug
 from config import MODEL_LOCATION, DEBUG
@@ -41,11 +42,37 @@ class MainDebug(Main):
     depthai_class = DepthAIDebug
     distance_guardian_class = DistanceGuardianDebug
     alerting_gate_class = AlertingGateDebug
+    distance_bird_frame = np.zeros((300, 100, 3), np.uint8)
+    max_z = 5
+    min_z = 0
+    max_x = 2
+    min_x = -0.5
+
+    def calc_x(self, val):
+        norm = min(self.max_x, max(val, self.min_x))
+        center = (norm - self.min_x) / (self.max_x - self.min_x) * self.distance_bird_frame.shape[1]
+        bottom_x = max(center - 2, 0)
+        top_x = min(center + 2, self.distance_bird_frame.shape[1])
+        return int(bottom_x), int(top_x)
+
+    def calc_z(self, val):
+        norm = min(self.max_z, max(val, self.min_z))
+        center = (norm - self.min_z) / (self.max_z - self.min_z) * self.distance_bird_frame.shape[0]
+        bottom_z = max(center - 2, 0)
+        top_z = min(center + 2, self.distance_bird_frame.shape[0])
+        return int(bottom_z), int(top_z)
 
     def parse_frame(self, frame, results):
         super().parse_frame(frame, results)
 
+        bird_frame = self.distance_bird_frame.copy()
+        for result in results:
+            left, right = self.calc_x(result['distance_x'])
+            top, bottom = self.calc_z(result['distance_z'])
+            cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
+
         cv2.imshow("Frame", frame)
+        cv2.imshow("Bird", bird_frame)
         key = cv2.waitKey(1)
 
         if key == ord("q"):

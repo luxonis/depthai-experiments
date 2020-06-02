@@ -37,9 +37,9 @@ class AlertingGateDebug(AlertingGate):
 
         last_reported_date = self.last_reported.isoformat(' ') if self.last_reported is not None else None
         positive_ratio = sum(self.statuses) / len(self.statuses) if len(self.statuses) > 0 else None
-        log.info("Result: {}, Statuses: {}, positive ratio: {}, last reported: {}".format(
-            result, len(self.statuses), positive_ratio, last_reported_date
-        ))
+        # log.info("Result: {}, Statuses: {}, positive ratio: {}, last reported: {}".format(
+        #     result, len(self.statuses), positive_ratio, last_reported_date
+        # ))
 
         return result
 
