@@ -88,6 +88,7 @@ class DepthAI:
                             })
                         except:
                             continue
+                    print(boxes)
                     yield frame, boxes
 
     def __del__(self):

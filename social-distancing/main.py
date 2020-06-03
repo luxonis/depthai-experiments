@@ -28,6 +28,7 @@ class Main:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
             cv2.putText(frame, "Too close", (int(img_w / 3), int(img_h / 2)), cv2.FONT_HERSHEY_TRIPLEX, 2, (0, 0, 255), 1)
+        return distance_results, should_alert
 
     def run(self):
         try:
@@ -43,9 +44,9 @@ class MainDebug(Main):
     distance_guardian_class = DistanceGuardianDebug
     alerting_gate_class = AlertingGateDebug
     distance_bird_frame = np.zeros((300, 100, 3), np.uint8)
-    max_z = 5
+    max_z = 6
     min_z = 0
-    max_x = 2
+    max_x = 1.3
     min_x = -0.5
 
     def calc_x(self, val):
@@ -57,19 +58,32 @@ class MainDebug(Main):
 
     def calc_z(self, val):
         norm = min(self.max_z, max(val, self.min_z))
-        center = (norm - self.min_z) / (self.max_z - self.min_z) * self.distance_bird_frame.shape[0]
+        center = (1 - (norm - self.min_z) / (self.max_z - self.min_z)) * self.distance_bird_frame.shape[0]
         bottom_z = max(center - 2, 0)
         top_z = min(center + 2, self.distance_bird_frame.shape[0])
         return int(bottom_z), int(top_z)
 
     def parse_frame(self, frame, results):
-        super().parse_frame(frame, results)
+        distance_results, should_alert = super().parse_frame(frame, results)
 
         bird_frame = self.distance_bird_frame.copy()
+        too_close_ids = []
+        for result in distance_results:
+            if result['dangerous']:
+                left, right = self.calc_x(result['box1']['distance_x'])
+                top, bottom = self.calc_z(result['box1']['distance_z'])
+                cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
+                too_close_ids.append(result['box1']['id'])
+                left, right = self.calc_x(result['box2']['distance_x'])
+                top, bottom = self.calc_z(result['box2']['distance_z'])
+                cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
+                too_close_ids.append(result['box2']['id'])
+
         for result in results:
-            left, right = self.calc_x(result['distance_x'])
-            top, bottom = self.calc_z(result['distance_z'])
-            cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            if result['id'] not in too_close_ids:
+                left, right = self.calc_x(result['distance_x'])
+                top, bottom = self.calc_z(result['distance_z'])
+                cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
         cv2.imshow("Frame", frame)
         cv2.imshow("Bird", bird_frame)
