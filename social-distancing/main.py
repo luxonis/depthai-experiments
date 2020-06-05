@@ -1,4 +1,5 @@
 import logging
+import math
 
 import cv2
 import numpy as np
@@ -43,11 +44,35 @@ class MainDebug(Main):
     depthai_class = DepthAIDebug
     distance_guardian_class = DistanceGuardianDebug
     alerting_gate_class = AlertingGateDebug
-    distance_bird_frame = np.zeros((300, 100, 3), np.uint8)
     max_z = 6
     min_z = 0
     max_x = 1.3
     min_x = -0.5
+
+    def __init__(self):
+        super().__init__()
+        self.distance_bird_frame = self.make_bird_frame()
+
+    def make_bird_frame(self):
+        fov = 68.7938
+        min_distance = 0.827
+        frame = np.zeros((300, 100, 3), np.uint8)
+        min_y = int((1 - (min_distance - self.min_z) / (self.max_z - self.min_z)) * frame.shape[0])
+        cv2.rectangle(frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1)
+
+        alpha = (180 - fov) / 2
+        center = int(frame.shape[1] / 2)
+        max_p = frame.shape[0] - int(math.tan(math.radians(alpha)) * center)
+        fov_cnt = np.array([
+            (0, frame.shape[0]),
+            (frame.shape[1], frame.shape[0]),
+            (frame.shape[1], max_p),
+            (center, frame.shape[0]),
+            (0, max_p),
+            (0, frame.shape[0]),
+        ])
+        cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
+        return frame
 
     def calc_x(self, val):
         norm = min(self.max_x, max(val, self.min_x))
