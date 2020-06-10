@@ -32,7 +32,7 @@ class MainDebug(Main):
         super().parse_frame(frame, results)
 
         cv2.imshow("Frame", frame)
-        cv2.moveWindow("Frame", 1100, 300)
+        cv2.moveWindow("Frame", 1100, 200)
         key = cv2.waitKey(1)
 
         if key == ord("q"):
