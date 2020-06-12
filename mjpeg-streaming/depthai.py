@@ -42,32 +42,35 @@ class TCPServerRequest(socketserver.BaseRequestHandler):
         # Handle is called each time a client is connected
         # When OpenDataCam connects, do not return - instead keep the connection open and keep streaming data
         # First send HTTP header
-        header = 'HTTP/1.0 200 OK\r\nServer: Mozarella/2.2\r\nAccept-Range: bytes\r\nConnection: close\r\nMax-Age: 0\r\nExpires: 0\r\nCache-Control: no-cache, private\r\nPragma: no-cache\r\nContent-Type: application/json\r\n\r\n['
+        header = 'HTTP/1.0 200 OK\r\nServer: Mozarella/2.2\r\nAccept-Range: bytes\r\nConnection: close\r\nMax-Age: 0\r\nExpires: 0\r\nCache-Control: no-cache, private\r\nPragma: no-cache\r\nContent-Type: application/json\r\n\r\n'
         self.request.send(header.encode())
         while True:
             sleep(0.1)
-            json_string = self.server.mycustomadata
-            json_separator = ',\n'
-            json_to_send = json_string + json_separator
-            self.request.send(json_to_send.encode())
+            try:
+                json_to_send = self.server.mycustomadata
+                self.request.send(json_to_send.encode())
+            except:
+                continue
 
 # HTTPServer MJPEG
 class VideoStreamHandler(BaseHTTPRequestHandler):
-	def do_GET(self):
-		self.send_response(200)
-		self.send_header('Content-type','multipart/x-mixed-replace; boundary=--jpgboundary')
-		self.end_headers()
-		while True:
-			MJPEG_frame_RGB=cv2.cvtColor(MJPEG_frame,cv2.COLOR_BGR2RGB)
-			JPG = Image.fromarray(MJPEG_frame_RGB)
-			stream_file = BytesIO()
-			JPG.save(stream_file,'JPEG')
-			self.wfile.write("--jpgboundary".encode())
-			self.send_header('Content-type','image/jpeg')
-			self.send_header('Content-length',str(stream_file.getbuffer().nbytes))
-			self.end_headers()
-			JPG.save(self.wfile,'JPEG')
-# 			sleep(0.01)
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type','multipart/x-mixed-replace; boundary=--jpgboundary')
+        self.end_headers()
+        while True:
+            sleep(0.1)
+            MJPEG_frame_RGB=cv2.cvtColor(MJPEG_frame,cv2.COLOR_BGR2RGB)
+            JPG = Image.fromarray(MJPEG_frame_RGB)
+            stream_file = BytesIO()
+            JPG.save(stream_file,'JPEG')
+            self.wfile.write("--jpgboundary".encode())
+
+            self.send_header('Content-type','image/jpeg')
+            self.send_header('Content-length',str(stream_file.getbuffer().nbytes))
+            self.end_headers()
+            JPG.save(self.wfile,'JPEG')
+
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 	"""Handle requests in a separate thread."""
@@ -218,49 +221,50 @@ def show_landmarks_recognition(entries_prev, frame):
 # TCPServer initialize
 server_TCP = socketserver.TCPServer(('127.0.0.1', 8070), TCPServerRequest)
 th = threading.Thread(target=server_TCP.serve_forever)
-def json_stream(frame_id, entries_prev):
+def json_stream(frame_id, entries_prev, frame):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
-    json_dic = {"frame_id": frame_id, "object": []}
+    json_dic = {"frame_id": frame_id, "objects": []}
 
     global config
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
-        # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > config['depth']['confidence_threshold']:
-            class_id = e[0]['label']
-            label_name = labels[int(e[0]['label'])]
-            center_x = 1            # replace with actual coordinates
-            center_y = 2            # replace with actual coordinates
-            width = 3               # replace with actual coordinates
-            height = 4              # replace with actual coordinates
-            confidence = e[0]['confidence']
+        class_id = e[0]["label"]
+        label_name = labels[int(e[0]["label"])]
+        
+        center_x = (e[0]['right'] - e[0]['left'])/2 + e[0]['left']
+        center_y = (e[0]['bottom'] - e[0]['top'])/2 + e[0]['top']
+        width = abs(e[0]['right'] - e[0]['left'])
+        height = abs(e[0]['bottom'] - e[0]['top'])
+        confidence = e[0]["confidence"]
 
-            data_json = send_json(json_dic, class_id, label_name, center_x, center_y, width, height, confidence)
+        data_json = send_json(json_dic, class_id, label_name, center_x, center_y, width, height, confidence)
 
-            streamer = Streamer()
-            streamer.get_data(data_json)
+        streamer = Streamer()
+        streamer.get_data(data_json)
 
-            # start a thread to allow server and video running at the same time
-            server_TCP.mycustomadata = streamer.pass_data()
+        # start a thread to allow server and video running at the same time
+        server_TCP.mycustomadata = streamer.pass_data()
+        
 th.daemon = True
 th.start()
 
 def send_json(json_dic, class_id, label_name, center_x, center_y, width, height, confidence):
-    json_dic['object'].append(
+    json_dic["objects"].append(
         {
-            'class_id': class_id,
-            'name': label_name,
-            'relative_coordinates': {
-                'center_x': center_x,
-                'center_y': center_y,
-                'width': width,
-                'height': height
+            "class_id": class_id,
+            "name": label_name,
+            "relative_coordinates": {
+                "center_x": center_x,
+                "center_y": center_y,
+                "width": width,
+                "height": height
             },
-            'confidence': confidence
+            "confidence": confidence
         }
     )
     return json_dic
+
 
 global args
 try:
@@ -516,7 +520,8 @@ while True:
             
             # pass MJPEG streaming
             MJPEG_frame = nn_frame
-	
+	    json_stream(frame_id, entries_prev, nn_frame)
+
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
@@ -567,7 +572,6 @@ while True:
 
         frame_count[packet.stream_name] += 1
         
-        json_stream(frame_id, entries_prev)
 
     t_curr = time()
     if t_start + 1.0 < t_curr:
