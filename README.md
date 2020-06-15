@@ -22,6 +22,12 @@ Since DepthAI gives the full 3D position of objects in physical space, it's a co
 
 [![COVID-19 Social Distancing with DepthAI](https://img.youtube.com/vi/cJr4IpGMSLA/0.jpg)](https://www.youtube.com/watch?v=cJr4IpGMSLA "DepthAI Social Distancing Proof of Concept")
 
+## Demo-UI ([here](https://github.com/luxonis/depthai-experiments/tree/master/demo-ui))
+Application used to demonstrate various capabilities of the DepthAI platform. Contains examples with descriptions,
+console outputs and preview windows.
+
+![DemoUI](./demo-ui/preview.png)
+
 
 
 

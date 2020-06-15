@@ -1,0 +1,17 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: normal
+
+pages:
+  image: node:lts
+  script:
+    - yarn
+    - yarn build
+    - rm -rf public
+    - mv build public
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
+  tags:
+    - docker
