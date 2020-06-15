@@ -15,7 +15,7 @@ This lay the groundwork to make DepthAI [OpenDataCam](https://github.com/opendat
 
 This project shows you how to run the COVID-19 mask/no-mask object detector which was trained [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks#covid-19-maskno-mask-training-)
 
-[![COVID-19 mask-no-mask megaAI](https://img.youtube.com/vi/d_oUxDzWHd0/0.jpg)](https://www.youtube.com/watch?v=d_oUxDzWHd0 "COVID-19 mask detection")
+[![COVID-19 mask-no-mask megaAI](https://i.imgur.com/iZMigOv.png)](https://photos.app.goo.gl/mJZ8TdWoNatHzW4x7 "COVID-19 mask detection")
 
 ## Social Distancing Example ([here](https://github.com/luxonis/depthai-experiments/tree/master/social-distancing))
 Since DepthAI gives the full 3D position of objects in physical space, it's a couple lines of code to make a social-distancing monitor with DepthAI.  So that's what this project is, a quick cut at a social-distancing monitor.
