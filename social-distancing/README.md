@@ -1,6 +1,6 @@
 # Social distancing
 
-[![COVID-19 Social Distancing with DepthAI](https://img.youtube.com/vi/cJr4IpGMSLA/0.jpg)](https://www.youtube.com/watch?v=cJr4IpGMSLA "DepthAI Social Distancing Proof of Concept")
+[![COVID-19 Social Distancing with DepthAI](https://i.imgur.com/6cYN5rm.jpg)](https://www.youtube.com/watch?v=cJr4IpGMSLA "DepthAI Social Distancing Proof of Concept")
 
 ## Pre-requisites
 
