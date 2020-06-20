@@ -1,6 +1,6 @@
 # CoronaMask
 
-This experiment allows you to run the COVID-19 mask/no-mask object detector which was trained via the Google Colab tutorial [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks#covid-19-maskno-mask-training-)
+This experiment allows you to run the COVID-19 mask/no-mask object detector which was trained via the Google Colab tutorial [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks#covid-19-maskno-mask-training-).
 
 Below is a quick run of this mask detector:
 
