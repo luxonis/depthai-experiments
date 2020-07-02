@@ -1,5 +1,7 @@
 # Social distancing
 
+Below you can see 3 people in a scene.  DepthAI monitors their 3D positions and alerts whenever they are closer than 2 meters, displaying `Too Close` when they are below this threshold, and also overlaying the distance betwen the people at all times.
+
 [![COVID-19 Social Distancing with DepthAI](https://i.imgur.com/6cYN5rm.jpg)](https://www.youtube.com/watch?v=cJr4IpGMSLA "DepthAI Social Distancing Proof of Concept")
 
 ## Pre-requisites
