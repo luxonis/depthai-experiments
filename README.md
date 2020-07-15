@@ -5,12 +5,6 @@ Experimental projects we've done with DepthAI.
 
 The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list), but here are some as of June 1st 2020:
 
-## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
-
-[![MJPEG Streaming DepthAI](https://i.imgur.com/0DT3NNR.jpg)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
-
-This lay the groundwork to make DepthAI [OpenDataCam](https://github.com/opendatacam/opendatacam) compatible.
-
 ## COVID-19 Mask / No-Mask Detector ([here](https://github.com/luxonis/depthai-experiments/blob/master/coronamask/README.md))
 
 This project shows you how to run the COVID-19 mask/no-mask object detector which was trained [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks#covid-19-maskno-mask-training-)
@@ -27,6 +21,12 @@ Application used to demonstrate various capabilities of the DepthAI platform. Co
 console outputs and preview windows.
 
 ![DemoUI](./demo-ui/preview.png)
+
+## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
+
+[![MJPEG Streaming DepthAI](https://i.imgur.com/0DT3NNR.jpg)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
+
+This lay the groundwork to make DepthAI [OpenDataCam](https://github.com/opendatacam/opendatacam) compatible.
 
 
 
