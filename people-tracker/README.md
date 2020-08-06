@@ -1,6 +1,6 @@
 # People tracker
 
-This application is our modification of the PyImageSearch People Counter Tutorial to run with megaAI/DepthAI.  
+This application is our modification of the [PyImageSearch People Counter Tutorial](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/) to run with megaAI/DepthAI.  Specifically this example uses PyImageSearch CentroidTracker and other functions from the tutorial.
 
 Please see here for PyImageSearch original (and excellent) tutorial: https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/
 
