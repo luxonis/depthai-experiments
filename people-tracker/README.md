@@ -1,5 +1,9 @@
 # People tracker
 
+This application is our re-implementation of the PyImageSearch People Counter Tutorial to run on megaAI/DepthAI.  
+
+Please see here for PyImageSearch original (and excellent) tutorial: https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/
+
 This application counts how many people went upwards / downwards / leftwards / rightwards on the image, allowing you to
 receive an information about how many people went into a room or went through a corridor.
 
