@@ -1,4 +1,4 @@
-# People counting
+# People tracker
 
 This application counts how many people went upwards / downwards on the image, allowing you to
 receive an information about how many people went into a room or went through a corridor.
