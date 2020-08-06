@@ -4,7 +4,7 @@ This application is our modification of the PyImageSearch People Counter Tutoria
 
 Please see here for PyImageSearch original (and excellent) tutorial: https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/
 
-This application counts how many people went upwards / downwards / leftwards / rightwards on the image, allowing you to
+This application counts how many people went upwards / downwards / leftwards / rightwards in the video stream, allowing you to
 receive an information about how many people went into a room or went through a corridor.
 
 Model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html)
