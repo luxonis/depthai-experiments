@@ -6,6 +6,12 @@ results to JSON file (for further processing)
 App can be useful as a starting point to other applications or to monitor e.x. the conference
 rooms usage
 
+Model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html)
+
+## Demo
+
+[![Watch the demo](https://img.youtube.com/vi/M0xQI1kXju4/hqdefault.jpg)](https://youtu.be/M0xQI1kXju4)
+
 ## Pre-requisites
 
 1. Purchase a DepthAI model (see https://shop.luxonis.com/)
