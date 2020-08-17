@@ -1,13 +1,5 @@
 # People tracker
 
-This application is our modification of the PyImageSearch People Counter Tutorial to run on megaAI/DepthAI.  
-From the original source code, we've taken a `CentroidTracker` class (which is located inside `modules.py` file),
-with all the great explanations of what it does and how.
-
-Please see here for PyImageSearch original (and excellent) tutorial: https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/
-
----
-
 This application counts how many people went upwards / downwards / leftwards / rightwards in the video stream, allowing you to
 receive an information about how many people went into a room or went through a corridor.
 
@@ -45,3 +37,7 @@ If you want to run it without preview, just to collect the data, you can modify 
 ```
 
 Then the app will run without preview window nor debug messages, will just save the results to `results.json`
+
+## Credits
+
+Adrian Rosebrock, OpenCV People Counter, PyImageSearch, https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/, accessed on 6 August 2020
