@@ -1,6 +1,8 @@
+import argparse
 import ctypes
 import json
 import time
+import os
 from pathlib import Path
 
 import cv2
@@ -8,10 +10,12 @@ from modules import PeopleCounter
 from depthai_utils import DepthAI
 from multiprocessing import Process, Manager
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', '--model', default='person_detection_retail_0013', choices=list(os.listdir('./models')))
+args = parser.parse_args()
 
 debug = True
 shared_results = Manager().Value(ctypes.c_wchar_p, '{}')
-
 
 #  https://stackoverflow.com/a/44599922/5494277
 def append_to_json(_dict, path):
@@ -44,7 +48,7 @@ p = Process(target=store, args=(shared_results, ))
 p.daemon = True
 p.start()
 
-d = DepthAI(threshold=0.5)
+d = DepthAI(model_name=args.model, threshold=0.5)
 pc = PeopleCounter()
 
 for frame, results in d.run():

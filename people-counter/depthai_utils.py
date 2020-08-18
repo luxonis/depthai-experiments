@@ -5,7 +5,7 @@ import cv2
 
 
 class DepthAI:
-    def __init__(self, threshold=0.5, fps=None):
+    def __init__(self, model_name, threshold=0.5, fps=None):
         if not depthai.init_device(consts.resource_paths.device_cmd_fpath):
             raise RuntimeError("Error initializing device. Try to reset it.")
 
@@ -14,8 +14,8 @@ class DepthAI:
                 {'name': 'previewout', "max_fps": fps}, {'name': 'metaout', "max_fps": fps}
             ],
             "ai": {
-                "blob_file": str(Path('./model/model.blob').resolve().absolute()),
-                "blob_file_config": str(Path('./model/config.json').resolve().absolute())
+                "blob_file": str(Path(f'./models/{model_name}/model.blob').resolve().absolute()),
+                "blob_file_config": str(Path(f'./models/{model_name}/config.json').resolve().absolute())
             }
         })
 
@@ -24,6 +24,7 @@ class DepthAI:
 
         self.entries_prev = []
         self.threshold = threshold
+        self.model_name = model_name
 
     def run(self):
         while True:
@@ -35,6 +36,8 @@ class DepthAI:
                     if e[0]['image_id'] == -1.0 or e[0]['conf'] == 0.0:
                         break
                     if e[0]['conf'] > self.threshold:
+                        if self.model_name == "mobilenet-ssd" and e[0]['label'] != 15:
+                            continue
                         self.entries_prev.append(e[0])
 
             for packet in data_packets:
