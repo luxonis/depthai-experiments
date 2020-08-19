@@ -1,4 +1,6 @@
-3D visualizer faical landmarks demo (draft) with OpenGL and OpenCV
+So because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host.  If there is interest to do this on DepthAI directly instead, please let us know!
+
+This 3D visualizer is for the facial landmarks demo, and uses OpenGL and OpenCV.  Consider it a draft/reference at this point.  
 
 - replace depthai.py under depthai folder and mobilenet_ssd_handler.py under depthai_helpers folder
 - add the visual_help subfolder under depthai folder
