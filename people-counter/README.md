@@ -13,7 +13,7 @@ Models used in this example are:
 
 ## Demo
 
-[![Watch the demo](https://img.youtube.com/vi/M0xQI1kXju4/hqdefault.jpg)](https://youtu.be/M0xQI1kXju4)
+[![Watch the demo](https://user-images.githubusercontent.com/32992551/90693638-6cd07900-e234-11ea-841b-5ce993750244.png)](https://youtu.be/M0xQI1kXju4)
 
 ## Pre-requisites
 
