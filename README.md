@@ -42,6 +42,12 @@ So you could use this to make plots over a day of room occupancy.  One could mod
 
 [![Watch the demo](https://user-images.githubusercontent.com/32992551/90693638-6cd07900-e234-11ea-841b-5ce993750244.png)](https://youtu.be/M0xQI1kXju4)
 
+## People Tracker ([here](https://github.com/luxonis/depthai-experiments/tree/master/people-tracker))
 
+This application counts how many people went upwards / downwards / leftwards / rightwards in the video stream, allowing you to receive an information about how many people went into a room or went through a corridor.
+
+The model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) from the OpenVIN Model Zoo.  Credits: Adrian Rosebrock, OpenCV People Counter, PyImageSearch, [https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/), accessed on 6 August 2020.
+
+[![Watch the demo](https://user-images.githubusercontent.com/32992551/90694088-3f37ff80-e235-11ea-8f7a-8e02f9ab1e4e.png)](https://youtu.be/8RiHkkGKdj0)
 
 
