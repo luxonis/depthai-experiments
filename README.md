@@ -34,7 +34,13 @@ So because there are often application-specific host-side filtering to be done o
 
 [![Spatial AI](https://user-images.githubusercontent.com/32992551/89942141-44fc6800-dbd9-11ea-8142-fe126922148f.png)](https://www.youtube.com/watch?v=Cs8xo3mPBMg "3D Facial Landmark visualization")
 
+## People Counting ([here](https://github.com/luxonis/depthai-experiments/blob/master/people-counter/README.md))
 
+This is a basic usage example of megaAI and/or DepthAI (although it doesn't actually use the depth aspect of DepthAI): simply counting people in a scene and logging this count.
+
+So you could use this to make plots over a day of room occupancy.  One could modify this example to show *where* in a room those people were, over time, if desirable.  But for now it just produces a count of people - so the total in view of the camera - over time.
+
+[![Watch the demo](https://user-images.githubusercontent.com/32992551/90693638-6cd07900-e234-11ea-841b-5ce993750244.png)](https://youtu.be/M0xQI1kXju4)
 
 
 
