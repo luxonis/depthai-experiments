@@ -7,7 +7,7 @@ The model used in this example is [person_detection_retail_0013](https://docs.op
 
 ## Demo
 
-[![Watch the demo](https://user-images.githubusercontent.com/32992551/90694088-3f37ff80-e235-11ea-8f7a-8e02f9ab1e4e.png)](https://youtu.be/8RiHkkGKdj0)
+[![Watch the demo](https://user-images.githubusercontent.com/5244214/90752628-ee2d1780-e2d7-11ea-8e48-ca94b02a7674.gif)](https://youtu.be/8RiHkkGKdj0)
 
 ## Pre-requisites
 
