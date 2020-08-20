@@ -14,7 +14,7 @@ This project shows you how to run the COVID-19 mask/no-mask object detector whic
 ## Social Distancing Example ([here](https://github.com/luxonis/depthai-experiments/tree/master/social-distancing))
 Since DepthAI gives the full 3D position of objects in physical space, it's a couple lines of code to make a social-distancing monitor with DepthAI.  So that's what this project is, a quick cut at a social-distancing monitor.
 
-[![COVID-19 Social Distancing with DepthAI](https://i.imgur.com/17WR2v9.jpg)](https://www.youtube.com/watch?v=-Ut9TemGZ8I "DepthAI Social Distancing Proof of Concept")
+[![COVID-19 Social Distancing with DepthAI](https://user-images.githubusercontent.com/5244214/90741333-73f89500-e2cf-11ea-919b-b1f47dc55c4a.gif)](https://www.youtube.com/watch?v=-Ut9TemGZ8I "DepthAI Social Distancing Proof of Concept")
 
 ## Demo-UI ([here](https://github.com/luxonis/depthai-experiments/tree/master/demo-ui))
 Application used to demonstrate various capabilities of the DepthAI platform. Contains examples with descriptions,
