@@ -40,7 +40,7 @@ This is a basic usage example of megaAI and/or DepthAI (although it doesn't actu
 
 So you could use this to make plots over a day of room occupancy.  One could modify this example to show *where* in a room those people were, over time, if desirable.  But for now it just produces a count of people - so the total in view of the camera - over time.
 
-[![Watch the demo](https://user-images.githubusercontent.com/32992551/90693638-6cd07900-e234-11ea-841b-5ce993750244.png)](https://youtu.be/M0xQI1kXju4)
+[![Watch the demo](https://user-images.githubusercontent.com/5244214/90751105-fc7a3400-e2d5-11ea-82fe-3c7797e99e3e.gif)](https://youtu.be/M0xQI1kXju4)
 
 ## People Tracker ([here](https://github.com/luxonis/depthai-experiments/tree/master/people-tracker))
 
@@ -48,6 +48,6 @@ This application counts how many people went upwards / downwards / leftwards / r
 
 The model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) from the OpenVIN Model Zoo.  Credits: Adrian Rosebrock, OpenCV People Counter, PyImageSearch, [https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/), accessed on 6 August 2020.
 
-[![Watch the demo](https://user-images.githubusercontent.com/32992551/90694088-3f37ff80-e235-11ea-8f7a-8e02f9ab1e4e.png)](https://youtu.be/8RiHkkGKdj0)
+[![Watch the demo](https://user-images.githubusercontent.com/5244214/90752628-ee2d1780-e2d7-11ea-8e48-ca94b02a7674.gif)](https://youtu.be/8RiHkkGKdj0)
 
 
