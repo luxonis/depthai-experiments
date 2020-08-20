@@ -24,7 +24,7 @@ console outputs and preview windows.
 
 ## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
 
-[![MJPEG Streaming DepthAI](https://i.imgur.com/0DT3NNR.jpg)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
+[![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
 
 This lay the groundwork to make DepthAI [OpenDataCam](https://github.com/opendatacam/opendatacam) compatible.
 
