@@ -31,3 +31,11 @@ Using the defaults, will use `0.03` ms threshold and will store dataset in `data
 ```
 python3 main.py
 ```
+
+## TODOs
+
+Script is now utilizing two assumptions (for simplicity):
+- Left packet will arrive before right packet
+- disparity_color packet will arrive as the last one
+
+When one of those two conditions is not met, the script will not collect the data
