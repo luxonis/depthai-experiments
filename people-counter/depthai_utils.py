@@ -15,7 +15,7 @@ class DepthAI:
             ],
             "ai": {
                 "blob_file": str(Path(f'./models/{model_name}/model.blob').resolve().absolute()),
-                "blob_file_config": str(Path(f'./models/{model_name}/config.json').resolve().absolute())
+                "blob_file_config": str(Path(f'./models/{model_name}/config.json').resolve().absolute()),
             }
         })
 
