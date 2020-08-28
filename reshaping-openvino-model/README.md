@@ -1,6 +1,8 @@
 # Reshaping OpenVINO model
 
-This script allows you to reshape the OpenVINO model input.
+This script allows you to reshape the OpenVINO model input layer.
+
+This way, if your model normally accepts 300x300 input, you can change the dimensions to any value, e.x. 200x200
 
 ## Using docker
 
