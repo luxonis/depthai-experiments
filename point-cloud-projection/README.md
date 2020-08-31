@@ -18,9 +18,9 @@ python3 calibrate.py -s [SQUARE_SIZE_IN_CM] -b [baseline] -m process
 - if dataset folder doesn't exist. Calibrate your camera as shown [here](https://docs.luxonis.com/tutorials/stereo_calibration/).
 -  Now execute the depthai.py as with `right` and `depth_raw` streams enabled.
 
-:::info
+<p class="callout info">
+Note:
 if you don't need point cloud visualization but want to receive only point clouds set `PointCloudVisualizer(file_path, enableViz=false)`
-:::
-
+</p>
 # Sample video
-![](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
+![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
