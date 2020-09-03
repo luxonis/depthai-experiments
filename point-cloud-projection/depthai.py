@@ -381,8 +381,9 @@ for stream in stream_names:
         cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
 
 if "depth_raw" in stream_names and "right" in stream_names:
-    pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
     right = None
+
+pcl_not_set = True
 
 while True:
     # retreive data from the device
@@ -453,8 +454,12 @@ while True:
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
                     if "depth_raw" in stream_names and "right" in stream_names and right is not None:
+                        if pcl_not_set:
+                            pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
+                            pcl_not_set =  False
                         pcd = pcl_converter.rgbd_to_projection(frame, right)
                         pcl_converter.visualize_pcd()
+
                     frame = (65535//frame).astype(np.uint8)
                     #colorize depth map, comment out code below to obtain grayscale
                     frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
