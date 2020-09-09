@@ -2,9 +2,8 @@ import logging
 import uuid
 from pathlib import Path
 
-import consts.resource_paths  # load paths to depthai resources
 import cv2
-import depthai  # access the camera and its data packets
+import depthai
 from imutils.video import FPS
 
 log = logging.getLogger(__name__)
@@ -13,11 +12,10 @@ log = logging.getLogger(__name__)
 class DepthAI:
     @staticmethod
     def create_pipeline(config):
-        if not depthai.init_device(consts.resource_paths.device_cmd_fpath):
-            raise RuntimeError("Error initializing device. Try to reset it.")
+        device = depthai.Device('', False)
         log.info("Creating DepthAI pipeline...")
 
-        pipeline = depthai.create_pipeline(config)
+        pipeline = device.create_pipeline(config)
         if pipeline is None:
             raise RuntimeError("Pipeline was not created.")
         log.info("Pipeline created.")

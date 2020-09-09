@@ -5,12 +5,10 @@ both left, right, rgb and disparity frames stored.
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see https://shop.luxonis.com/)
-2. Install DepthAI API (see [here](https://docs.luxonis.com/api/) for your operating system/platform)
-3. Switch DepthAI API branch to `enhance_stereo_depth`
+1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
+2. Install requirements
    ```
-   # in depthai repository
-   git checkout enhance_stereo_depth
+   python3 -m pip install -r requirements.txt
    ```
 
 ## Usage

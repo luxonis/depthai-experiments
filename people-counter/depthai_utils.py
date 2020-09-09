@@ -1,15 +1,13 @@
 import depthai
 from pathlib import Path
-import consts.resource_paths
 import cv2
 
 
 class DepthAI:
     def __init__(self, model_name, threshold=0.5, fps=None):
-        if not depthai.init_device(consts.resource_paths.device_cmd_fpath):
-            raise RuntimeError("Error initializing device. Try to reset it.")
+        self.device = depthai.Device('', False)
 
-        self.p = depthai.create_pipeline(config={
+        self.p = self.device.create_pipeline(config={
             "streams": ["metaout", "previewout"] if not isinstance(fps, int) else [
                 {'name': 'previewout', "max_fps": fps}, {'name': 'metaout', "max_fps": fps}
             ],
@@ -64,4 +62,4 @@ class DepthAI:
     def __del__(self):
         if hasattr(self, 'p'):
             del self.p
-        depthai.deinit_device()
+        del self.device
