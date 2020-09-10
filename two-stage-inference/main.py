@@ -31,11 +31,11 @@ while True:
         cam = nnet_packet.getMetadata().getCameraName()
         entries_prev[cam] = []
         for e in nnet_packet.entries():
+            print(e[0], len(e[0]), len(e))
             if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
                 break
 
             if e[0]['confidence'] > 0.5:
-                print(e)
                 entries_prev[cam].append({
                     "id": e[0]["id"],
                     "label": e[0]["label"],
