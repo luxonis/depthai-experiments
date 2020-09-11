@@ -3,7 +3,6 @@ from pathlib import Path
 from multiprocessing import Process
 from uuid import uuid4
 
-import consts.resource_paths
 import cv2
 import depthai
 
@@ -13,19 +12,18 @@ parser.add_argument('-p', '--path', default="data", type=str, help="Path where t
 parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
 args = parser.parse_args()
 
-if not depthai.init_device(consts.resource_paths.device_cmd_fpath):
-    raise RuntimeError("Error initializing device. Try to reset it.")
+device = depthai.Device('', False)
 
 dest = Path(args.path).resolve().absolute()
 if dest.exists() and len(list(dest.glob('*'))) != 0 and not args.dirty:
     raise ValueError(f"Path {dest} contains {len(list(dest.glob('*')))} files. Either specify new path or use \"--dirty\" flag to use current one")
 dest.mkdir(parents=True, exist_ok=True)
 
-p = depthai.create_pipeline(config={
+p = device.create_pipeline(config={
     "streams": ["left", "right", "previewout", "disparity_color"],
     "ai": {
-        "blob_file": consts.resource_paths.blob_fpath,
-        "blob_file_config": consts.resource_paths.blob_config_fpath
+        "blob_file": str(Path('./mobilenet-ssd/mobilenet-ssd.blob').resolve().absolute()),
+        "blob_file_config": str(Path('./mobilenet-ssd/mobilenet-ssd.json').resolve().absolute())
     },
     'camera': {
         'mono': {
@@ -67,6 +65,7 @@ while True:
     data_packets = p.get_available_data_packets()
 
     for packet in data_packets:
+        print(packet.stream_name)
         print(packet.getMetadata().getTimestamp(), packet.getMetadata().getSequenceNum(), packet.stream_name)
         if packet.stream_name == "left":
             latest_left = packet
@@ -104,4 +103,4 @@ while True:
 for proc in procs:
     proc.join()
 del p
-depthai.deinit_device()
+del device

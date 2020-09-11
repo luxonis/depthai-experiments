@@ -2,7 +2,6 @@ import logging
 import uuid
 from pathlib import Path
 
-import consts.resource_paths  # load paths to depthai resources
 import cv2
 import depthai  # access the camera and its data packets
 from imutils.video import FPS
@@ -11,21 +10,18 @@ log = logging.getLogger(__name__)
 
 
 class DepthAI:
-    @staticmethod
-    def create_pipeline(config):
-        if not depthai.init_device(consts.resource_paths.device_cmd_fpath):
-            raise RuntimeError("Error initializing device. Try to reset it.")
+    def create_pipeline(self, config):
+        self.device = depthai.Device('', False)
         log.info("Creating DepthAI pipeline...")
 
-        pipeline = depthai.create_pipeline(config)
-        if pipeline is None:
+        self.pipeline = self.device.create_pipeline(config)
+        if self.pipeline is None:
             raise RuntimeError("Pipeline was not created.")
         log.info("Pipeline created.")
-        return pipeline
 
     def __init__(self, model_location, model_label):
         self.model_label = model_label
-        self.pipeline = DepthAI.create_pipeline({
+        self.create_pipeline({
             # metaout - contains neural net output
             # previewout - color video
             'streams': ['metaout', 'previewout'],
@@ -93,7 +89,7 @@ class DepthAI:
 
     def __del__(self):
         del self.pipeline
-        depthai.deinit_device()
+        del self.device
 
 
 class DepthAIDebug(DepthAI):

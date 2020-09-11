@@ -1,13 +1,32 @@
-streaming depthai.py video via web browser localhost port 8090
+# MJPEG Streaming server
 
-Steps to use:
-1. Download the file `depthai.py`
-2. Replace with the current `depthai.py` under `depthai`
-3. Run the file with commend `python3 test.py`
-4. Open chrome with address: http://localhost:8090 and now you can see the video stream via web browser (Chrome)
+This script allows you to:
+- Stream frames via HTTP Server using MJPEG stream
+- Stream data via TCP Server
 
-The video below shows this code in action on macOS:
+## Demo
 
 [![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
 
-Note: if want to view the video stream on different device under same WIFI, please fill your IP address to replace `localhost` at `server_HTTP = ThreadedHTTPServer(('localhost', 8090), VideoStreamHandler)` in the `depthai.py` 
+
+## Installation
+
+```
+python3 -m pip install -r requirements.txt
+```
+
+## Usage
+
+Run the application
+
+```
+python3 main.py
+```
+
+To see the streamed frames, open [localhost:8090](http://localhost:8090)
+
+To see the streamed data, use
+
+```
+nc localhost 8070
+```

@@ -3,41 +3,28 @@ import logging
 import uuid
 from pathlib import Path
 
-import consts.resource_paths  # load paths to depthai resources
 import cv2
-import depthai  # access the camera and its data packets
+import depthai
 from imutils.video import FPS
 
 log = logging.getLogger(__name__)
 
 
 class DepthAI:
-    @staticmethod
-    def create_pipeline(config):
-        if not depthai.init_device(consts.resource_paths.device_cmd_fpath):
-            raise RuntimeError("Error initializing device. Try to reset it.")
+    def create_pipeline(self, config):
+        self.device = depthai.Device('', False)
         log.info("Creating DepthAI pipeline...")
 
-        pipeline = depthai.create_pipeline(config)
-        if pipeline is None:
+        self.pipeline = self.device.create_pipeline(config)
+        if self.pipeline is None:
             raise RuntimeError("Pipeline was not created.")
         log.info("Pipeline created.")
-        return pipeline
 
     def __init__(self, model_location, model_label):
         self.model_label = model_label
-        self.pipeline = DepthAI.create_pipeline({
-            # metaout - contains neural net output
-            # previewout - color video
-            'streams': ['metaout', 'previewout'],
-            "depth": {
-                "calibration_file": "",
-                "padding_factor": 0.3,
-                "depth_limit_m": 10.0
-            },
+        self.create_pipeline({
+            'streams': ['previewout', 'metaout'],
             'ai': {
-                "calc_dist_to_bb": True,
-                "keep_aspect_ratio": True,
                 'blob_file': str(Path(model_location, 'model.blob').absolute()),
                 'blob_file_config': str(Path(model_location, 'config.json').absolute())
             },
@@ -50,12 +37,12 @@ class DepthAI:
             nnet_packets, data_packets = self.pipeline.get_available_nnet_and_data_packets()
             for _, nnet_packet in enumerate(nnet_packets):
                 self.network_results = []
-                # Shape: [1, 1, N, 7], where N is the number of detected bounding boxes
                 for _, e in enumerate(nnet_packet.entries()):
-                    if e[0]['image_id'] == -1.0 or e[0]['conf'] < 0.5 or not e[0]['label'].is_integer():
+                    if e[0]['image_id'] == -1.0 or e[0]['conf'] == 0.0:
                         break
 
-                    self.network_results.append(e[0])
+                    if e[0]['conf'] > 0.5 and e[0]['label'].is_integer():
+                        self.network_results.append(e[0])
 
             for packet in data_packets:
                 if packet.stream_name == 'previewout':
@@ -89,7 +76,7 @@ class DepthAI:
 
     def __del__(self):
         del self.pipeline
-        depthai.deinit_device()
+        del self.device
 
 
 class DepthAIDebug(DepthAI):

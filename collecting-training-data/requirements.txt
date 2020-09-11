@@ -1,1 +1,1 @@
-depthai # Not available via `pip install depthai`. See https://docs.luxonis.com/api/#install for instructions.
+depthai==0.2.0.1
