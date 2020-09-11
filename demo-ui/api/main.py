@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 proc = None
 
-depthai_path = Path('../depthai/depthai.py').resolve()
+depthai_path = Path('../depthai/depthai_demo.py').resolve()
 output_file = None
 cmd = f"python3 {depthai_path}"
 cmd_env = os.environ.copy()
