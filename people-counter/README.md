@@ -17,8 +17,7 @@ Models used in this example are:
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see https://shop.luxonis.com/)
-2. Install DepthAI API (see [here](https://docs.luxonis.com/api/) for your operating system/platform)
+Purchase a DepthAI model (see https://shop.luxonis.com/)
 
 ## Install project requirements
 
