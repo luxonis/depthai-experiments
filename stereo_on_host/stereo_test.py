@@ -19,7 +19,7 @@ if __name__ == "__main__":
     left_images_paths.sort()
     right_images_paths.sort()
     print(left_images_paths)
-    stereo_process = StereoSGBM(7.5, H_right)
+    stereo_process = StereoSGBM(7.5, H_right) # baselienght and right homography. 
 
     for left_img_path, right_img_path in zip(left_images_paths, right_images_paths):
         stereo_process.create_disparity_map(left_img_path, right_img_path)

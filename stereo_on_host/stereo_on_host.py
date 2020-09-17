@@ -57,14 +57,14 @@ class StereoSGBM:
         self.disparity = self.stereoProcessor.compute(left_img_rect, right_img_rect)
         cv2.filterSpeckles(self.disparity, 0, 60, self.max_disparity)
         
-        _, disparity = cv2.threshold(self.disparity, 0, self.max_disparity * 16, cv2.THRESH_TOZERO)
+        _, self.disparity = cv2.threshold(self.disparity, 0, self.max_disparity * 16, cv2.THRESH_TOZERO)
         disparity_scaled = (self.disparity / 16.).astype(np.uint8)
-        frame = cv2.applyColorMap(disparity_scaled, cv2.COLORMAP_HOT)
+        # frame = cv2.applyColorMap(disparity_scaled, cv2.COLORMAP_HOT)
         # frame[frame > 200] = 0
-        cv2.imshow("Scaled Disparity stream", frame)
+        # cv2.imshow("Scaled Disparity stream", frame)
 
         disparity_colour_mapped = cv2.applyColorMap(
-            (disparity * (16. / self.max_disparity)).astype(np.uint8),
+            (disparity_scaled * (256. / self.max_disparity)).astype(np.uint8),
             cv2.COLORMAP_HOT)
         cv2.imshow("Disparity", disparity_colour_mapped)
         cv2.imshow("rectified left", left_img_rect)
