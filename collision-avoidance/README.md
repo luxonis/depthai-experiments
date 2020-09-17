@@ -1,8 +1,6 @@
 # Collision avoidance
 
-This experiment is still a WIP
-
-It's goal is to detect the vehicles moving towards the camera and alert the user if it can be dangerous pass
+This experiment's goal is to detect the vehicles moving towards the camera and alert the user if it can be dangerous pass
 
 ## Install
 
