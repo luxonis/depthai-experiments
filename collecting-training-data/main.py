@@ -105,6 +105,8 @@ class PairingSystem:
     def __init__(self):
         self.ts_packets = {}
         self.seq_packets = {}
+        self.last_paired_ts = None
+        self.last_paired_seq = None
 
     def add_packet(self, packet):
         if packet.stream_name in self.seq_streams:
@@ -120,8 +122,6 @@ class PairingSystem:
                 packet.stream_name: packet
             }
 
-        # TODO garbage collection
-
     def get_pairs(self):
         results = []
         for key in list(self.seq_packets.keys()):
@@ -132,9 +132,19 @@ class PairingSystem:
                         **self.seq_packets[key],
                         **self.ts_packets[ts_key]
                     })
-                    del self.seq_packets[key]
-                    del self.ts_packets[ts_key]
+                    self.last_paired_seq = key
+                    self.last_paired_ts = ts_key
+        if len(results) > 0:
+            self.collect_garbage()
         return results
+
+    def collect_garbage(self):
+        for key in list(self.seq_packets.keys()):
+            if key <= self.last_paired_seq:
+                del self.seq_packets[key]
+        for key in list(self.ts_packets.keys()):
+            if key <= self.last_paired_ts:
+                del self.ts_packets[key]
 
 
 ps = PairingSystem()
