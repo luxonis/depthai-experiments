@@ -1,2 +1,2 @@
-depthai==0.2.0.1
+git+https://github.com/luxonis/depthai-python.git@8cf9e4125e54701cd71a50d04cb2d6f30907ab0e
 opencv-python>4
