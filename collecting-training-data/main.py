@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from multiprocessing import Process
+from time import time
 from uuid import uuid4
 
 import cv2
@@ -10,8 +11,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--threshold', default=0.03, type=float,
                     help="Maximum difference between packet timestamps to be considered as synced")
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
-parser.add_argument('-d', '--dirty', action='store_true', default=False,
-                    help="Allow the destination path not to be empty")
+parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
+parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
+parser.add_argument('-m', '--time', type=float, default=float("inf"), help="Finish execution after X seconds")
 args = parser.parse_args()
 
 device = depthai.Device('', False)
@@ -148,22 +150,28 @@ class PairingSystem:
 
 
 ps = PairingSystem()
+start_ts = time()
 
 while True:
     data_packets = p.get_available_data_packets()
 
     for packet in data_packets:
-        print(packet.stream_name)
-        print(packet.getMetadata().getTimestamp(), packet.getMetadata().getSequenceNum())
+        if not args.prod:
+            print(packet.stream_name)
+            print(packet.getMetadata().getTimestamp(), packet.getMetadata().getSequenceNum())
         ps.add_packet(packet)
         pairs = ps.get_pairs()
         for pair in pairs:
-            for stream_name in pair:
-                frame = extract_frame[stream_name](pair[stream_name])
-                cv2.imshow(stream_name, frame)
+            if not args.prod:
+                for stream_name in pair:
+                    frame = extract_frame[stream_name](pair[stream_name])
+                    cv2.imshow(stream_name, frame)
             store_frames(pair)
 
-    if cv2.waitKey(1) == ord('q'):
+    if not args.prod and cv2.waitKey(1) == ord('q'):
+        break
+
+    if time() - start_ts > args.time:
         break
 
 for proc in procs:
