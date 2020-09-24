@@ -8,7 +8,7 @@ import depthai
 device = depthai.Device('', False)
 
 p = device.create_pipeline(config={
-    "streams": ["disparity", "right",],
+    "streams": ["disparity", "rectified_right",],
     #IGNORE ai for this example. Will be removed later.
     "ai": {
         "blob_file": str(Path('./models/landmarks-regression-retail-0009/landmarks-regression-retail-0009.blob').resolve().absolute()),
@@ -98,8 +98,9 @@ while True:
         if packetData is None:
             print('Invalid packet data!')
             continue
-        if packet.stream_name == 'right':
+        if packet.stream_name == 'rectified_right':
             frame_bgr = packetData
+            frame_bgr = cv2.flip(frame_bgr, flipCode = 1)
             prev_right = frame_bgr
             cv2.imshow(window_name, frame_bgr)
         
@@ -124,6 +125,7 @@ while True:
             cv2.imshow(wls_stream + "_color", colored_wls)
 
             prev_right = None
+            prev_disp = None
 
     if cv2.waitKey(1) == ord('q'):
         break
