@@ -118,6 +118,11 @@ while True:
             # print(_sigma)
             filtered_disp = wls_filter.filter(prev_disp, prev_right)
             cv2.imshow(wls_stream, filtered_disp)
+            
+            cv2.normalize(filtered_disp, filtered_disp, 0, 255, cv2.NORM_MINMAX)
+            colored_wls = cv2.applyColorMap(filtered_disp, cv2.COLORMAP_JET)
+            cv2.imshow(wls_stream + "_color", colored_wls)
+
             prev_right = None
 
     if cv2.waitKey(1) == ord('q'):
