@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-
-import numpy as np
 import open3d as o3d
 import os
 
