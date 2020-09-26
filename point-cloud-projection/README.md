@@ -25,7 +25,7 @@ python3 main.py
 > Note: if you don't need point cloud visualization but want to receive only point clouds set `PointCloudVisualizer(file_path, enableViz=false)`
 
 
-## "No EEPROM data present" - Calibrate camera
+## Calibrate camera (if needed)
 
 To run this application, EEPROM needs to be programmed on your device. Most of the devices we ship has already programmed EEPROM.
 
