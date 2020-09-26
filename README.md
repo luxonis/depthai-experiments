@@ -51,7 +51,7 @@ The model used in this example is [person_detection_retail_0013](https://docs.op
 [![Watch the demo](https://user-images.githubusercontent.com/5244214/90752628-ee2d1780-e2d7-11ea-8e48-ca94b02a7674.gif)](https://youtu.be/8RiHkkGKdj0)
 
 
-## Point Cloud Projection ([here](https://github.com/luxonis/depthai-experiments/tree/pcl_generation/point-cloud-projection))
+## Point Cloud Projection ([here](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection/README.md))
 
 This is a simple application which creates rgbd image from `right` and `depth_raw` stream and projects it into point clouds. There is also a interactive point cloud visualizer. (depth_raw with left and rgb will be added soon)
 
