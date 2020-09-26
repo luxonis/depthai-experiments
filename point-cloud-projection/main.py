@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import json
+import os
+import tempfile
 from pathlib import Path
 
 import cv2
@@ -32,7 +35,14 @@ while True:
             frame = packet.getData()
             if right is not None:
                 if pcl_converter is None:
-                    pcl_converter = PointCloudVisualizer('intrinisc_right.json')
+                    fd, path = tempfile.mkstemp(suffix='.json')
+                    with os.fdopen(fd, 'w') as tmp:
+                        json.dump({
+                            "width": 1280,
+                            "height": 720,
+                            "intrinsic_matrix": [item for row in device.get_right_intrinsic() for item in row]
+                        }, tmp)
+                    pcl_converter = PointCloudVisualizer(path)
                 pcd = pcl_converter.rgbd_to_projection(frame, right)
                 pcl_converter.visualize_pcd()
             cv2.imshow(packet.stream_name, frame)
@@ -41,5 +51,3 @@ while True:
 
 if pcl_converter is not None:
     pcl_converter.close_window()
-
-

@@ -26,7 +26,14 @@ python3 main.py
 
 To run this application, EEPROM needs to be programmed on your device. Most of the devices we ship has already programmed EEPROM.
 
-If you received the EEPROM error, please check application logs for `EEPROM data:` line.
+If you received the EEPROM error, like the one below:
+
+```
+legacy, get_right_intrinsic() is not available in version -1
+recalibrate and load the new calibration to the device. 
+```
+
+please check application logs for `EEPROM data:` line.
 
 Correct EEPROM data should look like this:
 
