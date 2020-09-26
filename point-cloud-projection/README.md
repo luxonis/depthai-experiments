@@ -7,6 +7,9 @@
 
 This experiment allows you to run and visualize the point clouds generated using depth map and right camera.
 
+# Demo
+![demogif](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
+
 ## Installation
 
 ```
