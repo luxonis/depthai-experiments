@@ -14,9 +14,11 @@ parser.add_argument('-p', '--path', default="data", type=str, help="Path where t
 parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
 parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
 parser.add_argument('-m', '--time', type=float, default=float("inf"), help="Finish execution after X seconds")
+parser.add_argument('-af', '--autofocus', type=str, default=None, help="Set AutoFocus mode of the RGB camera", choices=list(filter(lambda name: name.startswith("AF_"), vars(depthai.AutofocusMode))))
 args = parser.parse_args()
 
 device = depthai.Device('', False)
+device.request_af_mode(getattr(depthai.AutofocusMode, args.autofocus, depthai.AutofocusMode.AF_MODE_AUTO))
 
 dest = Path(args.path).resolve().absolute()
 if dest.exists() and len(list(dest.glob('*'))) != 0 and not args.dirty:
