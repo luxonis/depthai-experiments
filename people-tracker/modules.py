@@ -39,10 +39,10 @@ class CentroidTracker:
         del self.objects[objectID]
         del self.disappeared[objectID]
 
-    def update(self, rects):
+    def update(self, detections):
         # check to see if the list of input bounding box rectangles
         # is empty
-        if len(rects) == 0:
+        if len(detections) == 0:
             # loop over any existing tracked objects and mark them
             # as disappeared
             for objectID in list(self.disappeared.keys()):
@@ -59,10 +59,10 @@ class CentroidTracker:
             return self.objects
 
         # initialize an array of input centroids for the current frame
-        inputCentroids = np.zeros((len(rects), 2), dtype="int")
+        inputCentroids = np.zeros((len(detections), 2), dtype="int")
 
         # loop over the bounding box rectangles
-        for (i, (startX, startY, endX, endY)) in enumerate(rects):
+        for (i, (startX, startY, endX, endY)) in enumerate(detections):
             # use the bounding box coordinates to derive the centroid
             cX = int((startX + endX) / 2.0)
             cY = int((startY + endY) / 2.0)
@@ -171,8 +171,14 @@ class PersonTracker:
         self.ct = CentroidTracker(maxDisappeared=40, maxDistance=50)
         self.persons = {}
 
-    def parse(self, frame, boxes):
-        objects = self.ct.update(boxes)
+    def parse(self, frame, detections):
+        img_h = frame.shape[0]
+        img_w = frame.shape[1]
+        objects = self.ct.update([
+            (int(detection.x_min * img_w), int(detection.y_min * img_h),
+             int(detection.x_max * img_w), int(detection.y_max * img_h))
+            for detection in detections
+        ])
         for object_id, centroid in objects.items():
             self.persons[object_id] = self.persons.get(object_id, []) + [centroid]
         return len(self.persons)
@@ -209,8 +215,8 @@ class PersonTracker:
 
 
 class PersonTrackerDebug(PersonTracker):
-    def parse(self, frame, boxes):
-        result = super().parse(frame, boxes)
+    def parse(self, frame, detections):
+        result = super().parse(frame, detections)
         for object_id, centroid in self.ct.objects.items():
             cv2.putText(frame, f"ID {object_id}", (centroid[0] - 10, centroid[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (255, 255, 0), 2)

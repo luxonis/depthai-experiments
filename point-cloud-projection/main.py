@@ -13,7 +13,6 @@ pipeline = device.create_pipeline(config={
     'streams': ['right', 'depth'],
     'ai': {
         "blob_file": str(Path('./mobilenet-ssd/mobilenet-ssd.blob').resolve().absolute()),
-        "blob_file_config": str(Path('./mobilenet-ssd/mobilenet-ssd.json').resolve().absolute()),
     },
     'camera': {'mono': {'resolution_h': 720, 'fps': 30}},
 })
@@ -25,7 +24,7 @@ right = None
 pcl_converter = None
 
 while True:
-    nnet_packets, data_packets = pipeline.get_available_nnet_and_data_packets()
+    data_packets = pipeline.get_available_data_packets()
 
     for packet in data_packets:
         if packet.stream_name == "right":

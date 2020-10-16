@@ -64,7 +64,7 @@ th2.start()
 
 device = depthai.Device('', False)
 
-p = device.create_pipeline(config={
+pipeline = device.create_pipeline(config={
     "streams": ["metaout", "previewout"],
     "ai": {
         "blob_file": str(Path('./mobilenet-ssd/model.blob').resolve().absolute()),
@@ -72,29 +72,16 @@ p = device.create_pipeline(config={
     }
 })
 
-if p is None:
+if pipeline is None:
     raise RuntimeError("Error initializing pipelne")
 
-entries_prev = []
+detections = []
 
 while True:
-    nnet_packets, data_packets = p.get_available_nnet_and_data_packets()
+    nnet_packets, data_packets = pipeline.get_available_nnet_and_data_packets()
 
     for nnet_packet in nnet_packets:
-        entries_prev = []
-        for e in nnet_packet.entries():
-            if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
-                break
-            if e[0]['confidence'] > 0.5:
-                entries_prev.append({
-                    "id": e[0]["id"],
-                    "label": e[0]["label"],
-                    "confidence": e[0]["confidence"],
-                    "left": e[0]["left"],
-                    "right": e[0]["right"],
-                    "top": e[0]["top"],
-                    "bottom": e[0]["bottom"],
-                })
+        detections = list(nnet_packet.getDetectedObjects())
 
     for packet in data_packets:
         if packet.stream_name == 'previewout':
@@ -107,18 +94,18 @@ while True:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
-            for e in entries_prev:
-                pt1 = int(e['left'] * img_w), int(e['top'] * img_h)
-                pt2 = int(e['right'] * img_w), int(e['bottom'] * img_h)
+            for detection in detections:
+                left, top = int(detection.x_min * img_w), int(detection.y_min * img_h)
+                right, bottom = int(detection.x_max * img_w), int(detection.y_max * img_h)
 
-                cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
-            server_TCP.datatosend = json.dumps(entries_prev)
+            server_TCP.datatosend = json.dumps([detection.get_dict() for detection in detections])
             server_HTTP.frametosend = frame
             cv2.imshow('previewout', frame)
 
     if cv2.waitKey(1) == ord('q'):
         break
 
-del p
+del pipeline
 del device

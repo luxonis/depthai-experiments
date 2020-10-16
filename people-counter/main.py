@@ -48,17 +48,21 @@ p = Process(target=store, args=(shared_results, ))
 p.daemon = True
 p.start()
 
-d = DepthAI(model_name=args.model, threshold=0.5)
+d = DepthAI(model_name=args.model)
 pc = PeopleCounter()
 
-for frame, results in d.run():
-    total = pc.parse(results)
+for frame, detections in d.run():
+    total = pc.parse(detections)
     shared_results.value = json.dumps({"count": total})
 
     if debug:
         print(f"Detected: {total}")
         cv2.putText(frame, f"Detected: {total}", (20, 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-        for left, top, right, bottom in results:
+        img_h = frame.shape[0]
+        img_w = frame.shape[1]
+        for detection in detections:
+            left, top = int(detection.x_min * img_w), int(detection.y_min * img_h)
+            right, bottom = int(detection.x_max * img_w), int(detection.y_max * img_h)
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
         cv2.imshow('previewout', frame)
 

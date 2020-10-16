@@ -17,19 +17,19 @@ def calculate_distance(point1, point2):
 class DistanceGuardian:
     max_distance = 1
 
-    def parse_frame(self, frame, boxes):
+    def parse_frame(self, frame, detections):
         results = []
-        for i, box1 in enumerate(boxes):
-            for box2 in boxes[i+1:]:
-                point1 = box1['distance_x'], box1['distance_y'], box1['distance_z']
-                point2 = box2['distance_x'], box2['distance_y'], box2['distance_z']
+        for i, detection1 in enumerate(detections):
+            for detection2 in detections[i+1:]:
+                point1 = detection1.depth_x, detection1.depth_y, detection1.depth_z
+                point2 = detection2.depth_x, detection2.depth_y, detection2.depth_z
                 distance = calculate_distance(point1, point2)
                 log.info("DG: {}".format(distance))
                 results.append({
                     'distance': distance,
                     'dangerous': distance < self.max_distance,
-                    'box1': box1,
-                    'box2': box2,
+                    'detection1': detection1,
+                    'detection2': detection2,
                 })
 
         return results
@@ -39,11 +39,13 @@ class DistanceGuardianDebug(DistanceGuardian):
     def parse_frame(self, frame, boxes):
         results = super().parse_frame(frame, boxes)
         overlay = frame.copy()
+        img_h = frame.shape[0]
+        img_w = frame.shape[1]
         for result in results:
-            x1 = int(result['box1']['left'] + (result['box1']['right'] - result['box1']['left']) / 2)
-            y1 = int(result['box1']['bottom'])
-            x2 = int(result['box2']['left'] + (result['box2']['right'] - result['box2']['left']) / 2)
-            y2 = int(result['box2']['bottom'])
+            x1 = int((result['detection1'].x_min + (result['detection1'].x_max - result['detection1'].x_min) / 2) * img_w)
+            y1 = int(result['detection1'].y_max * img_h)
+            x2 = int((result['detection2'].x_min + (result['detection2'].x_max - result['detection2'].x_min) / 2) * img_w)
+            y2 = int(result['detection2'].y_max * img_h)
             color = (0, 0, 255) if result['dangerous'] else (255, 0, 0)
             cv2.ellipse(overlay, (x1, y1), (40, 10), 0, 0, 360, color, thickness=cv2.FILLED)
             cv2.ellipse(overlay, (x2, y2), (40, 10), 0, 0, 360, color, thickness=cv2.FILLED)

@@ -52,9 +52,7 @@ def get_landmark_3d(landmark):
 
 initialize_OpenGL()
 
-entries_prev = {}
-left_landmarks = []
-right_landmarks = []
+detections = {}
 
 left_camera_position = (0.107, -0.038, 0.008)
 right_camera_position = (0.109, 0.039, 0.008)
@@ -65,26 +63,12 @@ while True:
 
     for nnet_packet in nnet_packets:
         cam = nnet_packet.getMetadata().getCameraName()
-        entries_prev[cam] = []
-        for e in nnet_packet.entries():
-            if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
-                break
-
-            landmarks_raw = [e[1][i] for i in range(len(e[1]))]
-            landmarks_pairs = list(zip(*[iter(landmarks_raw)] * 2))
-            landmarks_3d = list(map(get_landmark_3d, landmarks_pairs))
-            if e[0]['confidence'] > 0.5:
-                entries_prev[cam].append({
-                    "id": e[0]["id"],
-                    "label": e[0]["label"],
-                    "confidence": e[0]["confidence"],
-                    "left": e[0]["left"],
-                    "top": e[0]["top"],
-                    "right": e[0]["right"],
-                    "bottom": e[0]["bottom"],
-                    "landmarks": landmarks_pairs,
-                    "landmarks_3d": landmarks_3d,
-                })
+        landmark_pairs = list(zip(*[iter(nnet_packet.getOutputsList()[1].reshape((10, )))] * 2))
+        detections[cam] = {
+            'face': nnet_packet.getDetectedObjects(),
+            'land': landmark_pairs,
+            'land_3d': list(map(get_landmark_3d, landmark_pairs)),
+        }
 
     for packet in data_packets:
         if packet.stream_name == 'previewout':
@@ -100,42 +84,36 @@ while True:
 
             landmarks_frame = np.zeros((img_h, img_w, 3), np.uint8)
 
-            for e in entries_prev.get(cam, []):
-                left = int(e['left'] * img_w)
-                top = int(e['top'] * img_h)
-                right = int(e['right'] * img_w)
-                bottom = int(e['bottom'] * img_h)
+            for detection in detections.get(cam, {}).get('face', []):
+                left, top = int(detection.x_min * img_w), int(detection.y_min * img_h)
+                right, bottom = int(detection.x_max * img_w), int(detection.y_max * img_h)
 
                 cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
                 cv2.rectangle(landmarks_frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
                 face_width = int(right - left)
                 face_height = int(bottom - top)
-                for land_x, land_y in e['landmarks']:
+                for land_x, land_y in detections.get(cam, {}).get('land', []):
                     x = left + int(land_x * face_width)
                     y = top + int(land_y * face_height)
                     cv2.circle(frame, (x, y), 4, (255, 0, 0))
                     cv2.circle(landmarks_frame, (x, y), 4, (255, 0, 0))
 
-                if cam == "left":
-                    left_landmarks = e['landmarks_3d']
-                else:
-                    right_landmarks = e['landmarks_3d']
 
             cv2.imshow(f'previewout-{packet.getMetadata().getCameraName()}', frame)
             cv2.imshow(packet.getMetadata().getCameraName(), landmarks_frame)
 
-            if len(left_landmarks) > 0 and len(right_landmarks) > 0:
+            if len(detections.get("left", {}).get('land_3d', [])) > 0 and len(detections.get("right", {}).get('land_3d', [])) > 0:
                 mid_intersects = []
 
-                for i in range(len(left_landmarks)):
-                    left_vector = get_vector_direction(left_camera_position, left_landmarks[i])
-                    right_vector = get_vector_direction(right_camera_position, right_landmarks[i])
+                for i in range(len(detections["left"]["land_3d"])):
+                    left_vector = get_vector_direction(left_camera_position, detections["left"]["land_3d"][i])
+                    right_vector = get_vector_direction(right_camera_position, detections["right"]["land_3d"][i])
                     intersection_landmark = get_vector_intersection(left_vector, left_camera_position, right_vector,
                                                                     right_camera_position)
                     mid_intersects.append(intersection_landmark)
 
-                start_OpenGL(mid_intersects, cameras, left_landmarks, right_landmarks)
+                start_OpenGL(mid_intersects, cameras, detections["left"]["land_3d"], detections["right"]["land_3d"])
 
     if cv2.waitKey(1) == ord('q'):
         break

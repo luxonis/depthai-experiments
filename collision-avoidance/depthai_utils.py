@@ -10,30 +10,23 @@ log = logging.getLogger(__name__)
 
 
 class DepthAI:
-    @staticmethod
-    def create_pipeline(config):
-        device = depthai.Device('', False)
+    def create_pipeline(self, config):
+        self.device = depthai.Device('', False)
         log.info("Creating DepthAI pipeline...")
 
-        pipeline = device.create_pipeline(config)
+        pipeline = self.device.create_pipeline(config)
         if pipeline is None:
             raise RuntimeError("Pipeline was not created.")
         log.info("Pipeline created.")
         return pipeline
 
     def __init__(self, model_name, threshold):
-        self.pipeline = DepthAI.create_pipeline({
+        self.pipeline = self.create_pipeline({
             # metaout - contains neural net output
             # previewout - color video
             'streams': ['metaout', 'previewout'],
-            "depth": {
-                "calibration_file": "",
-                "padding_factor": 0.3,
-                "depth_limit_m": 10.0
-            },
             'ai': {
                 "calc_dist_to_bb": True,
-                "keep_aspect_ratio": True,
                 "blob_file": str(Path(f'./models/{model_name}/model.blob').resolve().absolute()),
                 "blob_file_config": str(Path(f'./models/{model_name}/config.json').resolve().absolute()),
             },
@@ -46,15 +39,8 @@ class DepthAI:
     def capture(self):
         while True:
             nnet_packets, data_packets = self.pipeline.get_available_nnet_and_data_packets()
-            for _, nnet_packet in enumerate(nnet_packets):
-                self.network_results = []
-                # Shape: [1, 1, N, 7], where N is the number of detected bounding boxes
-                for _, e in enumerate(nnet_packet.entries()):
-                    if e[0]['image_id'] == -1.0 or e[0]['conf'] == 0.0:
-                        break
-
-                    if e[0]['conf'] > self.threshold:
-                        self.network_results.append(e[0])
+            for nnet_packet in nnet_packets:
+                self.network_results = list(nnet_packet.getDetectedObjects())
 
             for packet in data_packets:
                 if packet.stream_name == 'previewout':
@@ -68,33 +54,10 @@ class DepthAI:
                     data2 = data[2, :, :]
                     frame = cv2.merge([data0, data1, data2])
 
-                    img_h = frame.shape[0]
-                    img_w = frame.shape[1]
-
-                    boxes = []
-
-                    for e in self.network_results:
-                        try:
-                            boxes.append({
-                                'id': uuid.uuid4(),
-                                'detector': self.model_name,
-                                'conf': e['conf'],
-                                'left': int(e['x_min'] * img_w),
-                                'top': int(e['y_min'] * img_h),
-                                'right': int(e['x_max'] * img_w),
-                                'bottom': int(e['y_max'] * img_h),
-                                'distance_x': e['distance_x'],
-                                'distance_y': e['distance_y'],
-                                'distance_z': e['distance_z'],
-                            })
-                        except:
-                            continue
-
-                    yield frame, boxes
+                    yield frame, self.network_results
 
     def __del__(self):
-        del self.pipeline
-        depthai.deinit_device()
+        del self.device
 
 
 class DepthAIDebug(DepthAI):
@@ -104,15 +67,20 @@ class DepthAIDebug(DepthAI):
         self.fps.start()
 
     def capture(self):
-        for frame, boxes in super().capture():
+        for frame, detections in super().capture():
             self.fps.update()
-            for box in boxes:
-                cv2.rectangle(frame, (box['left'], box['top']), (box['right'], box['bottom']), (0, 255, 0), 2)
-                cv2.putText(frame, "x: {}".format(round(box['distance_x'], 1)), (box['left'], box['top'] + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, "y: {}".format(round(box['distance_y'], 1)), (box['left'], box['top'] + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, "z: {}".format(round(box['distance_z'], 1)), (box['left'], box['top'] + 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, "conf: {}".format(round(box['conf'], 1)), (box['left'], box['top'] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            yield frame, boxes
+
+            img_h = frame.shape[0]
+            img_w = frame.shape[1]
+            for detection in detections:
+                left, top = int(detection.x_min * img_w), int(detection.y_min * img_h)
+                right, bottom = int(detection.x_max * img_w), int(detection.y_max * img_h)
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+                cv2.putText(frame, "x: {}".format(round(detection.depth_x, 1)), (left, top + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "y: {}".format(round(detection.depth_y, 1)), (left, top + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "z: {}".format(round(detection.depth_z, 1)), (left, top + 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "conf: {}".format(round(detection.confidence, 1)), (left, top + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            yield frame, detections
 
     def __del__(self):
         super().__del__()

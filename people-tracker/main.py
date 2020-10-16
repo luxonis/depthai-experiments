@@ -10,7 +10,7 @@ from multiprocessing import Process, Manager
 
 debug = True
 
-d = DepthAI(threshold=0.4)
+d = DepthAI()
 pt = PersonTrackerDebug() if debug else PersonTracker()
 shared_results = Manager().Value(ctypes.c_wchar_p, '{}')
 
@@ -47,12 +47,16 @@ p.daemon = True
 p.start()
 
 
-for frame, results in d.run():
-    total = pt.parse(frame, results)
+for frame, detections in d.run():
+    total = pt.parse(frame, detections)
     shared_results.value = json.dumps(pt.get_directions())
-
     if debug:
-        for left, top, right, bottom in results:
+        img_h = frame.shape[0]
+        img_w = frame.shape[1]
+
+        for detection in detections:
+            left, top = int(detection.x_min * img_w), int(detection.y_min * img_h)
+            right, bottom = int(detection.x_max * img_w), int(detection.y_max * img_h)
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
         print(pt.get_directions())
         cv2.imshow('previewout', frame)

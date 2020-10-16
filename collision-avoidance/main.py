@@ -21,7 +21,7 @@ class Main:
         self.crash_avoidance = CrashAvoidance()
 
     def parse_frame(self, frame, results):
-        pts = [(item['distance_x'], item['distance_z']) for item in results]
+        pts = [(item.depth_x, item.depth_z) for item in results]
         tracker_objs = self.tracker.update(pts)
         crash_alert = self.crash_avoidance.parse(tracker_objs)
         if crash_alert:
@@ -93,8 +93,8 @@ class MainDebug(Main):
         bird_frame = self.distance_bird_frame.copy()
 
         for result in results:
-            left, right = self.calc_x(result['distance_x'], padding=2)
-            top, bottom = self.calc_z(result['distance_z'], padding=2)
+            left, right = self.calc_x(result.depth_x, padding=2)
+            top, bottom = self.calc_z(result.depth_z, padding=2)
             cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
         for key in list(self.tracker.history.keys()):

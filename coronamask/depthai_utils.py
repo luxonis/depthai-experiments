@@ -1,6 +1,4 @@
-import json
 import logging
-import uuid
 from pathlib import Path
 
 import cv2
@@ -35,14 +33,8 @@ class DepthAI:
     def capture(self):
         while True:
             nnet_packets, data_packets = self.pipeline.get_available_nnet_and_data_packets()
-            for _, nnet_packet in enumerate(nnet_packets):
-                self.network_results = []
-                for _, e in enumerate(nnet_packet.entries()):
-                    if e[0]['image_id'] == -1.0 or e[0]['conf'] == 0.0:
-                        break
-
-                    if e[0]['conf'] > 0.5 and e[0]['label'].is_integer():
-                        self.network_results.append(e[0])
+            for nnet_packet in nnet_packets:
+                self.network_results = list(nnet_packet.getDetectedObjects())
 
             for packet in data_packets:
                 if packet.stream_name == 'previewout':
@@ -54,25 +46,7 @@ class DepthAI:
                     data2 = data[2, :, :]
                     frame = cv2.merge([data0, data1, data2])
 
-                    img_h = frame.shape[0]
-                    img_w = frame.shape[1]
-
-                    boxes = []
-                    for e in self.network_results:
-                        try:
-                            boxes.append({
-                                # 'id': uuid.uuid4(),
-                                'label': e['label'],
-                                'detector': self.model_label,
-                                'conf': e['conf'],
-                                'left': int(e['x_min'] * img_w),
-                                'top': int(e['y_min'] * img_h),
-                                'right': int(e['x_max'] * img_w),
-                                'bottom': int(e['y_max'] * img_h),
-                            })
-                        except:
-                            continue
-                    yield frame, boxes
+                    yield frame, self.network_results
 
     def __del__(self):
         del self.pipeline
@@ -86,13 +60,18 @@ class DepthAIDebug(DepthAI):
         self.fps.start()
 
     def capture(self):
-        for frame, boxes in super().capture():
+        for frame, detections in super().capture():
             self.fps.update()
-            for box in boxes:
-                color = (0, 255, 0) if box['label'] == 2 else (0, 0, 255)
-                cv2.rectangle(frame, (box['left'], box['top']), (box['right'], box['bottom']), color, 2)
-                cv2.putText(frame, "Conf: {}".format(box['conf']), (box['left'], box['top'] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            yield frame, boxes
+
+            img_h = frame.shape[0]
+            img_w = frame.shape[1]
+            for detection in detections:
+                left, top = int(detection.x_min * img_w), int(detection.y_min * img_h)
+                right, bottom = int(detection.x_max * img_w), int(detection.y_max * img_h)
+                color = (0, 255, 0) if detection.label == 2 else (0, 0, 255)
+                cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+                cv2.putText(frame, "Conf: {}".format(detection.confidence), (left, top + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            yield frame, detections
 
     def __del__(self):
         super().__del__()
