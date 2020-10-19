@@ -11,7 +11,6 @@ p = device.create_pipeline(config={
         "blob_file": str(Path('./models/face-detection-retail-0004/face-detection-retail-0004.blob').resolve().absolute()),
         "blob_file_config": str(Path('./models/face-detection-retail-0004/face-detection-retail-0004.json').resolve().absolute()),
         'blob_file2': str(Path('./models/landmarks-regression-retail-0009/landmarks-regression-retail-0009.blob').resolve().absolute()),
-        'blob_file_config2': str(Path('./models/landmarks-regression-retail-0009/landmarks-regression-retail-0009.json').resolve().absolute()),
         'camera_input': "left_right",
         'NN_engines': 2,
         'shaves': 14,
