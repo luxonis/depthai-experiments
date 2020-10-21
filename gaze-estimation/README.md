@@ -21,7 +21,7 @@ Origina OpenVINO demo, on which this example was made, is [here](https://github.
 ## Usage
 
 ```
-usage: main_depthai.py [-h] [-nd] [-cam CAMERA] [-vid VIDEO]
+usage: main.py [-h] [-nd] [-cam CAMERA] [-vid VIDEO]
 
 optional arguments:
   -h, --help            show this help message and exit
