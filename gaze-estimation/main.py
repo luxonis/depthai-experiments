@@ -185,7 +185,7 @@ class Main:
         self.gaze_in = self.device.getInputQueue("gaze_in")
         self.gaze_nn = self.device.getOutputQueue("gaze_nn")
         if self.camera is not None:
-            self.cam_out = self.device.getOutputQueue("cam_out")
+            self.cam_out = self.device.getOutputQueue("cam_out", 1, True)
 
     def full_frame_cords(self, cords):
         original_cords = self.face_coords[0]
@@ -283,7 +283,8 @@ class Main:
             print(self.gaze)
 
         if debug:
-            cv2.imshow("Camera_view", cv2.resize(self.debug_frame, (900, 450)))
+            aspect_ratio = self.frame.shape[1] / self.frame.shape[0]
+            cv2.imshow("Camera_view", cv2.resize(self.debug_frame, ( int(900),  int(900 / aspect_ratio))))
             if cv2.waitKey(1) == ord('q'):
                 cv2.destroyAllWindows()
                 raise StopIteration()
