@@ -8,7 +8,7 @@ import depthai
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
-parser.add_argument('-cam', '--camera', type=int, help="Camera ID to be used for inference (conflicts with -vid)")
+parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
 parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
 args = parser.parse_args()
 
@@ -16,8 +16,8 @@ debug = not args.no_debug
 
 if args.camera and args.video:
     raise ValueError("Incorrect command line parameters! \"-cam\" cannot be used with \"-vid\"!")
-elif args.camera is None and args.video is None:
-    raise ValueError("Missing inference source! Either use \"-cam <cam_id>\" to run on DepthAI camera or \"-vid <path>\" to run on video file")
+elif args.camera is False and args.video is None:
+    raise ValueError("Missing inference source! Either use \"-cam\" to run on DepthAI camera or \"-vid <path>\" to run on video file")
 
 
 def wait_for_results(queue):
@@ -96,7 +96,7 @@ def draw_3d_axis(image, head_pose, origin, size=50):
 
 
 class Main:
-    def __init__(self, file=None, camera=None):
+    def __init__(self, file=None, camera=False):
         print("Loading pipeline...")
         self.file = file
         self.camera = camera
@@ -107,14 +107,14 @@ class Main:
         print("Creating pipeline...")
         self.pipeline = depthai.Pipeline()
 
-        if self.camera is not None:
+        if self.camera:
             # ColorCamera
             print("Creating Color Camera...")
             cam = self.pipeline.createColorCamera()
             cam.setPreviewSize(300, 300)
             cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
             cam.setInterleaved(False)
-            cam.setCamId(self.camera)
+            cam.setCamId(0)
             cam_xout = self.pipeline.createXLinkOut()
             cam_xout.setStreamName("cam_out")
             cam.preview.link(cam_xout.input)
@@ -184,7 +184,7 @@ class Main:
         self.pose_nn = self.device.getOutputQueue("pose_nn")
         self.gaze_in = self.device.getInputQueue("gaze_in")
         self.gaze_nn = self.device.getOutputQueue("gaze_nn")
-        if self.camera is not None:
+        if self.camera:
             self.cam_out = self.device.getOutputQueue("cam_out", 1, True)
 
     def full_frame_cords(self, cords):
