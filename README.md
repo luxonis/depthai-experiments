@@ -3,7 +3,15 @@ Experimental projects we've done with DepthAI.
 
 **Experiments** can be anything from "here's some code and it works sometimes" to "this is almost a tutorial".  
 
-The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list), but here are some as of June 1st 2020:
+The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list), but here are some as of October 23rd 2020:
+
+## Gaze estimation ((here)[https://github.com/luxonis/depthai-experiments/blob/master/gaze-estimation/README.md])
+
+This example demonstrates how to run 3 stage (3-series, 2 parallel) inference on DepthAI using Gen2 Pipeline Builder
+
+[![Gaze Example Demo](https://user-images.githubusercontent.com/5244214/96713680-426c7a80-13a1-11eb-81e6-238e3decb7be.gif)](https://www.youtube.com/watch?v=OzgK5-APxBU)
+
+Origina OpenVINO demo, on which this example was made, is [here](https://github.com/LCTyrell/Gaze_pointer_controller)
 
 ## COVID-19 Mask / No-Mask Detector ([here](https://github.com/luxonis/depthai-experiments/blob/master/coronamask/README.md))
 
