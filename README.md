@@ -65,7 +65,7 @@ This is a simple application which creates rgbd image from `right` and `depth_ra
 
 ![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
 
-## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/blob/master/wls-filter/README.md))
+## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/wls-filter))
 
 This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI.  
 
