@@ -9,6 +9,8 @@ Example running on [BW1092](https://shop.luxonis.com/collections/all/products/bw
 
 ### How to Run
 
-Run 
+Run
+```
 ./install_dependencies.sh
 ./main.py
+```
