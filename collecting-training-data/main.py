@@ -8,8 +8,6 @@ import cv2
 import depthai
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--threshold', default=0.03, type=float,
-                    help="Maximum difference between packet timestamps to be considered as synced")
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
 parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
@@ -30,13 +28,15 @@ p = device.create_pipeline(config={
     "streams": ["left", "right", "color", "disparity_color"],
     "ai": {
         "blob_file": str(Path('./mobilenet-ssd/mobilenet-ssd.blob').resolve().absolute()),
-        "blob_file_config": str(Path('./mobilenet-ssd/mobilenet-ssd.json').resolve().absolute())
     },
     'camera': {
         'mono': {
             'resolution_h': 720, 'fps': 30
         },
     },
+    'app': {
+        'sync_sequence_numbers': True,
+    }
 })
 
 if p is None:
@@ -52,10 +52,6 @@ def step_norm(value):
 
 def seq(packet):
     return packet.getMetadata().getSequenceNum()
-
-
-def tst(packet):
-    return packet.getMetadata().getTimestamp()
 
 
 # https://stackoverflow.com/a/10995203/5494277
@@ -102,14 +98,10 @@ def store_frames(frames_dict):
 
 
 class PairingSystem:
-    seq_streams = ["left", "right", "disparity_color"]
-    ts_streams = ["color"]
-    seq_ts_mapping_stream = "left"  # which stream's packet will be responsible for both ts and seq matching
+    seq_streams = ["left", "right", "disparity_color", "color"]
 
     def __init__(self):
-        self.ts_packets = {}
         self.seq_packets = {}
-        self.last_paired_ts = None
         self.last_paired_seq = None
 
     def add_packet(self, packet):
@@ -119,25 +111,13 @@ class PairingSystem:
                 **self.seq_packets.get(seq_key, {}),
                 packet.stream_name: packet
             }
-        elif packet.stream_name in self.ts_streams:
-            ts_key = step_norm(tst(packet))
-            self.ts_packets[ts_key] = {
-                **self.ts_packets.get(ts_key, {}),
-                packet.stream_name: packet
-            }
 
     def get_pairs(self):
         results = []
         for key in list(self.seq_packets.keys()):
             if has_keys(self.seq_packets[key], self.seq_streams):
-                ts_key = step_norm(tst(self.seq_packets[key][self.seq_ts_mapping_stream]))
-                if ts_key in self.ts_packets and has_keys(self.ts_packets[ts_key], self.ts_streams):
-                    results.append({
-                        **self.seq_packets[key],
-                        **self.ts_packets[ts_key]
-                    })
-                    self.last_paired_seq = key
-                    self.last_paired_ts = ts_key
+                results.append(self.seq_packets[key])
+                self.last_paired_seq = key
         if len(results) > 0:
             self.collect_garbage()
         return results
@@ -146,9 +126,6 @@ class PairingSystem:
         for key in list(self.seq_packets.keys()):
             if key <= self.last_paired_seq:
                 del self.seq_packets[key]
-        for key in list(self.ts_packets.keys()):
-            if key <= self.last_paired_ts:
-                del self.ts_packets[key]
 
 
 ps = PairingSystem()
