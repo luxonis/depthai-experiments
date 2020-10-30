@@ -5,7 +5,7 @@ Experimental projects we've done with DepthAI.
 
 The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list), but here are some as of October 23rd 2020:
 
-## Gaze estimation ([here](https://github.com/luxonis/depthai-experiments/blob/master/gaze-estimation/README.md))
+## Gaze estimation ([here](https://github.com/luxonis/depthai-experiments/blob/master/gaze-estimation))
 
 This example demonstrates how to run 3 stage (3-series, 2 parallel) inference on DepthAI using Gen2 Pipeline Builder
 
@@ -13,7 +13,7 @@ This example demonstrates how to run 3 stage (3-series, 2 parallel) inference on
 
 Origina OpenVINO demo, on which this example was made, is [here](https://github.com/LCTyrell/Gaze_pointer_controller)
 
-## COVID-19 Mask / No-Mask Detector ([here](https://github.com/luxonis/depthai-experiments/blob/master/coronamask/README.md))
+## COVID-19 Mask / No-Mask Detector ([here](https://github.com/luxonis/depthai-experiments/blob/master/coronamask))
 
 This project shows you how to run the COVID-19 mask/no-mask object detector which was trained [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks#covid-19-maskno-mask-training-)
 
@@ -42,7 +42,7 @@ So because there are often application-specific host-side filtering to be done o
 
 [![Spatial AI](https://user-images.githubusercontent.com/5244214/90748450-7c9e9a80-e2d2-11ea-9e9e-da65b5d9e6f0.gif)](https://www.youtube.com/watch?v=Cs8xo3mPBMg "3D Facial Landmark visualization")
 
-## People Counting ([here](https://github.com/luxonis/depthai-experiments/blob/master/people-counter/README.md))
+## People Counting ([here](https://github.com/luxonis/depthai-experiments/blob/master/people-counter))
 
 This is a basic usage example of megaAI and/or DepthAI (although it doesn't actually use the depth aspect of DepthAI): simply counting people in a scene and logging this count.
 
@@ -59,7 +59,7 @@ The model used in this example is [person_detection_retail_0013](https://docs.op
 [![Watch the demo](https://user-images.githubusercontent.com/5244214/90752628-ee2d1780-e2d7-11ea-8e48-ca94b02a7674.gif)](https://youtu.be/8RiHkkGKdj0)
 
 
-## Point Cloud Projection ([here](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection/README.md))
+## Point Cloud Projection ([here](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection))
 
 This is a simple application which creates rgbd image from `right` and `depth_raw` stream and projects it into point clouds. There is also a interactive point cloud visualizer. (depth_raw with left and rgb will be added soon)
 
