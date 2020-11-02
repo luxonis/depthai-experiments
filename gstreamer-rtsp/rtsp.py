@@ -18,7 +18,7 @@ class RtspSystem(GstRtspServer.RTSPMediaFactory):
         self.fps = 15
         self.duration = 1 / self.fps * Gst.SECOND  # duration of a frame in nanoseconds
         self.launch_string = 'appsrc name=source is-live=true block=true format=GST_FORMAT_TIME ' \
-                             'caps=video/x-raw,format=BGR,width=672,height=384,framerate={}/1 ' \
+                             'caps=video/x-raw,format=BGR,width=300,height=300,framerate={}/1 ' \
                              '! videoconvert ! video/x-raw,format=I420 ' \
                              '! x264enc speed-preset=ultrafast tune=zerolatency ' \
                              '! rtph264pay config-interval=1 name=pay0 pt=96'.format(self.fps)
@@ -78,20 +78,9 @@ if __name__ == "__main__":
     from pathlib import Path
     import cv2
 
-
-    def extract_color_frame(item):
-        data = item.getData()
-        meta = item.getMetadata()
-        w = int(meta.getFrameWidth())
-        h = int(meta.getFrameHeight())
-        yuv420p = data.reshape((h * 3 // 2, w))
-        bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
-        bgr = cv2.resize(bgr, (w, h), interpolation=cv2.INTER_AREA)
-        return bgr
-
     device = depthai.Device('', False)
     p = device.create_pipeline(config={
-        "streams": ["color"],
+        "streams": ["previewout"],
         "ai": {"blob_file": str(Path('./mobilenet-ssd/mobilenet-ssd.blob').resolve().absolute())}
     })
 
@@ -103,4 +92,9 @@ if __name__ == "__main__":
         data_packets = p.get_available_data_packets()
 
         for packet in data_packets:
-            server.send_frame(extract_color_frame(packet))
+            data = packet.getData()
+            data0 = data[0, :, :]
+            data1 = data[1, :, :]
+            data2 = data[2, :, :]
+            frame = cv2.merge([data0, data1, data2])
+            server.send_frame(frame)
