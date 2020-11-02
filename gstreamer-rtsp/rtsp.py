@@ -1,7 +1,5 @@
-import sys
 import threading
 import logging
-import cv2
 
 import gi
 gi.require_version('Gst', '1.0')
@@ -83,12 +81,5 @@ class RTSPServer():
         self.rtsp = self._gst.get_rtsp_system()
         self.rtsp.start()
 
-    def send_frame(self, results, frame):
-        #RTSP should always show inference results
-        for box in results:
-            #log.info(box)
-            if box['conf'] <= 1.0 and box['conf'] > 0.5:
-                top_left = (box['left'], box['top'])
-                cv2.putText(frame, "{:.2f}".format(box['conf']),top_left ,cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                cv2.rectangle(frame, (box['left'], box['top']), (box['right'], box['bottom']), (0, 255, 0), 2)
+    def send_frame(self, frame):
         self.rtsp.send_frame(frame)
