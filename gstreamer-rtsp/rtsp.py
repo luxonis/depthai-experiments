@@ -60,26 +60,47 @@ class RtspSystem(GstRtspServer.RTSPMediaFactory):
         appsrc.connect('need-data', self.on_need_data)
 
 
-class GstServer(GstRtspServer.RTSPServer):
+class RTSPServer(GstRtspServer.RTSPServer):
     def __init__(self, **properties):
-        super(GstServer, self).__init__(**properties)
+        super(RTSPServer, self).__init__(**properties)
         self.rtsp = RtspSystem()
         self.rtsp.set_shared(True)
         self.get_mount_points().add_factory("/preview", self.rtsp)
         self.attach(None)
-    
-    def get_rtsp_system(self):
-        return self.rtsp
-
-    def init_gst(self):
         Gst.init(None)
-
-class RTSPServer():
-    def __init__(self, **properties):
-        self._gst = GstServer()
-        self._gst.init_gst()
-        self.rtsp = self._gst.get_rtsp_system()
         self.rtsp.start()
 
     def send_frame(self, frame):
         self.rtsp.send_frame(frame)
+
+if __name__ == "__main__":
+    import depthai
+    from pathlib import Path
+    import cv2
+
+
+    def extract_color_frame(item):
+        data = item.getData()
+        meta = item.getMetadata()
+        w = int(meta.getFrameWidth())
+        h = int(meta.getFrameHeight())
+        yuv420p = data.reshape((h * 3 // 2, w))
+        bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
+        bgr = cv2.resize(bgr, (w, h), interpolation=cv2.INTER_AREA)
+        return bgr
+
+    device = depthai.Device('', False)
+    p = device.create_pipeline(config={
+        "streams": ["color"],
+        "ai": {"blob_file": str(Path('./mobilenet-ssd/mobilenet-ssd.blob').resolve().absolute())}
+    })
+
+    if p is None:
+        raise RuntimeError("Error initializing pipelne")
+
+    server = RTSPServer()
+    while True:
+        data_packets = p.get_available_data_packets()
+
+        for packet in data_packets:
+            server.send_frame(extract_color_frame(packet))
