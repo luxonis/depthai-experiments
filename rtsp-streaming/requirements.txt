@@ -1,0 +1,4 @@
+PyGObject==3.38.0
+opencv-python==4.2.0.34; platform_machine != "armv7l"
+opencv-python==4.1.0.25; platform_machine == "armv7l"
+depthai==0.3.0.0
