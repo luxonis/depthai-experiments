@@ -1,17 +1,8 @@
 import cv2
 import numpy as np
 import depthai as dai
+from projector_3d import PointCloudVisualizer
 
-# StereoDepth config options. TODO move to command line options
-out_depth      = False  # Disparity by default
-out_rectified  = False  # Output and display rectified streams
-lrcheck  = False  # Better handling for occlusions
-extended = False  # Closer-in minimum depth, disparity range is doubled 
-subpixel = False  # Better accuracy for longer distance, fractional disparity 32-levels
-
-# Sanitize some incompatible options
-if extended or subpixel:
-    out_rectified = False # TODO
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
 are enabled, then:
@@ -22,6 +13,31 @@ are enabled, then:
 Otherwise, depth output is U16 (mm) and median is functional.
 But like on Gen1, either depth or disparity has valid data. TODO enable both.
 '''
+
+# StereoDepth config options. TODO move to command line options
+out_depth      = False  # Disparity by default
+out_rectified  = False  # Output and display rectified streams
+lrcheck  = True   # Better handling for occlusions
+extended = False  # Closer-in minimum depth, disparity range is doubled 
+subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
+# Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7 
+median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+
+# Sanitize some incompatible options
+if extended or subpixel:
+    out_rectified = False # TODO
+if lrcheck or extended or subpixel:
+    median   = dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF # TODO
+
+print("StereoDepth config options:")
+print("    Left-Right check:  ", lrcheck)
+print("    Extended disparity:", extended)
+print("    Subpixel:          ", subpixel)
+print("    Median filtering:  ", median)
+
+# TODO add API to read this from device / calib data
+right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
+pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
 
 def create_rgb_cam_pipeline():
     print("Creating pipeline: RGB CAM -> XLINK")
@@ -97,7 +113,7 @@ def create_stereo_depth_pipeline():
     stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
     #stereo.loadCalibrationFile(path) # Default: EEPROM calib is used
     #stereo->setInputResolution(1280, 720); # Default: resolution is taken from Mono nodes
-    #stereo.setMedianFilter(dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF) # KERNEL_7x7 default
+    stereo.setMedianFilter(median) # KERNEL_7x7 default
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)
@@ -118,14 +134,28 @@ def create_stereo_depth_pipeline():
     stereo.rectifiedLeft .link(xout_rectif_left.input)
     stereo.rectifiedRight.link(xout_rectif_right.input)
 
-    streams = ['left', 'right', 'disparity', 'depth']
+    streams = ['left', 'right']
     if out_rectified:
         streams.extend(['rectified_left', 'rectified_right'])
+    streams.extend(['disparity', 'depth'])
 
     return pipeline, streams
 
 # The operations done here seem very CPU-intensive, TODO
 def convert_to_cv2_frame(name, image):
+    global last_right
+    baseline = 75 #mm
+    focal = right_intrinsic[0][0]
+    max_disp = 96
+    disp_type = np.uint8
+    disp_levels = 1
+    if (extended):
+        max_disp *= 2
+    if (subpixel):
+        max_disp *= 32;
+        disp_type = np.uint16  # 5 bits fractional disparity
+        disp_levels = 32
+
     data, w, h = image.getData(), image.getWidth(), image.getHeight()
     # TODO check image frame type instead of name
     if name == 'rgb_preview':
@@ -137,18 +167,28 @@ def convert_to_cv2_frame(name, image):
         # TODO: this contains FP16 with (lrcheck or extended or subpixel)
         frame = np.array(data).astype(np.uint8).view(np.uint16).reshape((h, w))
     elif name == 'disparity':
-        max_disp = 96
-        type = np.uint8
-        if (extended): max_disp *= 2
-        if (subpixel): max_disp *= 32; type = np.uint16  # 5 bits fractional disparity
-        disp = np.array(data).astype(np.uint8).view(type).reshape((h, w))
+        disp = np.array(data).astype(np.uint8).view(disp_type).reshape((h, w))
+
+        # Compute depth from disparity (32 levels)
+        with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
+            depth = (disp_levels * baseline * focal / disp).astype(np.uint16)
+
         # Optionally, extend disparity range to better visualize it
         frame = (disp * 255. / max_disp).astype(np.uint8)
+
         # Optionally, apply a color map
         frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
         #frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
+
+        # TODO use rectified here
+        #right_rectified = cv2.flip(right_rectified, 1)
+        #pcl_converter.rgbd_to_projection(depth, frame) #should be color, but PCL displays as gray
+        pcl_converter.rgbd_to_projection(depth, last_right)
+        pcl_converter.visualize_pcd()
+
     else: # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
+        if name == 'right': last_right = frame
     return frame
 
 def test_pipeline():
@@ -172,6 +212,7 @@ def test_pipeline():
             name  = q.getName()
             image = q.get()
             #print("Received frame:", name)
+            if name in ['left', 'depth']: continue # Skip these for now
             frame = convert_to_cv2_frame(name, image)
             cv2.imshow(name, frame)
         if cv2.waitKey(1) == ord('q'):
