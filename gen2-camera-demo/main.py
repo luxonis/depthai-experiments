@@ -177,13 +177,14 @@ def convert_to_cv2_frame(name, image):
         frame = (disp * 255. / max_disp).astype(np.uint8)
 
         # Optionally, apply a color map
-        frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
-        #frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
+        # frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
+        frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
 
         # TODO use rectified here
         #right_rectified = cv2.flip(right_rectified, 1)
-        #pcl_converter.rgbd_to_projection(depth, frame) #should be color, but PCL displays as gray
-        pcl_converter.rgbd_to_projection(depth, last_right)
+        # print(frame.shape)
+        pcl_converter.rgbd_to_projection(depth, frame) #should be color, but PCL displays as gray
+        # pcl_converter.rgbd_to_projection(depth, last_right)
         pcl_converter.visualize_pcd()
 
     else: # mono streams / single channel
