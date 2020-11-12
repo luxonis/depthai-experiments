@@ -183,7 +183,8 @@ def convert_to_cv2_frame(name, image):
         # TODO use rectified here
         #right_rectified = cv2.flip(right_rectified, 1)
         # print(frame.shape)
-        pcl_converter.rgbd_to_projection(depth, frame) #should be color, but PCL displays as gray
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pcl_converter.rgbd_to_projection(depth, frame_rgb)
         # pcl_converter.rgbd_to_projection(depth, last_right)
         pcl_converter.visualize_pcd()
 
