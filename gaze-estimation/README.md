@@ -2,7 +2,7 @@
 
 This example demonstrates how to run 3 stage inference on DepthAI using Gen2 Pipeline Builder.
 
-Origina OpenVINO demo, on which this example was made, is [here](https://github.com/LCTyrell/Gaze_pointer_controller).
+Original OpenVINO demo, on which this example was made, is [here](https://github.com/LCTyrell/Gaze_pointer_controller).
 
 ## Demo
 
