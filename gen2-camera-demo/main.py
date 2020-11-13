@@ -16,7 +16,7 @@ But like on Gen1, either depth or disparity has valid data. TODO enable both.
 
 # StereoDepth config options. TODO move to command line options
 out_depth      = False  # Disparity by default
-out_rectified  = False  # Output and display rectified streams
+out_rectified  = True   # Output and display rectified streams
 lrcheck  = True   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled 
 subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
@@ -24,8 +24,6 @@ subpixel = True   # Better accuracy for longer distance, fractional disparity 32
 median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 
 # Sanitize some incompatible options
-if extended or subpixel:
-    out_rectified = False # TODO
 if lrcheck or extended or subpixel:
     median   = dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF # TODO
 
@@ -143,7 +141,7 @@ def create_stereo_depth_pipeline():
 
 # The operations done here seem very CPU-intensive, TODO
 def convert_to_cv2_frame(name, image):
-    global last_right
+    global last_rectif_right
     baseline = 75 #mm
     focal = right_intrinsic[0][0]
     max_disp = 96
@@ -173,24 +171,27 @@ def convert_to_cv2_frame(name, image):
         with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
             depth = (disp_levels * baseline * focal / disp).astype(np.uint16)
 
-        # Optionally, extend disparity range to better visualize it
-        frame = (disp * 255. / max_disp).astype(np.uint8)
+        if 1: # Optionally, extend disparity range to better visualize it
+            frame = (disp * 255. / max_disp).astype(np.uint8)
 
-        # Optionally, apply a color map
-        # frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
-        frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
+        if 1: # Optionally, apply a color map
+            frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
+            #frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
 
-        # TODO use rectified here
-        #right_rectified = cv2.flip(right_rectified, 1)
-        # print(frame.shape)
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        pcl_converter.rgbd_to_projection(depth, frame_rgb)
-        # pcl_converter.rgbd_to_projection(depth, last_right)
-        pcl_converter.visualize_pcd()
+        if 1: # point cloud viewer
+            if 0: # Option 1: project colorized disparity
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pcl_converter.rgbd_to_projection(depth, frame_rgb, True)
+            else: # Option 2: project rectified right
+                pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
+            pcl_converter.visualize_pcd()
 
     else: # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
-        if name == 'right': last_right = frame
+        if name.startswith('rectified_'):
+            frame = cv2.flip(frame, 1)
+        if name == 'rectified_right':
+            last_rectif_right = frame
     return frame
 
 def test_pipeline():
@@ -214,7 +215,8 @@ def test_pipeline():
             name  = q.getName()
             image = q.get()
             #print("Received frame:", name)
-            if name in ['left', 'depth']: continue # Skip these for now
+            # Skip some streams for now, to reduce CPU load
+            if name in ['left', 'right', 'rectified_left', 'depth']: continue
             frame = convert_to_cv2_frame(name, image)
             cv2.imshow(name, frame)
         if cv2.waitKey(1) == ord('q'):
