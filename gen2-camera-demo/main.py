@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import depthai as dai
 from projector_3d import PointCloudVisualizer
-
+from pathlib import Path
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
 are enabled, then:
@@ -14,6 +14,11 @@ Otherwise, depth output is U16 (mm) and median is functional.
 But like on Gen1, either depth or disparity has valid data. TODO enable both.
 '''
 
+curr_path = Path(__file__).parent.resolve()
+print("path")
+print(curr_path)
+Path("./pcl_dataset/depth").mkdir(parents=True, exist_ok=True)
+Path("./pcl_dataset/rec_right").mkdir(parents=True, exist_ok=True)
 # StereoDepth config options. TODO move to command line options
 out_depth      = False  # Disparity by default
 out_rectified  = False  # Output and display rectified streams
@@ -38,6 +43,8 @@ print("    Median filtering:  ", median)
 # TODO add API to read this from device / calib data
 right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
 pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
+capture_pcl = False
+
 
 def create_rgb_cam_pipeline():
     print("Creating pipeline: RGB CAM -> XLINK")
@@ -143,7 +150,7 @@ def create_stereo_depth_pipeline():
 
 # The operations done here seem very CPU-intensive, TODO
 def convert_to_cv2_frame(name, image):
-    global last_right
+    global last_right, count, capture_pcl
     baseline = 75 #mm
     focal = right_intrinsic[0][0]
     max_disp = 96
@@ -179,13 +186,26 @@ def convert_to_cv2_frame(name, image):
         # Optionally, apply a color map
         # frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
         frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
-
+        
         # TODO use rectified here
         #right_rectified = cv2.flip(right_rectified, 1)
         # print(frame.shape)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pcl_converter.rgbd_to_projection(depth, frame_rgb)
         # pcl_converter.rgbd_to_projection(depth, last_right)
+        if last_right is not None:
+            if capture_pcl:
+                print("capturing...")
+                count += 1
+                depth_path = str(curr_path) + '/pcl_dataset/depth/depth_' + str(count)+'.png'
+                rec_right_path =  str(curr_path) + '/pcl_dataset/rec_right/rec_right' + str(count)+'.png'
+                # print(depth_path)
+                cv2.imwrite(depth_path, depth)
+                cv2.imwrite(rec_right_path, last_right)
+                capture_pcl = False
+            pcl_converter.rgbd_to_projection(depth, last_right, True)
+            pcl_converter.visualize_pcd()
+
         pcl_converter.visualize_pcd()
 
     else: # mono streams / single channel
@@ -194,6 +214,7 @@ def convert_to_cv2_frame(name, image):
     return frame
 
 def test_pipeline():
+    global capture_pcl
    #pipeline, streams = create_rgb_cam_pipeline()
    #pipeline, streams = create_mono_cam_pipeline()
     pipeline, streams = create_stereo_depth_pipeline()
@@ -217,10 +238,14 @@ def test_pipeline():
             if name in ['left', 'depth']: continue # Skip these for now
             frame = convert_to_cv2_frame(name, image)
             cv2.imshow(name, frame)
-        if cv2.waitKey(1) == ord('q'):
+        key = cv2.waitKey(1)
+        if key == ord('q'):
             break
+        if key == ord('d'):
+            capture_pcl = True
 
     print("Closing device")
     del device
 
+count = 0
 test_pipeline()

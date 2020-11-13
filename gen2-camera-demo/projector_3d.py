@@ -21,12 +21,12 @@ class PointCloudVisualizer():
         self.vis.create_window()
         self.isstarted = False
 
-    def rgbd_to_projection(self, depth_map, rgb):
+    def rgbd_to_projection(self, depth_map, rgb, rgb_to_intensity = False):
         self.depth_map = depth_map
         self.rgb = rgb
         rgb_o3d = o3d.geometry.Image(self.rgb)
         depth_o3d = o3d.geometry.Image(self.depth_map)
-        rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(rgb_o3d, depth_o3d, convert_rgb_to_intensity=False)
+        rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(rgb_o3d, depth_o3d, convert_rgb_to_intensity=rgb_to_intensity)
         if self.pcl is None:
             self.pcl = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
         else:
