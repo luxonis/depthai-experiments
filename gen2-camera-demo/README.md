@@ -24,7 +24,7 @@ Select one pipeline to run:
 
 ### Example depth results with subpixel and lrcheck enabled
 
-![image](https://user-images.githubusercontent.com/32992551/99454589-dfa8c900-28e3-11eb-8464-e719302d9f04.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454680-fea75b00-28e3-11eb-80bc-2004016d75e2.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454698-0404a580-28e4-11eb-9cda-462708ef160d.png)
+![image](https://user-images.githubusercontent.com/32992551/99454589-dfa8c900-28e3-11eb-8464-e719302d9f04.png)
