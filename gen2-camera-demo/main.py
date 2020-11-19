@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import depthai as dai
+from time import sleep
 from projector_3d import PointCloudVisualizer
 
 '''
@@ -15,8 +16,10 @@ But like on Gen1, either depth or disparity has valid data. TODO enable both.
 '''
 
 # StereoDepth config options. TODO move to command line options
+source_camera  = True   # If False, will read input frames from 'dataset' folder
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
+point_cloud    = True   # Create point cloud visualizer. Depends on 'out_rectified'
 lrcheck  = True   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled 
 subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
@@ -35,10 +38,16 @@ print("    Median filtering:  ", median)
 
 # TODO add API to read this from device / calib data
 right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
-pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
+
+pcl_converter = None
+if point_cloud:
+    if out_rectified:
+        pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
+    else:
+        print("Disabling point-cloud visualizer, as out_rectified is not set")
 
 def create_rgb_cam_pipeline():
-    print("Creating pipeline: RGB CAM -> XLINK")
+    print("Creating pipeline: RGB CAM -> XLINK OUT")
     pipeline = dai.Pipeline()
 
     cam          = pipeline.createColorCamera()
@@ -61,7 +70,7 @@ def create_rgb_cam_pipeline():
     return pipeline, streams
 
 def create_mono_cam_pipeline():
-    print("Creating pipeline: MONO CAMS -> XLINK")
+    print("Creating pipeline: MONO CAMS -> XLINK OUT")
     pipeline = dai.Pipeline()
 
     cam_left   = pipeline.createMonoCamera()
@@ -85,12 +94,20 @@ def create_mono_cam_pipeline():
 
     return pipeline, streams
 
-def create_stereo_depth_pipeline():
-    print("Creating Stereo Depth pipeline: MONO CAMS -> STEREO -> XLINK")
+def create_stereo_depth_pipeline(from_camera=True):
+    print("Creating Stereo Depth pipeline: ", end='')
+    if from_camera:
+        print("MONO CAMS -> STEREO -> XLINK OUT")
+    else:
+        print("XLINK IN -> STEREO -> XLINK OUT")
     pipeline = dai.Pipeline()
 
-    cam_left          = pipeline.createMonoCamera()
-    cam_right         = pipeline.createMonoCamera()
+    if from_camera:
+        cam_left      = pipeline.createMonoCamera()
+        cam_right     = pipeline.createMonoCamera()
+    else:
+        cam_left      = pipeline.createXLinkIn()
+        cam_right     = pipeline.createXLinkIn()
     stereo            = pipeline.createStereoDepth()
     xout_left         = pipeline.createXLinkOut()
     xout_right        = pipeline.createXLinkOut()
@@ -99,22 +116,31 @@ def create_stereo_depth_pipeline():
     xout_rectif_left  = pipeline.createXLinkOut()
     xout_rectif_right = pipeline.createXLinkOut()
 
-    cam_left .setCamId(1)
-    cam_right.setCamId(2)
-    for cam in [cam_left, cam_right]: # Common config
-        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-        #cam.setFps(20.0)
+    if from_camera:
+        cam_left .setCamId(1)
+        cam_right.setCamId(2)
+        for cam in [cam_left, cam_right]: # Common config
+            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+            #cam.setFps(20.0)
+    else:
+        cam_left .setStreamName('in_left')
+        cam_right.setStreamName('in_right')
 
     stereo.setOutputDepth(out_depth)
     stereo.setOutputRectified(out_rectified)
     stereo.setConfidenceThreshold(200)
     stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
-    #stereo.loadCalibrationFile(path) # Default: EEPROM calib is used
-    #stereo->setInputResolution(1280, 720); # Default: resolution is taken from Mono nodes
     stereo.setMedianFilter(median) # KERNEL_7x7 default
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)
+    if from_camera:
+        # Default: EEPROM calib is used, and resolution taken from MonoCamera nodes
+        #stereo.loadCalibrationFile(path)
+        pass
+    else:
+        stereo.setEmptyCalibration() # Set if the input frames are already rectified
+        stereo.setInputResolution(1280, 720)
 
     xout_left        .setStreamName('left')
     xout_right       .setStreamName('right')
@@ -178,7 +204,7 @@ def convert_to_cv2_frame(name, image):
             frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
             #frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
 
-        if 1: # point cloud viewer
+        if pcl_converter is not None:
             if 0: # Option 1: project colorized disparity
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 pcl_converter.rgbd_to_projection(depth, frame_rgb, True)
@@ -197,12 +223,33 @@ def convert_to_cv2_frame(name, image):
 def test_pipeline():
    #pipeline, streams = create_rgb_cam_pipeline()
    #pipeline, streams = create_mono_cam_pipeline()
-    pipeline, streams = create_stereo_depth_pipeline()
+    pipeline, streams = create_stereo_depth_pipeline(source_camera)
 
     print("Creating DepthAI device")
-    device = dai.Device()
+    if 1:
+        device = dai.Device()
+    else: # For debug mode, with the firmware already loaded
+        found, device_info = dai.XLinkConnection.getFirstDevice(
+                dai.XLinkDeviceState.X_LINK_BOOTED)
+        if found:
+            device = dai.Device(device_info)
+        else:
+            raise RuntimeError("Device not found")
     print("Starting pipeline")
     device.startPipeline(pipeline)
+
+    in_streams = []
+    if not source_camera:
+        # Reversed order trick:
+        # The sync stage on device side has a timeout between receiving left
+        # and right frames. In case a delay would occur on host between sending
+        # left and right, the timeout will get triggered.
+        # We make sure to send first the right frame, then left.
+        in_streams.extend(['in_right', 'in_left'])
+    in_q_list = []
+    for s in in_streams:
+        q = device.getInputQueue(s)
+        in_q_list.append(q)
 
     # Create a receive queue for each stream
     q_list = []
@@ -210,13 +257,40 @@ def test_pipeline():
         q = device.getOutputQueue(s, 8, True)
         q_list.append(q)
 
+    # Need to set a timestamp for input frames, for the sync stage in Stereo node
+    timestamp_ms = 0
+    index = 0
     while True:
+        # Handle input streams, if any
+        if in_q_list:
+            dataset_size = 2  # Number of image pairs
+            frame_interval_ms = 33
+            for q in in_q_list:
+                name = q.getName()
+                path = 'dataset/' + str(index) + '/' + name + '.png'
+                data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
+                tstamp_ns = timestamp_ms * (1000*1000)
+                tstamp = dai.Timestamp()
+                tstamp.sec  = tstamp_ns // (1000*1000*1000)
+                tstamp.nsec = tstamp_ns  % (1000*1000*1000)
+                img = dai.ImgFrame()
+                img.setData(data)
+                img.setTimestamp(tstamp)
+                img.setWidth(1280)
+                img.setHeight(720)
+                q.send(img)
+                print("Sent frame: {:25s}".format(path), 'timestamp_ms:', timestamp_ms)
+            timestamp_ms += frame_interval_ms
+            index = (index + 1) % dataset_size
+            if 1: # Optional delay between iterations, host driven pipeline
+                sleep(frame_interval_ms / 1000)
+        # Handle output streams
         for q in q_list:
             name  = q.getName()
             image = q.get()
             #print("Received frame:", name)
             # Skip some streams for now, to reduce CPU load
-            if name in ['left', 'right', 'rectified_left', 'depth']: continue
+            if name in ['left', 'right', 'depth']: continue
             frame = convert_to_cv2_frame(name, image)
             cv2.imshow(name, frame)
         if cv2.waitKey(1) == ord('q'):
