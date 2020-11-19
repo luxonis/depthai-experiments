@@ -47,7 +47,7 @@ if point_cloud:
         print("Disabling point-cloud visualizer, as out_rectified is not set")
 
 def create_rgb_cam_pipeline():
-    print("Creating pipeline: RGB CAM -> XLINK")
+    print("Creating pipeline: RGB CAM -> XLINK OUT")
     pipeline = dai.Pipeline()
 
     cam          = pipeline.createColorCamera()
@@ -70,7 +70,7 @@ def create_rgb_cam_pipeline():
     return pipeline, streams
 
 def create_mono_cam_pipeline():
-    print("Creating pipeline: MONO CAMS -> XLINK")
+    print("Creating pipeline: MONO CAMS -> XLINK OUT")
     pipeline = dai.Pipeline()
 
     cam_left   = pipeline.createMonoCamera()
@@ -95,7 +95,11 @@ def create_mono_cam_pipeline():
     return pipeline, streams
 
 def create_stereo_depth_pipeline(from_camera=True):
-    print("Creating Stereo Depth pipeline: MONO CAMS -> STEREO -> XLINK")
+    print("Creating Stereo Depth pipeline: ", end='')
+    if from_camera:
+        print("MONO CAMS -> STEREO -> XLINK OUT")
+    else:
+        print("XLINK IN -> STEREO -> XLINK OUT")
     pipeline = dai.Pipeline()
 
     if from_camera:
