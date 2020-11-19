@@ -1,4 +1,6 @@
-### Gen2 Camera Demo
+## Gen2 Camera Demo
+
+### Real-Time Depth from DepthAI Stereo Pair
 
 StereoDepth configuration options:
 ```
@@ -22,9 +24,25 @@ Select one pipeline to run:
     pipeline, streams = create_stereo_depth_pipeline()
 ```
 
-### Example depth results with subpixel and lrcheck enabled
+#### Example depth results with subpixel and lrcheck enabled
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454680-fea75b00-28e3-11eb-80bc-2004016d75e2.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454698-0404a580-28e4-11eb-9cda-462708ef160d.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454589-dfa8c900-28e3-11eb-8464-e719302d9f04.png)
+
+### Depth from Rectified Host Images
+
+Set `source_camera = False`
+
+Using input images from: https://vision.middlebury.edu/stereo/data/scenes2014/
+
+![image](https://user-images.githubusercontent.com/60824841/99694663-589b5280-2a95-11eb-94fe-3f9cc2afc158.png)
+
+![image](https://user-images.githubusercontent.com/60824841/99694401-0eb26c80-2a95-11eb-8728-403665024750.png)
+
+For the bad looking areas, these are caused by the objects being too close to the camera for the given baseline, exceeding the 96 pixels max distance for disparity matching (StereoDepth engine constraint):
+![image](https://user-images.githubusercontent.com/60824841/99696549-7cf82e80-2a97-11eb-9dbd-3e3645be210f.png)
+
+These areas will be improved with `extended = True`, however Extended Disparity and Subpixel cannot operate both at the same time.
+
