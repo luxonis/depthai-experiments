@@ -212,10 +212,6 @@ def convert_to_cv2_frame(name, image):
 
         pcl_converter.visualize_pcd()
 
-
-
-
-
     else: # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
         if name.startswith('rectified_'):
@@ -258,8 +254,8 @@ def test_pipeline():
         if key == ord('p'):
             ply_pth = str(curr_path) + '/pcl_dataset/ply/'
             # pcl_converter.save_ply(ply_pth)
-            # pcl_converter.save_mesh_as_ply(ply_pth)
-            pcl_converter.save_mesh_as_ply_vista(ply_pth)
+            pcl_converter.save_mesh_from_rgbd(ply_pth)
+            # pcl_converter.save_mesh_as_ply_vista(ply_pth)
 
     print("Closing device")
     del device
