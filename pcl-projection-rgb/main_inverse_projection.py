@@ -172,9 +172,15 @@ while True:
             
             ## Projecting depth in right to world
             K_inv = np.linalg.inv(M2)
+            print('Inv of intrinics of right camera')
+            print(K_inv)
+            print('pixel_coords.shape') # (h,w) -> (y,x)
             print(pixel_coords.shape) # (h,w) -> (y,x)
-            print(pixel_coords[:,5])
+            print(pixel_coords[:,2])
+            print(depth_vals[0,2])
             temp = depth_vals.copy()
+            x = temp.flatten()
+            print(x[2])
             cam_coords = K_inv @ pixel_coords * temp.flatten() * (1./100) # [x, y, z]
             del temp
 
@@ -192,13 +198,13 @@ while True:
             # print(x.shape)
 
             print('printing single coordinate x , y, z')
-            print(cam_coords[2])
+            print(cam_coords[:,2])
 
             cam_coords_2 = np.vstack((cam_coords, np.ones_like(cam_coords[0]))) # [x,y,z,w]
             print(cam_coords_2.shape)
             
             print('printing single coordinate')
-            print(cam_coords_2[2])
+            print(cam_coords_2[:,2])
 
             extrensics = np.hstack((R, np.transpose([T])))
             print('extrensics.shape')
@@ -206,9 +212,14 @@ while True:
             print(extrensics)
         
             rgb_frame_ref_cloud = np.matmul(extrensics, cam_coords_2)
+            rgb_image_pts = np.matmul(M_RGB, rgb_frame_ref_cloud)
+        
 
-            # Project this back to rgb image using cv2.projectPoints(objectPoin..)
-
+            # Project this back to rgb image using cv2.projectPoints(objectPoin..) cannot use this now
+            # rgb_image_pts = cv2.projectPoints(rgb_frame_ref_cloud, cameraMatrix=M_RGB)
+            print('rgb_image_pts.shape')
+            print(rgb_image_pts.shape)
+            print(rgb_image_pts[:,2])
             # depth_map_rgb = np
             print('Transformed cloud shape')
             print(rgb_frame_ref_cloud.shape)
