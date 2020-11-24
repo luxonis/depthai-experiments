@@ -19,6 +19,7 @@ print("path")
 print(curr_path)
 Path("./pcl_dataset/depth").mkdir(parents=True, exist_ok=True)
 Path("./pcl_dataset/rec_right").mkdir(parents=True, exist_ok=True)
+Path("./pcl_dataset/ply").mkdir(parents=True, exist_ok=True)
 # StereoDepth config options. TODO move to command line options
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
@@ -39,7 +40,11 @@ print("    Subpixel:          ", subpixel)
 print("    Median filtering:  ", median)
 
 # TODO add API to read this from device / calib data
-right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
+# right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
+right_intrinsic = [[860.858642578125, 0.0,              649.8875732421875], 
+                   [0.0,            861.3336791992188, 309.46539306640625], 
+                   [0.0,            0.0,                1.0]]
+
 pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
 capture_pcl = False
 
@@ -250,6 +255,11 @@ def test_pipeline():
             break
         if key == ord('d'):
             capture_pcl = True
+        if key == ord('p'):
+            ply_pth = str(curr_path) + '/pcl_dataset/ply/'
+            # pcl_converter.save_ply(ply_pth)
+            # pcl_converter.save_mesh_as_ply(ply_pth)
+            pcl_converter.save_mesh_as_ply_vista(ply_pth)
 
     print("Closing device")
     del device
