@@ -49,6 +49,38 @@ pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
 capture_pcl = False
 
 
+
+_lambda = 8000
+def on_trackbar_change_lambda(value):
+    global _lambda
+    _lambda = value * 100
+    return
+
+_sigma = 1.5
+def on_trackbar_change_sigma(value):
+    global _sigma
+    _sigma = value / float(10)
+    return
+
+_lambda_trackbar_name = 'Lambda'
+wls_stream = "wls_filte disparityr"
+cv2.namedWindow(wls_stream)
+_lambda_slider_min = 0
+_lambda_slider_max = 255
+_lambda_slider_default = 80
+cv2.createTrackbar(_lambda_trackbar_name, wls_stream, _lambda_slider_min, _lambda_slider_max, on_trackbar_change_lambda)
+cv2.setTrackbarPos(_lambda_trackbar_name, wls_stream, _lambda_slider_default)
+wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
+
+_sigma_trackbar_name = 'Sigma'
+_sigma_slider_min = 0
+_sigma_slider_max = 100
+_sigma_slider_default = 15
+cv2.createTrackbar(_sigma_trackbar_name, wls_stream, _sigma_slider_min, _sigma_slider_max, on_trackbar_change_sigma)
+cv2.setTrackbarPos(_sigma_trackbar_name, wls_stream, _sigma_slider_default)
+
+
+
 def create_rgb_cam_pipeline():
     print("Creating pipeline: RGB CAM -> XLINK")
     pipeline = dai.Pipeline()
@@ -179,14 +211,23 @@ def convert_to_cv2_frame(name, image):
         frame = np.array(data).astype(np.uint8).view(np.uint16).reshape((h, w))
     elif name == 'disparity':
         disp = np.array(data).astype(np.uint8).view(disp_type).reshape((h, w))
+        wls_filter.setLambda(_lambda)
+        wls_filter.setSigmaColor(_sigma)
+        filtered_disp = wls_filter.filter(disp, last_rectif_right)
 
         # Compute depth from disparity (32 levels)
         with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
             depth = (disp_levels * baseline * focal / disp).astype(np.uint16)
 
+        with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
+            depth_wls = (disp_levels * baseline * focal / filtered_disp).astype(np.uint16)
+
         if 1: # Optionally, extend disparity range to better visualize it
             frame = (disp * 255. / max_disp).astype(np.uint8)
-
+        
+        if 1: # Optionally, extend disparity range to better visualize it
+            frame_wls = (filtered_disp * 255. / max_disp).astype(np.uint8)
+            cv2.imshow(wls_stream, frame_wls)
         # Optionally, apply a color map
         # frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
         if 1: # Optionally, apply a color map
@@ -196,7 +237,7 @@ def convert_to_cv2_frame(name, image):
         if 1: # point cloud viewer
             if 0: # Option 1: project colorized disparity
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                pcl_converter.rgbd_to_projection(depth, frame_rgb, True)
+                pcl_converter.rgbd_to_projection(depth_wls, frame_rgb, True)
             else: # Option 2: project rectified right
                 if capture_pcl:
                     print("capturing...")
@@ -207,7 +248,7 @@ def convert_to_cv2_frame(name, image):
                     cv2.imwrite(depth_path, depth)
                     cv2.imwrite(rec_right_path, last_rectif_right)
                     capture_pcl = False
-                pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
+                pcl_converter.rgbd_to_projection(depth_wls, last_rectif_right, False)
             pcl_converter.visualize_pcd()
 
         pcl_converter.visualize_pcd()

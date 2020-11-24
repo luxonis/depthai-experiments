@@ -15,3 +15,4 @@ mesh = o3d.io.read_triangle_mesh(full_pth)
 # mesh.compute_vertex_normals()
 
 o3d.visualization.draw_geometries([mesh])
+

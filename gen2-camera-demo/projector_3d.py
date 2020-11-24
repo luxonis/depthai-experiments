@@ -62,8 +62,8 @@ class PointCloudVisualizer():
     def save_mesh_from_rgbd(self, path):
         full_path = path + 'rgbd_' + str(self.count) + '.ply'
         volume = o3d.integration.ScalableTSDFVolume(
-            voxel_length=4.0 / 512.0,
-            sdf_trunc=0.04,
+            voxel_length=2.0 / 512.0,
+            sdf_trunc=0.06,
             color_type=o3d.integration.TSDFVolumeColorType.Gray32)
         ext = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]], dtype=np.float32)
         print(type(self.rgbd))
