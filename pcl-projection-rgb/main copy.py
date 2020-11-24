@@ -8,7 +8,7 @@ import cv2
 import depthai
 from projector_3d import PointCloudVisualizer
 import numpy as np
-
+from time import sleep
 
 def cvt_to_bgr(packet):
     meta = packet.getMetadata()
@@ -21,16 +21,22 @@ def cvt_to_bgr(packet):
 
 curr_dir = str(Path('.').resolve().absolute())
 
-# device = depthai.Device("", False)
-device = depthai.Device("/home/sachin/Desktop/luxonis/depthai/.fw_cache/depthai-e4d32d5cd79a6e881c82250c2d81621df97b5bc8.cmd", '')
+device = depthai.Device("", False)
 pipeline = device.create_pipeline(config={
     'streams': ['right', 'depth', 'color'],
     'ai': {
         "blob_file": str(Path('./mobilenet-ssd/mobilenet-ssd.blob').resolve().absolute()),
     },
-    'camera': {'mono': {'resolution_h': 720, 'fps': 30},
+    'camera': {'mono': {'resolution_h': 800, 'fps': 30},
                 'rgb':{'resolution_h': 1080, 'fps': 30}},
 })
+
+cam_c = depthai.CameraControl.CamId.RGB
+device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
+cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
+device.send_camera_control(cam_c, cmd_set_focus, '111')
+
+# sleep(2)
 
 if pipeline is None:
     raise RuntimeError("Error creating a pipeline!")
@@ -47,10 +53,10 @@ while True:
     for packet in data_packets:
         if packet.stream_name == "color":
             color = cvt_to_bgr(packet)
-            print(color.shape) # numpy format (h, w)
-            final_path = curr_dir + '/dataset/1080.png'
-            print(final_path)
-            cv2.imwrite(final_path, color)
+            # print(color.shape) # numpy format (h, w)
+            # final_path = curr_dir + '/dataset/3040.png'
+            # print(final_path)
+            # cv2.imwrite(final_path, color)
             scale_width = req_resolution[1]/color.shape[1]
             dest_res = (int(color.shape[1] * scale_width), int(color.shape[0] * scale_width)) ## opencv format dimensions
             # print("destination resolution------>")
@@ -96,7 +102,10 @@ while True:
             
         elif packet.stream_name == "depth":
             frame = packet.getData()
-            # M2 = device.get_right_intrinsic()
+            M2 = device.get_right_intrinsic()
+            print("Displaying M2")
+            print(M2)
+            print()
             # M3 = np.array([[2968.3318, 0, 2096.0703],
             #                 [0, 2968.3318, 1444.4983],
             #                 [0,     0,          1   ]], dtype=np.float32)
@@ -119,17 +128,24 @@ while True:
             M_RGB = np.array([[986.76263743, 0, 637.06145685],
                               [0, 985.51417088, 356.9171903],
                               [0,     0,          1   ]], dtype=np.float32)
-            # R = np.array([[0.999946, -0.008328, -0.006217],
-            #               [0.008445,  0.999782,  0.019107],
-            #               [0.006056, -0.019158,  0.999798]], dtype=np.float32)
+            R = np.array([[0.999946, -0.008328, -0.006446],
+                          [0.008442,  0.999802,  0.017998],
+                          [0.006295, -0.018051,  0.999817]], dtype=np.float32)
 
-            # T = np.array([-3.746683, 0.012276, 0.319712], np.float32)
+
+            print("R before")
+            print(R)
+            T = np.array([-3.746683, 0.012276, 0.319712], np.float32)
             # R[:,2] =  T
-            
-            # # H_forward = np.matmul(np.matmul(M_RGB, R), np.linalg.inv(M2))
+            print("R for homo")
+            print(R)
+            # H_forward = np.matmul(np.matmul(M_RGB, R), np.linalg.inv(M2))
             # H_forward = (np.matmul(M_RGB, R))
             H_inv = np.linalg.inv(device.get_right_homography())
             # H_inv = np.matmul(H_forward, np.matmul(np.linalg.inv(M2),np.linalg.inv(device.get_right_homography())))
+
+            H_forward = np.matmul(M_RGB,np.matmul( R, np.linalg.inv(M2)))
+            
 
 
             # H = np.linalg.inv(np.matmul(H_forward, H_inv))
@@ -155,15 +171,55 @@ while True:
                           [0.008445,  0.999782,  0.019107],
                           [0.006056, -0.019158,  0.999798]], dtype=np.float32)
 
+
             # using all images but rgb was top cropper while rest was center cropped
+            # H_c = np.array([[1.08690918 , 7.41758715e-02, 6.7014219],
+            #               [-1.13036787e-02,  1.09798085,  2.008645e+01],
+            #               [-4.56661176e-06, 1.57753751e-05,  1]], dtype=np.float32)
+
             H_c = np.array([[1.134155 , 2.26799882e-02, -1.68295944e+01],
                           [-2.66053562e-02,  1.13454926,  -7.51904639e+01],
                           [-4.75453420e-06, 1.03164808e-05,  1]], dtype=np.float32)
 
             F = np.array([[-2.54356430e-09 , 6.24459718e-08, -2.69654978e-04],
                           [-1.22788882e-07,  -7.93706750e-09,  -1.50105710e-02],
-                          [-6.28306896-05, 1.3159833-02,  1]], dtype=np.float32)
+                          [-6.28306896e-05, 1.3159833e-02,  1]], dtype=np.float32)
 
+            # calculate Fundamental matrix Fundamental
+            # Fundamental matrix doesnt workdir
+            # Soln: add autofocus to have const in calibration code. 
+            # Followed bty test H_c again using that and 
+            # then using depth map convert it into 3D pts and then place them back into rgb intrinsics
+            [-3.76482, 0.062066, 0.015372]
+            s_tb =np.array([[0 ,        -0.015372,      0.062066],
+                            [0.015372,  0,  -1.50105710e-02],
+                            [-6.28306896e-05, 1.3159833e-02,  0]], dtype=np.float32)
+  
+            print("Expected homography")
+            print(H_c)
+
+            print("Calculated homography")
+            print(H_forward)
+            print("R form H_c homography")
+            print(np.matmul(np.matmul(np.linalg.inv(M_RGB), H_c) ,M2))
+
+            right_trasns = cv2.warpPerspective(right, F, frame.shape[::-1],
+                                        cv2.INTER_CUBIC +
+                                        cv2.WARP_FILL_OUTLIERS +
+                                        cv2.WARP_INVERSE_MAP)
+
+            right_trasns2 = cv2.warpPerspective(right, H_c, frame.shape[::-1],
+                                        cv2.INTER_CUBIC +
+                                        cv2.WARP_FILL_OUTLIERS +
+                                        cv2.WARP_INVERSE_MAP)
+
+            cv2.imshow('Right fundamental matrix', right_trasns)
+            cv2.imshow('Right H_c', right_trasns2)
+            
+            backtorgb = cv2.cvtColor(right_trasns2,cv2.COLOR_GRAY2RGB)
+            backtorgb =  backtorgb[40:720 + 40, :]
+            added_image = cv2.addWeighted(color,0.6,backtorgb,0.1,0)
+            cv2.imshow('RGB-gray H-c overlay ', added_image)
 
             depth_vals = cv2.warpPerspective(frame, H_inv, frame.shape[::-1],
                                         cv2.INTER_CUBIC +
@@ -178,6 +234,13 @@ while True:
 
             cv2.imshow('color homo', depth_vals)
             frame = depth_vals
+
+            # backtorgb = cv2.cvtColor(depth_vals,cv2.COLOR_GRAY2RGB)
+            # print(color.shape)
+            # print(backtorgb.shape)
+            # added_image = cv2.addWeighted(color,0.4,backtorgb,0.1,0)
+            # cv2.imshow('RGBD overlay ', added_image)
+
             if right is not None:
                 if pcl_converter is None:
                     fd, path = tempfile.mkstemp(suffix='.json')
@@ -193,9 +256,9 @@ while True:
                             "height": 720,
                             "intrinsic_matrix": [item.astype(float) for row in M_RGB for item in row]
                         }, tmp)
-                    pcl_converter = PointCloudVisualizer(path)
-                pcd = pcl_converter.rgbd_to_projection(frame, color)
-                pcl_converter.visualize_pcd()
+                #     pcl_converter = PointCloudVisualizer(path)
+                # pcd = pcl_converter.rgbd_to_projection(frame, color)
+                # pcl_converter.visualize_pcd()
             cv2.imshow(packet.stream_name, frame)
     if cv2.waitKey(1) == ord("q"):
         break

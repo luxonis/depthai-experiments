@@ -1,2 +1,5 @@
 .DS_Store
 
+*.png
+*/dataset/*
+__pycache__
