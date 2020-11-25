@@ -61,7 +61,7 @@ while True:
 
     for nnet_packet in nnet_packets:
         cam = nnet_packet.getMetadata().getCameraName()
-        landmark_pairs = list(zip(*[iter(nnet_packet.getOutputsList()[1].reshape((10, )))] * 2))
+        landmark_pairs = list(zip(*[iter(nnet_packet.get_tensor(1).reshape((10, )))] * 2))
         detections[cam] = {
             'face': nnet_packet.getDetectedObjects(),
             'land': landmark_pairs,
