@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime, timedelta
+from multiprocessing import Pipe, Process
 from pathlib import Path
 import cv2
 import numpy as np
@@ -36,14 +37,8 @@ def to_planar(arr: np.ndarray, shape: tuple) -> list:
 
 
 def to_nn_result(nn_data):
+    print(nn_data, nn_data.getAllLayerNames(), dir(nn_data))
     return np.array(nn_data.getFirstLayerFp16())
-
-
-def to_tensor_result(packet):
-    return {
-        name: np.array(packet.getLayerFp16(name))
-        for name in [tensor.name for tensor in packet.getRaw().tensors]
-    }
 
 
 def to_bbox_result(nn_data):
@@ -73,6 +68,95 @@ def frame_norm(frame, *xy_vals):
         else:
             result.append(max(0, min(height, int(val * height))))
     return result
+
+
+class ThreadedNode:
+    EXIT_MESSAGE = "exit_message"
+
+    def __init__(self, *args):
+        self.mainPipe, self.subPipe = Pipe()
+        self.p = Process(target=self.run_process, args=(self.subPipe, *args))
+        self.p.start()
+
+    def run_process(self, pipe, *args):
+        self.start(*args)
+        while True:
+            val = pipe.recv()
+            if isinstance(val, str) and val == self.EXIT_MESSAGE:
+                return
+            self.accept(val)
+
+    def start(self, *args, **kwargs):
+        pass
+
+    def accept(self, data):
+        pass
+
+    def receive(self, data):
+        self.mainPipe.send(data)
+
+    def exit(self):
+        self.mainPipe.send(self.EXIT_MESSAGE)
+
+
+class DetectionNode(ThreadedNode):
+    def start(self, parent, device, reid_node):
+        self.detection_in = device.getInputQueue("detection_in")
+        self.detection_nn = device.getOutputQueue("detection_nn")
+        self.parent = parent
+        self.reid_node = reid_node
+
+    def accept(self, data):
+        nn_data = run_nn(self.detection_in, self.detection_nn, {"input": to_planar(data, (544, 320))})
+        results = to_bbox_result(nn_data)
+        pedestrian_coords = [
+            frame_norm(data, *obj[3:7])
+            for obj in results
+            if obj[2] > 0.4
+        ]
+
+        pedestrian_frames = [
+            (coords, data[coords[1]:coords[3], coords[0]:coords[2]])
+            for coords in pedestrian_coords
+        ]
+        if debug:
+            for bbox in pedestrian_coords:
+                cv2.rectangle(self.parent.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+
+        self.reid_node.receive(pedestrian_frames)
+
+
+class ReidentificationNode(ThreadedNode):
+    def start(self, parent, device):
+        self.reid_in = device.getInputQueue("reid_in")
+        self.reid_nn = device.getOutputQueue("reid_nn")
+        self.results = {}
+        self.results_path = {}
+        self.parent = parent
+
+    def accept(self, data):
+        coords, detection = data
+        nn_data = run_nn(self.reid_in, self.reid_nn, {"data": to_planar(detection, (48, 96))})
+        result = to_nn_result(nn_data)
+        for person_id in self.results:
+            dist = cos_dist(result, self.results[person_id])
+            if dist > 0.5:
+                result_id = person_id
+                self.results[person_id] = result
+                break
+        else:
+            result_id = len(self.results)
+            self.results[result_id] = result
+            if debug:
+                self.results_path[result_id] = []
+
+        if debug:
+            x = (coords[0] + coords[2]) // 2
+            y = (coords[1] + coords[3]) // 2
+            self.results_path[result_id].append([x, y])
+            cv2.putText(self.parent.debug_frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+            if len(self.results_path[result_id]) > 1:
+                cv2.polylines(self.parent.debug_frame, [np.array(self.results_path[result_id], dtype=np.int32)], False, (255, 0, 0), 2)
 
 
 class Main:
@@ -131,86 +215,17 @@ class Main:
         self.device = depthai.Device()
         print("Starting pipeline...")
         self.device.startPipeline(self.pipeline)
-        self.detection_in = self.device.getInputQueue("detection_in")
-        self.detection_nn = self.device.getOutputQueue("detection_nn")
-        self.reid_in = self.device.getInputQueue("reid_in")
-        self.reid_nn = self.device.getOutputQueue("reid_nn")
         if self.camera:
             self.cam_out = self.device.getOutputQueue("cam_out", 1, True)
 
-    def full_frame_cords(self, cords):
-        original_cords = self.face_coords[0]
-        return [
-            original_cords[0 if i % 2 == 0 else 1] + val
-            for i, val in enumerate(cords)
-        ]
-
-    def full_frame_bbox(self, bbox):
-        relative_cords = self.full_frame_cords(bbox)
-        height, width = self.frame.shape[:2]
-        y_min = max(0, relative_cords[1])
-        y_max = min(height, relative_cords[3])
-        x_min = max(0, relative_cords[0])
-        x_max = min(width, relative_cords[2])
-        result_frame = self.frame[y_min:y_max, x_min:x_max]
-        return result_frame, relative_cords
-
-    def draw_bbox(self, bbox, color):
-        cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
-
-    def run_detection(self):
-        nn_data = run_nn(self.detection_in, self.detection_nn, {"input": to_planar(self.frame, (544, 320))})
-        results = to_bbox_result(nn_data)
-        self.pedestrian_coords = [
-            frame_norm(self.frame, *obj[3:7])
-            for obj in results
-            if obj[2] > 0.4
-        ]
-        if len(self.pedestrian_coords) == 0:
-            return []
-        self.pedestrian_frames = [
-            (coords, self.frame[coords[1]:coords[3], coords[0]:coords[2]])
-            for coords in self.pedestrian_coords
-        ]
-        if debug:
-            for bbox in self.pedestrian_coords:
-                self.draw_bbox(bbox, (10, 245, 10))
-        return self.pedestrian_frames
-
-    def run_reid(self, detection_result):
-        coords, detection = detection_result
-        nn_data = run_nn(self.reid_in, self.reid_nn, {"data": to_planar(detection, (48, 96))})
-        result = to_nn_result(nn_data)
-        for person_id in self.results:
-            dist = cos_dist(result, self.results[person_id])
-            if dist > 0.5:
-                result_id = person_id
-                self.results[person_id] = result
-                break
-        else:
-            result_id = len(self.results)
-            self.results[result_id] = result
-            if debug:
-                self.results_path[result_id] = []
-
-        if debug:
-            x = (coords[0] + coords[2]) // 2
-            y = (coords[1] + coords[3]) // 2
-            self.results_path[result_id].append([x, y])
-            cv2.putText(self.debug_frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-            if len(self.results_path[result_id]) > 1:
-                cv2.polylines(self.debug_frame, [np.array(self.results_path[result_id], dtype=np.int32)], False, (255, 0, 0), 2)
-
-        return result_id
+        self.reid_node = ReidentificationNode(self, self.device)
+        self.det_node = DetectionNode(self, self.device, self.reid_node)
 
     def parse(self):
         if debug:
             self.debug_frame = self.frame.copy()
 
-        detection_results = self.run_detection()
-        if len(detection_results) > 0:
-            for detection_result in detection_results:
-                person_id = self.run_reid(detection_result)
+        self.det_node.receive(self.frame)
 
         if debug:
             aspect_ratio = self.frame.shape[1] / self.frame.shape[0]
@@ -247,6 +262,8 @@ class Main:
             self.run_video()
         else:
             self.run_camera()
+        self.det_node.exit()
+        self.reid_node.exit()
         del self.device
 
 
