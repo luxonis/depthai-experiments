@@ -1,10 +1,10 @@
 import argparse
+import threading
 from datetime import datetime, timedelta
-from multiprocessing import Pipe, Process
+from multiprocessing import Pipe
 from pathlib import Path
 import cv2
 import numpy as np
-from math import cos, sin
 import depthai
 
 parser = argparse.ArgumentParser()
@@ -37,7 +37,6 @@ def to_planar(arr: np.ndarray, shape: tuple) -> list:
 
 
 def to_nn_result(nn_data):
-    print(nn_data, nn_data.getAllLayerNames(), dir(nn_data))
     return np.array(nn_data.getFirstLayerFp16())
 
 
@@ -75,8 +74,8 @@ class ThreadedNode:
 
     def __init__(self, *args):
         self.mainPipe, self.subPipe = Pipe()
-        self.p = Process(target=self.run_process, args=(self.subPipe, *args))
-        self.p.start()
+        thread = threading.Thread(target=self.run_process, args=(self.subPipe, *args), daemon=True)
+        thread.start()
 
     def run_process(self, pipe, *args):
         self.start(*args)
@@ -123,7 +122,8 @@ class DetectionNode(ThreadedNode):
             for bbox in pedestrian_coords:
                 cv2.rectangle(self.parent.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
 
-        self.reid_node.receive(pedestrian_frames)
+        for frame in pedestrian_frames:
+            self.reid_node.receive(frame)
 
 
 class ReidentificationNode(ThreadedNode):
