@@ -250,7 +250,7 @@ class Main:
 
     def run_camera(self):
         while True:
-            self.frame = np.array(self.cam_out.get().getData()).reshape((3, 300, 300)).transpose(1, 2, 0).astype(np.uint8)
+            self.frame = np.array(self.cam_out.get().getData()).reshape((3, 320, 544)).transpose(1, 2, 0).astype(np.uint8)
             try:
                 self.parse()
             except StopIteration:
