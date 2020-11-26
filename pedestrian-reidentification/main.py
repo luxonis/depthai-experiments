@@ -1,5 +1,7 @@
 import argparse
+import queue
 import threading
+import time
 from datetime import datetime, timedelta
 from multiprocessing import Pipe
 from pathlib import Path
@@ -46,12 +48,15 @@ def to_bbox_result(nn_data):
     arr = arr.reshape((arr.size // 7, 7))
     return arr
 
-
-def run_nn(x_in, x_out, in_dict):
+def send_nn(x_in, in_dict):
     nn_data = depthai.NNData()
     for key in in_dict:
         nn_data.setLayer(key, in_dict[key])
     x_in.send(nn_data)
+
+
+def run_nn(x_in, x_out, in_dict):
+    send_nn(x_in, in_dict)
     has_results = wait_for_results(x_out)
     if not has_results:
         raise RuntimeError("No data from nn!")
@@ -73,90 +78,95 @@ class ThreadedNode:
     EXIT_MESSAGE = "exit_message"
 
     def __init__(self, *args):
-        self.mainPipe, self.subPipe = Pipe()
-        thread = threading.Thread(target=self.run_process, args=(self.subPipe, *args), daemon=True)
+        self.queue = queue.Queue()
+        thread = threading.Thread(target=self.run_process, args=(self.queue, *args), daemon=True)
         thread.start()
 
-    def run_process(self, pipe, *args):
+    def run_process(self, queue, *args):
+        self.queue = queue
         self.start(*args)
-        while True:
-            val = pipe.recv()
-            if isinstance(val, str) and val == self.EXIT_MESSAGE:
-                return
-            self.accept(val)
+        self.run()
 
     def start(self, *args, **kwargs):
         pass
 
-    def accept(self, data):
+    def run(self):
         pass
-
-    def receive(self, data):
-        self.mainPipe.send(data)
-
-    def exit(self):
-        self.mainPipe.send(self.EXIT_MESSAGE)
 
 
 class DetectionNode(ThreadedNode):
     def start(self, parent, device, reid_node):
-        self.detection_in = device.getInputQueue("detection_in")
         self.detection_nn = device.getOutputQueue("detection_nn")
+        self.reid_in = device.getInputQueue("reid_in")
         self.parent = parent
         self.reid_node = reid_node
+        self.pedestrian_coords = []
 
-    def accept(self, data):
-        nn_data = run_nn(self.detection_in, self.detection_nn, {"input": to_planar(data, (544, 320))})
-        results = to_bbox_result(nn_data)
-        pedestrian_coords = [
-            frame_norm(data, *obj[3:7])
-            for obj in results
-            if obj[2] > 0.4
-        ]
+    def run(self):
+        while True:
+            if not self.detection_nn.has():
+                continue
+            data = self.queue.get()
+            self.queue.task_done()
+            results = to_bbox_result(self.detection_nn.get())
+            self.pedestrian_coords = [
+                frame_norm(data, *obj[3:7])
+                for obj in results
+                if obj[2] > 0.4
+            ]
 
-        pedestrian_frames = [
-            (coords, data[coords[1]:coords[3], coords[0]:coords[2]])
-            for coords in pedestrian_coords
-        ]
-        if debug:
-            for bbox in pedestrian_coords:
-                cv2.rectangle(self.parent.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+            pedestrian_frames = [
+                (coords, data[coords[1]:coords[3], coords[0]:coords[2]])
+                for coords in self.pedestrian_coords
+            ]
 
-        for frame in pedestrian_frames:
-            self.reid_node.receive(frame)
+            for coords, detection in pedestrian_frames:
+                send_nn(self.reid_in, {"data": to_planar(detection, (48, 96))})
+                self.reid_node.queue.put(coords)
 
 
 class ReidentificationNode(ThreadedNode):
     def start(self, parent, device):
-        self.reid_in = device.getInputQueue("reid_in")
         self.reid_nn = device.getOutputQueue("reid_nn")
         self.results = {}
         self.results_path = {}
+        self.results_time = {}
         self.parent = parent
 
-    def accept(self, data):
-        coords, detection = data
-        nn_data = run_nn(self.reid_in, self.reid_nn, {"data": to_planar(detection, (48, 96))})
-        result = to_nn_result(nn_data)
-        for person_id in self.results:
-            dist = cos_dist(result, self.results[person_id])
-            if dist > 0.5:
-                result_id = person_id
-                self.results[person_id] = result
-                break
-        else:
-            result_id = len(self.results)
-            self.results[result_id] = result
-            if debug:
-                self.results_path[result_id] = []
+    def run(self):
+        while True:
+            if not self.reid_nn.has():
+                continue
 
-        if debug:
-            x = (coords[0] + coords[2]) // 2
-            y = (coords[1] + coords[3]) // 2
-            self.results_path[result_id].append([x, y])
-            cv2.putText(self.parent.debug_frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-            if len(self.results_path[result_id]) > 1:
-                cv2.polylines(self.parent.debug_frame, [np.array(self.results_path[result_id], dtype=np.int32)], False, (255, 0, 0), 2)
+            coords = self.queue.get()
+            self.queue.task_done()
+            nn_data = self.reid_nn.get()
+            result = to_nn_result(nn_data)
+            for key in list(self.results.keys()):
+                if time.time() - self.results_time[key] > 4:
+                    del self.results[key]
+                    del self.results_time[key]
+                    if debug:
+                        del self.results_path[key]
+
+            for person_id in self.results:
+                dist = cos_dist(result, self.results[person_id])
+                if dist > 0.5:
+                    result_id = person_id
+                    self.results[person_id] = result
+                    break
+            else:
+                result_id = int(list(self.results)[-1]) + 1 if len(self.results) > 0 else 0
+                self.results[result_id] = result
+                if debug:
+                    self.results_path[result_id] = []
+
+            self.results_time[result_id] = time.time()
+
+            if debug:
+                x = (coords[0] + coords[2]) // 2
+                y = (coords[1] + coords[3]) // 2
+                self.results_path[result_id].append([x, y])
 
 
 class Main:
@@ -164,8 +174,6 @@ class Main:
         print("Loading pipeline...")
         self.file = file
         self.camera = camera
-        self.results = {}
-        self.results_path = {}
         self.create_pipeline()
         self.start_pipeline()
 
@@ -220,14 +228,26 @@ class Main:
 
         self.reid_node = ReidentificationNode(self, self.device)
         self.det_node = DetectionNode(self, self.device, self.reid_node)
+        self.detection_in = self.device.getInputQueue("detection_in")
 
     def parse(self):
         if debug:
             self.debug_frame = self.frame.copy()
 
-        self.det_node.receive(self.frame)
+        send_nn(self.detection_in, {"input": to_planar(self.frame, (544, 320))})
+        self.det_node.queue.put(self.frame)
 
         if debug:
+            for bbox in self.det_node.pedestrian_coords:
+                cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+            for result_id in self.reid_node.results:
+                path = self.reid_node.results_path[result_id]
+                if len(path) < 2:
+                    continue
+                x, y = path[-1]
+                cv2.putText(self.debug_frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+                cv2.polylines(self.debug_frame, [np.array(path, dtype=np.int32)], False, (255, 0, 0), 2)
+
             aspect_ratio = self.frame.shape[1] / self.frame.shape[0]
             cv2.imshow("Camera_view", cv2.resize(self.debug_frame, ( int(900),  int(900 / aspect_ratio))))
             if cv2.waitKey(1) == ord('q'):
@@ -262,8 +282,6 @@ class Main:
             self.run_video()
         else:
             self.run_camera()
-        self.det_node.exit()
-        self.reid_node.exit()
         del self.device
 
 
