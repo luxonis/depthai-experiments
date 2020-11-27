@@ -35,7 +35,9 @@ def wait_for_results(queue):
 
 
 def to_planar(arr: np.ndarray, shape: tuple) -> list:
-    return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
+    resized = cv2.resize(arr, shape)
+    c1,c2,c3 = cv2.split(resized)
+    return np.vstack(( c1,c2,c3 )).ravel()
 
 
 def to_nn_result(nn_data):
@@ -78,8 +80,9 @@ class ThreadedNode:
     EXIT_MESSAGE = "exit_message"
 
     def __init__(self, *args):
-        self.queue = queue.Queue()
-        thread = threading.Thread(target=self.run_process, args=(self.queue, *args), daemon=True)
+        # Just to limit number of messages in memory
+        self.queue = queue.Queue(16)
+        thread = threading.Thread(target=self.run_process, args=(self.queue, *args))
         thread.start()
 
     def run_process(self, queue, *args):
@@ -104,8 +107,6 @@ class DetectionNode(ThreadedNode):
 
     def run(self):
         while True:
-            if not self.detection_nn.has():
-                continue
             data = self.queue.get()
             self.queue.task_done()
             results = to_bbox_result(self.detection_nn.get())
@@ -135,9 +136,6 @@ class ReidentificationNode(ThreadedNode):
 
     def run(self):
         while True:
-            if not self.reid_nn.has():
-                continue
-
             coords = self.queue.get()
             self.queue.task_done()
             nn_data = self.reid_nn.get()
@@ -237,6 +235,10 @@ class Main:
         send_nn(self.detection_in, {"input": to_planar(self.frame, (544, 320))})
         self.det_node.queue.put(self.frame)
 
+        # TODO - this has to be fixed. Data from other nodes isn't in sync with this stages iteration.
+        # Suggestion, pass data all the way to the last node (or create last node)
+        # and accumulate it all there - pass in all required things from previous stages,
+        # where the data can then be visualized as below 
         if debug:
             for bbox in self.det_node.pedestrian_coords:
                 cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
@@ -256,6 +258,8 @@ class Main:
 
     def run_video(self):
         cap = cv2.VideoCapture(str(Path(self.file).resolve().absolute()))
+        tprev = time.time()
+        frame_counter = 0
         while cap.isOpened():
             read_correctly, self.frame = cap.read()
             if not read_correctly:
@@ -265,6 +269,18 @@ class Main:
                 self.parse()
             except StopIteration:
                 break
+
+            ## Measures how quickly the frames are read from file.
+            ## Because of the limit on Queue size, and the later
+            ## stages being slower, the put function blocks and
+            ## The rate caps at throughput of NN (detection) stage
+             
+            # frame_counter = frame_counter + 1
+            # elapsed = time.time() - tprev
+            # if elapsed >= 1.0 :
+            #     tprev = time.time()
+            #     print('FPS of first stage: ', frame_counter)
+            #     frame_counter = 0
 
         cap.release()
 
