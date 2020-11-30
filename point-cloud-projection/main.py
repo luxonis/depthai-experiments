@@ -2,11 +2,15 @@
 import json
 import os
 import tempfile
+import platform
 from pathlib import Path
 
 import cv2
 import depthai
 from projector_3d import PointCloudVisualizer
+
+if platform.machine().startswith('arm') or platform.machine().startswith('aarch64'):
+    raise NotImplementedError("Point cloud visualization is currently not supported on RPI")
 
 device = depthai.Device("", False)
 pipeline = device.create_pipeline(config={
