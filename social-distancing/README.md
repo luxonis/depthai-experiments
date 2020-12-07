@@ -19,3 +19,7 @@ python3 -m pip install -r requirements.txt
 ```
 python3 main.py
 ```
+
+## How it Works
+
+![Social Distancing explanation](https://user-images.githubusercontent.com/32992551/101372410-19c51500-3869-11eb-8af4-f9b4e81a6f78.png)
