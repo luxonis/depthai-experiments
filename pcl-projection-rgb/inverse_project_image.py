@@ -90,7 +90,7 @@ depth_vals = cv2.warpPerspective(depth, H_inv, depth.shape[::-1],
                                         cv2.WARP_FILL_OUTLIERS +
                                         cv2.WARP_INVERSE_MAP)
 
-# depth_mat = depth_vals.copy()
+depth_mat = depth_vals.copy()
 
 # depth_vals = depth.copy()
             

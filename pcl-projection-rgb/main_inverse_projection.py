@@ -147,6 +147,30 @@ while True:
             # print(final_path)
             cv2.imwrite(final_path, frame)
             
+            with open(curr_dir + '/dataset/m3_rgb.npy', 'wb') as f:
+                x = device.get_intrinsic(depthai.CameraControl.CamId.RGB)
+                # print('Type of --------------------------------------------->')
+                # print(type(x))
+                # print(x.dtype)
+                # print(x.shape)
+                np.save(f, np.array(x))
+
+            with open(curr_dir + '/dataset/rot_rgb.npy', 'wb') as f:
+                x = device.get_rgb_rotation()
+                np.save(f, x)
+
+            with open(curr_dir + '/dataset/inv_homo.npy', 'wb') as f:
+                x = device.get_right_homography()
+                np.save(f, np.array(x))
+
+            with open(curr_dir + '/dataset/m2_r.npy', 'wb') as f:
+                x = device.get_right_intrinsic()
+                np.save(f, np.array(x))
+
+            with open(curr_dir + '/dataset/t_rgb.npy', 'wb') as f:
+                x = device.get_rgb_translation()
+                np.save(f, np.array(x))
+
             # M3 = np.array([[2968.3318, 0, 2096.0703],
             #                 [0, 2968.3318, 1444.4983],
             #                 [0,     0,          1   ]], dtype=np.float32)

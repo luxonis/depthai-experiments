@@ -44,10 +44,8 @@ M2 = np.array([[862.3698, 0.0,            637.838],
                [0.0,          861.3336791992188, 364.46539306640625], 
                [0.0,          0.0,                   1.0]], dtype=np.float32)
 
-
-M2 = np.array([[862.3698,      0.0,         637.838], 
-               [0.0,           862.94336,   364.13205], 
-               [0.0,           0.0,         1.0]], dtype=np.float32)
+with open(curr_dir + '/dataset/m2_r.npy', 'rb') as f:
+    M2 = np.load(f)
 
 print("Displaying sHARE OF COLOR IMAGE")
 print(color.shape) 
@@ -84,32 +82,54 @@ if is_color:
                       [0, 996.68878, 358.062592],
                       [0,     0,          1   ]], dtype=np.float32)
 
+    M_RGB = np.array([[997.163574,    0.000000,  631.543762],
+                    [0.000000,  997.899414,  365.938538],
+                    [0.000000,    0.000000,    1.000000]], dtype=np.float32)
+
+    with open(curr_dir + '/dataset/m3_rgb.npy', 'rb') as f:
+        M_RGB = np.load(f)
+
+
 R = np.array([[0.999966,    0.006664,   -0.004894],
               [-0.006641,    0.999967,    0.00470],
               [0.004925,   -0.004668,    0.999977]], dtype=np.float32)
 
+
+
 if is_color:
     # color
-    R = np.array([[0.999684, 0.024849, -0.003688],
-                [-0.024845,  0.999691,  0.001207],
-                [0.003717,  -0.001115,  0.999992]], dtype=np.float32)
+    # R = np.array([[0.999684, 0.024849, -0.003688],
+    #             [-0.024845,  0.999691,  0.001207],
+    #             [0.003717,  -0.001115,  0.999992]], dtype=np.float32)
+    # R = np.array([[1, 0., -0.0],
+    #             [-0.,  1,  0.0],
+    #             [0.,  -0.,  1]], dtype=np.float32)
+    
+    with open(curr_dir + '/dataset/rot_rgb.npy', 'rb') as f:
+        R = np.load(f)
+
+# T = np.array([-3.760219, 6.551057, -5.57906], np.float32)
 # T = np.array([-3.760219, 6.551057, -5.57906], np.float32)
 T = np.array([-7.5, 0, 0.0001], np.float32) # cm 
 if is_color:
-    T = np.array([-3.770253, 0.066012, 0.049125], np.float32) # cm 
+    # T = np.array([-3.770253, 0.055446, 0.251579], np.float32) # cm 
+    with open(curr_dir + '/dataset/t_rgb.npy', 'rb') as f:
+        T = np.load(f)
 
 R_inv = np.linalg.inv(R)
 
 T_neg = -1 * T
 
-H_inv = np.array([[ 1.00280449e+00, -7.35970674e-03, -2.78654202e+00],
-                  [ 6.93586028e-03,  9.99131674e-01, -2.22207977e+00],
-                  [ 4.35014077e-06, -2.74672190e-06,  9.98013113e-01]], dtype=np.float32)  
+# H_inv = np.array([[ 1.00280449e+00, -7.35970674e-03, -2.78654202e+00],
+#                   [ 6.93586028e-03,  9.99131674e-01, -2.22207977e+00],
+#                   [ 4.35014077e-06, -2.74672190e-06,  9.98013113e-01]], dtype=np.float32)  
 
-H_inv = np.array([[ 9.93284397e-01,  1.68031060e-02,  5.75327534e+00],
-                    [-2.09308677e-02,  9.99638404e-01,  1.37869851e+01],
-                    [-1.02260173e-05, -5.87467424e-07,  1.00670350e+00]], dtype=np.float32)  
+# H_inv = np.array([[ 9.93284397e-01,  1.68031060e-02,  5.75327534e+00],
+#                     [-2.09308677e-02,  9.99638404e-01,  1.37869851e+01],
+#                     [-1.02260173e-05, -5.87467424e-07,  1.00670350e+00]], dtype=np.float32)  
 
+with open(curr_dir + '/dataset/inv_homo.npy', 'rb') as f:
+    H_inv = np.load(f)
 
 im_color_right_unrec = (65535 // depth).astype(np.uint8)
 # colorize depth map, comment out code below to obtain grayscale
@@ -191,6 +211,11 @@ origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100, origin=[0, 
 
 print('printing single coordinate x , y, z')
 print(cam_coords[:,index])
+print('Printing M2 ---------------->')
+print(M2)
+
+print('Printing MRGB ---------------->')
+print(M_RGB)
 
 cam_coords_2 = np.vstack((cam_coords, np.ones_like(cam_coords[0]))) # [x,y,z,w]
 print(cam_coords_2.shape)
