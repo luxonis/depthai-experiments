@@ -34,7 +34,7 @@ optional arguments:
 To use with a video file, run the script with the following arguments
 
 ```
-python3 main.py -vid ./demo.py
+python3 main.py -vid ./demo.mp4
 ```
 
 To use with DepthAI 4K RGB camera, use instead
