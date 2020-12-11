@@ -57,9 +57,6 @@ print(depth.min())
 index = 2
 print()
 print()
-cv2.imshow('left', color)
-
-cv2.imshow('depth', depth)
 
 # P3D.x = (x_d - cx_d) * depth(x_d,y_d) / fx_d
 # P3D.y = (y_d - cy_d) * depth(x_d,y_d) / fy_d
@@ -88,6 +85,12 @@ if is_color:
 
     with open(curr_dir + '/dataset/m3_rgb.npy', 'rb') as f:
         M_RGB = np.load(f)
+
+    scale_width = 1280/1920
+    m_scale = [[scale_width,      0,   0],
+                [0,         scale_width,        0],
+                [0,             0,         1]]
+    M_RGB = np.matmul(m_scale, M_RGB)
 
 
 R = np.array([[0.999966,    0.006664,   -0.004894],
@@ -130,6 +133,7 @@ T_neg = -1 * T
 
 with open(curr_dir + '/dataset/inv_homo.npy', 'rb') as f:
     H_inv = np.load(f)
+    H_inv = np.linalg.inv(H_inv)
 
 im_color_right_unrec = (65535 // depth).astype(np.uint8)
 # colorize depth map, comment out code below to obtain grayscale
