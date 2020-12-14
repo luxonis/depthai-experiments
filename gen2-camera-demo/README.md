@@ -3,6 +3,9 @@
 ### Install Dependencies:
 `python3 -m pip install -r requirements.txt`
 
+### Running Example As-Is:
+`python3 main.py`
+
 ### Real-Time Depth from DepthAI Stereo Pair
 
 StereoDepth configuration options:
