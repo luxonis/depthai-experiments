@@ -232,7 +232,7 @@ def test_pipeline():
         found, device_info = dai.XLinkConnection.getFirstDevice(
                 dai.XLinkDeviceState.X_LINK_BOOTED)
         if found:
-            device = dai.Device(device_info)
+            device = dai.Device(pipeline, device_info)
         else:
             raise RuntimeError("Device not found")
     print("Starting pipeline")
