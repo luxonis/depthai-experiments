@@ -14,7 +14,7 @@ The ESP32 is running a custom protocol to communicate over SPI with the DepthAI.
 git submodule update --init --recursive
 
 ### Run the ESP32 Side of the Example:
-##If you haven’t already, set up the ESP32 programmer
+# If you haven’t already, set up the ESP32 programmer
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html
 
 ```
