@@ -75,10 +75,12 @@ m_scale = [[scale_width,      0,   0],
 
 M_RGB = np.matmul(m_scale, M_RGB)
 K_inv = np.linalg.inv(M2)
+inter_conv = np.matmul(K_inv, H_inv)
 
 extrensics = np.hstack((R_inv, np.transpose([T_neg])))
 transform_matrix = np.vstack((extrensics, np.array([0, 0, 0, 1])))
 
+pcl_converter = None
 
 while True:
     data_packets = pipeline.get_available_data_packets()
@@ -105,22 +107,17 @@ while True:
 
         if packet.stream_name == "right":
             right = packet.getData()
-            cv2.imshow(packet.stream_name, right)
+            # cv2.imshow(packet.stream_name, right)
         if packet.stream_name == "left":
             left = packet.getData()
-            cv2.imshow(packet.stream_name, left)
+            # cv2.imshow(packet.stream_name, left)
         elif packet.stream_name == "depth":
             frame = packet.getData()
             cv2.imshow(packet.stream_name, frame)
             start = time.time()
-            # converting right from rectified right to right frame_bgr
-            depth_vals = cv2.warpPerspective(frame, H_inv, frame.shape[::-1],
-                                                cv2.INTER_CUBIC +
-                                                cv2.WARP_FILL_OUTLIERS +
-                                                cv2.WARP_INVERSE_MAP)
 
-            temp = depth_vals.copy() # depth in right frame
-            cam_coords = np.dot(K_inv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
+            temp = frame.copy() # depth in right frame
+            cam_coords = np.dot(inter_conv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
             del temp
 
             cam_coords[:, cam_coords[2] > 1500] = float('inf') 
@@ -133,53 +130,34 @@ while True:
             rgb_frame_ref_cloud = np.asarray(pcd.points).transpose()
             print('shape pf left_frame_ref_cloud')
             print(rgb_frame_ref_cloud.shape)
-
             rgb_frame_ref_cloud_normalized = rgb_frame_ref_cloud / rgb_frame_ref_cloud[2,:]
             rgb_image_pts = np.matmul(M_RGB, rgb_frame_ref_cloud_normalized)
+            rgb_image_pts = rgb_image_pts.astype(np.int16)            
+            print("shape is {}".format(rgb_image_pts.shape[1]))  
 
-            depth_rgb = np.full((720, 1280),  65535, dtype=np.uint16)
-            # valid_pts_count = 0
-            rgb_image_pts = rgb_image_pts.astype(np.int16)
-
-            print('Convertion time')
-            
-            
             u_v_z = np.vstack((rgb_image_pts, rgb_frame_ref_cloud[2, :]))
-
-            print("shape after vstacking is {}".format(u_v_z.shape))
-            print(u_v_z.dtype)
-
             lft = np.logical_and(0 <= u_v_z[0], u_v_z[0] < 1280)
             rgt = np.logical_and(0 <= u_v_z[1], u_v_z[1] < 720)
             idx_bool = np.logical_and(lft, rgt)
             u_v_z_sampled = u_v_z[:, np.where(idx_bool)]
             y_idx = u_v_z_sampled[1].astype(int)
             x_idx = u_v_z_sampled[0].astype(int)
-            depth_rgb[y_idx,x_idx] = u_v_z_sampled[3]*10
-            end = time.time()
 
+            depth_rgb = np.full((720, 1280),  65535, dtype=np.uint16)
+            depth_rgb[y_idx,x_idx] = u_v_z_sampled[3]*10
+            frame_rgb = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
+            end = time.time()
             print('for loop Convertion time')
             print(end - start)
-
-
+            if pcl_converter is None:
+                pcl_converter = PointCloudVisualizer(M_RGB, 1280, 720)
+            pcd = pcl_converter.rgbd_to_projection(depth_rgb, frame_rgb)
+            pcl_converter.visualize_pcd()
 
     
     if cv2.waitKey(1) == ord("q"):
         break
 
-
-# 1. change 1080 shape. 
-# 2. crop the intrinisc matrix approprietly 
-# 3. change depth in rectified right using homography to place it back in right frame and then rotate and translate it to rgb
-# 4. how to handle this scenario when undistorted using mesh ? should I add distortions back ? 
-# 5. What would be the best way to illuminate the lights properly to avoid reflections or bad calibration (Does vicalib overcomes this issue or is it universal for that too) 
-# 6. Do we need calib to be in 4K ? I am thinking of doing it only for 1080 
-# 7. Any suggestions on best way to handle in when using camera with auto focus ? 
-# currently I have set it to a specific distance that helps in better focusing the calibration board with current setting
-# we can create api to return the homography to place the depth from rectified right to rgb a.k.a center of the 1098OBC 
-# or we can internally use wrap engine to do that before returning (extra load on Mx) 
-# Cropping issue - center crop or bottom crop 
-# ANother option is we can just find homography between right and rgb
 
 if pcl_converter is not None:
     pcl_converter.close_window()

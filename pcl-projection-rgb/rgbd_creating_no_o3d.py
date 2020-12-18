@@ -75,6 +75,7 @@ m_scale = [[scale_width,      0,   0],
 
 M_RGB = np.matmul(m_scale, M_RGB)
 K_inv = np.linalg.inv(M2)
+inter_conv = np.matmul(K_inv, H_inv)
 
 extrensics = np.hstack((R_inv, np.transpose([T_neg])))
 transform_matrix = np.vstack((extrensics, np.array([0, 0, 0, 1])))
@@ -114,20 +115,17 @@ while True:
             cv2.imshow(packet.stream_name, frame)
             start = time.time()
             # converting right from rectified right to right frame_bgr
-            depth_vals = cv2.warpPerspective(frame, H_inv, frame.shape[::-1],
-                                                cv2.INTER_CUBIC +
-                                                cv2.WARP_FILL_OUTLIERS +
-                                                cv2.WARP_INVERSE_MAP)
+            # depth_vals = cv2.warpPerspective(frame, H_inv, frame.shape[::-1],
+            #                                     cv2.INTER_CUBIC +
+            #                                     cv2.WARP_FILL_OUTLIERS +
+            #                                     cv2.WARP_INVERSE_MAP)
 
-            temp = depth_vals.copy() # depth in right frame
-            cam_coords = np.dot(K_inv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
+            temp = frame.copy() # depth in right frame
+            cam_coords = np.dot(inter_conv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
             del temp
 
             cam_coords_2 = np.vstack((cam_coords, np.ones_like(cam_coords[0]))) 
             rgb_frame_ref_cloud = np.matmul(extrensics, cam_coords_2)
-
-
-
 
             # rgb_frame_ref_cloud = np.asarray(pcd.points).transpose()
             print('shape pf left_frame_ref_cloud')
@@ -137,13 +135,9 @@ while True:
             rgb_image_pts = np.matmul(M_RGB, rgb_frame_ref_cloud_normalized)
 
             depth_rgb = np.full((720, 1280),  65535, dtype=np.uint16)
-            rgb_image_pts = rgb_image_pts.astype(np.int16)
-            
-            print("shape is {}".format(rgb_image_pts.shape[1]))
-            
+            rgb_image_pts = rgb_image_pts.astype(np.int16)            
             u_v_z = np.vstack((rgb_image_pts, rgb_frame_ref_cloud[2, :]))
 
-            print("shape after vstacking is {}".format(u_v_z.shape))
             print(u_v_z.dtype)
 
             lft = np.logical_and(0 <= u_v_z[0], u_v_z[0] < 1280)
@@ -159,7 +153,7 @@ while True:
             print(end - start)
 
             print('creating image')
-            cv2.imshow('egb_depth', depth_rgb)
+            cv2.imshow('rgb_depth', depth_rgb)
             
             depth_rgb[depth_rgb == 0] = 65535
 

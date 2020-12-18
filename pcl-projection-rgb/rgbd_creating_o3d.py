@@ -75,6 +75,7 @@ m_scale = [[scale_width,      0,   0],
 
 M_RGB = np.matmul(m_scale, M_RGB)
 K_inv = np.linalg.inv(M2)
+inter_conv = np.matmul(K_inv, H_inv)
 
 extrensics = np.hstack((R_inv, np.transpose([T_neg])))
 transform_matrix = np.vstack((extrensics, np.array([0, 0, 0, 1])))
@@ -113,14 +114,9 @@ while True:
             frame = packet.getData()
             cv2.imshow(packet.stream_name, frame)
             start = time.time()
-            # converting right from rectified right to right frame_bgr
-            depth_vals = cv2.warpPerspective(frame, H_inv, frame.shape[::-1],
-                                                cv2.INTER_CUBIC +
-                                                cv2.WARP_FILL_OUTLIERS +
-                                                cv2.WARP_INVERSE_MAP)
 
-            temp = depth_vals.copy() # depth in right frame
-            cam_coords = np.dot(K_inv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
+            temp = frame.copy() # depth in right frame
+            cam_coords = np.dot(inter_conv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
             del temp
 
             cam_coords[:, cam_coords[2] > 1500] = float('inf') 

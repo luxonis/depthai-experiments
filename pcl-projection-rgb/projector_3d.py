@@ -2,14 +2,17 @@ import open3d as o3d
 import os
 
 class PointCloudVisualizer():
-    def __init__(self, intrinsic_file, enableViz=True):
+    def __init__(self, intrinsic_matrix, width, height, enableViz=True):
         self.depth_map = None
         self.rgb = None
         self.pcl = None
         self.enableViz = enableViz
-        assert os.path.isfile(intrinsic_file) , ("Intrisic file not found. Rerun the calibrate.py to generate intrinsic file")
-            # print()
-        self.pinhole_camera_intrinsic = o3d.io.read_pinhole_camera_intrinsic(intrinsic_file)
+        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(width,
+                                                                         height,
+                                                                         intrinsic_matrix[0][0],
+                                                                         intrinsic_matrix[1][1],
+                                                                         intrinsic_matrix[0][2],
+                                                                         intrinsic_matrix[1][2])
         if self.enableViz:
             self.vis = o3d.visualization.Visualizer()
             self.vis.create_window()
@@ -28,6 +31,7 @@ class PointCloudVisualizer():
             pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
             self.pcl.points = pcd.points
             self.pcl.colors = pcd.colors
+            self.pcl.remove_non_finite_points()
         return self.pcl
 
 
