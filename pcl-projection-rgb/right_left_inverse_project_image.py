@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+import multiprocessing
 
 import cv2
 import depthai
@@ -320,7 +321,7 @@ cv2.imshow('egb_depth', depth_rgb)
 depth_rgb[depth_rgb == 0] = 65535
 
 im_color = (65535 // depth_rgb).astype(np.uint8)
-                            # colorize depth map, comment out code below to obtain grayscale
+# colorize depth map, comment out code below to obtain grayscale
 im_color = cv2.applyColorMap(im_color, cv2.COLORMAP_HOT)
 cv2.imshow('color_map left', im_color)
 
@@ -371,3 +372,9 @@ cv2.waitKey()
 # ANother option is we can just find homography between right and rgb
 
 
+start = time.time()
+for i in range(585115): 
+    pass
+end = time.time()
+print('for loop Convertion time')
+print(end - start)

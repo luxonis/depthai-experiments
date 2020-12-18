@@ -47,7 +47,7 @@ pipeline = device.create_pipeline(config={
 cam_c = depthai.CameraControl.CamId.RGB
 device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
 cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
-device.send_camera_control(cam_c, cmd_set_focus, '111')
+device.send_camera_control(cam_c, cmd_set_focus, '135')
 
 # sleep(2)
 pixel_coords = pixel_coord_np(1280, 720) 
@@ -67,61 +67,29 @@ while True:
     for packet in data_packets:
         if packet.stream_name == "color":
             color = cvt_to_bgr(packet)
-            # print(color.shape) # numpy format (h, w)
-            # final_path = curr_dir + '/dataset/3040.png'
-            # print(final_path)
-            # cv2.imwrite(final_path, color)
             scale_width = req_resolution[1]/color.shape[1]
             dest_res = (int(color.shape[1] * scale_width), int(color.shape[0] * scale_width)) ## opencv format dimensions
-            # print("destination resolution------>")
-            # print(dest_res)
             color = cv2.resize(
                 color, dest_res, interpolation=cv2.INTER_CUBIC) # can change interpolation if needed to reduce computations
-            # print("scaled gray shape")
-            # print(gray.shape)
             
             if color.shape[0] < req_resolution[0]: # height of color < required height of image
                 raise RuntimeError("resizeed height of rgb is smaller than required. {0} < {1}".format(
                     color.shape[0], req_resolution[0]))
-            # print(gray.shape[0] - req_resolution[0])
             del_height = (color.shape[0] - req_resolution[0]) // 2
+
             ## TODO(sachin): change center crop and use 1080 directly and test
             print('del_height ->')
             print(del_height)
             color_center = color[del_height: del_height + req_resolution[0], :]
-            # final_path = curr_dir + '/dataset/resized_scaled_center.png'
-            # print(final_path)
-            # cv2.imwrite(final_path, color_center)``
-            # print("scaled color frame shape")
-            # print(color_center.shape)
             cv2.imshow('color resized', color_center)
 
-            # color_top = color[: req_resolution[0], :]
-            # final_path = curr_dir + '/dataset/resized_scaled_top.png'
-            # print(final_path)
-            # cv2.imwrite(final_path, color_top)
-            
-            # color_bottom = color[del_height*2: req_resolution[0], :]
-            # final_path = curr_dir + '/dataset/resized_scaled_bottom.png'
-            # print(final_path)
-            # cv2.imwrite(final_path, color_bottom)
             color = color_center
 
         if packet.stream_name == "right":
             right = packet.getData()
-            # print(right.shape)
-            
-            # final_path = curr_dir + '/dataset/right.png'
-            # print(final_path)
-            # cv2.imwrite(final_path, right)
             cv2.imshow(packet.stream_name, right)
         if packet.stream_name == "left":
             left = packet.getData()
-            # print(right.shape)
-            
-            # final_path = curr_dir + '/dataset/right.png'
-            # print(final_path)
-            # cv2.imwrite(final_path, right)
             cv2.imshow(packet.stream_name, left)
         elif packet.stream_name == "depth":
             frame = packet.getData()
@@ -131,16 +99,12 @@ while True:
             print()
             print(color.shape) 
             cv2.imshow(packet.stream_name, frame)
-            # numpy format (h, w)
             final_path = curr_dir + '/dataset/color_1.png'
-            # print(final_path)
             cv2.imwrite(final_path, color)
             final_path = curr_dir + '/dataset/left_1.png'
-            # print(final_path)
             cv2.imwrite(final_path, left)
 
             final_path = curr_dir + '/dataset/right_1.png'
-            # print(final_path)
             cv2.imwrite(final_path, right)
 
             final_path = curr_dir + '/dataset/depth_1.tif'
@@ -150,7 +114,10 @@ while True:
             with open(curr_dir + '/dataset/m3_rgb.npy', 'wb') as f:
                 x = device.get_intrinsic(depthai.CameraControl.CamId.RGB)
                 # print('Type of --------------------------------------------->')
-                # print(type(x))
+
+
+
+
                 # print(x.dtype)
                 # print(x.shape)
                 np.save(f, np.array(x))
