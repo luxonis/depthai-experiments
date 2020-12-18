@@ -1,4 +1,5 @@
 ## Gen2 Camera Demo
+Unfiltered subpixel disparity depth results from a BW1092:
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
 
