@@ -4,7 +4,7 @@ This example demonstrates how to run 3 stage inference (3-series, 2-parallel) on
 
 Original OpenVINO demo, on which this example was made, is official [here](https://docs.openvinotoolkit.org/2021.1/omz_demos_gaze_estimation_demo_README.html) from Intel and implemented with the NCS2 with nice diagrams and explanation, [here](https://github.com/LCTyrell/Gaze_pointer_controller), from @LCTyrell.
 
-![Alt Text](results/pipeline.png)
+![Alt Text](https://raw.githubusercontent.com/LCTyrell/Gaze_estimation/master/results/pipeline.png)
 
 Figure: @LCTyrell
 
