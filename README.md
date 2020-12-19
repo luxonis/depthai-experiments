@@ -77,8 +77,8 @@ This is a simple application which creates rgbd image from `right` and `depth_ra
 
 This is a simple application which creates rgbd image from `rgb` and `depth` stream and projects it into rgb with depth overlay and point clouds. There is also a interactive point cloud visualizer.
 
-![rgbd](https://media.giphy.com/media/kf89fLK4b6DvAKEDnu/giphy.gif)
-![rgbd-pcl](https://media.giphy.com/media/mH321k0lCXAgP4bY21/giphy.gif)
+![rgbd](https://media.giphy.com/media/SnW9p4r3feMQGOmayy/giphy.gif)
+![rgbd-pcl](https://media.giphy.com/media/UeAlkPpeHaxItO0NJ6/giphy.gif)
 
 
 ## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/wls-filter))
