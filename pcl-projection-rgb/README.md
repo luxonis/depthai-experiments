@@ -1,7 +1,7 @@
 
 
 # Sample video
-![RGB-D image](https://media.giphy.com/media/kf89fLK4b6DvAKEDnu/giphy.gif)
+![](https://media.giphy.com/media/kf89fLK4b6DvAKEDnu/giphy.gif)
 
 # RGB-D conversion
 
