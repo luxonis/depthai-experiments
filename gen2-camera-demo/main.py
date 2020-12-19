@@ -19,10 +19,11 @@ But like on Gen1, either depth or disparity has valid data. TODO enable both.
 source_camera  = True   # If False, will read input frames from 'dataset' folder
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
-point_cloud    = True   # Create point cloud visualizer. Depends on 'out_rectified'
-lrcheck  = True   # Better handling for occlusions
+point_cloud    = False   # Create point cloud visualizer. Depends on 'out_rectified'
+test_manip     = True   # Test ImageManip node, with RGB or Stereo pipelines
+lrcheck  = False   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled 
-subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
+subpixel = False   # Better accuracy for longer distance, fractional disparity 32-levels
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7 
 median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 
@@ -66,6 +67,15 @@ def create_rgb_cam_pipeline():
     cam.video  .link(xout_video.input)
 
     streams = ['rgb_preview', 'rgb_video']
+
+    if test_manip:
+        manip      = pipeline.createImageManip()
+        xManip     = pipeline.createXLinkOut()
+        xManip     .setStreamName('manip_rgb')
+        manip      .setCropRect(0, 0, 0.5, 0.5)
+        manip.out  .link(xManip.input)
+        cam.preview.link(manip.inputImage)
+        streams.append('manip_rgb')
 
     return pipeline, streams
 
@@ -163,6 +173,39 @@ def create_stereo_depth_pipeline(from_camera=True):
         streams.extend(['rectified_left', 'rectified_right'])
     streams.extend(['disparity', 'depth'])
 
+    if test_manip:
+        manipMono      = pipeline.createImageManip()
+        manipMonoAsRgb = pipeline.createImageManip()
+        manipDisp      = pipeline.createImageManip()
+        manipDepth     = pipeline.createImageManip()
+
+        manipMono     .setCropRect(0.0, 0.4, 1.0, 0.6)
+        manipMonoAsRgb.setCropRect(0.4, 0.0, 0.6, 1.0)
+        manipDisp     .setCropRect(0.3, 0.3, 0.7, 0.7)
+        manipDepth    .setCropRect(0.0, 0.0, 0.5, 0.5)
+        manipMonoAsRgb.setFrameType(dai.RawImgFrame.Type.RGB888p)
+
+        xManipMono      = pipeline.createXLinkOut()
+        xManipMonoAsRgb = pipeline.createXLinkOut()
+        xManipDisp      = pipeline.createXLinkOut()
+        xManipDepth     = pipeline.createXLinkOut()
+
+        xManipMono     .setStreamName('manip_mono')
+        xManipMonoAsRgb.setStreamName('manip_mono_as_rgb')
+        xManipDisp     .setStreamName('manip_disp')
+        xManipDepth    .setStreamName('manip_depth')
+
+        cam_right.out     .link(manipMono.inputImage)
+        cam_right.out     .link(manipMonoAsRgb.inputImage)
+        stereo.disparity  .link(manipDisp.inputImage)
+        stereo.depth      .link(manipDepth.inputImage)
+        manipMono.out     .link(xManipMono.input)
+        manipMonoAsRgb.out.link(xManipMonoAsRgb.input)
+        manipDisp.out     .link(xManipDisp.input)
+        manipDepth.out    .link(xManipDepth.input)
+
+        streams.extend(['manip_mono', 'manip_mono_as_rgb', 'manip_disp', 'manip_depth'])
+
     return pipeline, streams
 
 # The operations done here seem very CPU-intensive, TODO
@@ -182,15 +225,15 @@ def convert_to_cv2_frame(name, image):
 
     data, w, h = image.getData(), image.getWidth(), image.getHeight()
     # TODO check image frame type instead of name
-    if name == 'rgb_preview':
+    if name in ['rgb_preview', 'manip_rgb', 'manip_mono_as_rgb']:
         frame = np.array(data).reshape((3, h, w)).transpose(1, 2, 0).astype(np.uint8)
     elif name == 'rgb_video': # YUV NV12
         yuv = np.array(data).reshape((h * 3 // 2, w)).astype(np.uint8)
         frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
-    elif name == 'depth':
+    elif name in ['depth', 'manip_depth']:
         # TODO: this contains FP16 with (lrcheck or extended or subpixel)
         frame = np.array(data).astype(np.uint8).view(np.uint16).reshape((h, w))
-    elif name == 'disparity':
+    elif name in ['disparity', 'manip_disp']:
         disp = np.array(data).astype(np.uint8).view(disp_type).reshape((h, w))
 
         # Compute depth from disparity (32 levels)
@@ -290,7 +333,7 @@ def test_pipeline():
             image = q.get()
             #print("Received frame:", name)
             # Skip some streams for now, to reduce CPU load
-            if name in ['left', 'right', 'depth']: continue
+            #if name in ['left', 'right', 'depth']: continue
             frame = convert_to_cv2_frame(name, image)
             cv2.imshow(name, frame)
         if cv2.waitKey(1) == ord('q'):
