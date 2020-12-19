@@ -73,7 +73,7 @@ This is a simple application which creates rgbd image from `right` and `depth_ra
 ![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
 
 
-## RGB-D and PCL([here](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection))
+## RGB-D and PCL([here](https://github.com/luxonis/depthai-experiments/tree/master/pcl-projection-rgb)
 
 This is a simple application which creates rgbd image from `rgb` and `depth` stream and projects it into rgb with depth overlay and point clouds. There is also a interactive point cloud visualizer.
 
