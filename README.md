@@ -72,6 +72,15 @@ This is a simple application which creates rgbd image from `right` and `depth_ra
 
 ![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
 
+
+## RGB-D and PCL([here](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection))
+
+This is a simple application which creates rgbd image from `rgb` and `depth` stream and projects it into rgb with depth overlay and point clouds. There is also a interactive point cloud visualizer.
+
+![rgbd](https://media.giphy.com/media/kf89fLK4b6DvAKEDnu/giphy.gif)
+![rgbd-pcl](https://media.giphy.com/media/mH321k0lCXAgP4bY21/giphy.gif)
+
+
 ## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/wls-filter))
 
 This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI.  
