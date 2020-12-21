@@ -1,13 +1,18 @@
 ## Gen2 Camera Demo
+This example shows how to use the DepthAI/megaAI/OAK cameras in the Gen2 Pipeline Builder over USB.  If you are interested in running over SPI instead (for embedded application), see [here](https://github.com/luxonis/depthai-experiments/blob/depthai-experiment-spi-jpeg/gen2-spi-stereo/README.md).
+
 Unfiltered subpixel disparity depth results from a BW1092:
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
+
 
 ### Install Dependencies:
 `python3 -m pip install -r requirements.txt`
 
 ### Running Example As-Is:
 `python3 main.py`
+
+This will run subpixel disparity by default.
 
 ### Real-Time Depth from DepthAI Stereo Pair
 
