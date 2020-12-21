@@ -1,9 +1,11 @@
 ## Gen2 Camera Demo
-This example shows how to use the DepthAI/megaAI/OAK cameras in the Gen2 Pipeline Builder over USB.  If you are interested in running over SPI instead (for embedded application), see [here](https://github.com/luxonis/depthai-experiments/blob/depthai-experiment-spi-jpeg/gen2-spi-stereo/README.md).
+This example shows how to use the DepthAI/megaAI/OAK cameras in the Gen2 Pipeline Builder over USB.  
 
-Unfiltered subpixel disparity depth results from a BW1092:
+Unfiltered subpixel disparity depth results from a [BW1092 board](https://shop.luxonis.com/collections/all/products/bw1092) over USB2:
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
+
+If you are interested in running over SPI instead (for embedded application), see [here](https://github.com/luxonis/depthai-experiments/blob/depthai-experiment-spi-jpeg/gen2-spi-stereo/README.md).  For example the ESP32 onboard the BW1092 can pull the results out over SPI.
 
 
 ### Install Dependencies:
