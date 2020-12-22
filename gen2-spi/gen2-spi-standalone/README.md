@@ -31,6 +31,12 @@ idf.py -p /dev/ttyUSB1 flash
 #### Set the GPIO pins to Enable Standalone Boot Mode
 https://docs.google.com/document/d/1Q0Wwjs0djMQOPwRT04k8tL20WWv_5AdwiQcPSeebqsw/edit
 
+Standalone Boot Pins:
+![image](https://user-images.githubusercontent.com/19913346/102914698-ee801f80-443d-11eb-96f4-5cc0a5bfb263.png)
+
+XLink Boot Pins:
+![image](https://user-images.githubusercontent.com/19913346/102914744-ff309580-443d-11eb-9975-66a7f633da6a.png)
+
 #### Flash the Bootloader
 This step really only needs to be done once. It can be run again to update the bootloader if necessary.
 
