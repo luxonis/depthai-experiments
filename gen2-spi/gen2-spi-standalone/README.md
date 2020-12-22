@@ -45,3 +45,4 @@ This step really only needs to be done once. It can be run again to update the b
 #### Flash the Pipeline
 `python3 main.py`
 
+At this point, you can reboot the board and watch the SPI output for incoming data. 
