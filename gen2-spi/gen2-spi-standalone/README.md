@@ -28,13 +28,14 @@ idf.py -p /dev/ttyUSB1 flash
 ```
 
 ### Run the DepthAI Side of the Example:
-#### Put the GPIO pins to Boot from Flash
+#### Set the GPIO pins to Enable Standalone Boot Mode
 https://docs.google.com/document/d/1Q0Wwjs0djMQOPwRT04k8tL20WWv_5AdwiQcPSeebqsw/edit
 
-#### Flash Bootloader
+#### Flash the Bootloader
 This step really only needs to be done once. It can be run again to update the bootloader if necessary.
+
 `python3 main.py bootloader`
 
-#### Flash Pipeline
+#### Flash the Pipeline
 `python3 main.py`
 
