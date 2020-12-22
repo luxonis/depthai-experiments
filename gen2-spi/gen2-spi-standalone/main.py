@@ -36,29 +36,27 @@ def create_spi_demo_pipeline():
 
     return pipeline
 
+def flash_bootloader():
+    (f, bl) = dai.DeviceBootloader.getFirstAvailableDevice()
+    bootloader = dai.DeviceBootloader(bl)
+    print(bootloader.getVersion())
 
-def test_pipeline():
+    progress = lambda p : print(f'Flashing progress: {p*100:.1f}%')
+    bootloader.flashBootloader(progress)
+
+
+def flash_image():
     pipeline = create_spi_demo_pipeline()
+    
+    (found, bl) = dai.DeviceBootloader.getFirstAvailableDevice()
 
-    print("Creating DepthAI device")
-    if 1:
-        device = dai.Device(pipeline)
-    else: # For debug mode, with the firmware already loaded
-        found, device_info = dai.XLinkConnection.getFirstDevice(
-                dai.XLinkDeviceState.X_LINK_UNBOOTED)
-        if found:
-            device = dai.Device(pipeline, device_info)
-        else:
-            raise RuntimeError("Device not found")
-    print("Starting pipeline")
-    device.startPipeline()
+    if(found):
+        bootloader = dai.DeviceBootloader(bl)
+        progress = lambda p : print(f'Flashing progress: {p*100:.1f}%')
+        bootloader.flash(progress, pipeline)
+    else:
+        print("No booted (bootloader) devices found...")
 
-    print("Pipeline is running. See connected SPI device for output!")
 
-    while True:
-        sleep(1)
-
-    print("Closing device")
-    del device
-
-test_pipeline()
+#flash_bootloader()
+flash_image()
