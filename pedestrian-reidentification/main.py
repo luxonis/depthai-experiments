@@ -132,6 +132,7 @@ class ReidentificationNode(ThreadedNode):
         self.results = {}
         self.results_path = {}
         self.results_time = {}
+        self.last_id = None
         self.parent = parent
 
     def run(self):
@@ -154,7 +155,8 @@ class ReidentificationNode(ThreadedNode):
                     self.results[person_id] = result
                     break
             else:
-                result_id = int(list(self.results)[-1]) + 1 if len(self.results) > 0 else 0
+                result_id = self.last_id + 1 if self.last_id is not None else 0
+                self.last_id = result_id
                 self.results[result_id] = result
                 if debug:
                     self.results_path[result_id] = []
