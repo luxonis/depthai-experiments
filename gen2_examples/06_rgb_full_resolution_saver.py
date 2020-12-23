@@ -25,8 +25,7 @@ device.startPipeline()
 
 q_rgb = device.getOutputQueue("rgb")
 
-out_dir = Path('06_data')
-out_dir.mkdir(parents=True)
+Path('06_data').mkdir(parents=True)
 
 while True:
     in_rgb = q_rgb.get()
@@ -34,7 +33,7 @@ while True:
     frame_rgb = in_rgb.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
     frame_rgb = np.ascontiguousarray(frame_rgb)
     cv2.imshow("rgb", frame_rgb)
-    cv2.imwrite(f"{int(time.time() * 10000)}.png", frame_rgb)
+    cv2.imwrite(f"06_data/{int(time.time() * 10000)}.png", frame_rgb)
 
     if cv2.waitKey(1) == ord('q'):
         break
