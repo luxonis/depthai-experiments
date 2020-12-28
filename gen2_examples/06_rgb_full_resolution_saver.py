@@ -8,7 +8,7 @@ import numpy as np
 pipeline = depthai.Pipeline()
 
 cam_rgb = pipeline.createColorCamera()
-cam_rgb.setPreviewSize(2160, 3840)
+cam_rgb.setPreviewSize(3840, 2160)
 cam_rgb.setCamId(0)
 cam_rgb.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_4_K)
 cam_rgb.setInterleaved(False)
