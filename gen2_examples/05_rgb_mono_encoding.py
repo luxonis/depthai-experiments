@@ -1,67 +1,71 @@
-import cv2
-import depthai
-import numpy as np
+import subprocess
+import depthai as dai
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
-cam = pipeline.createColorCamera()
-cam.setCamId(0)
-cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_4_K)
+# Nodes
+colorCam = pipeline.createColorCamera()
+monoCam = pipeline.createMonoCamera()
+monoCam2 = pipeline.createMonoCamera()
+ve1 = pipeline.createVideoEncoder()
+ve2 = pipeline.createVideoEncoder()
+ve3 = pipeline.createVideoEncoder()
 
-rgbEncoder = pipeline.createVideoEncoder()
-rgbEncoder.setDefaultProfilePreset(3840, 2160, 30, depthai.VideoEncoderProperties.Profile.H264_MAIN)
-cam.video.link(rgbEncoder.input)
+ve1Out = pipeline.createXLinkOut()
+ve2Out = pipeline.createXLinkOut()
+ve3Out = pipeline.createXLinkOut()
 
-cam_left = pipeline.createMonoCamera()
-cam_left.setCamId(1)
-cam_left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+# Properties
+monoCam.setCamId(1)
+monoCam2.setCamId(2)
+ve1Out.setStreamName('ve1Out')
+ve2Out.setStreamName('ve2Out')
+ve3Out.setStreamName('ve3Out')
 
-leftEncoder = pipeline.createVideoEncoder()
-leftEncoder.setDefaultProfilePreset(1280, 720, 30, depthai.VideoEncoderProperties.Profile.H264_MAIN)
-cam_left.out.link(leftEncoder.input)
+ve1.setDefaultProfilePreset(1280, 720, 30, dai.VideoEncoderProperties.Profile.H264_MAIN)
+ve2.setDefaultProfilePreset(1920, 1080, 30, dai.VideoEncoderProperties.Profile.H265_MAIN)
+ve3.setDefaultProfilePreset(1280, 720, 30, dai.VideoEncoderProperties.Profile.H264_MAIN)
 
-cam_right = pipeline.createMonoCamera()
-cam_right.setCamId(2)
-cam_right.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+# Link nodes
+monoCam.out.link(ve1.input)
+colorCam.video.link(ve2.input)
+monoCam2.out.link(ve3.input)
 
-rightEncoder = pipeline.createVideoEncoder()
-rightEncoder.setDefaultProfilePreset(1280, 720, 30, depthai.VideoEncoderProperties.Profile.H264_MAIN)
-cam_right.out.link(rightEncoder.input)
+ve1.bitstream.link(ve1Out.input)
+ve2.bitstream.link(ve2Out.input)
+ve3.bitstream.link(ve3Out.input)
 
-xout_rgb = pipeline.createXLinkOut()
-xout_rgb.setStreamName('rgb')
-xout_left = pipeline.createXLinkOut()
-xout_left.setStreamName('left')
-xout_right = pipeline.createXLinkOut()
-xout_right.setStreamName('right')
+# Connect to the device
+dev = dai.Device(pipeline)
 
-rgbEncoder.bitstream.link(xout_rgb.input)
-leftEncoder.bitstream.link(xout_left.input)
-rightEncoder.bitstream.link(xout_right.input)
+# Prepare data queues
+outQ1 = dev.getOutputQueue('ve1Out')
+outQ2 = dev.getOutputQueue('ve2Out')
+outQ3 = dev.getOutputQueue('ve3Out')
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
-device.startPipeline()
+# Start the pipeline
+dev.startPipeline()
 
-q_rgb = device.getOutputQueue("rgb")
-q_left = device.getOutputQueue("left")
-q_right = device.getOutputQueue("right")
+# Processing loop
+with open('mono1.h264', 'wb') as file_mono1_h264, open('color.h265', 'wb') as file_color_h265, open('mono2.h264', 'wb') as file_mono2_h264:
+    print("Press Ctrl+C to stop encoding...")
+    while True:
+        try:
+            # Empty each queue
+            while outQ1.has():
+                outQ1.get().getData().tofile(file_mono1_h264)
 
-with open('rgb.h264','wb') as rgbFile, open('left.h264','wb') as leftFile, open('right.h264','wb') as rightFile:
-    print("press key to interrupt")
-    try:
-        while True:
-            in_rgb = q_rgb.tryGet()
-            in_left = q_left.tryGet()
-            in_right = q_right.tryGet()
+            while outQ2.has():
+                outQ2.get().getData().tofile(file_color_h265)
 
-            if in_rgb is not None:
-                in_rgb.getData().tofile(rgbFile)
-            if in_left is not None:
-                in_left.getData().tofile(leftFile)
-            if in_right is not None:
-                in_right.getData().tofile(rightFile)
-    except KeyboardInterrupt:
-        print("interrupted")
+            while outQ3.has():
+                outQ3.get().getData().tofile(file_mono2_h264)
+        except KeyboardInterrupt:
+            break
+
+print("Converting stream file (.h264/.h265) into a video file (.mp4)...")
+cmd = "ffmpeg -framerate 30 -i {} -c copy {}"
+subprocess.check_call(cmd.format("mono1.h264", "mono1.mp4").split())
+subprocess.check_call(cmd.format("mono2.h264", "mono2.mp4").split())
+subprocess.check_call(cmd.format("color.h265", "color.mp4").split())
+print("Conversion successful, check mono1.mp4 / mono2.mp4 / color.mp4")
