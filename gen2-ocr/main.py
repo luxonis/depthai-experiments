@@ -25,6 +25,17 @@ nn_xout = pipeline.createXLinkOut()
 nn_xout.setStreamName("detections")
 nn.out.link(nn_xout.input)
 
+nn2 = pipeline.createNeuralNetwork()
+nn2.setBlobPath(str((Path(__file__).parent / Path('text-recognition-0012.blob')).resolve().absolute()))
+
+nn2_in = pipeline.createXLinkIn()
+nn2_in.setStreamName("in_recognition")
+nn2_in.out.link(nn2.input)
+
+nn2_xout = pipeline.createXLinkOut()
+nn2_xout.setStreamName("recognitions")
+nn2.out.link(nn2_xout.input)
+
 found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
 if not found:
     raise RuntimeError("Device not found")
@@ -39,8 +50,14 @@ def to_tensor_result(packet):
     }
 
 
+def to_planar(arr: np.ndarray, shape: tuple) -> list:
+    return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
+
+
 q_prev = device.getOutputQueue("preview")
 q_det = device.getOutputQueue("detections")
+q_rec_in = device.getInputQueue("in_recognition")
+q_rec = device.getOutputQueue("recognitions")
 
 frame = None
 points = []
@@ -48,6 +65,7 @@ points = []
 while True:
     in_prev = q_prev.tryGet()
     in_det = q_det.tryGet()
+    in_rec = q_rec.tryGet()
 
     if in_prev is not None:
         shape = (3, in_prev.getHeight(), in_prev.getWidth())
@@ -67,9 +85,19 @@ while True:
             for (bbox, angle) in zip(boxes, angles)
         ]
 
+    if in_rec is not None:
+        rec_data = bboxes = np.array(in_rec.getFirstLayerFp16())
+        print(rec_data, rec_data.shape)  # TODO handle text recognition
+
     if frame is not None:
         for point_arr in points:
             cv2.polylines(frame, [point_arr], isClosed=True, color=(255, 0, 0), thickness=1, lineType=cv2.LINE_8)
+
+            transformed = east.four_point_transform(frame, point_arr)
+            nn_data = depthai.NNData()
+            nn_data.setLayer("Placeholder", to_planar(transformed, (120, 32)))
+            q_rec_in.send(nn_data)
+
 
         cv2.imshow('preview', frame)
         if cv2.waitKey(1) == ord('q'):
