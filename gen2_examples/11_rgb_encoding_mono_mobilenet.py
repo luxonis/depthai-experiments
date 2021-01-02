@@ -4,8 +4,21 @@ from pathlib import Path
 import cv2
 import depthai
 import numpy as np
+import subprocess
 
 pipeline = depthai.Pipeline()
+
+cam = pipeline.createColorCamera()
+cam.setCamId(0)
+cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
+
+videoEncoder = pipeline.createVideoEncoder()
+videoEncoder.setDefaultProfilePreset(1920, 1080, 30, depthai.VideoEncoderProperties.Profile.H265_MAIN)
+cam.video.link(videoEncoder.input)
+
+videoOut = pipeline.createXLinkOut()
+videoOut.setStreamName('h265')
+videoEncoder.bitstream.link(videoOut.input)
 
 cam_left = pipeline.createMonoCamera()
 cam_left.setCamId(1)
@@ -34,15 +47,19 @@ xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
+found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_ANY_STATE)
 if not found:
     raise RuntimeError("Device not found")
 device = depthai.Device(pipeline, device_info)
 device.startPipeline()
 
-q_left = device.getOutputQueue("left")
-q_manip = device.getOutputQueue("manip")
-q_nn = device.getOutputQueue("nn")
+queue_size = 8
+overwriteLRU = True #overwrite least recently used frame in queue if it gets full (not blocking)
+q_left = device.getOutputQueue("left", queue_size, overwriteLRU)
+q_manip = device.getOutputQueue("manip", queue_size, overwriteLRU)
+q_nn = device.getOutputQueue("nn", queue_size, overwriteLRU)
+q_rgb_enc = device.getOutputQueue('h265', queue_size, overwriteLRU)
+
 
 frame = None
 frame_manip = None
@@ -53,10 +70,18 @@ def frame_norm(frame, bbox):
     return (np.array(bbox) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
 
 
+
+videoFile = open('video.h265','wb')
+
+
 while True:
     in_left = q_left.tryGet()
     in_manip = q_manip.tryGet()
     in_nn = q_nn.tryGet()
+    in_rgb_enc = q_rgb_enc.tryGet()
+
+    if in_rgb_enc is not None: 
+        in_rgb_enc.getData().tofile(videoFile)
 
     if in_left is not None:
         shape = (in_left.getHeight(), in_left.getWidth())
@@ -85,3 +110,9 @@ while True:
 
     if cv2.waitKey(1) == ord('q'):
         break
+
+videoFile.close()
+
+print("Converting stream file (.h265) into a video file (.mp4)...")
+subprocess.check_call("ffmpeg -framerate 30 -i video.h265 -c copy video.mp4".split())
+print("Conversion successful, check video.mp4")
