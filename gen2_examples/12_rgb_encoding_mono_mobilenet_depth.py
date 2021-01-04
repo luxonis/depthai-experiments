@@ -3,18 +3,18 @@
 from pathlib import Path
 
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 import subprocess
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
 cam.setCamId(0)
-cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
+cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
 videoEncoder = pipeline.createVideoEncoder()
-videoEncoder.setDefaultProfilePreset(1920, 1080, 30, depthai.VideoEncoderProperties.Profile.H265_MAIN)
+videoEncoder.setDefaultProfilePreset(1920, 1080, 30, dai.VideoEncoderProperties.Profile.H265_MAIN)
 cam.video.link(videoEncoder.input)
 
 videoOut = pipeline.createXLinkOut()
@@ -22,11 +22,11 @@ videoOut.setStreamName('h265')
 videoEncoder.bitstream.link(videoOut.input)
 
 left = pipeline.createMonoCamera()
-left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 left.setCamId(1)
 
 right = pipeline.createMonoCamera()
-right.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 right.setCamId(2)
 
 depth = pipeline.createStereoDepth()
@@ -52,7 +52,7 @@ depth.rectifiedLeft.link(xout_left.input)
 manip = pipeline.createImageManip()
 manip.setResize(300, 300)
 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-manip.setFrameType(depthai.RawImgFrame.Type.BGR888p)
+manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
 depth.rectifiedLeft.link(manip.inputImage)
 manip.out.link(detection_nn.input)
 
@@ -64,19 +64,14 @@ xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_ANY_STATE)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = dai.Device(pipeline)
 device.startPipeline()
 
-queue_size = 8
-overwriteLRU = True #overwrite least recently used frame in queue if it gets full (not blocking)
-q_left = device.getOutputQueue("rect_left", queue_size, overwriteLRU)
-q_manip = device.getOutputQueue("manip", queue_size, overwriteLRU)
-q_depth = device.getOutputQueue("depth", queue_size, overwriteLRU)
-q_nn = device.getOutputQueue("nn", queue_size, overwriteLRU)
-q_rgb_enc = device.getOutputQueue('h265', queue_size, overwriteLRU)
+q_left = device.getOutputQueue(name="rect_left", maxSize=8, overwrite=True)
+q_manip = device.getOutputQueue(name="manip", maxSize=8, overwrite=True)
+q_depth = device.getOutputQueue(name="depth", maxSize=8, overwrite=True)
+q_nn = device.getOutputQueue(name="nn", maxSize=8, overwrite=True)
+q_rgb_enc = device.getOutputQueue(name="h265", maxSize=8, overwrite=True)
 
 frame_left = None
 frame_manip = None

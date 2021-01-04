@@ -3,17 +3,17 @@
 from pathlib import Path
 
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 left = pipeline.createMonoCamera()
-left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 left.setCamId(1)
 
 right = pipeline.createMonoCamera()
-right.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 right.setCamId(2)
 
 depth = pipeline.createStereoDepth()
@@ -39,7 +39,7 @@ depth.rectifiedLeft.link(xout_left.input)
 manip = pipeline.createImageManip()
 manip.setResize(300, 300)
 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-manip.setFrameType(depthai.RawImgFrame.Type.BGR888p)
+manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
 depth.rectifiedLeft.link(manip.inputImage)
 manip.out.link(detection_nn.input)
 
@@ -51,10 +51,7 @@ xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_ANY_STATE)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = dai.Device(pipeline)
 device.startPipeline()
 
 q_left = device.getOutputQueue("rect_left")

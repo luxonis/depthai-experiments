@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 cam_left = pipeline.createMonoCamera()
 cam_left.setCamId(1)
-cam_left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+cam_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 cam_right = pipeline.createMonoCamera()
 cam_right.setCamId(2)
-cam_right.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+cam_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 xout_left = pipeline.createXLinkOut()
 xout_left.setStreamName('left')
@@ -22,14 +22,11 @@ xout_right.setStreamName('right')
 cam_left.out.link(xout_left.input)
 cam_right.out.link(xout_right.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = dai.Device(pipeline)
 device.startPipeline()
 
-q_left = device.getOutputQueue("left")
-q_right = device.getOutputQueue("right")
+q_left = device.getOutputQueue(name="left", maxSize=4, overwrite=True)
+q_right = device.getOutputQueue(name="right", maxSize=4, overwrite=True)
 
 frame_left = None
 frame_right = None

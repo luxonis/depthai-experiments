@@ -4,26 +4,23 @@ import time
 from pathlib import Path
 
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 cam_left = pipeline.createMonoCamera()
 cam_left.setCamId(1)
-cam_left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+cam_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 xout_rgb = pipeline.createXLinkOut()
 xout_rgb.setStreamName("left")
 cam_left.out.link(xout_rgb.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = dai.Device(pipeline)
 device.startPipeline()
 
-q_left = device.getOutputQueue("left")
+q_left = device.getOutputQueue(name="left", maxSize=4, overwrite=True)
 
 Path('07_data').mkdir(parents=True)
 

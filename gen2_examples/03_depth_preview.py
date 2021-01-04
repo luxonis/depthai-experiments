@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 left = pipeline.createMonoCamera()
-left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 left.setCamId(1)
 
 right = pipeline.createMonoCamera()
-right.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 right.setCamId(2)
 
 depth = pipeline.createStereoDepth()
@@ -23,13 +23,10 @@ xout = pipeline.createXLinkOut()
 xout.setStreamName("disparity")
 depth.disparity.link(xout.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = dai.Device(pipeline)
 device.startPipeline()
 
-q = device.getOutputQueue("disparity")
+q = device.getOutputQueue(name="disparity", maxSize=4, overwrite=True)
 
 while True:
     in_rgb = q.get()

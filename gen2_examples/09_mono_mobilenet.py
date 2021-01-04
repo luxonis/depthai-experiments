@@ -2,23 +2,22 @@
 
 from pathlib import Path
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 cam_left = pipeline.createMonoCamera()
 cam_left.setCamId(1)
-cam_left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+cam_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 detection_nn = pipeline.createNeuralNetwork()
 detection_nn.setBlobPath(str((Path(__file__).parent / Path('models/mobilenet-ssd.blob')).resolve().absolute()))
-cam_left.out.link(detection_nn.input)
 
 manip = pipeline.createImageManip()
 manip.setResize(300, 300)
 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-manip.setFrameType(depthai.RawImgFrame.Type.BGR888p)
+manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
 cam_left.out.link(manip.inputImage)
 manip.out.link(detection_nn.input)
 
@@ -34,10 +33,7 @@ xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = dai.Device(pipeline)
 device.startPipeline()
 
 q_left = device.getOutputQueue("left")

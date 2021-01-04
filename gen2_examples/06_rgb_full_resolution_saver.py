@@ -4,28 +4,25 @@ import time
 from pathlib import Path
 
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 cam_rgb = pipeline.createColorCamera()
 cam_rgb.setPreviewSize(3840, 2160)
 cam_rgb.setCamId(0)
-cam_rgb.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_4_K)
+cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
 cam_rgb.setInterleaved(False)
 
 xout_rgb = pipeline.createXLinkOut()
 xout_rgb.setStreamName("rgb")
 cam_rgb.preview.link(xout_rgb.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = dai.Device(pipeline)
 device.startPipeline()
 
-q_rgb = device.getOutputQueue("rgb")
+q_rgb = device.getOutputQueue(name="rgb")
 
 Path('06_data').mkdir(parents=True)
 
