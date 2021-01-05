@@ -22,7 +22,7 @@ git submodule update --init --recursive
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html
 
 ```
-cd esp32-spi-message-demo/
+cd esp32-spi-message-demo/jpeg_demo/
 idf.py build
 idf.py -p /dev/ttyUSB1 flash
 ```
