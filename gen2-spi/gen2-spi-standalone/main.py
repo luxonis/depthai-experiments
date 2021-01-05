@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import depthai as dai
+import sys
 from time import sleep
 
 '''
@@ -57,6 +58,9 @@ def flash_image():
     else:
         print("No booted (bootloader) devices found...")
 
-
-#flash_bootloader()
-flash_image()
+if(len(sys.argv) >= 2 and sys.argv[1] == "bootloader"):
+    print("flashing bootloader")
+    flash_bootloader()
+else:
+    print("flashing pipeline")
+    flash_image()
