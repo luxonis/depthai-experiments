@@ -27,7 +27,7 @@ git submodule update --init --recursive
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html
 
 ```
-cd esp32-spi-message-demo/remote_yolo_parsing/
+cd esp32-spi-message-demo/parse_meta/
 idf.py build
 idf.py -p /dev/ttyUSB1 flash
 ```

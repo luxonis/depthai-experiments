@@ -1,4 +1,4 @@
-## Gen2 JPEG/Large File SPI Demo
+## Gen2 Stereo/Crop SPI Demo
 
 ### Overview:
 This demo requires an ESP32 board connected via SPI to the DepthAI. The easiest way to accomplish this is to get a hold of an BW1092 board. It has an integrated ESP32 already connected to the DepthAI.
@@ -20,7 +20,7 @@ git submodule update --init --recursive
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html
 
 ```
-cd ../esp32-spi-message-demo/
+cd ../esp32-spi-message-demo/jpeg_demo
 idf.py build
 idf.py -p /dev/ttyUSB1 flash
 ```
