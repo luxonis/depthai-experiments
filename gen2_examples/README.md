@@ -11,6 +11,14 @@ Allowing the power of these permutations, but with the speed of copy/paste plugg
 
 So the below examples hope to serve to show how to use each of these nodes, so that you can piece them together for your application.
 
+## Install Dependencies
+
+Prior to running the examples below, install the dependencies for them with:
+
+`python3 -m pip install -r requirements.txt`
+
+This installs the depthai library version that corresponds to the examples, to ensure compatibility.
+
 ## The examples:
 
 ### [01_rgb_preview.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/01_rgb_preview.py)
