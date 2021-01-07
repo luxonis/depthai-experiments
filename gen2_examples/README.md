@@ -39,6 +39,8 @@ This example shows how to set the SGBM (semi-global-matching) disparity-depth no
 
 This example shows how to configure the depthai video encoder in h.265 format to encode the RGB camera input at 8MP/4K/2160p (3840x2160) at 30FPS (the maximum possible encoding resolultion possible for the encoder, higher frame-rates are possible at lower resolutions, like 1440p at 60FPS), and transfers the encoded video over XLINK to the host, saving it to disk as a video file.
 
+Pressing Ctrl+C will stop the recording and then convert it using ffmpeg into an mp4 to make it playable.
+
 Be careful with this one... it is saving video to your disk.  If you leave it running, you could fill up your storage on your host.
 
 ### [05_rgb_mono_encoding.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/05_rgb_mono_encoding.py)
