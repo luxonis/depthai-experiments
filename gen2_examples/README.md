@@ -1,4 +1,4 @@
-### Background on the DepthAI Gen2 Pipeline Builder Examples
+## Background on the DepthAI Gen2 Pipeline Builder Examples
 
 The Gen2 Pipeline Builder (luxonis/depthai#136) allows theoretically infinite permutations of pipelines to be built. 
 So there is no way to do what we did with depthai_demo.py as in Gen1 where effectively all permutations of configs can be done via CLI options.
@@ -11,9 +11,9 @@ Allowing the power of these permutations, but with the speed of copy/paste plugg
 
 So the below examples hope to serve to show how to use each of these nodes, so that you can piece them together for your application.
 
-### The examples:
+## The examples:
 
-- [01_rgb_preview.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/01_rgb_preview.py)
+### [01_rgb_preview.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/01_rgb_preview.py)
 
 This example shows how to set up a pipeline that outpus a preview of the RGB camera, connects over XLink to transfer these to the host real-time, and displays the RGB frames on the host with OpenCV.
 
