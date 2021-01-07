@@ -21,6 +21,8 @@ This installs the depthai library version that corresponds to the examples, to e
 
 ## The examples:
 
+Note that the encoding examples will save encoded video to your host storage.  Be more careful with these...  If you leave them running, you could fill up your storage on your host.
+
 ### [01_rgb_preview.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/01_rgb_preview.py)
 
 To run, issue `python3 01_rgb_preview.py` after having installed the dependencies above.
@@ -41,13 +43,11 @@ This example shows how to configure the depthai video encoder in h.265 format to
 
 Pressing Ctrl+C will stop the recording and then convert it using ffmpeg into an mp4 to make it playable.  Note that ffmpeg will need to be installed and runnable for the conversion to mp4 to succeed.
 
-Be careful with this one... it is saving video to your disk.  If you leave it running, you could fill up your storage on your host.
-
 ### [05_rgb_mono_encoding.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/05_rgb_mono_encoding.py)
 
 This example shows how to set up the encoder node to encode the RGB camera and both grayscale cameras (of DepthAI/OAK-D) at the same time.  The RGB is set to 1920x1080 and the grayscale are set to 1280x720 each, all at 30FPS.  Each encoded video stream is transferred over XLINK and saved to a respective file.
 
-Be more careful with this one... it is saving 3 videos in parall to your disk.  If you leave it running, you could fill up your storage on your host.
+Pressing Ctrl+C will stop the recording and then convert it using ffmpeg into an mp4 to make it playable.  Note that ffmpeg will need to be installed and runnable for the conversion to mp4 to succeed.
 
 ### [06_rgb_full_resolution_saver.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/06_rgb_full_resolution_saver.py)
 
@@ -73,12 +73,16 @@ This example shows how to run MobileNetv2SSD on the left grayscale camera in par
 
 This example shows how to encode the RGB stream in h.265 while in parallel running MobileNetv2SSD on the left grayscale camera.  The example saves the h.265-encoded RGB stream to disk, while in parallel displaying the bounding boxes from MobileNetv2SSD overlaid on the left camera stream.
 
+Pressing Ctrl+C will stop the recording and then convert it using ffmpeg into an mp4 to make it playable.  Note that ffmpeg will need to be installed and runnable for the conversion to mp4 to succeed.
+
 ### [12_rgb_encoding_mono_mobilenet_depth.py ](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/12_rgb_encoding_mono_mobilenet_depth.py)
 
 This example shows how to run all of the following in parallel:
 1. Encode the RGB camera in h.265 and save it to disk on the host.
 2. Run MobileNetv2SSD on the left grayscale camera, displaying the left stream and the overlaid bounding box on the host.
 3. Run the depth node, displaying depth on the host.
+
+Pressing Ctrl+C will stop the recording and then convert it using ffmpeg into an mp4 to make it playable.  Note that ffmpeg will need to be installed and runnable for the conversion to mp4 to succeed.
 
 ### [13_encoding_max_limit.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/13_encoding_max_limit.py)
 
@@ -88,5 +92,6 @@ This example show the maximum possible resolution + framerate for the case of en
 - RGB: 3840x2160 at 25 FPS
 - right: 1280x720 at 25 FPS
 
-
 This example is actually slightly above the theoritical maximum combination of resolution and framerate for DepthAI/OAK-D's video encoder, which is a total max pixel limit of 3840x2160 at 30FPS, which is 248,832,000 pixels/second limit.  This example is 1280x720x2x25 + 3840x2160x25 = 253,440,000 pixels/second.
+
+Pressing Ctrl+C will stop the recording and then convert it using ffmpeg into an mp4 to make it playable.  Note that ffmpeg will need to be installed and runnable for the conversion to mp4 to succeed.
