@@ -13,11 +13,11 @@ So the below examples hope to serve to show how to use each of these nodes, so t
 
 ## Install Dependencies
 
-Prior to running the examples below, install the dependencies for them with:
+After having [installed development tools on your system](https://docs.luxonis.com/en/latest/pages/api/#installing-system-dependencies), and prior to running the examples below, install the dependencies for them with:
 
 `python3 -m pip install -r requirements.txt`
 
-This installs the depthai library version that corresponds to the examples, to ensure compatibility.
+This installs the depthai library version that corresponds to the examples, to ensure compatibility.  
 
 ## The examples:
 
