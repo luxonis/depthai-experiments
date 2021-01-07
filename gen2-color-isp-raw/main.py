@@ -28,7 +28,7 @@ if 'raw' in streams:
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 
-device = dai.Device(pipeline, "depthai-dd12b7d5.cmd")
+device = dai.Device(pipeline, "depthai-12d04d92.cmd")
 device.startPipeline()
 
 q_list = []
