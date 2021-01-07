@@ -25,7 +25,7 @@ This installs the depthai library version that corresponds to the examples, to e
 
 To run, issue `python3 01_rgb_preview.py` after having installed the dependencies above.
 
-This example shows how to set up a pipeline that outpus a preview of the RGB camera, connects over XLink to transfer these to the host real-time, and displays the RGB frames on the host with OpenCV.
+This example shows how to set up a pipeline that outpus a small preview of the RGB camera, connects over XLink to transfer these to the host real-time, and displays the RGB frames on the host with OpenCV.
 
 ### [02_mono_preview.py](https://github.com/luxonis/depthai-experiments/blob/master/gen2_examples/02_mono_preview.py)
 
