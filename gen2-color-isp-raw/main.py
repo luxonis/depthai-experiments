@@ -11,6 +11,7 @@ streams.append('isp')
 
 display_scale = 0.3  # configurable
 
+print("depthai version:", dai.__version__)
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
