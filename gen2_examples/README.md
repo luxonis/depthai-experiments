@@ -19,6 +19,10 @@ After having [installed development tools on your system](https://docs.luxonis.c
 
 This installs the depthai library version that corresponds to the examples, to ensure compatibility.  
 
+## Known issues
+
+As of now, these examples do not show additional capabilities of depth processing that depthai/OAK-D are capable of, such as subpixel, LR-check, and extended disparity, as there is an instability we are tracking down when using these additional features with the `manip` node and/or the `neural-network` node.  To try subpixel, LR-check, and extended disparity independently, see the Subpixel and LR-Check Disparity Depth example, [here](https://github.com/luxonis/depthai-experiments#gen2-subpixel-and-lr-check-disparity-depth-here).
+
 ## The examples:
 
 Note that the encoding examples will save encoded video to your host storage.  Be more careful with these...  If you leave them running, you could fill up your storage on your host.
