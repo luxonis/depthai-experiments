@@ -112,8 +112,9 @@ class MainDebug(Main):
 
         cv2.imshow("Frame", frame)
         cv2.imshow("Bird", bird_frame)
-        cv2.moveWindow("Bird", 1050, 200)
-        cv2.moveWindow("Frame", 1370, 200)
+        h,w,c = frame.shape
+        cv2.moveWindow("Bird", w+10,0)
+        cv2.moveWindow("Frame", 0, 0)
         key = cv2.waitKey(1)
 
         if key == ord("q"):
