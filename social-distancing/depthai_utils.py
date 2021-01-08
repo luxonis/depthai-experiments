@@ -55,17 +55,14 @@ class DepthAI:
 
                     boxes = []
                     for e in self.network_results:
-                        try:
-                            boxes.append({
-                                **e.get_dict(),
-                                'id': uuid.uuid4(),
-                                'x_min': int(e.x_min * img_w),
-                                'y_min': int(e.y_min * img_h),
-                                'x_max': int(e.x_max * img_w),
-                                'y_max': int(e.y_max * img_h),
-                            })
-                        except:
-                            continue
+                        boxes.append({
+                            **e.get_dict(),
+                            'id': uuid.uuid4(),
+                            'x_min': int(e.x_min * img_w),
+                            'y_min': int(e.y_min * img_h),
+                            'x_max': int(e.x_max * img_w),
+                            'y_max': int(e.y_max * img_h),
+                        })
 
                     yield frame, boxes
 
