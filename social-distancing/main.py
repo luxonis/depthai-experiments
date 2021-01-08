@@ -18,7 +18,7 @@ class Main:
     alerting_gate_class = AlertingGate
 
     def __init__(self):
-        self.depthai = self.depthai_class(MODEL_LOCATION, 'people')
+        self.depthai = self.depthai_class(MODEL_LOCATION)
         self.distance_guardian = self.distance_guardian_class()
         self.alerting_gate = self.alerting_gate_class()
 
