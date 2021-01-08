@@ -95,19 +95,19 @@ class MainDebug(Main):
         too_close_ids = []
         for result in distance_results:
             if result['dangerous']:
-                left, right = self.calc_x(result['box1']['distance_x'])
-                top, bottom = self.calc_z(result['box1']['distance_z'])
+                left, right = self.calc_x(result['detection1']['depth_x'])
+                top, bottom = self.calc_z(result['detection1']['depth_z'])
                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
-                too_close_ids.append(result['box1']['id'])
-                left, right = self.calc_x(result['box2']['distance_x'])
-                top, bottom = self.calc_z(result['box2']['distance_z'])
+                too_close_ids.append(result['detection1']['id'])
+                left, right = self.calc_x(result['detection2']['depth_x'])
+                top, bottom = self.calc_z(result['detection2']['depth_z'])
                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
-                too_close_ids.append(result['box2']['id'])
+                too_close_ids.append(result['detection2']['id'])
 
         for result in results:
             if result['id'] not in too_close_ids:
-                left, right = self.calc_x(result['distance_x'])
-                top, bottom = self.calc_z(result['distance_z'])
+                left, right = self.calc_x(result['depth_x'])
+                top, bottom = self.calc_z(result['depth_z'])
                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
         cv2.imshow("Frame", frame)

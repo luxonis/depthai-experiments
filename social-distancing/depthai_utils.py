@@ -38,7 +38,6 @@ class DepthAI:
             nnet_packets, data_packets = self.pipeline.get_available_nnet_and_data_packets()
             for nnet_packet in nnet_packets:
                 self.network_results = list(nnet_packet.getDetectedObjects())
-
             for packet in data_packets:
                 if packet.stream_name == 'previewout':
                     data = packet.getData()
@@ -58,16 +57,12 @@ class DepthAI:
                     for e in self.network_results:
                         try:
                             boxes.append({
+                                **e.get_dict(),
                                 'id': uuid.uuid4(),
-                                'detector': self.model_label,
-                                'conf': e['conf'],
-                                'left': int(e['x_min'] * img_w),
-                                'top': int(e['y_min'] * img_h),
-                                'right': int(e['x_max'] * img_w),
-                                'bottom': int(e['y_max'] * img_h),
-                                'distance_x': e['distance_x'],
-                                'distance_y': e['distance_y'],
-                                'distance_z': e['distance_z'],
+                                'x_min': int(e.x_min * img_w),
+                                'y_min': int(e.y_min * img_h),
+                                'x_max': int(e.x_max * img_w),
+                                'y_max': int(e.y_max * img_h),
                             })
                         except:
                             continue
@@ -91,13 +86,11 @@ class DepthAIDebug(DepthAI):
             img_h = frame.shape[0]
             img_w = frame.shape[1]
             for detection in detections:
-                left, top = int(detection.x_min * img_w), int(detection.y_min * img_h)
-                right, bottom = int(detection.x_max * img_w), int(detection.y_max * img_h)
-                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-                cv2.putText(frame, "x: {}".format(round(detection.depth_x, 1)), (left, top + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, "y: {}".format(round(detection.depth_y, 1)), (left, top + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, "z: {}".format(round(detection.depth_z, 1)), (left, top + 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, "conf: {}".format(round(detection.confidence, 1)), (detection.left, detection.top + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.rectangle(frame, (detection['x_min'], detection['y_min']), (detection['x_max'], detection['y_max']), (0, 255, 0), 2)
+                cv2.putText(frame, "x: {}".format(round(detection['depth_x'], 1)), (detection['x_min'], detection['y_min'] + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "y: {}".format(round(detection['depth_y'], 1)), (detection['x_min'], detection['y_min'] + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "z: {}".format(round(detection['depth_z'], 1)), (detection['x_min'], detection['y_min'] + 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "conf: {}".format(round(detection['confidence'], 1)), (detection['x_min'], detection['y_min'] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             yield frame, detections
 
     def __del__(self):
