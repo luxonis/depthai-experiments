@@ -28,7 +28,13 @@ if 'raw' in streams:
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 
-device = dai.Device(pipeline, "depthai-12d04d92.cmd")
+print("===== Booting custom FW, please ignore the next failure: Failed to find device after booting")
+print("===== and run a standard UVC viewer like (replace X with 0, 1, 2...) :")
+print("guvcview -d /dev/videoX")
+print()
+device = dai.Device(pipeline, "imx283-uvc.mvcmd")
+# The above will error out -- expected
+
 device.startPipeline()
 
 q_list = []
