@@ -83,8 +83,6 @@ class DepthAIDebug(DepthAI):
     def capture(self):
         for frame, detections in super().capture():
             self.fps.update()
-            img_h = frame.shape[0]
-            img_w = frame.shape[1]
             for detection in detections:
                 cv2.rectangle(frame, (detection['x_min'], detection['y_min']), (detection['x_max'], detection['y_max']), (0, 255, 0), 2)
                 cv2.putText(frame, "x: {}".format(round(detection['depth_x'], 1)), (detection['x_min'], detection['y_min'] + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
