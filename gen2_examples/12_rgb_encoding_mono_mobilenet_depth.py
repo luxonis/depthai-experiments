@@ -10,7 +10,7 @@ import subprocess
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-cam.setCamId(0)
+cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
 videoEncoder = pipeline.createVideoEncoder()
@@ -23,11 +23,11 @@ videoEncoder.bitstream.link(videoOut.input)
 
 left = pipeline.createMonoCamera()
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-left.setCamId(1)
+left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
 right = pipeline.createMonoCamera()
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-right.setCamId(2)
+right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 depth = pipeline.createStereoDepth()
 depth.setConfidenceThreshold(200)
@@ -67,11 +67,11 @@ detection_nn.out.link(xout_nn.input)
 device = dai.Device(pipeline)
 device.startPipeline()
 
-q_left = device.getOutputQueue(name="rect_left", maxSize=8, overwrite=True)
-q_manip = device.getOutputQueue(name="manip", maxSize=8, overwrite=True)
-q_depth = device.getOutputQueue(name="depth", maxSize=8, overwrite=True)
-q_nn = device.getOutputQueue(name="nn", maxSize=8, overwrite=True)
-q_rgb_enc = device.getOutputQueue(name="h265", maxSize=8, overwrite=True)
+q_left = device.getOutputQueue(name="rect_left", maxSize=8, blocking=False)
+q_manip = device.getOutputQueue(name="manip", maxSize=8, blocking=False)
+q_depth = device.getOutputQueue(name="depth", maxSize=8, blocking=False)
+q_nn = device.getOutputQueue(name="nn", maxSize=8, blocking=False)
+q_rgb_enc = device.getOutputQueue(name="h265", maxSize=8, blocking=False)
 
 frame_left = None
 frame_manip = None

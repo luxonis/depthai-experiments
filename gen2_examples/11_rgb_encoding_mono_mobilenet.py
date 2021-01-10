@@ -9,7 +9,7 @@ import subprocess
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-cam.setCamId(0)
+cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
 videoEncoder = pipeline.createVideoEncoder()
@@ -21,7 +21,7 @@ videoOut.setStreamName('h265')
 videoEncoder.bitstream.link(videoOut.input)
 
 cam_left = pipeline.createMonoCamera()
-cam_left.setCamId(1)
+cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 cam_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 detection_nn = pipeline.createNeuralNetwork()

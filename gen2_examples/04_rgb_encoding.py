@@ -8,7 +8,7 @@ pipeline = dai.Pipeline()
 
 # Define a source - color camera
 cam = pipeline.createColorCamera()
-cam.setCamId(0)
+cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
 
 # Create an encoder, consuming the frames and encoding them using H.265 encoding
@@ -26,7 +26,7 @@ device = dai.Device(pipeline)
 device.startPipeline()
 
 # Output queue will be used to get the encoded data from the output defined above
-q = device.getOutputQueue(name="h265")
+q = device.getOutputQueue(name="h265", maxSize=4, blocking=False)
 
 # The .h265 file is a raw stream file (not playable yet)
 with open('video.h265','wb') as videoFile:

@@ -9,9 +9,9 @@ pipeline = dai.Pipeline()
 # Define a source - color and mono cameras
 colorCam = pipeline.createColorCamera()
 monoCam = pipeline.createMonoCamera()
-monoCam.setCamId(1)
+monoCam.setBoardSocket(dai.CameraBoardSocket.LEFT)
 monoCam2 = pipeline.createMonoCamera()
-monoCam2.setCamId(2)
+monoCam2.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create encoders, one for each camera, consuming the frames and encoding them using H.264 / H.265 encoding
 ve1 = pipeline.createVideoEncoder()
@@ -45,9 +45,9 @@ dev = dai.Device(pipeline)
 dev.startPipeline()
 
 # Output queues will be used to get the encoded data from the outputs defined above
-outQ1 = dev.getOutputQueue(name='ve1Out')
-outQ2 = dev.getOutputQueue(name='ve2Out')
-outQ3 = dev.getOutputQueue(name='ve3Out')
+outQ1 = dev.getOutputQueue(name='ve1Out', maxSize=4, blocking=False)
+outQ2 = dev.getOutputQueue(name='ve2Out', maxSize=4, blocking=False)
+outQ3 = dev.getOutputQueue(name='ve3Out', maxSize=4, blocking=False)
 
 # The .h264 / .h265 files are raw stream files (not playable yet)
 with open('mono1.h264', 'wb') as file_mono1_h264, open('color.h265', 'wb') as file_color_h265, open('mono2.h264', 'wb') as file_mono2_h264:

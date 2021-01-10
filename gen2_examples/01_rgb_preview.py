@@ -10,7 +10,7 @@ pipeline = dai.Pipeline()
 # Define a source - color camera
 cam_rgb = pipeline.createColorCamera()
 cam_rgb.setPreviewSize(300, 300)
-cam_rgb.setCamId(0)
+cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 cam_rgb.setInterleaved(False)
 
@@ -24,7 +24,7 @@ device = dai.Device(pipeline)
 device.startPipeline()
 
 # Output queue will be used to get the rgb frames from the output defined above
-q_rgb = device.getOutputQueue(name="rgb", maxSize=4, overwrite=True)
+q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
 
 while True:
     in_rgb = q_rgb.get()  # blocking call, will wait until a new data has arrived

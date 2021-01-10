@@ -19,8 +19,8 @@ ve2Out = pipeline.createXLinkOut()
 ve3Out = pipeline.createXLinkOut()
 
 # Properties
-monoCam.setCamId(1)
-monoCam2.setCamId(2)
+monoCam.setBoardSocket(dai.CameraBoardSocket.LEFT)
+monoCam2.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 ve1Out.setStreamName('ve1Out')
 ve2Out.setStreamName('ve2Out')
 ve3Out.setStreamName('ve3Out')
@@ -43,9 +43,9 @@ ve3.bitstream.link(ve3Out.input)
 dev = dai.Device(pipeline)
 
 # Prepare data queues
-outQ1 = dev.getOutputQueue('ve1Out')
-outQ2 = dev.getOutputQueue('ve2Out')
-outQ3 = dev.getOutputQueue('ve3Out')
+outQ1 = dev.getOutputQueue('ve1Out', maxSize=8, blocking=False)
+outQ2 = dev.getOutputQueue('ve2Out', maxSize=8, blocking=False)
+outQ3 = dev.getOutputQueue('ve3Out', maxSize=8, blocking=False)
 
 # Start the pipeline
 dev.startPipeline()

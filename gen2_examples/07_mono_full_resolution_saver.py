@@ -12,7 +12,7 @@ pipeline = dai.Pipeline()
 
 # Define a source - mono (grayscale) camera
 cam_left = pipeline.createMonoCamera()
-cam_left.setCamId(1)
+cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 cam_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 # Create output
@@ -25,10 +25,10 @@ device = dai.Device(pipeline)
 device.startPipeline()
 
 # Output queue will be used to get the grayscale frames from the output defined above
-q_left = device.getOutputQueue(name="left", maxSize=4, overwrite=True)
+q_left = device.getOutputQueue(name="left", maxSize=4, blocking=False)
 
 # Make sure the destination path is present before starting to store the examples
-Path('07_data').mkdir(parents=True)
+Path('07_data').mkdir(parents=True, exist_ok=True)
 
 while True:
     in_left = q_left.get()  # blocking call, will wait until a new data has arrived
