@@ -1,5 +1,15 @@
 # Gen2 SPI Examples
-This directory contains a few examples of how to use the SPI interface with the Gen2 Pipeline builder.
+This directory contains a few examples of how to use the SPI interface with the Gen2 Pipeline builder. 
+
+
+### Install Dependencies and Init Submodules:
+Note that all of these examples depend on the requirements specified in requirements.txt and may have git submodules.
+
+```
+python3 -m pip install -r requirements.txt
+git submodule update --init --recursive
+```
+
 
 #### gen2-spi-jpeg
 This example builds a pipeline that returns jpegs of the color camera through SPI.

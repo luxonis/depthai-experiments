@@ -61,8 +61,10 @@ def create_spi_demo_pipeline(nnPath):
 
 
 def test_pipeline():
-
-    pipeline = create_spi_demo_pipeline(sys.argv[1])
+    nnBlobPath="tiny-yolo-v3.blob.sh4cmx4NCE1"
+    if len(sys.argv) >= 2:
+        nnBlobPath = sys.argv[1]
+    pipeline = create_spi_demo_pipeline(nnBlobPath)
 
     print("Creating DepthAI device")
     if 1:
