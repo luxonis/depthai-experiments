@@ -114,7 +114,7 @@ class Main:
             cam.setPreviewSize(300, 300)
             cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
             cam.setInterleaved(False)
-            cam.setCamId(0)
+            cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
             cam_xout = self.pipeline.createXLinkOut()
             cam_xout.setStreamName("cam_out")
             cam.preview.link(cam_xout.input)
@@ -173,9 +173,9 @@ class Main:
         print("Pipeline created.")
 
     def start_pipeline(self):
-        self.device = depthai.Device()
+        self.device = depthai.Device(self.pipeline)
         print("Starting pipeline...")
-        self.device.startPipeline(self.pipeline)
+        self.device.startPipeline()
         self.face_in = self.device.getInputQueue("face_in")
         self.face_nn = self.device.getOutputQueue("face_nn")
         self.land_in = self.device.getInputQueue("landmark_in")

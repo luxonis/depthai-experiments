@@ -39,7 +39,7 @@ def create_pipeline():
         cam.setPreviewSize(544, 320)
         cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
-        cam.setCamId(0)
+        cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
         cam_xout = pipeline.createXLinkOut()
         cam_xout.setStreamName("cam_out")
         cam.preview.link(cam_xout.input)
