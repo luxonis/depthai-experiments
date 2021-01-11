@@ -9,7 +9,7 @@ import subprocess
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-cam.setCamId(0)
+cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
 videoEncoder = pipeline.createVideoEncoder()
@@ -21,7 +21,7 @@ videoOut.setStreamName('h265')
 videoEncoder.bitstream.link(videoOut.input)
 
 cam_left = pipeline.createMonoCamera()
-cam_left.setCamId(1)
+cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 cam_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 detection_nn = pipeline.createNeuralNetwork()
@@ -54,7 +54,7 @@ overwriteLRU = True #overwrite least recently used frame in queue if it gets ful
 q_left = device.getOutputQueue("left", queue_size, overwriteLRU)
 q_manip = device.getOutputQueue("manip", queue_size, overwriteLRU)
 q_nn = device.getOutputQueue("nn", queue_size, overwriteLRU)
-q_rgb_enc = device.getOutputQueue('h265', queue_size, overwriteLRU)
+q_rgb_enc = device.getOutputQueue('h265', maxSize=30, blocking=True)
 
 frame = None
 frame_manip = None

@@ -10,7 +10,7 @@ pipeline = dai.Pipeline()
 
 # Define a source - mono (grayscale) camera
 cam_left = pipeline.createMonoCamera()
-cam_left.setCamId(1)
+cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 cam_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 
 # Define a neural network that will make predictions based on the source frames
@@ -39,8 +39,8 @@ device = dai.Device(pipeline)
 device.startPipeline()
 
 # Output queues will be used to get the grayscale frames and nn data from the outputs defined above
-q_left = device.getOutputQueue("left")
-q_nn = device.getOutputQueue("nn")
+q_left = device.getOutputQueue("left", maxSize=4, blocking=False)
+q_nn = device.getOutputQueue("nn", maxSize=4, blocking=False)
 
 frame = None
 bboxes = []

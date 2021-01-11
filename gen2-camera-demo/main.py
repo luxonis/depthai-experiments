@@ -57,7 +57,7 @@ def create_rgb_cam_pipeline():
     cam.setPreviewSize(540, 540)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
-    cam.setCamId(0)
+    cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 
     xout_preview.setStreamName('rgb_preview')
     xout_video  .setStreamName('rgb_video')
@@ -78,8 +78,8 @@ def create_mono_cam_pipeline():
     xout_left  = pipeline.createXLinkOut()
     xout_right = pipeline.createXLinkOut()
 
-    cam_left .setCamId(1)
-    cam_right.setCamId(2)
+    cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
+    cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
     for cam in [cam_left, cam_right]: # Common config
         cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
         #cam.setFps(20.0)
@@ -117,8 +117,8 @@ def create_stereo_depth_pipeline(from_camera=True):
     xout_rectif_right = pipeline.createXLinkOut()
 
     if from_camera:
-        cam_left .setCamId(1)
-        cam_right.setCamId(2)
+        cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
+        cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         for cam in [cam_left, cam_right]: # Common config
             cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
             #cam.setFps(20.0)

@@ -32,8 +32,8 @@ device = dai.Device(pipeline)
 device.startPipeline()
 
 # Output queues will be used to get the rgb frames and nn data from the outputs defined above
-q_rgb = device.getOutputQueue(name="rgb", maxSize=4, overwrite=True)
-q_nn = device.getOutputQueue(name="nn", maxSize=4, overwrite=True)
+q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
 frame = None
 bboxes = []
