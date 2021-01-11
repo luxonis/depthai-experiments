@@ -39,7 +39,6 @@ right.out.link(depth.right)
 
 detection_nn = pipeline.createNeuralNetwork()
 detection_nn.setBlobPath(str((Path(__file__).parent / Path('models/mobilenet-ssd.blob')).resolve().absolute()))
-depth.rectifiedLeft.link(detection_nn.input)
 
 xout_depth = pipeline.createXLinkOut()
 xout_depth.setStreamName("depth")
