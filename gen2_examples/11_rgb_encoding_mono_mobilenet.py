@@ -54,7 +54,7 @@ overwriteLRU = True #overwrite least recently used frame in queue if it gets ful
 q_left = device.getOutputQueue("left", queue_size, overwriteLRU)
 q_manip = device.getOutputQueue("manip", queue_size, overwriteLRU)
 q_nn = device.getOutputQueue("nn", queue_size, overwriteLRU)
-q_rgb_enc = device.getOutputQueue('h265', queue_size, overwriteLRU)
+q_rgb_enc = device.getOutputQueue('h265', maxSize=30, blocking=True)
 
 frame = None
 frame_manip = None
