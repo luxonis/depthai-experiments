@@ -21,7 +21,7 @@ out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
 point_cloud    = False   # Create point cloud visualizer. Depends on 'out_rectified'
 test_manip     = True   # Test ImageManip node, with RGB or Stereo pipelines
-lrcheck  = False   # Better handling for occlusions
+lrcheck  = True   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled 
 subpixel = False   # Better accuracy for longer distance, fractional disparity 32-levels
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7 
@@ -77,6 +77,7 @@ def create_stereo_depth_pipeline(from_camera=True):
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)
+    stereo.setOutputDepth(True)
 
     # Default: EEPROM calib is used, and resolution taken from MonoCamera nodes
     #stereo.loadCalibrationFile(path)

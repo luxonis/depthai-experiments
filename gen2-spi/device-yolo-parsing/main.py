@@ -17,9 +17,8 @@ def create_spi_demo_pipeline(nnPath):
 
     # testing YOLO DetectionNetwork 
     detectionNetwork = pipeline.createYoloDetectionNetwork()
-    detectionNetwork.setStreamName("yolo")
     detectionNetwork.setConfidenceThreshold(0.5)
-    detectionNetwork.setNNBlobPath(nnPath)
+    detectionNetwork.setBlobPath(nnPath)
     detectionNetwork.setNumClasses(80)
     detectionNetwork.setCoordinateSize(4)
     anchors = np.array([10,14, 23,27, 37,58, 81,82, 135,169, 344,319])
@@ -36,9 +35,8 @@ def create_spi_demo_pipeline(nnPath):
 
 #    # testing MobileNet DetectionNetwork
 #    detectionNetwork = pipeline.createMobileNetDetectionNetwork()
-#    detectionNetwork.setStreamName("mobilenet")
 #    detectionNetwork.setConfidenceThreshold(0.5)
-#    detectionNetwork.setNNBlobPath(nnPath)
+#    detectionNetwork.setBlobPath(nnPath)
 
     # set up color camera and link to NN node
     colorCam = pipeline.createColorCamera()
