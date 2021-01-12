@@ -56,7 +56,7 @@ class MainDebug(Main):
     def make_bird_frame(self):
         fov = 68.7938
         min_distance = 0.827
-        frame = np.zeros((300, 100, 3), np.uint8)
+        frame = np.zeros((320, 100, 3), np.uint8)
         min_y = int((1 - (min_distance - self.min_z) / (self.max_z - self.min_z)) * frame.shape[0])
         cv2.rectangle(frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1)
 
@@ -110,10 +110,8 @@ class MainDebug(Main):
                 top, bottom = self.calc_z(result['depth_z'])
                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
-        cv2.imshow("Frame", frame)
-        cv2.imshow("Bird", bird_frame)
-        cv2.moveWindow("Bird", 1050, 200)
-        cv2.moveWindow("Frame", 1370, 200)
+        numpy_horizontal = np.hstack((frame, bird_frame))
+        cv2.imshow("Frame", numpy_horizontal)
         key = cv2.waitKey(1)
 
         if key == ord("q"):
