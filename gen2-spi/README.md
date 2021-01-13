@@ -11,13 +11,13 @@ git submodule update --init --recursive
 ```
 
 
-#### gen2-spi-jpeg
+#### jpeg-transfer
 This example builds a pipeline that returns jpegs of the color camera through SPI.
 
-#### gen2-spi-standalone
+#### standalone-jpeg
 This example shows you how to flash the gen2-spi-jpeg example to the board so it can be run standalone.
 
-#### gen2-spi-stereo
+#### stereo-depth-crop
 This example crops and returns a section of the depth map over SPI.
 
 #### device-yolo-parsing
