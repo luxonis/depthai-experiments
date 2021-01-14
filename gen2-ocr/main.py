@@ -46,11 +46,6 @@ def to_tensor_result(packet):
         for name in [tensor.name for tensor in packet.getRaw().tensors]
     }
 
-
-def to_planar(arr: np.ndarray, shape: tuple) -> list:
-    return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
-
-
 q_prev = device.getOutputQueue("preview")
 q_det = device.getOutputQueue("detections")
 q_rec_in = device.getInputQueue("in_recognition")
@@ -99,13 +94,23 @@ while True:
 
     if frame is not None:
         if in_det is not None:
+            cropped_stacked = None
             for point_arr in points:
                 cv2.polylines(frame, [point_arr], isClosed=True, color=(255, 0, 0), thickness=1, lineType=cv2.LINE_8)
 
                 transformed = east.four_point_transform(frame, point_arr)
+                transformed = cv2.cvtColor(transformed, cv2.COLOR_BGR2GRAY)
+                transformed = cv2.resize(transformed, (120, 32), interpolation=cv2.INTER_AREA)
+                transformed = np.ascontiguousarray(transformed)
                 nn_data = depthai.NNData()
-                nn_data.setLayer("Placeholder", to_planar(transformed, (120, 32)))
+                nn_data.setLayer("Placeholder", transformed)
                 q_rec_in.send(nn_data)
+                if cropped_stacked is None:
+                    cropped_stacked = transformed
+                else:
+                    cropped_stacked = np.vstack((cropped_stacked, transformed))
+            if cropped_stacked is not None:
+                cv2.imshow('cropped_stacked', cropped_stacked)
 
 
         cv2.imshow('preview', frame)
