@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 import json
 import os
-import tempfile
 from pathlib import Path
 
 import cv2
 import depthai
-from projector_3d import PointCloudVisualizer
 import numpy as np
-from time import sleep
 import time
-import open3d as o3d
-import multiprocessing
 
 def pixel_coord_np(width, height):
     """
