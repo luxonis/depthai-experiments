@@ -59,6 +59,16 @@ q_rec = device.getOutputQueue("recognitions")
 frame = None
 points = []
 
+def decode_text(data):
+    data = data.reshape((30, 37))
+    alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
+    text = ''
+    for row in data:
+        idx = np.argmax(row) # Get index of best score
+        if idx != 36: # Last is blank character, ignore
+            text += alphabet[idx]
+    return text
+
 while True:
     in_prev = q_prev.tryGet()
     in_det = q_det.tryGet()
@@ -84,7 +94,8 @@ while True:
 
     if in_rec is not None:
         rec_data = bboxes = np.array(in_rec.getFirstLayerFp16())
-        print(rec_data, rec_data.shape)  # TODO handle text recognition
+        decoded_text = decode_text(rec_data)
+        print("=== text:", decoded_text)
 
     if frame is not None:
         if in_det is not None:
