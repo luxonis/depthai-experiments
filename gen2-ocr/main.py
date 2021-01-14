@@ -36,10 +36,7 @@ nn2_xout = pipeline.createXLinkOut()
 nn2_xout.setStreamName("recognitions")
 nn2.out.link(nn2_xout.input)
 
-found, device_info = depthai.XLinkConnection.getFirstDevice(depthai.XLinkDeviceState.X_LINK_UNBOOTED)
-if not found:
-    raise RuntimeError("Device not found")
-device = depthai.Device(pipeline, device_info)
+device = depthai.Device(pipeline)
 device.startPipeline()
 
 
