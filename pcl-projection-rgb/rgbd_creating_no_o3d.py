@@ -7,6 +7,11 @@ import cv2
 import depthai
 import numpy as np
 import time
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
+                            help="Force usb2 connection")
+args = parser.parse_args()
 
 def pixel_coord_np(width, height):
     """
@@ -30,7 +35,7 @@ def cvt_to_bgr(packet):
 
 curr_dir = str(Path('.').resolve().absolute())
 
-device = depthai.Device("", False)
+device = depthai.Device("", args.force_usb2)
 pipeline = device.create_pipeline(config={
     'streams': ['right', 'depth', 'color', 'left'],
     'ai': {

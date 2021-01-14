@@ -10,6 +10,12 @@ import time
 import open3d as o3d
 import multiprocessing
 
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
+                            help="Force usb2 connection")
+args = parser.parse_args()
+print(args.force_usb2)
 def pixel_coord_np(width, height):
     """
     Pixel in homogenous coordinate
@@ -32,7 +38,7 @@ def cvt_to_bgr(packet):
 
 curr_dir = str(Path('.').resolve().absolute())
 
-device = depthai.Device("", False)
+device = depthai.Device("", args.force_usb2)
 pipeline = device.create_pipeline(config={
     'streams': ['right', 'depth', 'color', 'left'],
     'ai': {
