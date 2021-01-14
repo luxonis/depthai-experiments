@@ -123,8 +123,8 @@ while True:
             rgb_frame_ref_cloud = np.matmul(extrensics, cam_coords_2)
 
             # rgb_frame_ref_cloud = np.asarray(pcd.points).transpose()
-            print('shape pf left_frame_ref_cloud')
-            print(rgb_frame_ref_cloud.shape)
+            # print('shape pf left_frame_ref_cloud')
+            # print(rgb_frame_ref_cloud.shape)
 
             rgb_frame_ref_cloud_normalized = rgb_frame_ref_cloud / rgb_frame_ref_cloud[2,:]
             rgb_image_pts = np.matmul(M_RGB, rgb_frame_ref_cloud_normalized)
@@ -133,7 +133,6 @@ while True:
             rgb_image_pts = rgb_image_pts.astype(np.int16)            
             u_v_z = np.vstack((rgb_image_pts, rgb_frame_ref_cloud[2, :]))
 
-            print(u_v_z.dtype)
 
             lft = np.logical_and(0 <= u_v_z[0], u_v_z[0] < 1280)
             rgt = np.logical_and(0 <= u_v_z[1], u_v_z[1] < 720)
@@ -144,10 +143,10 @@ while True:
             depth_rgb[y_idx,x_idx] = u_v_z_sampled[3]*10
 
             end = time.time()
-            print('for loop Convertion time')
-            print(end - start)
+            # print('for loop Convertion time')
+            # print(end - start)
 
-            print('creating image')
+            # print('creating image')
             cv2.imshow('rgb_depth', depth_rgb)
             
             depth_rgb[depth_rgb == 0] = 65535
