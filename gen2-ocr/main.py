@@ -87,13 +87,14 @@ while True:
         print(rec_data, rec_data.shape)  # TODO handle text recognition
 
     if frame is not None:
-        for point_arr in points:
-            cv2.polylines(frame, [point_arr], isClosed=True, color=(255, 0, 0), thickness=1, lineType=cv2.LINE_8)
+        if in_det is not None:
+            for point_arr in points:
+                cv2.polylines(frame, [point_arr], isClosed=True, color=(255, 0, 0), thickness=1, lineType=cv2.LINE_8)
 
-            transformed = east.four_point_transform(frame, point_arr)
-            nn_data = depthai.NNData()
-            nn_data.setLayer("Placeholder", to_planar(transformed, (120, 32)))
-            q_rec_in.send(nn_data)
+                transformed = east.four_point_transform(frame, point_arr)
+                nn_data = depthai.NNData()
+                nn_data.setLayer("Placeholder", to_planar(transformed, (120, 32)))
+                q_rec_in.send(nn_data)
 
 
         cv2.imshow('preview', frame)
