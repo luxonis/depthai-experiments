@@ -39,7 +39,6 @@ nn2.out.link(nn2_xout.input)
 device = depthai.Device(pipeline)
 device.startPipeline()
 
-
 def to_tensor_result(packet):
     return {
         name: np.array(packet.getLayerFp16(name))
@@ -54,15 +53,53 @@ q_rec = device.getOutputQueue("recognitions")
 frame = None
 points = []
 
-def decode_text(data):
-    data = data.reshape((30, 37))
-    alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
-    text = ''
-    for row in data:
-        idx = np.argmax(row) # Get index of best score
-        if idx != 36: # Last is blank character, ignore
-            text += alphabet[idx]
-    return text
+class CTCCodec(object):
+    """ Convert between text-label and text-index """
+    def __init__(self, characters):
+        # characters (str): set of the possible characters.
+        dict_character = list(characters)
+
+        self.dict = {}
+        for i, char in enumerate(dict_character):
+             self.dict[char] = i + 1
+
+    
+        self.characters = dict_character
+        print(self.characters)
+        input()
+        
+    def decode(self, preds):
+        """ convert text-index into text-label. """
+        texts = []
+        index = 0
+        # Select max probabilty (greedy decoding) then decode index to character
+        preds = preds.astype(np.float16)
+        preds_index = np.argmax(preds, 2)
+        preds_index = preds_index.transpose(1, 0)
+        preds_index_reshape = preds_index.reshape(-1)
+        preds_sizes = np.array([preds_index.shape[1]] * preds_index.shape[0])
+
+        for l in preds_sizes:
+            t = preds_index_reshape[index:index + l]
+
+            # NOTE: t might be zero size
+            if t.shape[0] == 0:
+                continue
+
+            char_list = []
+            for i in range(l):
+                # removing repeated characters and blank.
+                if t[i] != 0 and (not (i > 0 and t[i - 1] == t[i])):
+                    char_list.append(self.characters[t[i]])
+            text = ''.join(char_list)
+            texts.append(text)
+
+            index += l
+
+        return texts
+
+characters = '0123456789abcdefghijklmnopqrstuvwxyz#'
+codec = CTCCodec(characters)
 
 while True:
     in_prev = q_prev.tryGet()
@@ -88,8 +125,8 @@ while True:
         ]
 
     if in_rec is not None:
-        rec_data = bboxes = np.array(in_rec.getFirstLayerFp16())
-        decoded_text = decode_text(rec_data)
+        rec_data = bboxes = np.array(in_rec.getFirstLayerFp16()).reshape(30,1,37)
+        decoded_text = codec.decode(rec_data)
         print("=== text:", decoded_text)
 
     if frame is not None:
