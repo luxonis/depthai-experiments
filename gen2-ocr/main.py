@@ -19,6 +19,7 @@ colorCam.preview.link(cam_xout.input)
 
 nn = pipeline.createNeuralNetwork()
 nn.setBlobPath(str((Path(__file__).parent / Path('text-detection.blob')).resolve().absolute()))
+nn.setNumPoolFrames(1)
 colorCam.preview.link(nn.input)
 
 nn_xout = pipeline.createXLinkOut()
@@ -46,12 +47,15 @@ def to_tensor_result(packet):
     }
 
 q_prev = device.getOutputQueue("preview")
-q_det = device.getOutputQueue("detections")
+# This should be blocking, but there's some sort of queuing!
+q_det = device.getOutputQueue("detections", 1, overwrite=True)
 q_rec_in = device.getInputQueue("in_recognition")
 q_rec = device.getOutputQueue("recognitions")
 
 frame = None
 points = []
+rec_pushed = 0
+rec_received = 0
 
 class CTCCodec(object):
     """ Convert between text-label and text-index """
@@ -65,8 +69,8 @@ class CTCCodec(object):
 
     
         self.characters = dict_character
-        print(self.characters)
-        input()
+        #print(self.characters)
+        #input()
         
     def decode(self, preds):
         """ convert text-index into text-label. """
@@ -103,7 +107,6 @@ codec = CTCCodec(characters)
 
 while True:
     in_prev = q_prev.tryGet()
-    in_det = q_det.tryGet()
     in_rec = q_rec.tryGet()
 
     if in_prev is not None:
@@ -111,26 +114,33 @@ while True:
         frame = in_prev.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
         frame = np.ascontiguousarray(frame)
 
-    if in_det is not None:
-        scores, geom1, geom2 = to_tensor_result(in_det).values()
-        scores = np.reshape(scores, (1, 1, 64, 64))
-        geom1 = np.reshape(geom1, (1, 4, 64, 64))
-        geom2 = np.reshape(geom2, (1, 1, 64, 64))
-
-        bboxes, confs, angles = east.decode_predictions(scores, geom1, geom2)
-        boxes, angles = east.non_max_suppression(np.array(bboxes), probs=confs, angles=np.array(angles))
-        points = [
-            east.rotated_Rectangle(bbox, angle * -1)
-            for (bbox, angle) in zip(boxes, angles)
-        ]
-
     if in_rec is not None:
         rec_data = bboxes = np.array(in_rec.getFirstLayerFp16()).reshape(30,1,37)
         decoded_text = codec.decode(rec_data)
-        print("=== text:", decoded_text)
+        print("=== ", rec_received, "text:", decoded_text)
+        rec_received += 1
+
+    if rec_received >= rec_pushed:
+        in_det = q_det.tryGet()
+        if in_det is not None:
+            scores, geom1, geom2 = to_tensor_result(in_det).values()
+            scores = np.reshape(scores, (1, 1, 64, 64))
+            geom1 = np.reshape(geom1, (1, 4, 64, 64))
+            geom2 = np.reshape(geom2, (1, 1, 64, 64))
+    
+            bboxes, confs, angles = east.decode_predictions(scores, geom1, geom2)
+            boxes, angles = east.non_max_suppression(np.array(bboxes), probs=confs, angles=np.array(angles))
+            points = [
+                east.rotated_Rectangle(bbox, angle * -1)
+                for (bbox, angle) in zip(boxes, angles)
+            ]
 
     if frame is not None:
         if in_det is not None:
+            rec_received = 0
+            rec_pushed = len(points)
+            if rec_pushed:
+                print("====== Pushing for recognition, count:", rec_pushed)
             cropped_stacked = None
             for point_arr in points:
                 cv2.polylines(frame, [point_arr], isClosed=True, color=(255, 0, 0), thickness=1, lineType=cv2.LINE_8)
@@ -148,8 +158,8 @@ while True:
                     cropped_stacked = np.vstack((cropped_stacked, transformed))
             if cropped_stacked is not None:
                 cv2.imshow('cropped_stacked', cropped_stacked)
+            in_det = None
 
-
-        cv2.imshow('preview', frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
+            cv2.imshow('preview', frame)
+            if cv2.waitKey(1) == ord('q'):
+                break
