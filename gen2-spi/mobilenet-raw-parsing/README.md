@@ -17,7 +17,7 @@ The ESP32 is running a custom protocol to communicate over SPI with the DepthAI.
 In this example the ESP32 receives parsed simplified results from YOLO running on the DepthAI. The ESP32 simply decodes and prints the results in this example.
 
 ### Run the ESP32 Side of the Example:
-#### If you haven’t already, set up the ESP32 programmer
+If you haven’t already, set up the ESP32 IDF framework:
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html
 
 ```

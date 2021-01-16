@@ -10,7 +10,7 @@ This example shows how to crop the output of StereoDepth nodes and pass that dat
 The ESP32 is running a custom protocol to communicate over SPI with the DepthAI. This protocol is hidden behind a simple API that lives in components/depthai-spi-api. In this example, the depth output can still be larger than available free memory so we also demostrate a callback in the SPI API to get the output packet by packet. Please see ./esp32-spi-message-demo/main/app_main.cpp for the ESP32 side source to get a better idea of what it's doing.
 
 ### Run the ESP32 Side of the Example:
-#### If you haven’t already, set up the ESP32 programmer
+If you haven’t already, set up the ESP32 IDF framework:
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html
 
 ```
