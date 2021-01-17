@@ -139,7 +139,6 @@ try:
 
             for person_id in results:
                 dist = cos_dist(reid_result, results[person_id])
-                print(dist)
                 if dist > 0.7:
                     result_id = person_id
                     results[person_id] = reid_result
