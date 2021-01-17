@@ -21,7 +21,7 @@ def cos_dist(a, b):
 
 
 def frame_norm(frame, bbox):
-    return (np.array(bbox) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
+    return (np.clip(np.array(bbox), 0, 1) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
 
 
 def to_planar(arr: np.ndarray, shape: tuple) -> list:
@@ -122,14 +122,18 @@ try:
             bboxes = np.array(detection_nn.get().getFirstLayerFp16())
             bboxes = bboxes[:np.where(bboxes == -1)[0][0]]
             bboxes = bboxes.reshape((bboxes.size // 7, 7))
-            bboxes = bboxes[bboxes[:, 2] > 0.5][:, 3:7]
+            bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
 
             for raw_bbox in bboxes:
                 bbox = frame_norm(frame, raw_bbox)
                 det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
 
                 nn_data = depthai.NNData()
-                nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
+                try:
+                    nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
+                except:
+                    print(raw_bbox, bbox, det_frame.size, det_frame.shape, frame.size, frame.shape)
+                    raise
                 reid_in.send(nn_data)
                 reid_bbox_q.put(bbox)
 
@@ -139,7 +143,8 @@ try:
 
             for person_id in results:
                 dist = cos_dist(reid_result, results[person_id])
-                if dist > 0.5:
+                print(dist)
+                if dist > 0.7:
                     result_id = person_id
                     results[person_id] = reid_result
                     break
