@@ -129,11 +129,7 @@ try:
                 det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
 
                 nn_data = depthai.NNData()
-                try:
-                    nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
-                except:
-                    print(raw_bbox, bbox, det_frame.size, det_frame.shape, frame.size, frame.shape)
-                    raise
+                nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
                 reid_in.send(nn_data)
                 reid_bbox_q.put(bbox)
 
