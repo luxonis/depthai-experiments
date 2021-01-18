@@ -78,7 +78,6 @@ detection_in = device.getInputQueue("detection_in")
 detection_nn = device.getOutputQueue("detection_nn")
 reid_in = device.getInputQueue("reid_in")
 reid_nn = device.getOutputQueue("reid_nn")
-reid_pass = device.getOutputQueue("reid_pass")
 
 bboxes = []
 results = {}
