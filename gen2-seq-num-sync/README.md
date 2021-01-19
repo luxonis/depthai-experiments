@@ -1,7 +1,7 @@
 # Gen2 Frames Sync
 
-This example demonstrates how to synchronise incoming frames using their sequence numbers. 
-This allows to display frames taken in exact same moment
+This example demonstrates how to synchronize incoming frames using their sequence numbers. 
+This allows displaying frames taken in exact same moment
 
 ## Demo
 
