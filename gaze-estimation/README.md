@@ -1,4 +1,4 @@
-# Gaze estimation
+# [Gen2] Gaze estimation
 
 This example demonstrates how to run 3 stage inference (3-series, 2-parallel) on DepthAI using Gen2 Pipeline Builder.
 
