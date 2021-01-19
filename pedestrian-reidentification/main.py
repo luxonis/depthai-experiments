@@ -13,6 +13,9 @@ parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4
 parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
 args = parser.parse_args()
 
+if not args.camera and not args.video:
+    raise RuntimeError("No source selected. Please use either \"-cam\" to use RGB camera as a source or \"-vid <path>\" to run on video")
+
 debug = not args.no_debug
 
 

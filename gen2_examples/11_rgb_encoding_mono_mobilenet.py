@@ -62,7 +62,7 @@ bboxes = []
 
 
 def frame_norm(frame, bbox):
-    return (np.array(bbox) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
+    return (np.clip(np.array(bbox), 0, 1) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
 
 
 videoFile = open('video.h265','wb')
