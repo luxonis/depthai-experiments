@@ -1,5 +1,4 @@
 imutils==0.5.3
 concurrent-log-handler==0.9.16
-opencv-python==4.2.0.34; platform_machine != "armv7l"
-opencv-python==4.1.0.25; platform_machine == "armv7l"
+opencv-python==4.5.1.48
 depthai==0.4.0.0
