@@ -4,6 +4,13 @@ import numpy as np
 
 _conf_threshold = 0.5
 
+def get_cv_rotated_rect(bbox, angle):
+    x0, y0, x1, y1 = bbox
+    width = abs(x0 - x1)
+    height = abs(y0 - y1)
+    x = x0 + width * 0.5
+    y = y0 + height * 0.5
+    return ((x, y), (width, height), np.rad2deg(angle))
 
 def rotated_Rectangle(bbox, angle):
     X0, Y0, X1, Y1 = bbox
