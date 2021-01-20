@@ -94,7 +94,8 @@ class CTCCodec(object):
             for i in range(l):
                 # removing repeated characters and blank.
                 if t[i] != 0 and (not (i > 0 and t[i - 1] == t[i])):
-                    char_list.append(self.characters[t[i]])
+                    if self.characters[t[i]] != '#':
+                        char_list.append(self.characters[t[i]])
             text = ''.join(char_list)
             texts.append(text)
 
