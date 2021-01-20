@@ -73,6 +73,7 @@ q_manip_cfg = device.getInputQueue("manip_cfg")
 q_manip_out = device.getOutputQueue("manip_out")
 
 frame = None
+cropped_stacked = None
 rotated_rectangles = []
 rec_pushed = 0
 rec_received = 0
@@ -138,8 +139,16 @@ while True:
 
     if in_rec is not None:
         rec_data = bboxes = np.array(in_rec.getFirstLayerFp16()).reshape(30,1,37)
-        decoded_text = codec.decode(rec_data)
+        decoded_text = codec.decode(rec_data)[0]
         print("=== ", rec_received, "text:", decoded_text)
+        # Display on the right side of cropped_stacked - placeholder
+        if cropped_stacked is not None:
+            cv2.putText(cropped_stacked, decoded_text,
+                            (120 + 10 , 32 * rec_received + 24),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
+            cv2.imshow('cropped_stacked', cropped_stacked)
+            if cv2.waitKey(1) == ord('q'):
+                break
         rec_received += 1
 
     if rec_received >= rec_pushed:
@@ -188,6 +197,8 @@ while True:
                 shape = (3, cropped.getHeight(), cropped.getWidth())
                 transformed = cropped.getData().reshape(shape).transpose(1, 2, 0)
 
+                rec_placeholder_img = np.zeros((32, 200, 3), np.uint8)
+                transformed = np.hstack((transformed, rec_placeholder_img))
                 if cropped_stacked is None:
                     cropped_stacked = transformed
                 else:
