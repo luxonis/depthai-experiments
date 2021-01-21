@@ -63,8 +63,8 @@ def to_tensor_result(packet):
     }
 
 q_prev = device.getOutputQueue("preview")
-# This should be blocking, but there's some sort of queuing!
-q_det = device.getOutputQueue("detections", 1, overwrite=True)
+# This should be set to block, but would get to some extreme queuing/latency!
+q_det = device.getOutputQueue("detections", 1, blocking=False)
 q_rec_in = device.getInputQueue("in_recognition")
 q_rec = device.getOutputQueue("recognitions")
 
