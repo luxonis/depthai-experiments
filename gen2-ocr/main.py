@@ -12,6 +12,7 @@ colorCam.setPreviewSize(256, 256)
 colorCam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
 colorCam.setInterleaved(False)
 colorCam.setCamId(0)
+colorCam.setFps(10)
 
 cam_xout = pipeline.createXLinkOut()
 cam_xout.setStreamName("preview")
