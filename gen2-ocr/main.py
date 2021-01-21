@@ -129,7 +129,6 @@ codec = CTCCodec(characters)
 
 while True:
     in_prev = q_prev.tryGet()
-    in_rec = q_rec.tryGet()
 
     if in_prev is not None:
         shape = (3, in_prev.getHeight(), in_prev.getWidth())
@@ -137,19 +136,26 @@ while True:
         frame = in_prev.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
         frame = np.ascontiguousarray(frame)
 
-    if in_rec is not None:
+    # Multiple recognition results may be available, read until queue is empty
+    while True:
+        in_rec = q_rec.tryGet()
+        if in_rec is None:
+            break
         rec_data = bboxes = np.array(in_rec.getFirstLayerFp16()).reshape(30,1,37)
         decoded_text = codec.decode(rec_data)[0]
-        print("=== ", rec_received, "text:", decoded_text)
-        # Display on the right side of cropped_stacked - placeholder
+        pos = rotated_rectangles[rec_received]
+        print("{:2}: {:20}".format(rec_received, decoded_text),
+              "center({:3},{:3}) size({:3},{:3}) angle{:5.1f} deg".format(
+                  int(pos[0][0]), int(pos[0][1]), pos[1][0], pos[1][1], pos[2]))
+        # Draw the text on the right side of 'cropped_stacked' - placeholder
         if cropped_stacked is not None:
             cv2.putText(cropped_stacked, decoded_text,
                             (120 + 10 , 32 * rec_received + 24),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
             cv2.imshow('cropped_stacked', cropped_stacked)
-            if cv2.waitKey(1) == ord('q'):
-                break
         rec_received += 1
+    if cv2.waitKey(1) == ord('q'):
+        break
 
     if rec_received >= rec_pushed:
         in_det = q_det.tryGet()
