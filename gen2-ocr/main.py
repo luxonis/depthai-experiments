@@ -9,6 +9,7 @@ pipeline = depthai.Pipeline()
 
 colorCam = pipeline.createColorCamera()
 colorCam.setPreviewSize(256, 256)
+colorCam.setAutoFocusMode(depthai.RawCameraControl.AutoFocusMode.AUTO)
 colorCam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
 colorCam.setInterleaved(False)
 colorCam.setCamId(0)
