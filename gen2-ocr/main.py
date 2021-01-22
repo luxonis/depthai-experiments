@@ -176,7 +176,7 @@ while True:
             if rec_pushed:
                 print("====== Pushing for recognition, count:", rec_pushed)
             cropped_stacked = None
-            for rotated_rect in rotated_rectangles:
+            for idx, rotated_rect in enumerate(rotated_rectangles):
                 # Draw detection crop area on input frame
                 points = np.int0(cv2.boxPoints(rotated_rect))
                 cv2.polylines(frame, [points], isClosed=True, color=(255, 0, 0), thickness=1, lineType=cv2.LINE_8)
@@ -193,7 +193,10 @@ while True:
                 cfg.setCropRotatedRect(rr, False)
                 cfg.setResize(120, 32)
                 # Send frame and config to device
-                q_manip_img.send(frame_orig)
+                if idx == 0:
+                    q_manip_img.send(frame_orig)
+                else:
+                    cfg.setReusePreviousImage(True)
                 q_manip_cfg.send(cfg)
                 # Get processed output from device
                 cropped = q_manip_out.get()
