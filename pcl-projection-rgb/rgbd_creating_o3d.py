@@ -7,10 +7,15 @@ import cv2
 import depthai
 import numpy as np
 import time
-import open3d as o3d
 import multiprocessing
 
 import argparse
+try:
+    import open3d as o3d
+except ImportError as e:
+    raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e} \033[0m ")
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
                             help="Force usb2 connection")

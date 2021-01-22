@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import depthai as dai
 from time import sleep
-from projector_3d import PointCloudVisualizer
 
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
@@ -43,6 +42,10 @@ right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
 pcl_converter = None
 if point_cloud:
     if out_rectified:
+        try:
+            from projector_3d import PointCloudVisualizer
+        except ImportError as e:
+            raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e}. Try disabling pointcloud \033[0m ")
         pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
     else:
         print("Disabling point-cloud visualizer, as out_rectified is not set")

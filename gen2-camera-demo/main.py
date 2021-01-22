@@ -41,7 +41,10 @@ right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
 pcl_converter = None
 if point_cloud:
     if out_rectified:
-        from projector_3d import PointCloudVisualizer
+        try:
+            from projector_3d import PointCloudVisualizer
+        except ImportError as e:
+            raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e}. Try disabling the point cloud \033[0m ")
         pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
     else:
         print("Disabling point-cloud visualizer, as out_rectified is not set")
