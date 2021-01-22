@@ -47,10 +47,6 @@ nn2.setBlobPath(str((Path(__file__).parent / Path('text-recognition-0012.blob'))
 manip.out.link(nn2.input)
 manip.out.link(manip_xout.input)
 
-#nn2_in = pipeline.createXLinkIn()
-#nn2_in.setStreamName("in_recognition")
-#nn2_in.out.link(nn2.input)
-
 nn2_xout = pipeline.createXLinkOut()
 nn2_xout.setStreamName("recognitions")
 nn2.out.link(nn2_xout.input)
@@ -67,7 +63,6 @@ def to_tensor_result(packet):
 q_prev = device.getOutputQueue("preview")
 # This should be set to block, but would get to some extreme queuing/latency!
 q_det = device.getOutputQueue("detections", 1, blocking=False)
-q_rec_in = device.getInputQueue("in_recognition")
 q_rec = device.getOutputQueue("recognitions")
 
 q_manip_img = device.getInputQueue("manip_img")
