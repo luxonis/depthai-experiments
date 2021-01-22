@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import depthai as dai
 from time import sleep
+import argparse
 
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
@@ -14,11 +15,16 @@ Otherwise, depth output is U16 (mm) and median is functional.
 But like on Gen1, either depth or disparity has valid data. TODO enable both.
 '''
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-pcl", "--pointcloud", help="display a square of a given number", default=False, action="store_true")
+args = parser.parse_args()
+
+
 # StereoDepth config options. TODO move to command line options
+point_cloud    = args.pointcloud  # Create point cloud visualizer. Depends on 'out_rectified'
 source_camera  = True   # If False, will read input frames from 'dataset' folder
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
-point_cloud    = False   # Create point cloud visualizer. Depends on 'out_rectified'
 test_manip     = True   # Test ImageManip node, with RGB or Stereo pipelines
 lrcheck  = True   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled 

@@ -20,5 +20,6 @@ idf.py -p /dev/ttyUSB1 flash
 ```
 
 ### Run the DepthAI Side of the Example:
-`python3 main.py`
+`python3 main.py` - Runs without point cloud visualization
+`python3 main.py -pcl` - Enables point cloud visualization
 
