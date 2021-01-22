@@ -17,12 +17,12 @@ colorCam.setFps(10)
 
 cam_xout = pipeline.createXLinkOut()
 cam_xout.setStreamName("preview")
-colorCam.preview.link(cam_xout.input)
 
 nn = pipeline.createNeuralNetwork()
 nn.setBlobPath(str((Path(__file__).parent / Path('text-detection.blob')).resolve().absolute()))
 nn.setNumPoolFrames(1)
 colorCam.preview.link(nn.input)
+nn.passthrough.link(cam_xout.input)
 
 nn_xout = pipeline.createXLinkOut()
 nn_xout.setStreamName("detections")
