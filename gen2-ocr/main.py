@@ -44,6 +44,7 @@ manip_xout.setStreamName('manip_out')
 
 nn2 = pipeline.createNeuralNetwork()
 nn2.setBlobPath(str((Path(__file__).parent / Path('text-recognition-0012.blob')).resolve().absolute()))
+nn2.setNumInferenceThreads(2)
 manip.out.link(nn2.input)
 manip.out.link(manip_xout.input)
 
