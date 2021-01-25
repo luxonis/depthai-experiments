@@ -17,7 +17,7 @@ But like on Gen1, either depth or disparity has valid data. TODO enable both.
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-pcl", "--pointcloud", help="display a square of a given number", default=False, action="store_true")
+parser.add_argument("-pcl", "--pointcloud", help="enables point cloud convertion and visualization", default=False, action="store_true")
 args = parser.parse_args()
 
 point_cloud    = args.pointcloud   # Create point cloud visualizer. Depends on 'out_rectified'
