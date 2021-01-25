@@ -20,16 +20,11 @@ Note that the more text in the frame, the slower the network will run - as it is
 And you will see this variance in the examples below:
 
 
-[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749638-eb76c400-5f00-11eb-8e9a-18e550b35ae4.png)](https://www.youtube.com/watch?v=Bv-p76A3YMk "Gen2 OCR Pipeline")
+[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749743-13febe00-5f01-11eb-8b5f-dca801f5d125.png)](https://www.youtube.com/watch?v=Bv-p76A3YMk "Gen2 OCR Pipeline")
 
 [![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749667-f6315900-5f00-11eb-92bd-a297590adedc.png)](https://www.youtube.com/watch?v=YWIZYeixQjc "Gen2 OCR Pipeline")
 
-[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749743-13febe00-5f01-11eb-8b5f-dca801f5d125.png)](https://www.youtube.com/watch?v=Wclmk42Zvj4 "Gen2 OCR Pipeline")
-
-
-
-
-
+[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749638-eb76c400-5f00-11eb-8e9a-18e550b35ae4.png)](https://www.youtube.com/watch?v=Wclmk42Zvj4 "Gen2 OCR Pipeline")
 
 
 
