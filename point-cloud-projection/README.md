@@ -11,10 +11,10 @@ This experiment allows you to run and visualize the point clouds generated using
 ![demogif](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
 
 ## Installation
-
 ```
-python3 -m pip install -r requirements.txt
+python3 install_requirements.py
 ```
+Note: `python3 install_requirements.py` also tries to install libs from requirements-optional.txt which are optional. This example contains open3d lib which is necessary for point cloud visualization and transformation. However, this library's binaries are not available for some hosts like raspberry pi and jetson. 
 
 ## Usage
 Run the application

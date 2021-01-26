@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import depthai as dai
 from time import sleep
+import argparse
 
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
@@ -14,11 +15,17 @@ Otherwise, depth output is U16 (mm) and median is functional.
 But like on Gen1, either depth or disparity has valid data. TODO enable both.
 '''
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-pcl", "--pointcloud", help="enables point cloud convertion and visualization", default=False, action="store_true")
+args = parser.parse_args()
+
+point_cloud    = args.pointcloud   # Create point cloud visualizer. Depends on 'out_rectified'
+
 # StereoDepth config options. TODO move to command line options
 source_camera  = True   # If False, will read input frames from 'dataset' folder
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
-point_cloud    = True   # Create point cloud visualizer. Depends on 'out_rectified'
 lrcheck  = True   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled 
 subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
@@ -41,7 +48,10 @@ right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
 pcl_converter = None
 if point_cloud:
     if out_rectified:
-        from projector_3d import PointCloudVisualizer
+        try:
+            from projector_3d import PointCloudVisualizer
+        except ImportError as e:
+            raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e}. Try disabling the point cloud \033[0m ")
         pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
     else:
         print("Disabling point-cloud visualizer, as out_rectified is not set")
