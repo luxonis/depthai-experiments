@@ -53,6 +53,8 @@ def create_pipeline():
     detection_in.setStreamName("detection_in")
     detection_nn = pipeline.createNeuralNetwork()
     detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013.blob").resolve().absolute()))
+    # Increase threads for detection
+    detection_nn.setNumInferenceThreads(2)
     detection_nn_xout = pipeline.createXLinkOut()
     detection_nn_xout.setStreamName("detection_nn")
     detection_in.out.link(detection_nn.input)
@@ -64,6 +66,10 @@ def create_pipeline():
     reid_in.setStreamName("reid_in")
     reid_nn = pipeline.createNeuralNetwork()
     reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031.blob").resolve().absolute()))
+
+    # Decrease threads for reidentification
+    reid_nn.setNumInferenceThreads(1)
+
     reid_nn_xout = pipeline.createXLinkOut()
     reid_nn_xout.setStreamName("reid_nn")
     reid_in.out.link(reid_nn.input)
@@ -76,7 +82,8 @@ def create_pipeline():
 device = depthai.Device(create_pipeline())
 print("Starting pipeline...")
 device.startPipeline()
-cam_out = device.getOutputQueue("cam_out", 1, True)
+if args.camera:
+    cam_out = device.getOutputQueue("cam_out", 1, True)
 detection_in = device.getInputQueue("detection_in")
 detection_nn = device.getOutputQueue("detection_nn")
 reid_in = device.getInputQueue("reid_in")

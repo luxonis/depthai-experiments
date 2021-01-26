@@ -30,6 +30,10 @@ def create_pipeline():
     detection_in.setStreamName("detection_in")
     detection_nn = pipeline.createNeuralNetwork()
     detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013.blob").resolve().absolute()))
+    
+    # Increase threads for detection
+    detection_nn.setNumInferenceThreads(2)
+
     detection_nn_xout = pipeline.createXLinkOut()
     detection_nn_xout.setStreamName("detection_nn")
     detection_in.out.link(detection_nn.input)
@@ -41,6 +45,10 @@ def create_pipeline():
     reid_in.setStreamName("reid_in")
     reid_nn = pipeline.createNeuralNetwork()
     reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031.blob").resolve().absolute()))
+    
+    # Decrease threads for reidentification
+    reid_nn.setNumInferenceThreads(1)
+    
     reid_nn_xout = pipeline.createXLinkOut()
     reid_nn_xout.setStreamName("reid_nn")
     reid_in.out.link(reid_nn.input)
@@ -64,7 +72,7 @@ class Main:
         self.reid_bbox_q = queue.Queue()
         self.next_id = 0
 
-        self.cap = cv2.VideoCapture(str(Path("./input2.mp4").resolve().absolute()))
+        self.cap = cv2.VideoCapture(str(Path("./input.mp4").resolve().absolute()))
 
         self.fps = FPS()
         self.fps.start()
