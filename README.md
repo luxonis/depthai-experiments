@@ -20,7 +20,7 @@ This example shows how to do Subpixel, LR-Check or Extended Disparity, and also 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454680-fea75b00-28e3-11eb-80bc-2004016d75e2.png)
 
-## [Gen2] Text Detection + Optical Character Recognition (OCR) Pipeline
+## [Gen2] Text Detection + Optical Character Recognition (OCR) Pipeline ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-ocr#gen2-text-detection--optical-character-recognition-ocr-pipeline))
 
 This pipeline implements text detection (EAST) followed by optical character recognition of the detected text. 
 
