@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import depthai as dai
 from time import sleep
+import datetime
 import argparse
 
 '''
@@ -279,10 +280,8 @@ def test_pipeline():
                 name = q.getName()
                 path = 'dataset/' + str(index) + '/' + name + '.png'
                 data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
-                tstamp_ns = timestamp_ms * (1000*1000)
-                tstamp = dai.Timestamp()
-                tstamp.sec  = tstamp_ns // (1000*1000*1000)
-                tstamp.nsec = tstamp_ns  % (1000*1000*1000)
+                tstamp = datetime.timedelta(seconds = timestamp_ms // 1000,
+                                            milliseconds = timestamp_ms % 1000)
                 img = dai.ImgFrame()
                 img.setData(data)
                 img.setTimestamp(tstamp)
