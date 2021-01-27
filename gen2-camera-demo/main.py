@@ -239,15 +239,7 @@ def test_pipeline():
     pipeline, streams = create_stereo_depth_pipeline(source_camera)
 
     print("Creating DepthAI device")
-    if 1:
-        device = dai.Device(pipeline)
-    else: # For debug mode, with the firmware already loaded
-        found, device_info = dai.XLinkConnection.getFirstDevice(
-                dai.XLinkDeviceState.X_LINK_BOOTED)
-        if found:
-            device = dai.Device(pipeline, device_info)
-        else:
-            raise RuntimeError("Device not found")
+    device = dai.Device(pipeline)
     print("Starting pipeline")
     device.startPipeline()
 
