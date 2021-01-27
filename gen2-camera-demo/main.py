@@ -19,12 +19,14 @@ But like on Gen1, either depth or disparity has valid data. TODO enable both.
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-pcl", "--pointcloud", help="enables point cloud convertion and visualization", default=False, action="store_true")
+parser.add_argument("-static", "--static_frames", default=False, action="store_true",
+                    help="Run stereo on static frames passed from host 'dataset' folder")
 args = parser.parse_args()
 
 point_cloud    = args.pointcloud   # Create point cloud visualizer. Depends on 'out_rectified'
 
 # StereoDepth config options. TODO move to command line options
-source_camera  = True   # If False, will read input frames from 'dataset' folder
+source_camera  = not args.static_frames
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
 lrcheck  = True   # Better handling for occlusions
