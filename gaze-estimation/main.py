@@ -181,6 +181,7 @@ class Main:
         self.pose = None
         self.gaze = None
 
+        self.running = True
         self.fps = FPS()
         self.fps.start()
 
@@ -189,7 +190,7 @@ class Main:
         landmark_in = self.device.getInputQueue("landmark_in")
         pose_in = self.device.getInputQueue("pose_in")
 
-        while True:
+        while self.running:
             if self.frame is None:
                 continue
             bboxes = np.array(face_nn.get().getFirstLayerFp16())
@@ -216,7 +217,7 @@ class Main:
         pose_nn = self.device.getOutputQueue("pose_nn")
         gaze_in = self.device.getInputQueue("gaze_in")
 
-        while True:
+        while self.running:
             face_bbox = self.face_box_q.get()
             left = face_bbox[0]
             top = face_bbox[1]
@@ -240,7 +241,7 @@ class Main:
 
     def gaze_thread(self):
         gaze_nn = self.device.getOutputQueue("gaze_nn")
-        while True:
+        while self.running:
             self.gaze = np.array(gaze_nn.get().getFirstLayerFp16())
 
     def should_run(self):
@@ -253,9 +254,13 @@ class Main:
             return self.cap.read()
 
     def run(self):
-        threading.Thread(target=self.face_thread, daemon=True).start()
-        threading.Thread(target=self.land_pose_thread, daemon=True).start()
-        threading.Thread(target=self.gaze_thread, daemon=True).start()
+        self.threads = [
+            threading.Thread(target=self.face_thread, daemon=True),
+            threading.Thread(target=self.land_pose_thread, daemon=True),
+            threading.Thread(target=self.gaze_thread, daemon=True)
+        ]
+        for thread in self.threads:
+            thread.start()
 
         while self.should_run():
             read_correctly, self.frame = self.get_frame()
@@ -307,6 +312,9 @@ class Main:
         print("FPS: {:.2f}".format(self.fps.fps()))
         if not camera:
             self.cap.release()
+        self.running = False
+        for thread in self.threads:
+            thread.join()
 
 
 Main().run()
