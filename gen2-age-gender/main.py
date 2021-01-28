@@ -89,8 +89,7 @@ age_gender_in = device.getInputQueue("age_gender_in")
 age_gender_nn = device.getOutputQueue("age_gender_nn")
 
 bboxes = []
-results = {}
-results_path = {}
+results = []
 face_bbox_q = queue.Queue()
 next_id = 0
 
@@ -150,13 +149,23 @@ try:
             gender_str = "female" if gender[0] > gender[1] else "male"
             bbox = face_bbox_q.get()
 
-            if debug:
-                cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
-                y = (bbox[1] + bbox[3]) // 2
-                cv2.putText(debug_frame, str(age), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-                cv2.putText(debug_frame, gender_str, (bbox[0], y + 20), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+            while not len(results) < len(bboxes):
+                results.pop(0)
+            results.append({
+                "bbox": bbox,
+                "gender": gender_str,
+                "age": age,
+            })
+
 
         if debug and frame is not None:
+            for result in results:
+                bbox = result["bbox"]
+                cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+                y = (bbox[1] + bbox[3]) // 2
+                cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+                cv2.putText(debug_frame, result["gender"], (bbox[0], y + 20), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+
             aspect_ratio = frame.shape[1] / frame.shape[0]
             cv2.imshow("Camera_view", cv2.resize(debug_frame, (int(900),  int(900 / aspect_ratio))))
             if cv2.waitKey(1) == ord('q'):
@@ -167,4 +176,5 @@ except KeyboardInterrupt:
 
 fps.stop()
 print("FPS: {:.2f}".format(fps.fps()))
-cap.release()
+if args.video:
+    cap.release()
