@@ -1,5 +1,6 @@
 import argparse
 import queue
+import time
 from pathlib import Path
 
 import cv2
@@ -154,8 +155,10 @@ try:
                 "bbox": bbox,
                 "gender": gender_str,
                 "age": age,
+                "ts": time.time()
             })
 
+        results = list(filter(lambda result: time.time() - result["ts"] < 0.2, results))
 
         if debug and frame is not None:
             for result in results:
