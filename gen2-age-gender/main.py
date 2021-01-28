@@ -128,15 +128,9 @@ try:
                 detection_in.send(nn_data)
 
         while detection_nn.has():
-            try:
-                pckt = detection_nn.get()
-                bboxes = np.array(pckt.getFirstLayerFp16())
-                bboxes = bboxes[:np.where(bboxes == -1)[0][0]]
-                bboxes = bboxes.reshape((bboxes.size // 7, 7))
-                bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
-            except:
-                print("test")
-                raise
+            bboxes = np.array(detection_nn.get().getFirstLayerFp16())
+            bboxes = bboxes.reshape((bboxes.size // 7, 7))
+            bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
 
             for raw_bbox in bboxes:
                 bbox = frame_norm(frame, raw_bbox)
