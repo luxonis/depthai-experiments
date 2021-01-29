@@ -76,6 +76,10 @@ def padded_point(point, padding, frame_shape=None):
     else:
         def norm(val, dim):
             return max(0, min(val, dim))
+        if np.any(point - padding > frame_shape[:2]) or np.any(point + padding < 0):
+            print(f"Unable to create padded box for point {point} with padding {padding} and frame shape {frame_shape[:2]}")
+            return None
+
         return [
             norm(point[0] - padding, frame_shape[0]),
             norm(point[1] - padding, frame_shape[1]),
@@ -194,7 +198,6 @@ class Main:
             if self.frame is None:
                 continue
             bboxes = np.array(face_nn.get().getFirstLayerFp16())
-            bboxes = bboxes[:np.where(bboxes == -1)[0][0]]
             bboxes = bboxes.reshape((bboxes.size // 7, 7))
             self.bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
 
@@ -225,8 +228,16 @@ class Main:
             land_data = frame_norm(face_frame, landmark_nn.get().getFirstLayerFp16())
             land_data[::2] += left
             land_data[1::2] += top
-            self.left_bbox = padded_point(land_data[:2], padding=30, frame_shape=self.frame.shape)
-            self.right_bbox = padded_point(land_data[2:4], padding=30, frame_shape=self.frame.shape)
+            left_bbox = padded_point(land_data[:2], padding=30, frame_shape=self.frame.shape)
+            if left_bbox is None:
+                print("Point for left eye is corrupted, skipping nn result...")
+                continue
+            self.left_bbox = left_bbox
+            right_bbox = padded_point(land_data[2:4], padding=30, frame_shape=self.frame.shape)
+            if right_bbox is None:
+                print("Point for right eye is corrupted, skipping nn result...")
+                continue
+            self.right_bbox = right_bbox
             self.nose = land_data[4:6]
             left_img = self.frame[self.left_bbox[1]:self.left_bbox[3], self.left_bbox[0]:self.left_bbox[2]]
             right_img = self.frame[self.right_bbox[1]:self.right_bbox[3], self.right_bbox[0]:self.right_bbox[2]]
@@ -247,11 +258,19 @@ class Main:
     def should_run(self):
         return True if camera else self.cap.isOpened()
 
-    def get_frame(self):
+    def get_frame(self, retries=0):
         if camera:
             return True, np.array(self.cam_out.get().getData()).reshape((3, 300, 300)).transpose(1, 2, 0).astype(np.uint8)
         else:
-            return self.cap.read()
+            read_correctly, new_frame = self.cap.read()
+            if not read_correctly or new_frame is None:
+                if retries < 5:
+                    return self.get_frame(retries+1)
+                else:
+                    print("Source closed, terminating...")
+                    return False, None
+            else:
+                return read_correctly, new_frame
 
     def run(self):
         self.threads = [
@@ -263,12 +282,13 @@ class Main:
             thread.start()
 
         while self.should_run():
-            read_correctly, self.frame = self.get_frame()
-
+            read_correctly, new_frame = self.get_frame()
+            
             if not read_correctly:
                 break
 
             self.fps.update()
+            self.frame = new_frame
             self.debug_frame = self.frame.copy()
 
             if not camera:
@@ -312,9 +332,12 @@ class Main:
         print("FPS: {:.2f}".format(self.fps.fps()))
         if not camera:
             self.cap.release()
+        cv2.destroyAllWindows()
         self.running = False
         for thread in self.threads:
-            thread.join()
+            thread.join(3)
+            if thread.is_alive():
+                break
 
 
 Main().run()
