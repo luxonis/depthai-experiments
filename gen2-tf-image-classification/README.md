@@ -6,7 +6,9 @@ This example demonstrates how to run a neural network created using [TensorFlow 
 
 ## Demo
 
-TBD
+**Please note that the detected flower is not correct, [we're working on fixing the detection results](https://github.com/luxonis/depthai-experiments/issues/55)**
+
+![Pedestrian Re-Identification](https://user-images.githubusercontent.com/5244214/106612249-3039d500-6569-11eb-94c3-7efb4267c53b.gif)
 
 ## Pre-requisites
 
