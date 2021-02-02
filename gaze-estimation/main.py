@@ -1,6 +1,7 @@
 import argparse
 import queue
 import threading
+import time
 from pathlib import Path
 
 import cv2
@@ -216,12 +217,13 @@ class Main:
                 self.face_box_q.put(bbox)
 
     def land_pose_thread(self):
-        landmark_nn = self.device.getOutputQueue("landmark_nn")
-        pose_nn = self.device.getOutputQueue("pose_nn")
+        landmark_nn = self.device.getOutputQueue(name="landmark_nn", maxSize=1, blocking=False)
+        pose_nn = self.device.getOutputQueue(name="pose_nn", maxSize=1, blocking=False)
         gaze_in = self.device.getInputQueue("gaze_in")
 
         while self.running:
             face_bbox = self.face_box_q.get()
+            self.face_box_q.task_done()
             left = face_bbox[0]
             top = face_bbox[1]
             face_frame = self.frame[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
@@ -249,6 +251,9 @@ class Main:
             gaze_data.setLayer("right_eye_image", to_planar(right_img, (60, 60)))
             gaze_data.setLayer("head_pose_angles", self.pose)
             gaze_in.send(gaze_data)
+
+        landmark_nn.tryGetAll()
+        pose_nn.tryGetAll()
 
     def gaze_thread(self):
         gaze_nn = self.device.getOutputQueue("gaze_nn")
