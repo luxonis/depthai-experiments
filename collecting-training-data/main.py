@@ -16,12 +16,12 @@ parser.add_argument('-af', '--autofocus', type=str, default=None, help="Set Auto
 args = parser.parse_args()
 
 device = depthai.Device('', False)
-device.request_af_mode(getattr(depthai.AutofocusMode, args.autofocus, depthai.AutofocusMode.AF_MODE_AUTO))
+if args.autofocus is not None:
+    device.request_af_mode(getattr(depthai.AutofocusMode, args.autofocus, depthai.AutofocusMode.AF_MODE_AUTO))
 
 dest = Path(args.path).resolve().absolute()
 if dest.exists() and len(list(dest.glob('*'))) != 0 and not args.dirty:
-    raise ValueError(
-        f"Path {dest} contains {len(list(dest.glob('*')))} files. Either specify new path or use \"--dirty\" flag to use current one")
+    raise ValueError(f"Path {dest} contains {len(list(dest.glob('*')))} files. Either specify new path or use \"--dirty\" flag to use current one")
 dest.mkdir(parents=True, exist_ok=True)
 
 p = device.create_pipeline(config={
