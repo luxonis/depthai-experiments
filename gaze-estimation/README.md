@@ -1,6 +1,6 @@
 # [Gen2] Gaze estimation
 
-NOTE: This example has a BUG where it may crash when ending the example.  Something to do with thread joining not working properly.  This only occurs upon quitting the example, but we are actively debugging as we are unsure if this may have something to do with an internal library state.  We will update when we find out.  For now, a crash may occur when ending the program.
+NOTE: This example has a BUG ([here](https://github.com/luxonis/depthai-experiments/issues/54)) where it may crash when ending the example.  Something to do with thread joining not working properly.  This only occurs upon quitting the example, but we are actively debugging as we are unsure if this may have something to do with an internal library state.  We will update when we find out.  For now, a crash may occur when ending the program.
 
 This example demonstrates how to run 3 stage inference (3-series, 2-parallel) on DepthAI using Gen2 Pipeline Builder.
 
