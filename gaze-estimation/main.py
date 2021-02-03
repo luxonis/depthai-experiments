@@ -227,9 +227,9 @@ class Main:
         gaze_in = self.device.getInputQueue("gaze_in")
 
         while self.running:
-            print("LAND ONE")
+            print("LAND ONE: {}".format(self.running))
             try:
-                face_bbox = self.face_box_q.get(block=True, timeout=1000)
+                face_bbox = self.face_box_q.get(block=True, timeout=100)
             except queue.Empty:
                 continue
             self.face_box_q.task_done()
