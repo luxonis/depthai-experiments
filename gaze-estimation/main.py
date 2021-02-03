@@ -1,7 +1,6 @@
 import argparse
 import queue
 import threading
-import time
 from pathlib import Path
 
 import cv2
