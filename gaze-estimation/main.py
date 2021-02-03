@@ -227,26 +227,31 @@ class Main:
         gaze_in = self.device.getInputQueue("gaze_in")
 
         while self.running:
+            print("LAND ONE")
             face_bbox = self.face_box_q.get()
             self.face_box_q.task_done()
             left = face_bbox[0]
             top = face_bbox[1]
             face_frame = self.frame[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
             try:
+                print("LAND TWO")
                 land_data = frame_norm(face_frame, landmark_nn.get().getFirstLayerFp16())
             except RuntimeError as ex:
                 print("Error getting data from landmark_nn: {}".format(ex))
+                print("LAND TWO EXIT")
                 continue
             land_data[::2] += left
             land_data[1::2] += top
             left_bbox = padded_point(land_data[:2], padding=30, frame_shape=self.frame.shape)
             if left_bbox is None:
                 print("Point for left eye is corrupted, skipping nn result...")
+                print("LAND TWO EXIT TWO")
                 continue
             self.left_bbox = left_bbox
             right_bbox = padded_point(land_data[2:4], padding=30, frame_shape=self.frame.shape)
             if right_bbox is None:
                 print("Point for right eye is corrupted, skipping nn result...")
+                print("LAND TWO EXIT THREE")
                 continue
             self.right_bbox = right_bbox
             self.nose = land_data[4:6]
@@ -254,8 +259,10 @@ class Main:
             right_img = self.frame[self.right_bbox[1]:self.right_bbox[3], self.right_bbox[0]:self.right_bbox[2]]
 
             try:
+                print("LAND FOUR")
                 self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
             except RuntimeError as ex:
+                print("LAND FOUR EXIT")
                 print("Error getting data from pose_nn: {}".format(ex))
                 continue
 
@@ -264,6 +271,7 @@ class Main:
             gaze_data.setLayer("right_eye_image", to_planar(right_img, (60, 60)))
             gaze_data.setLayer("head_pose_angles", self.pose)
             gaze_in.send(gaze_data)
+            print("LAND FIVE")
         print("Land exited")
 
     def gaze_thread(self):
