@@ -367,6 +367,8 @@ class Main:
         if not camera:
             self.cap.release()
         cv2.destroyAllWindows()
+        for i in range(1, 5):  # https://stackoverflow.com/a/25794701/5494277
+            cv2.waitKey(1)
         self.running = False
 
 
