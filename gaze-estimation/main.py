@@ -231,6 +231,7 @@ class Main:
             try:
                 face_bbox = self.face_box_q.get(block=True, timeout=100)
             except queue.Empty:
+                print("LAND ONE EXIT")
                 continue
             self.face_box_q.task_done()
             left = face_bbox[0]
