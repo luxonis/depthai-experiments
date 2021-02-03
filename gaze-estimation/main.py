@@ -198,7 +198,11 @@ class Main:
         while self.running:
             if self.frame is None:
                 continue
-            bboxes = np.array(face_nn.get().getFirstLayerFp16())
+            try:
+                bboxes = np.array(face_nn.get().getFirstLayerFp16())
+            except RuntimeError as ex:
+                print("Error getting data from face_nn: {}".format(ex))
+                continue
             bboxes = bboxes.reshape((bboxes.size // 7, 7))
             self.bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
 
@@ -227,7 +231,11 @@ class Main:
             left = face_bbox[0]
             top = face_bbox[1]
             face_frame = self.frame[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
-            land_data = frame_norm(face_frame, landmark_nn.get().getFirstLayerFp16())
+            try:
+                land_data = frame_norm(face_frame, landmark_nn.get().getFirstLayerFp16())
+            except RuntimeError as ex:
+                print("Error getting data from landmark_nn: {}".format(ex))
+                continue
             land_data[::2] += left
             land_data[1::2] += top
             left_bbox = padded_point(land_data[:2], padding=30, frame_shape=self.frame.shape)
@@ -244,7 +252,11 @@ class Main:
             left_img = self.frame[self.left_bbox[1]:self.left_bbox[3], self.left_bbox[0]:self.left_bbox[2]]
             right_img = self.frame[self.right_bbox[1]:self.right_bbox[3], self.right_bbox[0]:self.right_bbox[2]]
 
-            self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
+            try:
+                self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
+            except RuntimeError as ex:
+                print("Error getting data from pose_nn: {}".format(ex))
+                continue
 
             gaze_data = depthai.NNData()
             gaze_data.setLayer("left_eye_image", to_planar(left_img, (60, 60)))
@@ -252,13 +264,14 @@ class Main:
             gaze_data.setLayer("head_pose_angles", self.pose)
             gaze_in.send(gaze_data)
 
-        landmark_nn.tryGetAll()
-        pose_nn.tryGetAll()
-
     def gaze_thread(self):
         gaze_nn = self.device.getOutputQueue("gaze_nn")
         while self.running:
-            self.gaze = np.array(gaze_nn.get().getFirstLayerFp16())
+            try:
+                self.gaze = np.array(gaze_nn.get().getFirstLayerFp16())
+            except RuntimeError as ex:
+                print("Error getting data from pose_nn: {}".format(ex))
+                continue
 
     def should_run(self):
         return True if camera else self.cap.isOpened()
@@ -339,9 +352,11 @@ class Main:
             self.cap.release()
         cv2.destroyAllWindows()
         self.running = False
-        for thread in self.threads:
-            thread.join()
 
 
 with depthai.Device(create_pipeline()) as device:
-    Main(device).run()
+    app = Main(device)
+    app.run()
+
+for thread in app.threads:
+    thread.join()
