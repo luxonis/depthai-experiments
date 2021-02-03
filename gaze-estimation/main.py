@@ -228,7 +228,10 @@ class Main:
 
         while self.running:
             print("LAND ONE")
-            face_bbox = self.face_box_q.get()
+            try:
+                face_bbox = self.face_box_q.get(block=True, timeout=1000)
+            except queue.Empty:
+                continue
             self.face_box_q.task_done()
             left = face_bbox[0]
             top = face_bbox[1]
