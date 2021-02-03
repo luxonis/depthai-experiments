@@ -200,7 +200,6 @@ class Main:
             try:
                 bboxes = np.array(face_nn.get().getFirstLayerFp16())
             except RuntimeError as ex:
-                print("Error getting data from face_nn: {}".format(ex))
                 continue
             bboxes = bboxes.reshape((bboxes.size // 7, 7))
             self.bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
@@ -228,7 +227,6 @@ class Main:
             try:
                 land_in = landmark_nn.get().getFirstLayerFp16()
             except RuntimeError as ex:
-                print("Error getting data from landmark_nn: {}".format(ex))
                 continue
 
             try:
@@ -260,7 +258,6 @@ class Main:
             try:
                 self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
             except RuntimeError as ex:
-                print("Error getting data from pose_nn: {}".format(ex))
                 continue
 
             gaze_data = depthai.NNData()
@@ -275,7 +272,6 @@ class Main:
             try:
                 self.gaze = np.array(gaze_nn.get().getFirstLayerFp16())
             except RuntimeError as ex:
-                print("Error getting data from pose_nn: {}".format(ex))
                 continue
 
     def should_run(self):
