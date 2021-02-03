@@ -259,10 +259,10 @@ class Main:
             right_img = self.frame[self.right_bbox[1]:self.right_bbox[3], self.right_bbox[0]:self.right_bbox[2]]
 
             try:
-                print("LAND FOUR")
+                print("LAND THREE")
                 self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
             except RuntimeError as ex:
-                print("LAND FOUR EXIT")
+                print("LAND THREE EXIT")
                 print("Error getting data from pose_nn: {}".format(ex))
                 continue
 
@@ -271,7 +271,7 @@ class Main:
             gaze_data.setLayer("right_eye_image", to_planar(right_img, (60, 60)))
             gaze_data.setLayer("head_pose_angles", self.pose)
             gaze_in.send(gaze_data)
-            print("LAND FIVE")
+            print("LAND FOUR")
         print("Land exited")
 
     def gaze_thread(self):
