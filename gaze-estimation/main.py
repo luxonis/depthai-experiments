@@ -340,9 +340,7 @@ class Main:
         cv2.destroyAllWindows()
         self.running = False
         for thread in self.threads:
-            thread.join(3)
-            if thread.is_alive():
-                break
+            thread.join()
 
 
 with depthai.Device(create_pipeline()) as device:
