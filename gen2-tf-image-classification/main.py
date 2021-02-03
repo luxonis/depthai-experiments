@@ -48,26 +48,14 @@ xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
-# Pipeline defined, now the device is assigned and pipeline is started
-device = dai.Device(pipeline)
-device.startPipeline()
-
-# Output queues will be used to get the rgb frames and nn data from the outputs defined above
-if camera:
-    q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-else:
-    cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
-    detection_in = device.getInputQueue("in_nn")
-q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
-
 frame = None
 bboxes = []
 
 
 # nn data, being the bounding box locations, are in <0..1> range - they need to be normalized with frame width/height
-def frame_norm(frame, bbox):
-    norm_vals = np.full(len(bbox), frame.shape[0])
-    norm_vals[::2] = frame.shape[1]
+def frame_norm(in_frame, bbox):
+    norm_vals = np.full(len(bbox), in_frame.shape[0])
+    norm_vals[::2] = in_frame.shape[1]
     return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
 
 
@@ -88,53 +76,65 @@ def to_planar(arr: np.ndarray, shape: tuple) -> list:
     return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
 
 
-def should_run():
-    return cap.isOpened() if args.video else True
+# Pipeline defined, now the device is assigned and pipeline is started
+with dai.Device(pipeline) as device:
+    device.startPipeline()
 
-
-def get_frame():
+    # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     if camera:
-        in_rgb = q_rgb.get()
-        frame = np.array(in_rgb.getData()).reshape((3, in_rgb.getHeight(), in_rgb.getWidth())).transpose(1, 2, 0).astype(np.uint8)
-        return True, np.ascontiguousarray(frame)
+        q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     else:
-        return cap.read()
+        cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
+        detection_in = device.getInputQueue("in_nn")
+    q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
 
-class_names = ['daisy', 'dandelion', 'roses', 'sunflowers', 'tulips']
-result = None
+    def should_run():
+        return cap.isOpened() if args.video else True
 
 
-while should_run():
-    read_correctly, frame = get_frame()
+    def get_frame():
+        if camera:
+            in_rgb = q_rgb.get()
+            new_frame = np.array(in_rgb.getData()).reshape((3, in_rgb.getHeight(), in_rgb.getWidth())).transpose(1, 2, 0).astype(np.uint8)
+            return True, np.ascontiguousarray(new_frame)
+        else:
+            return cap.read()
 
-    if not read_correctly:
-        break
 
-    if frame is not None and not camera:
-        nn_data = dai.NNData()
-        nn_data.setLayer("input", to_planar(frame, (180, 180)))
-        detection_in.send(nn_data)
+    class_names = ['daisy', 'dandelion', 'roses', 'sunflowers', 'tulips']
+    result = None
 
-    in_nn = q_nn.tryGet()
+    while should_run():
+        read_correctly, frame = get_frame()
 
-    if in_nn is not None:
-        data = softmax(in_nn.getFirstLayerFp16())
-        result = {
-            "name": class_names[np.argmax(data)],
-            "conf": round(100 * np.max(data), 2)
-        }
-
-    if debug:
-        if frame is not None:
-            # if the frame is available, draw bounding boxes on it and show the frame
-            if result is not None:
-                cv2.putText(frame, "{} ({}%)".format(result["name"], result["conf"]), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
-
-            cv2.imshow("rgb", frame)
-
-        if cv2.waitKey(1) == ord('q'):
+        if not read_correctly:
             break
-    else:
-        if frame is not None and result is not None:
-            print("{} ({}%)".format(result["name"], result["conf"]))
+
+        if frame is not None and not camera:
+            nn_data = dai.NNData()
+            nn_data.setLayer("input", to_planar(frame, (180, 180)))
+            detection_in.send(nn_data)
+
+        in_nn = q_nn.tryGet()
+
+        if in_nn is not None:
+            data = softmax(in_nn.getFirstLayerFp16())
+            result = {
+                "name": class_names[np.argmax(data)],
+                "conf": round(100 * np.max(data), 2)
+            }
+
+        if debug:
+            if frame is not None:
+                # if the frame is available, draw bounding boxes on it and show the frame
+                if result is not None:
+                    cv2.putText(frame, "{} ({}%)".format(result["name"], result["conf"]), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+
+                cv2.imshow("rgb", frame)
+
+            if cv2.waitKey(1) == ord('q'):
+                break
+        else:
+            if frame is not None and result is not None:
+                print("{} ({}%)".format(result["name"], result["conf"]))

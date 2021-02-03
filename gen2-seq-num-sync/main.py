@@ -24,9 +24,6 @@ xout_right = pipeline.createXLinkOut()
 xout_right.setStreamName('right')
 cam_right.out.link(xout_right.input)
 
-# Pipeline defined, now the device is assigned and pipeline is started
-device = dai.Device(pipeline)
-device.startPipeline()
 
 def seq(packet):
     return packet.getSequenceNum()
@@ -68,26 +65,29 @@ class PairingSystem:
                 del self.seq_packets[key]
 
 
+# Pipeline defined, now the device is assigned and pipeline is started
+with dai.Device(pipeline) as device:
+    device.startPipeline()
 
-# Output queue will be used to get the rgb frames from the output defined above
-q_left = device.getOutputQueue(name="left", maxSize=4, blocking=False)
-q_right = device.getOutputQueue(name="right", maxSize=4, blocking=False)
-ps = PairingSystem()
+    # Output queue will be used to get the rgb frames from the output defined above
+    q_left = device.getOutputQueue(name="left", maxSize=4, blocking=False)
+    q_right = device.getOutputQueue(name="right", maxSize=4, blocking=False)
+    ps = PairingSystem()
 
-while True:
-    # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
-    ps.add_packet(q_left.tryGet())
-    ps.add_packet(q_right.tryGet())
+    while True:
+        # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
+        ps.add_packet(q_left.tryGet())
+        ps.add_packet(q_right.tryGet())
 
-    for synced in ps.get_pairs():
-        raw_left = synced[1]
-        raw_right = synced[2]
+        for synced in ps.get_pairs():
+            raw_left = synced[1]
+            raw_right = synced[2]
 
-        frame_left = raw_left.getData().reshape((raw_left.getHeight(), raw_left.getWidth())).astype(np.uint8)
-        frame_right = raw_right.getData().reshape((raw_right.getHeight(), raw_right.getWidth())).astype(np.uint8)
+            frame_left = raw_left.getData().reshape((raw_left.getHeight(), raw_left.getWidth())).astype(np.uint8)
+            frame_right = raw_right.getData().reshape((raw_right.getHeight(), raw_right.getWidth())).astype(np.uint8)
 
-        cv2.imshow("left", frame_left)
-        cv2.imshow("right", frame_right)
+            cv2.imshow("left", frame_left)
+            cv2.imshow("right", frame_right)
 
-    if cv2.waitKey(1) == ord('q'):
-        break
+        if cv2.waitKey(1) == ord('q'):
+            break
