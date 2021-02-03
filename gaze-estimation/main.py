@@ -227,23 +227,24 @@ class Main:
         gaze_in = self.device.getInputQueue("gaze_in")
 
         while self.running:
-            print("LAND ONE: {}".format(self.running))
             try:
+                print("LAND TWO")
+                land_in = landmark_nn.get().getFirstLayerFp16()
+            except RuntimeError as ex:
+                print("Error getting data from landmark_nn: {}".format(ex))
+                print("LAND ONE EXIT")
+                continue
+            try:
+                print("LAND TWO")
                 face_bbox = self.face_box_q.get(block=True, timeout=100)
             except queue.Empty:
-                print("LAND ONE EXIT")
+                print("LAND TWO EXIT")
                 continue
             self.face_box_q.task_done()
             left = face_bbox[0]
             top = face_bbox[1]
             face_frame = self.frame[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
-            try:
-                print("LAND TWO")
-                land_data = frame_norm(face_frame, landmark_nn.get().getFirstLayerFp16())
-            except RuntimeError as ex:
-                print("Error getting data from landmark_nn: {}".format(ex))
-                print("LAND TWO EXIT")
-                continue
+            land_data = frame_norm(face_frame, land_in)
             land_data[::2] += left
             land_data[1::2] += top
             left_bbox = padded_point(land_data[:2], padding=30, frame_shape=self.frame.shape)
