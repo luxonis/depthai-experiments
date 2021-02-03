@@ -165,8 +165,8 @@ def create_pipeline():
 
 
 class Main:
-    def __init__(self):
-        self.device = depthai.Device(create_pipeline())
+    def __init__(self, device):
+        self.device = device
         print("Starting pipeline...")
         self.device.startPipeline()
         if camera:
@@ -345,4 +345,5 @@ class Main:
                 break
 
 
-Main().run()
+with depthai.Device(create_pipeline()) as device:
+    Main(device).run()
