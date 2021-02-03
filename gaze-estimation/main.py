@@ -219,6 +219,7 @@ class Main:
                 pose_in.send(pose_data)
 
                 self.face_box_q.put(bbox)
+        print("Face exited")
 
     def land_pose_thread(self):
         landmark_nn = self.device.getOutputQueue(name="landmark_nn", maxSize=1, blocking=False)
@@ -263,6 +264,7 @@ class Main:
             gaze_data.setLayer("right_eye_image", to_planar(right_img, (60, 60)))
             gaze_data.setLayer("head_pose_angles", self.pose)
             gaze_in.send(gaze_data)
+        print("Land exited")
 
     def gaze_thread(self):
         gaze_nn = self.device.getOutputQueue("gaze_nn")
@@ -272,6 +274,7 @@ class Main:
             except RuntimeError as ex:
                 print("Error getting data from pose_nn: {}".format(ex))
                 continue
+        print("Gaze exited")
 
     def should_run(self):
         return True if camera else self.cap.isOpened()
@@ -292,9 +295,9 @@ class Main:
 
     def run(self):
         self.threads = [
-            threading.Thread(target=self.face_thread, daemon=True),
-            threading.Thread(target=self.land_pose_thread, daemon=True),
-            threading.Thread(target=self.gaze_thread, daemon=True)
+            threading.Thread(target=self.face_thread),
+            threading.Thread(target=self.land_pose_thread),
+            threading.Thread(target=self.gaze_thread)
         ]
         for thread in self.threads:
             thread.start()
