@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cv2
 import depthai
+print(depthai.__version__)
 import numpy as np
 from imutils.video import FPS
 
@@ -132,7 +133,6 @@ with depthai.Device(create_pipeline()) as device:
 
             while detection_nn.has():
                 bboxes = np.array(detection_nn.get().getFirstLayerFp16())
-                bboxes = bboxes[:np.where(bboxes == -1)[0][0]]
                 bboxes = bboxes.reshape((bboxes.size // 7, 7))
                 bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
 
