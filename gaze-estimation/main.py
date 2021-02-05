@@ -164,8 +164,8 @@ def create_pipeline():
 
 
 class Main:
-    def __init__(self):
-        self.device = depthai.Device(create_pipeline())
+    def __init__(self, device):
+        self.device = device
         print("Starting pipeline...")
         self.device.startPipeline()
         if camera:
@@ -197,7 +197,10 @@ class Main:
         while self.running:
             if self.frame is None:
                 continue
-            bboxes = np.array(face_nn.get().getFirstLayerFp16())
+            try:
+                bboxes = np.array(face_nn.get().getFirstLayerFp16())
+            except RuntimeError as ex:
+                continue
             bboxes = bboxes.reshape((bboxes.size // 7, 7))
             self.bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
 
@@ -216,16 +219,26 @@ class Main:
                 self.face_box_q.put(bbox)
 
     def land_pose_thread(self):
-        landmark_nn = self.device.getOutputQueue("landmark_nn")
-        pose_nn = self.device.getOutputQueue("pose_nn")
+        landmark_nn = self.device.getOutputQueue(name="landmark_nn", maxSize=1, blocking=False)
+        pose_nn = self.device.getOutputQueue(name="pose_nn", maxSize=1, blocking=False)
         gaze_in = self.device.getInputQueue("gaze_in")
 
         while self.running:
-            face_bbox = self.face_box_q.get()
+            try:
+                land_in = landmark_nn.get().getFirstLayerFp16()
+            except RuntimeError as ex:
+                continue
+
+            try:
+                face_bbox = self.face_box_q.get(block=True, timeout=100)
+            except queue.Empty:
+                continue
+
+            self.face_box_q.task_done()
             left = face_bbox[0]
             top = face_bbox[1]
             face_frame = self.frame[face_bbox[1]:face_bbox[3], face_bbox[0]:face_bbox[2]]
-            land_data = frame_norm(face_frame, landmark_nn.get().getFirstLayerFp16())
+            land_data = frame_norm(face_frame, land_in)
             land_data[::2] += left
             land_data[1::2] += top
             left_bbox = padded_point(land_data[:2], padding=30, frame_shape=self.frame.shape)
@@ -242,7 +255,10 @@ class Main:
             left_img = self.frame[self.left_bbox[1]:self.left_bbox[3], self.left_bbox[0]:self.left_bbox[2]]
             right_img = self.frame[self.right_bbox[1]:self.right_bbox[3], self.right_bbox[0]:self.right_bbox[2]]
 
-            self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
+            try:
+                self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
+            except RuntimeError as ex:
+                continue
 
             gaze_data = depthai.NNData()
             gaze_data.setLayer("left_eye_image", to_planar(left_img, (60, 60)))
@@ -253,7 +269,10 @@ class Main:
     def gaze_thread(self):
         gaze_nn = self.device.getOutputQueue("gaze_nn")
         while self.running:
-            self.gaze = np.array(gaze_nn.get().getFirstLayerFp16())
+            try:
+                self.gaze = np.array(gaze_nn.get().getFirstLayerFp16())
+            except RuntimeError as ex:
+                continue
 
     def should_run(self):
         return True if camera else self.cap.isOpened()
@@ -274,9 +293,9 @@ class Main:
 
     def run(self):
         self.threads = [
-            threading.Thread(target=self.face_thread, daemon=True),
-            threading.Thread(target=self.land_pose_thread, daemon=True),
-            threading.Thread(target=self.gaze_thread, daemon=True)
+            threading.Thread(target=self.face_thread),
+            threading.Thread(target=self.land_pose_thread),
+            threading.Thread(target=self.gaze_thread)
         ]
         for thread in self.threads:
             thread.start()
@@ -333,11 +352,14 @@ class Main:
         if not camera:
             self.cap.release()
         cv2.destroyAllWindows()
+        for i in range(1, 5):  # https://stackoverflow.com/a/25794701/5494277
+            cv2.waitKey(1)
         self.running = False
-        for thread in self.threads:
-            thread.join(3)
-            if thread.is_alive():
-                break
 
 
-Main().run()
+with depthai.Device(create_pipeline()) as device:
+    app = Main(device)
+    app.run()
+
+for thread in app.threads:
+    thread.join()
