@@ -78,103 +78,103 @@ def create_pipeline():
     return pipeline
 
 
-device = depthai.Device(create_pipeline())
-print("Starting pipeline...")
-device.startPipeline()
-if args.camera:
-    cam_out = device.getOutputQueue("cam_out", 1, True)
-else:
-    detection_in = device.getInputQueue("detection_in")
-detection_nn = device.getOutputQueue("detection_nn")
-age_gender_in = device.getInputQueue("age_gender_in")
-age_gender_nn = device.getOutputQueue("age_gender_nn")
-
-bboxes = []
-results = []
-face_bbox_q = queue.Queue()
-next_id = 0
-
-if args.video:
-    cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
-
-fps = FPS()
-fps.start()
-
-
-def should_run():
-    return cap.isOpened() if args.video else True
-
-
-def get_frame():
-    if args.video:
-        return cap.read()
+with depthai.Device(create_pipeline()) as device:
+    print("Starting pipeline...")
+    device.startPipeline()
+    if args.camera:
+        cam_out = device.getOutputQueue("cam_out", 1, True)
     else:
-        return True, np.array(cam_out.get().getData()).reshape((3, 300, 300)).transpose(1, 2, 0).astype(np.uint8)
+        detection_in = device.getInputQueue("detection_in")
+    detection_nn = device.getOutputQueue("detection_nn")
+    age_gender_in = device.getInputQueue("age_gender_in")
+    age_gender_nn = device.getOutputQueue("age_gender_nn")
+
+    bboxes = []
+    results = []
+    face_bbox_q = queue.Queue()
+    next_id = 0
+
+    if args.video:
+        cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
+
+    fps = FPS()
+    fps.start()
 
 
-try:
-    while should_run():
-        read_correctly, frame = get_frame()
+    def should_run():
+        return cap.isOpened() if args.video else True
 
-        if not read_correctly:
-            break
 
-        if frame is not None:
-            fps.update()
-            debug_frame = frame.copy()
+    def get_frame():
+        if args.video:
+            return cap.read()
+        else:
+            return True, np.array(cam_out.get().getData()).reshape((3, 300, 300)).transpose(1, 2, 0).astype(np.uint8)
 
-            if not args.camera:
-                nn_data = depthai.NNData()
-                nn_data.setLayer("input", to_planar(frame, (300, 300)))
-                detection_in.send(nn_data)
 
-        while detection_nn.has():
-            bboxes = np.array(detection_nn.get().getFirstLayerFp16())
-            bboxes = bboxes.reshape((bboxes.size // 7, 7))
-            bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
+    try:
+        while should_run():
+            read_correctly, frame = get_frame()
 
-            for raw_bbox in bboxes:
-                bbox = frame_norm(frame, raw_bbox)
-                det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-
-                nn_data = depthai.NNData()
-                nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
-                age_gender_in.send(nn_data)
-                face_bbox_q.put(bbox)
-
-        while age_gender_nn.has():
-            det = age_gender_nn.get()
-            age = int(float(np.squeeze(np.array(det.getLayerFp16('age_conv3')))) * 100)
-            gender = np.squeeze(np.array(det.getLayerFp16('prob')))
-            gender_str = "female" if gender[0] > gender[1] else "male"
-            bbox = face_bbox_q.get()
-
-            while not len(results) < len(bboxes) and len(results) > 0:
-                results.pop(0)
-            results.append({
-                "bbox": bbox,
-                "gender": gender_str,
-                "age": age,
-                "ts": time.time()
-            })
-
-        results = list(filter(lambda result: time.time() - result["ts"] < 0.2, results))
-
-        if debug and frame is not None:
-            for result in results:
-                bbox = result["bbox"]
-                cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
-                y = (bbox[1] + bbox[3]) // 2
-                cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-                cv2.putText(debug_frame, result["gender"], (bbox[0], y + 20), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-
-            aspect_ratio = frame.shape[1] / frame.shape[0]
-            cv2.imshow("Camera_view", cv2.resize(debug_frame, (int(900),  int(900 / aspect_ratio))))
-            if cv2.waitKey(1) == ord('q'):
-                cv2.destroyAllWindows()
+            if not read_correctly:
                 break
-except KeyboardInterrupt:
-    pass
+
+            if frame is not None:
+                fps.update()
+                debug_frame = frame.copy()
+
+                if not args.camera:
+                    nn_data = depthai.NNData()
+                    nn_data.setLayer("input", to_planar(frame, (300, 300)))
+                    detection_in.send(nn_data)
+
+            while detection_nn.has():
+                bboxes = np.array(detection_nn.get().getFirstLayerFp16())
+                bboxes = bboxes.reshape((bboxes.size // 7, 7))
+                bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
+
+                for raw_bbox in bboxes:
+                    bbox = frame_norm(frame, raw_bbox)
+                    det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+
+                    nn_data = depthai.NNData()
+                    nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
+                    age_gender_in.send(nn_data)
+                    face_bbox_q.put(bbox)
+
+            while age_gender_nn.has():
+                det = age_gender_nn.get()
+                age = int(float(np.squeeze(np.array(det.getLayerFp16('age_conv3')))) * 100)
+                gender = np.squeeze(np.array(det.getLayerFp16('prob')))
+                gender_str = "female" if gender[0] > gender[1] else "male"
+                bbox = face_bbox_q.get()
+
+                while not len(results) < len(bboxes) and len(results) > 0:
+                    results.pop(0)
+                results.append({
+                    "bbox": bbox,
+                    "gender": gender_str,
+                    "age": age,
+                    "ts": time.time()
+                })
+
+            results = list(filter(lambda result: time.time() - result["ts"] < 0.2, results))
+
+            if debug and frame is not None:
+                for result in results:
+                    bbox = result["bbox"]
+                    cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+                    y = (bbox[1] + bbox[3]) // 2
+                    cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+                    cv2.putText(debug_frame, result["gender"], (bbox[0], y + 20), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+
+                aspect_ratio = frame.shape[1] / frame.shape[0]
+                cv2.imshow("Camera_view", cv2.resize(debug_frame, (int(900),  int(900 / aspect_ratio))))
+                if cv2.waitKey(1) == ord('q'):
+                    cv2.destroyAllWindows()
+                    break
+    except KeyboardInterrupt:
+        pass
 
 fps.stop()
 print("FPS: {:.2f}".format(fps.fps()))
