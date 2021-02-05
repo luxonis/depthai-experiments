@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import csv
+import threading
 import time
 from pathlib import Path
 import sys
@@ -39,10 +41,50 @@ texts = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", 
 
 for text in texts:
     (Path(__file__).parent / Path(f'data/{text}')).mkdir(parents=True, exist_ok=True)
+(Path(__file__).parent / Path(f'data/raw')).mkdir(parents=True, exist_ok=True)
 
 
 # Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device:
+with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_file:
+    dataset = csv.DictWriter(
+        dataset_file,
+        ["id", "label", "left", "top", "right", "bottom", "raw_frame", "overlay_frame", "cropped_frame"]
+    )
+    dataset.writeheader()
+
+    # nn data, being the bounding box locations, are in <0..1> range - they need to be normalized with frame width/height
+    def frame_norm(frame, bbox):
+        norm_vals = np.full(len(bbox), frame.shape[0])
+        norm_vals[::2] = frame.shape[1]
+        return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
+
+
+    def store_data(frame, raw_bboxes,  labels):
+        timestamp = int(time.time() * 10000)
+        raw_frame_path = f'data/raw/{timestamp}.jpg'
+        cv2.imwrite(raw_frame_path, frame)
+        for raw_bbox, label in zip(raw_bboxes, labels):
+            bbox = frame_norm(frame, raw_bbox)
+            det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+            cropped_path = f'data/{texts[label]}/{timestamp}_cropped.jpg'
+            cv2.imwrite(cropped_path, det_frame)
+            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+            cv2.putText(frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            overlay_path = f'data/{texts[label]}/{timestamp}_overlay.jpg'
+            cv2.imwrite(overlay_path, frame)
+
+            data = {
+                "id": timestamp,
+                "label": texts[label],
+                "left": raw_bbox[0],
+                "top": raw_bbox[1],
+                "right": raw_bbox[2],
+                "bottom": raw_bbox[3],
+                "raw_frame": raw_frame_path,
+                "overlay_frame": overlay_path,
+                "cropped_frame": cropped_path,
+            }
+            dataset.writerow(data)
     # Start pipeline
     device.startPipeline()
 
@@ -53,10 +95,6 @@ with dai.Device(pipeline) as device:
     frame = None
     bboxes = []
     labels = []
-
-    # nn data, being the bounding box locations, are in <0..1> range - they need to be normalized with frame width/height
-    def frame_norm(frame, bbox):
-        return (np.array(bbox) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
 
 
     while True:
@@ -81,12 +119,13 @@ with dai.Device(pipeline) as device:
             labels = bboxes[:, 1].astype(int)
             bboxes = bboxes[:, 3:7]
 
+            if frame is not None:
+                threading.Thread(target=store_data, args=(frame.copy(), bboxes, labels)).start()
+
         if frame is not None:
             # if the frame is available, draw bounding boxes on it and show the frame
             for raw_bbox, label in zip(bboxes, labels):
                 bbox = frame_norm(frame, raw_bbox)
-                det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-                cv2.imwrite(f'data/{texts[label]}/{int(time.time() * 10000)}.jpg', det_frame)
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
                 cv2.putText(frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             cv2.imshow("rgb", frame)
