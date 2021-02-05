@@ -48,7 +48,7 @@ for text in texts:
 with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_file:
     dataset = csv.DictWriter(
         dataset_file,
-        ["id", "label", "left", "top", "right", "bottom", "raw_frame", "overlay_frame", "cropped_frame"]
+        ["timestamp", "label", "left", "top", "right", "bottom", "raw_frame", "overlay_frame", "cropped_frame"]
     )
     dataset.writeheader()
 
@@ -59,27 +59,28 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
         return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
 
 
-    def store_data(frame, raw_bboxes,  labels):
+    def store_data(in_frame, in_bboxes,  in_labels):
         timestamp = int(time.time() * 10000)
         raw_frame_path = f'data/raw/{timestamp}.jpg'
-        cv2.imwrite(raw_frame_path, frame)
-        for raw_bbox, label in zip(raw_bboxes, labels):
-            bbox = frame_norm(frame, raw_bbox)
-            det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+        cv2.imwrite(raw_frame_path, in_frame)
+        for raw_bbox, label in zip(in_bboxes, in_labels):
+            debug_frame = in_frame.copy()
+            bbox = frame_norm(debug_frame, raw_bbox)
+            det_frame = debug_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
             cropped_path = f'data/{texts[label]}/{timestamp}_cropped.jpg'
             cv2.imwrite(cropped_path, det_frame)
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-            cv2.putText(frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+            cv2.putText(debug_frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             overlay_path = f'data/{texts[label]}/{timestamp}_overlay.jpg'
-            cv2.imwrite(overlay_path, frame)
+            cv2.imwrite(overlay_path, debug_frame)
 
             data = {
-                "id": timestamp,
+                "timestamp": timestamp,
                 "label": texts[label],
-                "left": raw_bbox[0],
-                "top": raw_bbox[1],
-                "right": raw_bbox[2],
-                "bottom": raw_bbox[3],
+                "left": bbox[0],
+                "top": bbox[1],
+                "right": bbox[2],
+                "bottom": bbox[3],
                 "raw_frame": raw_frame_path,
                 "overlay_frame": overlay_path,
                 "cropped_frame": cropped_path,
@@ -93,6 +94,7 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
     frame = None
+    thread = None
     bboxes = []
     labels = []
 
@@ -120,15 +122,20 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
             bboxes = bboxes[:, 3:7]
 
             if frame is not None:
-                threading.Thread(target=store_data, args=(frame.copy(), bboxes, labels)).start()
+                thread = threading.Thread(target=store_data, args=(frame, bboxes, labels))
+                thread.start()
 
         if frame is not None:
+            debug_frame = frame.copy()
             # if the frame is available, draw bounding boxes on it and show the frame
             for raw_bbox, label in zip(bboxes, labels):
-                bbox = frame_norm(frame, raw_bbox)
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-                cv2.putText(frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.imshow("rgb", frame)
+                bbox = frame_norm(debug_frame, raw_bbox)
+                cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+                cv2.putText(debug_frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.imshow("rgb", debug_frame)
 
         if cv2.waitKey(1) == ord('q'):
             break
+
+    if thread is not None:
+        thread.join()
