@@ -100,8 +100,7 @@ with depthai.Device(create_pipeline()) as device:
 
     def get_frame():
         if args.video:
-            read_correctly, frame = cap.read()
-            return read_correctly, cv2.resize(frame, (456, 256))
+            return cap.read()
         else:
             return True, np.array(cam_out.get().getData()).reshape((3, 256, 456)).transpose(1, 2, 0).astype(np.uint8)
 
@@ -109,18 +108,18 @@ with depthai.Device(create_pipeline()) as device:
     try:
         while should_run():
             read_correctly, frame = get_frame()
+            h, w = frame.shape[:2]  # 256, 456
 
             if not read_correctly:
                 break
 
-            if frame is not None:
-                fps.update()
-                debug_frame = frame.copy()
+            fps.update()
+            debug_frame = frame.copy()
 
-                if not args.camera:
-                    nn_data = depthai.NNData()
-                    nn_data.setLayer("input", to_planar(frame, (456, 256)))
-                    pose_in.send(nn_data)
+            if not args.camera:
+                nn_data = depthai.NNData()
+                nn_data.setLayer("input", to_planar(frame, (456, 256)))
+                pose_in.send(nn_data)
 
             while pose_nn.has():
                 raw_in = pose_nn.get()
@@ -136,7 +135,7 @@ with depthai.Device(create_pipeline()) as device:
 
                 for row in range(18):
                     probMap = outputs[0, row, :, :]
-                    probMap = cv2.resize(probMap, (456, 256))  # (456, 256)
+                    probMap = cv2.resize(probMap, (w, h))  # (456, 256)
                     keypoints = getKeypoints(probMap, 0.3)
                     keypoints_with_id = []
 
@@ -147,7 +146,7 @@ with depthai.Device(create_pipeline()) as device:
 
                     detected_keypoints.append(keypoints_with_id)
 
-                valid_pairs, invalid_pairs = getValidPairs(outputs, 456, 256, detected_keypoints)
+                valid_pairs, invalid_pairs = getValidPairs(outputs, w, h, detected_keypoints)
                 personwiseKeypoints = getPersonwiseKeypoints(valid_pairs, invalid_pairs, keypoints_list)
 
                 for i in range(18):
@@ -163,7 +162,7 @@ with depthai.Device(create_pipeline()) as device:
                         cv2.line(debug_frame, (B[0], A[0]), (B[1], A[1]), colors[i], 3, cv2.LINE_AA)
 
 
-            if debug and frame is not None:
+            if debug:
                 cv2.imshow("rgb", debug_frame)
 
             if cv2.waitKey(1) == ord('q'):
