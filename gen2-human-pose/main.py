@@ -137,11 +137,11 @@ with depthai.Device(create_pipeline()) as device:
                     probMap = outputs[0, row, :, :]
                     probMap = cv2.resize(probMap, (w, h))  # (456, 256)
                     keypoints = getKeypoints(probMap, 0.3)
+                    keypoints_list = np.vstack([keypoints_list, *keypoints])
                     keypoints_with_id = []
 
                     for i in range(len(keypoints)):
                         keypoints_with_id.append(keypoints[i] + (keypoint_id,))
-                        keypoints_list = np.vstack([keypoints_list, keypoints[i]])
                         keypoint_id += 1
 
                     detected_keypoints.append(keypoints_with_id)
