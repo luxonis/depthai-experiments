@@ -5,7 +5,9 @@ This example demonstrates how to run [Human Pose Estimation Network](https://doc
 
 ## Demo
 
-WIP
+[![Gen2 Age & Gender recognition](https://user-images.githubusercontent.com/5244214/107493701-35f97100-6b8e-11eb-8b13-02a7a8dbec21.gif)](https://www.youtube.com/watch?v=Py3-dHQymko "Human pose estimation on DepthAI")
+
+
 
 ## Pre-requisites
 
