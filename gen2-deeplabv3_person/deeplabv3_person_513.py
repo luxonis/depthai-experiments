@@ -5,6 +5,9 @@ import cv2
 import depthai as dai
 import numpy as np
 
+usb2mode=True
+classes_nr = 13
+
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
@@ -39,7 +42,7 @@ xout_nn.input.setBlocking(False)
 detection_nn.out.link(xout_nn.input)
 
 # Pipeline defined, now the device is assigned and pipeline is started
-device = dai.Device(pipeline)
+device = dai.Device(pipeline, usb2Mode=usb2mode)
 device.startPipeline()
 
 # Output queues will be used to get the rgb frames and nn data from the outputs defined above
@@ -69,7 +72,7 @@ while True:
         print(lay1.shape)
 
         layer2 = in_nn.getLayerFp16(output_layers[1])
-        lay2 = np.asarray(layer2, dtype=np.int32).reshape((1,151,513,513))
+        lay2 = np.asarray(layer2, dtype=np.int32).reshape((1,classes_nr,513,513))
         print(lay2.shape)
 
 
