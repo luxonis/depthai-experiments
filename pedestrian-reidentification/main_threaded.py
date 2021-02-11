@@ -1,3 +1,4 @@
+import time
 import queue
 import threading
 from pathlib import Path
@@ -17,8 +18,11 @@ def frame_norm(frame, bbox):
 
 
 def to_planar(arr: np.ndarray, shape: tuple) -> list:
-    return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
-
+    tstart = time.monotonic()
+    planar = [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
+    tdiff = time.monotonic() - tstart
+    #print('time take to planar: ', tdiff)
+    return planar
 
 def create_pipeline():
     print("Creating pipeline...")
@@ -30,7 +34,6 @@ def create_pipeline():
     detection_in.setStreamName("detection_in")
     detection_nn = pipeline.createNeuralNetwork()
     detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013.blob").resolve().absolute()))
-    
     # Increase threads for detection
     detection_nn.setNumInferenceThreads(2)
 
@@ -63,7 +66,7 @@ class Main:
         self.device = depthai.Device(create_pipeline())
         print("Starting pipeline...")
         self.device.startPipeline()
-        self.detection_in = self.device.getInputQueue("detection_in")
+        self.detection_in = self.device.getInputQueue("detection_in", 4, False)
         self.reid_in = self.device.getInputQueue("reid_in")
 
         self.bboxes = []
@@ -73,6 +76,9 @@ class Main:
         self.next_id = 0
 
         self.cap = cv2.VideoCapture(str(Path("./input.mp4").resolve().absolute()))
+
+        self. = queue.Queue()
+
 
         self.fps = FPS()
         self.fps.start()
@@ -84,6 +90,9 @@ class Main:
             bboxes = bboxes[:np.where(bboxes == -1)[0][0]]
             bboxes = bboxes.reshape((bboxes.size // 7, 7))
             bboxes = bboxes[bboxes[:, 2] > 0.5][:, 3:7]
+
+            # Let reid stage know how many boxes were found
+            reid_bbox_num_q.put(len(bboxes))
 
             for raw_bbox in bboxes:
                 bbox = frame_norm(self.frame, raw_bbox)
@@ -112,6 +121,8 @@ class Main:
                 self.results_path[result_id] = []
                 self.next_id += 1
 
+            
+
             cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
             x = (bbox[0] + bbox[2]) // 2
             y = (bbox[1] + bbox[3]) // 2
@@ -121,10 +132,36 @@ class Main:
                 cv2.polylines(self.debug_frame, [np.array(self.results_path[result_id], dtype=np.int32)], False,
                               (255, 0, 0), 2)
 
+    def visualization_thread(self):
+        
+        # Wait to receive first inference frame (baseline latency)
+        inferenceFrame = self.vis_inference_frame_q.get()
+
+        while True:
+            # Wait to receive frame
+            frame = self.vis_inference_frame_q.get()
+
+            # Try to receive infered frame
+            recInferenceFrame = self.vis_inference_frame_q.tryGet()
+            if recInferenceFrame != None:
+                inferenceFrame = recInferenceFrame
+            
+            # inferenceFrame containes latest 
+
+
+
+            aspect_ratio = self.frame.shape[1] / self.frame.shape[0]
+            cv2.imshow("Camera_view", cv2.resize(self.debug_frame, (int(900),  int(900 / aspect_ratio))))
+
+
+
+
+
     def run(self):
         threading.Thread(target=self.det_thread, daemon=True).start()
         threading.Thread(target=self.reid_thread, daemon=True).start()
 
+        t1 = time.monotonic()
         while self.cap.isOpened():
             read_correctly, self.frame = self.cap.read()
 
@@ -138,11 +175,15 @@ class Main:
             nn_data.setLayer("input", to_planar(self.frame, (544, 320)))
             self.detection_in.send(nn_data)
 
-            aspect_ratio = self.frame.shape[1] / self.frame.shape[0]
-            cv2.imshow("Camera_view", cv2.resize(self.debug_frame, (int(900),  int(900 / aspect_ratio))))
-            if cv2.waitKey(1) == ord('q'):
+
+            # 30 FPS
+            if cv2.waitKey(30) == ord('q'):
                 cv2.destroyAllWindows()
                 break
+
+            s1diff = time.monotonic() - t1
+            t1 = time.monotonic()
+            print('stage 1 ms: ', s1diff * 1000)
 
         self.fps.stop()
         print("FPS: {:.2f}".format(self.fps.fps()))
