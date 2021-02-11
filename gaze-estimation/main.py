@@ -1,6 +1,7 @@
 import argparse
 import queue
 import threading
+import signal
 from pathlib import Path
 
 import cv2
@@ -300,9 +301,12 @@ class Main:
         for thread in self.threads:
             thread.start()
 
-        while self.should_run():
-            read_correctly, new_frame = self.get_frame()
-            
+        while self.should_run() and self.running:
+            try:
+                read_correctly, new_frame = self.get_frame()
+            except RuntimeError:
+                continue
+
             if not read_correctly:
                 break
 
@@ -359,6 +363,12 @@ class Main:
 
 with depthai.Device(create_pipeline()) as device:
     app = Main(device)
+
+    # Register a graceful CTRL+C shutdown
+    def signal_handler(sig, frame):
+        app.running = False
+    signal.signal(signal.SIGINT, signal_handler)
+
     app.run()
 
 for thread in app.threads:
