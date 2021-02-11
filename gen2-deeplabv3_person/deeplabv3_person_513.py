@@ -4,6 +4,7 @@ from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
+import time
 
 usb2mode=True
 classes_nr = 13
@@ -21,7 +22,7 @@ cam_rgb.setInterleaved(False)
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
 detection_nn.setBlobPath(str((Path(__file__).parent / Path('models/saved_model.blob')).resolve().absolute()))
-detection_nn.setNumPoolFrames(1)
+detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
 # detection_nn.setNumInferenceThreads(1)
 
@@ -49,7 +50,9 @@ device.startPipeline()
 q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
 q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
-
+start_time = time.time()
+counter = 0
+fps = 0
 while True:
     # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
     in_rgb = q_rgb.get()
@@ -77,7 +80,15 @@ while True:
 
 
     if frame is not None:
+        cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
         cv2.imshow("rgb", frame)
+
+    counter+=1
+    if (time.time() - start_time) > 1 :
+        fps = counter / (time.time() - start_time)
+
+        counter = 0
+        start_time = time.time()
 
     if cv2.waitKey(1) == ord('q'):
         break
