@@ -14,6 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
 parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
 parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
+parser.add_argument('-laz', '--lazer', action="store_true", help="Lazer mode")
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -316,18 +317,6 @@ class Main:
                 self.face_in.send(nn_data)
 
             if debug:  # face
-                for raw_bbox in self.bboxes:
-                    bbox = frame_norm(self.frame, raw_bbox)
-                    cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
-                if self.nose is not None:
-                    cv2.circle(self.debug_frame, (self.nose[0], self.nose[1]), 2, (0, 255, 0), thickness=5, lineType=8, shift=0)
-                if self.left_bbox is not None:
-                    cv2.rectangle(self.debug_frame, (self.left_bbox[0], self.left_bbox[1]), (self.left_bbox[2], self.left_bbox[3]), (245, 10, 10), 2)
-                if self.right_bbox is not None:
-                    cv2.rectangle(self.debug_frame, (self.right_bbox[0], self.right_bbox[1]), (self.right_bbox[2], self.right_bbox[3]), (245, 10, 10), 2)
-                if self.pose is not None and self.nose is not None:
-                    draw_3d_axis(self.debug_frame, self.pose, self.nose)
-
                 if self.gaze is not None and self.left_bbox is not None and self.right_bbox is not None:
                     re_x = (self.right_bbox[0] + self.right_bbox[2]) // 2
                     re_y = (self.right_bbox[1] + self.right_bbox[3]) // 2
@@ -335,9 +324,31 @@ class Main:
                     le_y = (self.left_bbox[1] + self.left_bbox[3]) // 2
 
                     x, y = (self.gaze * 100).astype(int)[:2]
-                    cv2.arrowedLine(self.debug_frame, (le_x, le_y), (le_x + x, le_y - y), (255, 0, 255), 3)
-                    cv2.arrowedLine(self.debug_frame, (re_x, re_y), (re_x + x, re_y - y), (255, 0, 255), 3)
-
+                    
+                    if args.lazer:
+                        beam_img = np.zeros(self.debug_frame.shape, np.uint8)
+                        for t in range(10)[::-2]:
+                            cv2.line(beam_img, (re_x, re_y), ((re_x + x*100), (re_y - y*100)), (0, 0, 255-t*10), t*2)
+                            cv2.line(beam_img, (le_x, le_y), ((le_x + x*100), (le_y - y*100)), (0, 0, 255-t*10), t*2)
+                        self.debug_frame |= beam_img
+                        
+                    else:
+                        cv2.arrowedLine(self.debug_frame, (le_x, le_y), (le_x + x, le_y - y), (255, 0, 255), 3)
+                        cv2.arrowedLine(self.debug_frame, (re_x, re_y), (re_x + x, re_y - y), (255, 0, 255), 3)
+                
+                if not args.lazer:
+                    for raw_bbox in self.bboxes:
+                        bbox = frame_norm(self.frame, raw_bbox)
+                        cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+                    if self.nose is not None:
+                        cv2.circle(self.debug_frame, (self.nose[0], self.nose[1]), 2, (0, 255, 0), thickness=5, lineType=8, shift=0)
+                    if self.left_bbox is not None:
+                        cv2.rectangle(self.debug_frame, (self.left_bbox[0], self.left_bbox[1]), (self.left_bbox[2], self.left_bbox[3]), (245, 10, 10), 2)
+                    if self.right_bbox is not None:
+                        cv2.rectangle(self.debug_frame, (self.right_bbox[0], self.right_bbox[1]), (self.right_bbox[2], self.right_bbox[3]), (245, 10, 10), 2)
+                    if self.pose is not None and self.nose is not None:
+                        draw_3d_axis(self.debug_frame, self.pose, self.nose)
+    
                 if camera:
                     cv2.imshow("Camera view", self.debug_frame)
                 else:
