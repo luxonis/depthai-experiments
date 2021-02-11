@@ -5,6 +5,8 @@ import cv2
 import depthai as dai
 import numpy as np
 import argparse
+import time
+
 
 '''
 Deeplabv3 person running on selected camera.
@@ -43,8 +45,8 @@ pipeline.setPipelineOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str((Path(__file__).parent / Path('models/deeplabv3p_person.blob.sh13cmx13NCE1')).resolve().absolute()))
-detection_nn.setNumPoolFrames(1)
+detection_nn.setBlobPath(str((Path(__file__).parent / Path('models/deeplabv3p_person.blob.sh6cmx6NCE1')).resolve().absolute()))
+detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
 # detection_nn.setNumInferenceThreads(1)
 
@@ -91,7 +93,9 @@ device.startPipeline()
 q_nn_input = device.getOutputQueue(name="nn_input", maxSize=4, blocking=False)
 q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
-
+start_time = time.time()
+counter = 0
+fps = 0
 while True:
     # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
     in_nn_input = q_nn_input.get()
@@ -117,7 +121,16 @@ while True:
 
         if frame is not None:
             frame = show_deeplabv3p(output_colors, frame)
+            cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
             cv2.imshow("nn_input", frame)
+    
+    counter+=1
+    if (time.time() - start_time) > 1 :
+        fps = counter / (time.time() - start_time)
+
+        counter = 0
+        start_time = time.time()
+
 
     if cv2.waitKey(1) == ord('q'):
         break
