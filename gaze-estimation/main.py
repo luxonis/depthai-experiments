@@ -1,6 +1,7 @@
 import argparse
 import queue
 import threading
+import signal
 from pathlib import Path
 
 import cv2
@@ -275,7 +276,10 @@ class Main:
                 continue
 
     def should_run(self):
-        return True if camera else self.cap.isOpened()
+        if self.running:
+            return True if camera else self.cap.isOpened()
+        else:
+            return False
 
     def get_frame(self, retries=0):
         if camera:
@@ -301,8 +305,11 @@ class Main:
             thread.start()
 
         while self.should_run():
-            read_correctly, new_frame = self.get_frame()
-            
+            try:
+                read_correctly, new_frame = self.get_frame()
+            except RuntimeError:
+                continue
+
             if not read_correctly:
                 break
 
@@ -359,6 +366,12 @@ class Main:
 
 with depthai.Device(create_pipeline()) as device:
     app = Main(device)
+
+    # Register a graceful CTRL+C shutdown
+    def signal_handler(sig, frame):
+        app.running = False
+    signal.signal(signal.SIGINT, signal_handler)
+
     app.run()
 
 for thread in app.threads:
