@@ -276,7 +276,10 @@ class Main:
                 continue
 
     def should_run(self):
-        return True if camera else self.cap.isOpened()
+        if self.running:
+            return True if camera else self.cap.isOpened()
+        else:
+            return False
 
     def get_frame(self, retries=0):
         if camera:
@@ -301,7 +304,7 @@ class Main:
         for thread in self.threads:
             thread.start()
 
-        while self.should_run() and self.running:
+        while self.should_run():
             try:
                 read_correctly, new_frame = self.get_frame()
             except RuntimeError:
