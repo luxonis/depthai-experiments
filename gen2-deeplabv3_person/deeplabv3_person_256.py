@@ -15,6 +15,15 @@ python3 -m pip install -r requirements.txt
 python3 deeplabv3_person_256.py -cam rgb
 Possible input choices (-cam):
 'rgb', 'left', 'right'
+
+Blob taken from the great PINTO zoo
+
+git clone git@github.com:PINTO0309/PINTO_model_zoo.git
+cd PINTO_model_zoo/026_mobile-deeplabv3-plus/01_float32/
+./download.sh
+python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo_tf.py   --input_model deeplab_v3_plus_mnv2_decoder_256.pb   --model_name deeplab_v3_plus_mnv2_decoder_256   --input_shape [1,256,256,3]   --data_type FP16   --output_dir openvino/256x256/FP16 --mean_values [127.5,127.5,127.5] --scale_values [127.5,127.5,127.5]
+/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/myriad_compile -ip U8 -VPU_NUMBER_OF_SHAVES 6 -VPU_NUMBER_OF_CMX_SLICES 6 -m openvino/256x256/FP16/deeplab_v3_plus_mnv2_decoder_256.xml -o deeplabv3p_person_6_shaves.blob
+
 '''
 
 cam_options = ['rgb', 'left', 'right']
@@ -41,14 +50,14 @@ def show_deeplabv3p(output_colors, frame):
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
-pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
+# pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_2)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str((Path(__file__).parent / Path('models/deeplabv3p_person.blob.sh6cmx6NCE1')).resolve().absolute()))
+detection_nn.setBlobPath(str((Path(__file__).parent / Path('models/deeplabv3p_person_6_shaves.blob')).resolve().absolute()))
 detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
-# detection_nn.setNumInferenceThreads(1)
+detection_nn.setNumInferenceThreads(2)
 
 cam=None
 # Define a source - color camera
