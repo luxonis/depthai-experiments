@@ -41,7 +41,7 @@ def show_deeplabv3p(output_colors, frame):
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
-pipeline.setPipelineOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
+pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
