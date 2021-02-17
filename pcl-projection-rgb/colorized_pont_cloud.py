@@ -6,12 +6,16 @@ from pathlib import Path
 
 import cv2
 import depthai
-from projector_3d import PointCloudVisualizer
 import numpy as np
 from time import sleep
 import time
-import open3d as o3d
 import multiprocessing
+
+try:
+    from projector_3d import PointCloudVisualizer
+    import open3d as o3d
+except ImportError as e:
+    raise ImportError(f"\033[1;5;31mError occured when importing PCL projector/open3D: {e} \033[0m ")
 
 def pixel_coord_np(width, height):
     """
@@ -128,12 +132,10 @@ while True:
             pcd.transform(transform_matrix)
 
             rgb_frame_ref_cloud = np.asarray(pcd.points).transpose()
-            print('shape pf left_frame_ref_cloud')
             print(rgb_frame_ref_cloud.shape)
             rgb_frame_ref_cloud_normalized = rgb_frame_ref_cloud / rgb_frame_ref_cloud[2,:]
             rgb_image_pts = np.matmul(M_RGB, rgb_frame_ref_cloud_normalized)
             rgb_image_pts = rgb_image_pts.astype(np.int16)            
-            print("shape is {}".format(rgb_image_pts.shape[1]))  
 
             u_v_z = np.vstack((rgb_image_pts, rgb_frame_ref_cloud[2, :]))
             lft = np.logical_and(0 <= u_v_z[0], u_v_z[0] < 1280)
@@ -147,8 +149,6 @@ while True:
             depth_rgb[y_idx,x_idx] = u_v_z_sampled[3]*10
             frame_rgb = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
             end = time.time()
-            print('for loop Convertion time')
-            print(end - start)
             if pcl_converter is None:
                 pcl_converter = PointCloudVisualizer(M_RGB, 1280, 720)
             pcd = pcl_converter.rgbd_to_projection(depth_rgb, frame_rgb)
