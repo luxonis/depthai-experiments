@@ -1,0 +1,1 @@
+print("Please visit https://docs.luxonis.com/projects/api/en/gen2_develop/samples/08_rgb_mobilenet/")
