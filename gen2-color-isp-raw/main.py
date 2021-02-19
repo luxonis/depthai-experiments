@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import cv2
+import time
 import numpy as np
 import depthai as dai
 
@@ -13,6 +14,31 @@ display_scale = 0.3  # configurable
 
 print("depthai version:", dai.__version__)
 pipeline = dai.Pipeline()
+
+if 1:  # UVC test
+    vdevice = 0  # /dev/videoX number
+    try:
+        device = dai.Device(pipeline, "imx283-uvc.mvcmd")
+    except RuntimeError as e:
+        if "Failed to find device after booting" in str(e):
+            print("The UVC FW was booted up. Note: to restart, a manual reset or power-cycle is needed")
+        else:
+            raise RuntimeError(e) from None
+    cam = cv2.VideoCapture(vdevice)
+    while True:
+        ret, frame = cam.read()
+        cv2.imshow("camera", frame)
+        preview_shape = (int(frame.shape[1] * display_scale),
+                         int(frame.shape[0] * display_scale))
+        preview = cv2.resize(frame, preview_shape, interpolation=cv2.INTER_AREA)
+        cv2.imshow("preview", preview)
+        key = cv2.waitKey(1)
+        if key == ord('q'):
+            quit()
+        elif key == ord('c'):
+            name = 'cap-' +  time.strftime("%H-%M-%S", time.localtime()) + '.png'
+            cv2.imwrite(name, frame)
+            print("Saved to:", name)
 
 cam = pipeline.createColorCamera()
 cam.setEnablePreviewStillVideoStreams(False)
@@ -28,13 +54,7 @@ if 'raw' in streams:
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 
-print("===== Booting custom FW, please ignore the next failure: Failed to find device after booting")
-print("===== and run a standard UVC viewer like (replace X with 0, 1, 2...) :")
-print("guvcview -d /dev/videoX")
-print()
-device = dai.Device(pipeline, "imx283-uvc.mvcmd")
-# The above will error out -- expected
-
+device = dai.Device(pipeline)
 device.startPipeline()
 
 q_list = []
