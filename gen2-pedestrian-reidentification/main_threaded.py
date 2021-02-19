@@ -1,53 +1,97 @@
+import argparse
 import time
 import queue
+import signal
 import threading
 from pathlib import Path
 
 import cv2
-import depthai
+import depthai as dai
+print('depthai module: ', dai.__file__)
 import numpy as np
 from imutils.video import FPS
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
+parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
+parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
+args = parser.parse_args()
+
+if not args.camera and not args.video:
+    raise RuntimeError("No source selected. Please use either \"-cam\" to use RGB camera as a source or \"-vid <path>\" to run on video")
+
+debug = not args.no_debug
+camera = not args.video
+
+if args.camera and args.video:
+    raise ValueError("Incorrect command line parameters! \"-cam\" cannot be used with \"-vid\"!")
+elif args.camera is False and args.video is None:
+    raise ValueError("Missing inference source! Either use \"-cam\" to run on DepthAI camera or \"-vid <path>\" to run on video file")
 
 
 def cos_dist(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-
 def frame_norm(frame, bbox):
     return (np.clip(np.array(bbox), 0, 1) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
 
-
-def to_planar(arr: np.ndarray, shape: tuple) -> list:
-    tstart = time.monotonic()
-    planar = [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
-    tdiff = time.monotonic() - tstart
-    #print('time take to planar: ', tdiff)
-    return planar
+def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
+    resized = cv2.resize(arr, shape)
+    return resized.transpose(2,0,1)
 
 def create_pipeline():
     print("Creating pipeline...")
-    pipeline = depthai.Pipeline()
+    pipeline = dai.Pipeline()
+
+    if camera:
+        # ColorCamera
+        print("Creating Color Camera...")
+        cam = pipeline.createColorCamera()
+        cam.setPreviewSize(544, 320)
+        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        cam.setInterleaved(False)
+        cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+        cam_xout = pipeline.createXLinkOut()
+        cam_xout.setStreamName("cam_out")
+        cam.preview.link(cam_xout.input)
 
     # NeuralNetwork
     print("Creating Person Detection Neural Network...")
-    detection_in = pipeline.createXLinkIn()
-    detection_in.setStreamName("detection_in")
-    detection_nn = pipeline.createNeuralNetwork()
-    detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013.blob").resolve().absolute()))
+    detection_nn = pipeline.createMobileNetDetectionNetwork()
+    detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013_openvino_2020.1_4shave.blob").resolve().absolute()))
+    # Confidence
+    detection_nn.setConfidenceThreshold(0.7)
     # Increase threads for detection
     detection_nn.setNumInferenceThreads(2)
+    # Specify that network takes latest arriving frame in non-blocking manner
+    detection_nn.input.setQueueSize(1)
+    detection_nn.input.setBlocking(False)
 
     detection_nn_xout = pipeline.createXLinkOut()
     detection_nn_xout.setStreamName("detection_nn")
-    detection_in.out.link(detection_nn.input)
+
+    detection_nn_passthrough = pipeline.createXLinkOut()
+    detection_nn_passthrough.setStreamName("detection_passthrough")
+    detection_nn_passthrough.setMetadataOnly(True)
+
+    if camera:
+        print('linked cam.preview to detection_nn.input')
+        cam.preview.link(detection_nn.input)
+    else:
+        detection_in = pipeline.createXLinkIn()
+        detection_in.setStreamName("detection_in")
+        detection_in.out.link(detection_nn.input)
+
     detection_nn.out.link(detection_nn_xout.input)
+    detection_nn.passthrough.link(detection_nn_passthrough.input)
+
 
     # NeuralNetwork
     print("Creating Person Reidentification Neural Network...")
     reid_in = pipeline.createXLinkIn()
     reid_in.setStreamName("reid_in")
     reid_nn = pipeline.createNeuralNetwork()
-    reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031.blob").resolve().absolute()))
+    reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031_openvino_2020.1_4shave.blob").resolve().absolute()))
     
     # Decrease threads for reidentification
     reid_nn.setNumInferenceThreads(1)
@@ -60,134 +104,226 @@ def create_pipeline():
     print("Pipeline created.")
     return pipeline
 
-
 class Main:
     def __init__(self):
-        self.device = depthai.Device(create_pipeline())
-        print("Starting pipeline...")
-        self.device.startPipeline()
-        self.detection_in = self.device.getInputQueue("detection_in", 4, False)
-        self.reid_in = self.device.getInputQueue("reid_in")
 
-        self.bboxes = []
-        self.results = {}
-        self.results_path = {}
-        self.reid_bbox_q = queue.Queue()
-        self.next_id = 0
+        self.running = True
+        self.FRAMERATE = 30.0
 
-        self.cap = cv2.VideoCapture(str(Path("./input.mp4").resolve().absolute()))
+        if not camera:
+            self.cap = cv2.VideoCapture(args.video)
+            self.FRAMERATE = self.cap.get(cv2.CAP_PROP_FPS)
 
-        self. = queue.Queue()
+        print("framerate: ", self.FRAMERATE)
 
+        self.frame_queue = queue.Queue()
+        self.visualization_queue = queue.Queue(maxsize=4)
 
-        self.fps = FPS()
-        self.fps.start()
-
-    def det_thread(self):
-        detection_nn = self.device.getOutputQueue("detection_nn")
-        while True:
-            bboxes = np.array(detection_nn.get().getFirstLayerFp16())
-            bboxes = bboxes[:np.where(bboxes == -1)[0][0]]
-            bboxes = bboxes.reshape((bboxes.size // 7, 7))
-            bboxes = bboxes[bboxes[:, 2] > 0.5][:, 3:7]
-
-            # Let reid stage know how many boxes were found
-            reid_bbox_num_q.put(len(bboxes))
-
-            for raw_bbox in bboxes:
-                bbox = frame_norm(self.frame, raw_bbox)
-                det_frame = self.frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-
-                nn_data = depthai.NNData()
-                nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
-                self.reid_in.send(nn_data)
-                self.reid_bbox_q.put(bbox)
-
-    def reid_thread(self):
-        reid_nn = self.device.getOutputQueue("reid_nn")
-        while True:
-            reid_result = reid_nn.get().getFirstLayerFp16()
-            bbox = self.reid_bbox_q.get()
-
-            for person_id in self.results:
-                dist = cos_dist(reid_result, self.results[person_id])
-                if dist > 0.5:
-                    result_id = person_id
-                    self.results[person_id] = reid_result
-                    break
+    def is_running(self):
+        if self.running:
+            if camera:
+                return True
             else:
-                result_id = self.next_id
-                self.results[result_id] = reid_result
-                self.results_path[result_id] = []
-                self.next_id += 1
+                return self.cap.isOpened()
+        return False
 
+    def inference_thread(self):
+        # Queues
+        detection_passthrough = self.device.getOutputQueue("detection_passthrough")
+        detection_nn = self.device.getOutputQueue("detection_nn")
+
+        bboxes = []
+        results = {}
+        results_path = {}
+        next_id = 0
+
+        # Match up frames and detections
+        try:
+            prev_passthrough = detection_passthrough.getAll()[0]
+            prev_inference = detection_nn.getAll()[0]
+        except RuntimeError:
+            pass
+
+        while self.running:
+            try:
+                # Get current detection
+                passthrough = detection_passthrough.getAll()[0]
+                inference = detection_nn.getAll()[0]
+
+                # Combine all frames to current inference
+                frames = []
+                while True:
+                    # get the frames corresponding to inference
+                    frm = self.frame_queue.get()
+                    cv_frame = np.ascontiguousarray(frm.getData().reshape(3, frm.getHeight(), frm.getWidth()).transpose(1,2,0))
+                    frames.append(cv_frame)
+
+                    # Break out once all frames received for the current inference
+                    if frm.getSequenceNum() >= prev_passthrough.getSequenceNum() - 1:
+                        break
+
+                infered_frame = frames[0]
+
+                # Send bboxes to be infered upon
+                for det in inference.detections:
+                    raw_bbox = [det.xmin, det.ymin, det.xmax, det.ymax]
+                    bbox = frame_norm(infered_frame, raw_bbox)
+                    det_frame = infered_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+                    nn_data = dai.NNData()
+                    nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
+                    self.device.getInputQueue("reid_in").send(nn_data)
+
+                 
+                # Retrieve infered bboxes
+                for det in inference.detections:
+
+                    raw_bbox = [det.xmin, det.ymin, det.xmax, det.ymax]
+                    bbox = frame_norm(infered_frame, raw_bbox)
+
+                    reid_result = self.device.getOutputQueue("reid_nn").get().getFirstLayerFp16()
+
+                    for person_id in results:
+                        dist = cos_dist(reid_result, results[person_id])
+                        if dist > 0.7:
+                            result_id = person_id
+                            results[person_id] = reid_result
+                            break
+                    else:
+                        result_id = next_id
+                        results[result_id] = reid_result
+                        results_path[result_id] = []
+                        next_id += 1
+
+                    if debug:
+                        for frame in frames:
+                            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+                            x = (bbox[0] + bbox[2]) // 2
+                            y = (bbox[1] + bbox[3]) // 2
+                            results_path[result_id].append([x, y])
+                            cv2.putText(frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+                            if len(results_path[result_id]) > 1:
+                                cv2.polylines(frame, [np.array(results_path[result_id], dtype=np.int32)], False, (255, 0, 0), 2)
+                    else:
+                        print(f"Saw id: {result_id}")
+
+                # Send of to visualization thread
+                for frame in frames:
+                    if self.visualization_queue.full():
+                        self.visualization_queue.get_nowait()
+                    self.visualization_queue.put(frame)
             
 
-            cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
-            x = (bbox[0] + bbox[2]) // 2
-            y = (bbox[1] + bbox[3]) // 2
-            self.results_path[result_id].append([x, y])
-            cv2.putText(self.debug_frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-            if len(self.results_path[result_id]) > 1:
-                cv2.polylines(self.debug_frame, [np.array(self.results_path[result_id], dtype=np.int32)], False,
-                              (255, 0, 0), 2)
+                # Move current to prev
+                prev_passthrough = passthrough
+                prev_inference = inference
+
+            except RuntimeError:
+                continue
+
 
     def visualization_thread(self):
         
-        # Wait to receive first inference frame (baseline latency)
-        inferenceFrame = self.vis_inference_frame_q.get()
+        first = True
+        while self.running:
 
-        while True:
-            # Wait to receive frame
-            frame = self.vis_inference_frame_q.get()
+            t1 = time.time()
 
-            # Try to receive infered frame
-            recInferenceFrame = self.vis_inference_frame_q.tryGet()
-            if recInferenceFrame != None:
-                inferenceFrame = recInferenceFrame
+            # Show frame if available
+            if first or not self.visualization_queue.empty():
+                frame = self.visualization_queue.get()
+                aspect_ratio = frame.shape[1] / frame.shape[0]
+                cv2.imshow("frame", cv2.resize(frame, (int(900),  int(900 / aspect_ratio))))
+                first = False
+
+            # sleep if required
+            to_sleep_ms = ((1.0 / self.FRAMERATE) - (time.time() - t1)) * 1000
+            key = None
+            if to_sleep_ms >= 1:
+                key = cv2.waitKey(int(to_sleep_ms)) 
+            else:
+                key = cv2.waitKey(1)
+            # Exit
+            if key == ord('q'):
+                self.running = False
+                break
+
             
-            # inferenceFrame containes latest 
-
-
-
-            aspect_ratio = self.frame.shape[1] / self.frame.shape[0]
-            cv2.imshow("Camera_view", cv2.resize(self.debug_frame, (int(900),  int(900 / aspect_ratio))))
-
-
-
-
 
     def run(self):
-        threading.Thread(target=self.det_thread, daemon=True).start()
-        threading.Thread(target=self.reid_thread, daemon=True).start()
-
-        t1 = time.monotonic()
-        while self.cap.isOpened():
-            read_correctly, self.frame = self.cap.read()
-
-            if not read_correctly:
-                break
-
-            self.fps.update()
-            self.debug_frame = self.frame.copy()
-
-            nn_data = depthai.NNData()
-            nn_data.setLayer("input", to_planar(self.frame, (544, 320)))
-            self.detection_in.send(nn_data)
 
 
-            # 30 FPS
-            if cv2.waitKey(30) == ord('q'):
-                cv2.destroyAllWindows()
-                break
+        pipeline = create_pipeline()
 
-            s1diff = time.monotonic() - t1
-            t1 = time.monotonic()
-            print('stage 1 ms: ', s1diff * 1000)
+        # Connect to the device
+        with dai.Device(pipeline) as device:
 
-        self.fps.stop()
-        print("FPS: {:.2f}".format(self.fps.fps()))
-        self.cap.release()
+            self.device = device
+
+            print("Starting pipeline...")
+            device.startPipeline()            
 
 
-Main().run()
+            threads = [
+                threading.Thread(target=self.inference_thread), 
+                threading.Thread(target=self.visualization_thread)
+            ]
+            for t in threads:
+                t.start()
+
+            seq_num = 0
+            while self.is_running():
+
+                # Send images to next stage
+
+                # if camera - receive frames from camera
+                if camera:
+                    try:
+                        frame = device.getOutputQueue('cam_out').get()
+                        self.frame_queue.put(frame)
+                    except RuntimeError:
+                        continue
+                
+                # else if video - send frames down to NN
+                else:
+
+                    # Get frame from video capture
+                    read_correctly, vid_frame = self.cap.read()
+                    if not read_correctly:
+                        break
+
+                    # Send to NN and to inference thread
+                    frame_nn = dai.ImgFrame()
+                    frame_nn.setSequenceNum(seq_num)
+                    frame_nn.setWidth(544)
+                    frame_nn.setHeight(320)
+                    frame_nn.setData(to_planar(vid_frame, (544, 320)))
+                    self.device.getInputQueue("detection_in").send(frame_nn)
+                    self.frame_queue.put(frame_nn)
+
+                    seq_num = seq_num + 1
+
+                    # Sleep at video framerate
+                    time.sleep(1.0 / self.FRAMERATE)
+
+            self.running = False
+
+
+        # cleanup
+        self.running = False
+        if not camera:
+            self.cap.release()
+        for thread in threads:
+            thread.join()
+
+
+# Create the application
+app = Main()
+
+# Register a graceful CTRL+C shutdown
+def signal_handler(sig, frame):
+    app.running = False
+signal.signal(signal.SIGINT, signal_handler)
+
+
+# Run the application
+app.run()
