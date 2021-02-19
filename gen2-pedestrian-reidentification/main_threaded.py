@@ -119,6 +119,8 @@ class Main:
         self.frame_queue = queue.Queue()
         self.visualization_queue = queue.Queue(maxsize=4)
 
+        self.nn_fps = 0
+
     def is_running(self):
         if self.running:
             if camera:
@@ -144,11 +146,17 @@ class Main:
         except RuntimeError:
             pass
 
+        fps = 0
+        t_fps = time.time()
         while self.running:
             try:
+
                 # Get current detection
                 passthrough = detection_passthrough.getAll()[0]
                 inference = detection_nn.getAll()[0]
+
+                # Count NN fps
+                fps = fps + 1
 
                 # Combine all frames to current inference
                 frames = []
@@ -208,6 +216,10 @@ class Main:
 
                 # Send of to visualization thread
                 for frame in frames:
+                    # put nn_fps
+                    if debug:
+                        cv2.putText(frame, 'NN FPS: '+str(self.nn_fps), (5,15), cv2.FONT_HERSHEY_PLAIN, 1.0, (255,0,0))
+
                     if self.visualization_queue.full():
                         self.visualization_queue.get_nowait()
                     self.visualization_queue.put(frame)
@@ -216,6 +228,11 @@ class Main:
                 # Move current to prev
                 prev_passthrough = passthrough
                 prev_inference = inference
+
+                if time.time() - t_fps >= 1.0:
+                    self.nn_fps = round(fps / (time.time() - t_fps), 2)
+                    fps = 0
+                    t_fps = time.time()
 
             except RuntimeError:
                 continue
@@ -327,3 +344,5 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # Run the application
 app.run()
+
+print('FPS: ', app.nn_fps)
