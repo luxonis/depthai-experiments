@@ -6,7 +6,7 @@ Original OpenVINO demo, on which this example was made, is [here](https://docs.o
 
 ## Demo
 
-[![Pedestrian Re-Identification](https://user-images.githubusercontent.com/32992551/105907639-711e7080-5fe2-11eb-9e24-c8e05cc9a728.png)](https://www.youtube.com/watch?v=xWL2NUNV5L8 "Person Re-ID on DepthAI")
+[![Pedestrian Re-Identification](https://user-images.githubusercontent.com/32992551/108567421-71e6b180-72c5-11eb-8af0-c6e5c3382874.png)](https://www.youtube.com/watch?v=QlXGtMWVV18 "Person Re-ID on DepthAI")
 
 ## Pre-requisites
 
