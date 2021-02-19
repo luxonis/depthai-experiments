@@ -19,20 +19,22 @@ Original OpenVINO demo, on which this example was made, is [here](https://docs.o
 ## Usage
 
 ```
-usage: main.py [-h] [-nd] [-cam] [-vid VIDEO]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -nd, --no-debug       Prevent debug output
-  -cam, --camera        Use DepthAI 4K RGB camera for inference (conflicts with -vid)
-  -vid VIDEO, --video VIDEO
-                        Path to video file to be used for inference (conflicts with -cam)
+main.py [-h] [-nd] [-cam] [-vid VIDEO] [-w WIDTH] [-lq]
 ```
+
+Optional arguments:
+ - `-h, --help` Show this help message and exit
+ - `-nd, --no-debug` Prevent debug output
+ - `-cam, --camera` Use DepthAI RGB camera for inference (conflicts with -vid)
+ - `-vid VIDEO, --video VIDEO` Path to video file to be used for inference (conflicts with -cam)
+ - `-w WIDTH, --width WIDTH` Visualization width
+ - `-lq, --lowquality` Uses resized frames instead of source
+
 
 To use with a video file, run the script with the following arguments
 
 ```
-python3 main.py -vid ./input.mp4
+python3 main.py -vid input.mp4
 ```
 
 To use with DepthAI 4K RGB camera, use instead
