@@ -1,4 +1,4 @@
-## Gen2 JPEG/Large File SPI Demo
+## Gen2 Device Side YOLO Parsing Demo
 
 ### Overview:
 This demo requires an ESP32 board connected via SPI to the DepthAI. The easiest way to accomplish this is to get a hold of an BW1092 board. It has an integrated ESP32 already connected to the DepthAI.

@@ -58,9 +58,17 @@ def flash_image():
     else:
         print("No booted (bootloader) devices found...")
 
+def write_image_to_file(filename):
+    pipeline = create_spi_demo_pipeline()
+    dai.DeviceBootloader.saveDepthaiApplicationPackage(filename, pipeline)
+
 if(len(sys.argv) >= 2 and sys.argv[1] == "bootloader"):
     print("flashing bootloader")
     flash_bootloader()
+elif(len(sys.argv) >= 2 and sys.argv[1] == "save"):
+    filename = "pipeline.dap"
+    print("saving pipeline to disk as " + filename)
+    write_image_to_file(filename)
 else:
     print("flashing pipeline")
     flash_image()

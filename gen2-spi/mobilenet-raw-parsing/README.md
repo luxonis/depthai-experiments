@@ -1,4 +1,4 @@
-## Gen2 JPEG/Large File SPI Demo
+## ESP Side Raw Data Parsing Demo
 
 ### Overview:
 This demo requires an ESP32 board connected via SPI to the DepthAI. The easiest way to accomplish this is to get a hold of an BW1092 board. It has an integrated ESP32 already connected to the DepthAI.
@@ -27,4 +27,4 @@ idf.py -p /dev/ttyUSB1 flash
 ```
 
 ### Run the DepthAI Side of the Example:
-`python3 main.py tiny-yolo-v3.blob.sh4cmx4NCE1`
+`python3 main.py mobilenet-ssd.blob.sh8cmx8NCE1`

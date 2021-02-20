@@ -241,67 +241,65 @@ def test_pipeline():
     pipeline, streams = create_stereo_depth_pipeline(source_camera)
 
     print("Creating DepthAI device")
-    device = dai.Device(pipeline)
-    print("Starting pipeline")
-    device.startPipeline()
+    with dai.Device(pipeline) as device:
+        print("Starting pipeline")
+        device.startPipeline()
 
-    in_streams = []
-    if not source_camera:
-        # Reversed order trick:
-        # The sync stage on device side has a timeout between receiving left
-        # and right frames. In case a delay would occur on host between sending
-        # left and right, the timeout will get triggered.
-        # We make sure to send first the right frame, then left.
-        in_streams.extend(['in_right', 'in_left'])
-    in_q_list = []
-    for s in in_streams:
-        q = device.getInputQueue(s)
-        in_q_list.append(q)
+        in_streams = []
+        if not source_camera:
+            # Reversed order trick:
+            # The sync stage on device side has a timeout between receiving left
+            # and right frames. In case a delay would occur on host between sending
+            # left and right, the timeout will get triggered.
+            # We make sure to send first the right frame, then left.
+            in_streams.extend(['in_right', 'in_left'])
+        in_q_list = []
+        for s in in_streams:
+            q = device.getInputQueue(s)
+            in_q_list.append(q)
 
-    # Create a receive queue for each stream
-    q_list = []
-    for s in streams:
-        q = device.getOutputQueue(s, 8, blocking=True)
-        q_list.append(q)
+        # Create a receive queue for each stream
+        q_list = []
+        for s in streams:
+            q = device.getOutputQueue(s, 8, blocking=True)
+            q_list.append(q)
 
-    # Need to set a timestamp for input frames, for the sync stage in Stereo node
-    timestamp_ms = 0
-    index = 0
-    while True:
-        # Handle input streams, if any
-        if in_q_list:
-            dataset_size = 2  # Number of image pairs
-            frame_interval_ms = 33
-            for q in in_q_list:
-                name = q.getName()
-                path = 'dataset/' + str(index) + '/' + name + '.png'
-                data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
-                tstamp = datetime.timedelta(seconds = timestamp_ms // 1000,
-                                            milliseconds = timestamp_ms % 1000)
-                img = dai.ImgFrame()
-                img.setData(data)
-                img.setTimestamp(tstamp)
-                img.setWidth(1280)
-                img.setHeight(720)
-                q.send(img)
-                print("Sent frame: {:25s}".format(path), 'timestamp_ms:', timestamp_ms)
-            timestamp_ms += frame_interval_ms
-            index = (index + 1) % dataset_size
-            if 1: # Optional delay between iterations, host driven pipeline
-                sleep(frame_interval_ms / 1000)
-        # Handle output streams
-        for q in q_list:
-            name  = q.getName()
-            image = q.get()
-            #print("Received frame:", name)
-            # Skip some streams for now, to reduce CPU load
-            if name in ['left', 'right', 'depth']: continue
-            frame = convert_to_cv2_frame(name, image)
-            cv2.imshow(name, frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
+        # Need to set a timestamp for input frames, for the sync stage in Stereo node
+        timestamp_ms = 0
+        index = 0
+        while True:
+            # Handle input streams, if any
+            if in_q_list:
+                dataset_size = 2  # Number of image pairs
+                frame_interval_ms = 33
+                for q in in_q_list:
+                    name = q.getName()
+                    path = 'dataset/' + str(index) + '/' + name + '.png'
+                    data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
+                    tstamp = datetime.timedelta(seconds = timestamp_ms // 1000,
+                                                milliseconds = timestamp_ms % 1000)
+                    img = dai.ImgFrame()
+                    img.setData(data)
+                    img.setTimestamp(tstamp)
+                    img.setWidth(1280)
+                    img.setHeight(720)
+                    q.send(img)
+                    print("Sent frame: {:25s}".format(path), 'timestamp_ms:', timestamp_ms)
+                timestamp_ms += frame_interval_ms
+                index = (index + 1) % dataset_size
+                if 1: # Optional delay between iterations, host driven pipeline
+                    sleep(frame_interval_ms / 1000)
+            # Handle output streams
+            for q in q_list:
+                name  = q.getName()
+                image = q.get()
+                #print("Received frame:", name)
+                # Skip some streams for now, to reduce CPU load
+                if name in ['left', 'right', 'depth']: continue
+                frame = convert_to_cv2_frame(name, image)
+                cv2.imshow(name, frame)
+            if cv2.waitKey(1) == ord('q'):
+                break
 
-    print("Closing device")
-    del device
 
 test_pipeline()

@@ -1,6 +1,5 @@
 # Gen2 SPI Examples
-This directory contains a few examples of how to use the SPI interface with the Gen2 Pipeline builder. 
-
+This directory contains a few examples of how to use the SPI interface with the Gen2 Pipeline builder. The ESP32 side of these examples can be found in the esp32-spi-message-demo submodule. The MyriadX side of the examples are in this directory and and described below.
 
 ### Install Dependencies and Init Submodules:
 Note that all of these examples depend on the requirements specified in requirements.txt and may have git submodules.

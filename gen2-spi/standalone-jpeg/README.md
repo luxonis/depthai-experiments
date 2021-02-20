@@ -1,4 +1,4 @@
-## Gen2 JPEG/Large File SPI Demo
+## Flash Bootloader Demo
 
 ### Overview:
 This is an example of flashing/updating the bootloader on DepthAI as well as flashing a pipeline to the device that'll be run at boot. This example will essentially flash the gen2-spi-jpeg example to the board and run it at boot.
