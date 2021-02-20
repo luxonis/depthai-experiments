@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 import cv2
 import numpy as np
 import depthai as dai
 from time import sleep
+import datetime
 import argparse
 
 '''
@@ -18,12 +21,14 @@ But like on Gen1, either depth or disparity has valid data. TODO enable both.
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-pcl", "--pointcloud", help="enables point cloud convertion and visualization", default=False, action="store_true")
+parser.add_argument("-static", "--static_frames", default=False, action="store_true",
+                    help="Run stereo on static frames passed from host 'dataset' folder")
 args = parser.parse_args()
 
 point_cloud    = args.pointcloud   # Create point cloud visualizer. Depends on 'out_rectified'
 
 # StereoDepth config options. TODO move to command line options
-source_camera  = True   # If False, will read input frames from 'dataset' folder
+source_camera  = not args.static_frames
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
 lrcheck  = True   # Better handling for occlusions
@@ -256,7 +261,7 @@ def test_pipeline():
         # Create a receive queue for each stream
         q_list = []
         for s in streams:
-            q = device.getOutputQueue(s, 8, True)
+            q = device.getOutputQueue(s, 8, blocking=True)
             q_list.append(q)
 
         # Need to set a timestamp for input frames, for the sync stage in Stereo node
@@ -271,10 +276,8 @@ def test_pipeline():
                     name = q.getName()
                     path = 'dataset/' + str(index) + '/' + name + '.png'
                     data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
-                    tstamp_ns = timestamp_ms * (1000*1000)
-                    tstamp = dai.Timestamp()
-                    tstamp.sec  = tstamp_ns // (1000*1000*1000)
-                    tstamp.nsec = tstamp_ns  % (1000*1000*1000)
+                    tstamp = datetime.timedelta(seconds = timestamp_ms // 1000,
+                                                milliseconds = timestamp_ms % 1000)
                     img = dai.ImgFrame()
                     img.setData(data)
                     img.setTimestamp(tstamp)
