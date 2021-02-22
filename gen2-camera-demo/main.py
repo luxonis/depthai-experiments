@@ -261,7 +261,7 @@ def test_pipeline():
         # Create a receive queue for each stream
         q_list = []
         for s in streams:
-            q = device.getOutputQueue(s, 8, blocking=True)
+            q = device.getOutputQueue(s, 8, blocking=False)
             q_list.append(q)
 
         # Need to set a timestamp for input frames, for the sync stage in Stereo node
