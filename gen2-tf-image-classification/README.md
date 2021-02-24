@@ -1,14 +1,12 @@
 # Gen2 Tensorflow Image Classification example
 
-This example demonstrates how to run a neural network created using [TensorFlow Image Classification tutorial](https://www.tensorflow.org/tutorials/images/classification)
+This example demonstrates how to run a neural network created using [TensorFlow Image Classification tutorial](https://colab.research.google.com/drive/1oNxfvx5jOfcmk1Nx0qavjLN8KtWcLRn6?usp=sharing)
 (which one of our community members has put together in a single Colab Notebook, even with OpenVINO conversion to .blob)
 
 
 ## Demo
 
-**Please note that the detected flower is not correct, [we're working on fixing the detection results](https://github.com/luxonis/depthai-experiments/issues/55)**
-
-![Pedestrian Re-Identification](https://user-images.githubusercontent.com/5244214/106612249-3039d500-6569-11eb-94c3-7efb4267c53b.gif)
+![Pedestrian Re-Identification](https://user-images.githubusercontent.com/5244214/109003919-522a0180-76a8-11eb-948c-a74432c22be1.gif)
 
 ## Pre-requisites
 
