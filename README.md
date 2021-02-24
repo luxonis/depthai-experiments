@@ -3,7 +3,7 @@ Experimental projects we've done with DepthAI.
 
 **Experiments** can be anything from "here's some code and it works sometimes" to "this is almost a tutorial".  
 
-The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list), but here are some as of October 23rd 2020:
+The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list):
 
 ## [Gen2] Gaze estimation ([here](https://github.com/luxonis/depthai-experiments/blob/master/gaze-estimation))
 
@@ -31,6 +31,14 @@ This shows a simple two-stage neural inference example, doing face detection and
 This pipeline implements text detection (EAST) followed by optical character recognition of the detected text. 
 
 [![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749667-f6315900-5f00-11eb-92bd-a297590adedc.png)](https://www.youtube.com/watch?v=YWIZYeixQjc "Gen2 OCR Pipeline")
+
+## [Gen2] Pedestrian Reidentification ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification))
+
+This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pipeline Builder to identify and re-identify pedestrians with unique IDs.
+
+[![Pedestrian Re-Identification](https://user-images.githubusercontent.com/32992551/108567421-71e6b180-72c5-11eb-8af0-c6e5c3382874.png)](https://www.youtube.com/watch?v=QlXGtMWVV18 "Person Re-ID on DepthAI")
+
+Original OpenVINO demo, on which this example was made, is [here](https://docs.openvinotoolkit.org/2020.1/_demos_pedestrian_tracker_demo_README.html).
 
 ## COVID-19 Mask / No-Mask Detector ([here](https://github.com/luxonis/depthai-experiments/blob/master/coronamask))
 
