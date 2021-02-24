@@ -4,11 +4,19 @@ import cv2
 import numpy as np
 import numba as nb
 import depthai as dai
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-2", "--two_lanes", help="Use 2 MIPI lanes", default=False, action="store_true")
+args = parser.parse_args()
+
+use_4_lanes = not args.two_lanes
 
 streams = []
 # Enable one or both streams
-streams.append('isp')
-streams.append('raw')
+#streams.append('isp')
+#streams.append('raw')
+streams.append('video')
 
 display_scale = 0.3  # configurable
 
@@ -37,8 +45,9 @@ print("depthai version:", dai.__version__)
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-cam.setEnablePreviewStillVideoStreams(False)
-cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
+# TODO remove
+#cam.setEnablePreviewStillVideoStreams(False)
+cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
 if 'isp' in streams:
     xout_isp = pipeline.createXLinkOut()
@@ -50,7 +59,16 @@ if 'raw' in streams:
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 
-device = dai.Device(pipeline)
+if 'video' in streams:
+    xout_video = pipeline.createXLinkOut()
+    xout_video.setStreamName('video')
+    cam.video.link(xout_video.input)
+
+if use_4_lanes:
+    print("Booting custom FW for 4-lanes, IMX378 / IMX477")
+    device = dai.Device(pipeline, "fw_4lanes_imx378_imx477.mvcmd")
+else:
+    device = dai.Device(pipeline)
 device.startPipeline()
 
 q_list = []
@@ -93,6 +111,14 @@ while True:
             # See this for the ordering, at the end of page:
             # https://docs.opencv.org/4.5.1/de/d25/imgproc_color_conversions.html
             bgr = cv2.cvtColor(bayer, cv2.COLOR_BayerBG2BGR)
+        if name == 'video':
+            if capture_flag:
+                filename = capture_file_info_str + '_NV12.yuv'
+                print("Saving to file:", filename)
+                payload.tofile(filename)
+            shape = (height * 3 // 2, width)
+            nv12 = payload.reshape(shape).astype(np.uint8)
+            bgr = cv2.cvtColor(nv12, cv2.COLOR_YUV2BGR_NV12)
         if capture_flag:  # Save to disk if `c` was pressed
             filename = capture_file_info_str + '.png'
             print("Saving to file:", filename)
