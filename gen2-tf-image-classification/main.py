@@ -33,6 +33,7 @@ if camera:
     cam_rgb.setInterleaved(False)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+    cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
     cam_xout = pipeline.createXLinkOut()
     cam_xout.setStreamName("rgb")
@@ -72,8 +73,9 @@ def softmax(x):
     return e_x / e_x.sum(axis=0)
 
 
-def to_planar(arr: np.ndarray, shape: tuple) -> list:
-    return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
+def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
+    resized = cv2.resize(arr, shape)
+    return resized.transpose(2, 0, 1)
 
 
 # Pipeline defined, now the device is assigned and pipeline is started
@@ -82,11 +84,11 @@ with dai.Device(pipeline) as device:
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     if camera:
-        q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        q_rgb = device.getOutputQueue(name="rgb", maxSize=1, blocking=False)
     else:
         cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
         detection_in = device.getInputQueue("in_nn")
-    q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
+    q_nn = device.getOutputQueue(name="nn", maxSize=1, blocking=False)
 
 
     def should_run():
@@ -97,6 +99,7 @@ with dai.Device(pipeline) as device:
         if camera:
             in_rgb = q_rgb.get()
             new_frame = np.array(in_rgb.getData()).reshape((3, in_rgb.getHeight(), in_rgb.getWidth())).transpose(1, 2, 0).astype(np.uint8)
+            new_frame = cv2.cvtColor(new_frame, cv2.COLOR_BGR2RGB)
             return True, np.ascontiguousarray(new_frame)
         else:
             return cap.read()
@@ -111,7 +114,7 @@ with dai.Device(pipeline) as device:
         if not read_correctly:
             break
 
-        if frame is not None and not camera:
+        if not camera:
             nn_data = dai.NNData()
             nn_data.setLayer("input", to_planar(frame, (180, 180)))
             detection_in.send(nn_data)
@@ -120,21 +123,23 @@ with dai.Device(pipeline) as device:
 
         if in_nn is not None:
             data = softmax(in_nn.getFirstLayerFp16())
-            result = {
-                "name": class_names[np.argmax(data)],
-                "conf": round(100 * np.max(data), 2)
-            }
+            result_conf = np.max(data)
+            if result_conf > 0.5:
+                result = {
+                    "name": class_names[np.argmax(data)],
+                    "conf": round(100 * result_conf, 2)
+                }
+            else:
+                result = None
 
         if debug:
-            if frame is not None:
-                # if the frame is available, draw bounding boxes on it and show the frame
-                if result is not None:
-                    cv2.putText(frame, "{} ({}%)".format(result["name"], result["conf"]), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+            # if the frame is available, draw bounding boxes on it and show the frame
+            if result is not None:
+                cv2.putText(frame, "{} ({}%)".format(result["name"], result["conf"]), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                cv2.imshow("rgb", frame)
+            cv2.imshow("rgb", frame)
 
             if cv2.waitKey(1) == ord('q'):
                 break
-        else:
-            if frame is not None and result is not None:
-                print("{} ({}%)".format(result["name"], result["conf"]))
+        elif result is not None:
+            print("{} ({}%)".format(result["name"], result["conf"]))
