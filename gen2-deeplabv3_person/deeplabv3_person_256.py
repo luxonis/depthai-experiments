@@ -116,6 +116,7 @@ q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 start_time = time.time()
 counter = 0
 fps = 0
+layer_info_printed = False
 while True:
     # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
     in_nn_input = q_nn_input.get()
@@ -129,13 +130,23 @@ while True:
 
     if in_nn is not None:
         # print("NN received")
-        output_layers = in_nn.getAllLayerNames()
-        # print(output_layers)
+        layers = in_nn.getAllLayers()
 
-        layer1 = in_nn.getLayerInt32(output_layers[0])
+        if not layer_info_printed:
+            for layer_nr, layer in enumerate(layers):
+                print(f"Layer {layer_nr}")
+                print(f"Name: {layer.name}")
+                print(f"Order: {layer.order}")
+                print(f"dataType: {layer.dataType}")
+                dims = layer.dims[::-1] # reverse dimensions
+                print(f"dims: {dims}")
+            layer_info_printed = True
 
-        lay1 = np.asarray(layer1, dtype=np.int32).reshape((1,nn_shape,nn_shape))
-        # print(lay1.shape)
+        # get layer1 data
+        layer1 = in_nn.getLayerInt32(layers[0].name)
+        # reshape to numpy array
+        dims = layer.dims[::-1]
+        lay1 = np.asarray(layer1, dtype=np.int32).reshape(dims)
 
         output_colors = decode_deeplabv3p(lay1)
 
