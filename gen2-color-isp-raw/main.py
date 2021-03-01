@@ -19,8 +19,6 @@ streams = []
 streams.append('isp')
 streams.append('raw')
 
-display_scale = 0.3  # configurable
-
 ''' Packing scheme for RAW10 - MIPI CSI-2
 - 4 pixels: p0[9:0], p1[9:0], p2[9:0], p3[9:0]
 - stored on 5 bytes (byte0..4) as:
@@ -79,6 +77,9 @@ q_list = []
 for s in streams:
     q = device.getOutputQueue(name=s, maxSize=3, blocking=True)
     q_list.append(q)
+    # Make window resizable, and configure initial size
+    cv2.namedWindow(s, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(s, (960, 540))
 
 capture_flag = False
 while True:
@@ -120,9 +121,6 @@ while True:
             print("Saving to file:", filename)
             bgr = np.ascontiguousarray(bgr)  # just in case
             cv2.imwrite(filename, bgr)
-        # Scale for display
-        display_res = (int(width * display_scale), int(height * display_scale))
-        bgr = cv2.resize(bgr, display_res, interpolation=cv2.INTER_AREA)
         bgr = np.ascontiguousarray(bgr)  # just in case
         cv2.imshow(name, bgr)
     # Reset capture_flag after iterating through all streams
