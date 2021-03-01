@@ -5,7 +5,7 @@ Experimental projects we've done with DepthAI.
 
 The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list):
 
-## [Gen2] Gaze estimation ([here](https://github.com/luxonis/depthai-experiments/blob/master/gaze-estimation))
+## [Gen2] Gaze estimation ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-gaze-estimation))
 
 This example demonstrates how to run 3 stage (3-series, 2 parallel) inference on DepthAI using [Gen2 Pipeline Builder](https://github.com/luxonis/depthai/issues/136).
 
