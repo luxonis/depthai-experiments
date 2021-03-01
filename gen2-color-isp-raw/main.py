@@ -52,6 +52,10 @@ elif args.enable_uvc:
 else:
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
 
+# Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
+cam.initialControl.setManualFocus(130)
+#cam.setFps(20.0)  # Default: 30
+
 if 'isp' in streams:
     xout_isp = pipeline.createXLinkOut()
     xout_isp.setStreamName('isp')
