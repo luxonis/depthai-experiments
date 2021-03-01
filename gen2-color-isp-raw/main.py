@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 
 import cv2
+import argparse
 import numpy as np
 import numba as nb
 import depthai as dai
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-u', '--enable_uvc', default=False, action="store_true",
+                    help='Enable UVC output (1080p). Independent from isp/raw streams. '
+                         'Needs a sensor resolution of 4K (with ISP 2x downscale), or 1080p')
+parser.add_argument('-1', '--res_1080p',  default=False, action="store_true",
+                    help='Set sensor res to 1080p, instead of 4K (with UVC) / 12MP')
+args = parser.parse_args()
+
 streams = []
-# Enable one or both streams
+# Enable none, one or both streams
 streams.append('isp')
 streams.append('raw')
 
@@ -37,8 +46,13 @@ print("depthai version:", dai.__version__)
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-cam.setEnablePreviewStillVideoStreams(False)
-cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
+if args.res_1080p:
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+elif args.enable_uvc:
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+    cam.setIspScale(1, 2)
+else:
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
 
 if 'isp' in streams:
     xout_isp = pipeline.createXLinkOut()
@@ -49,6 +63,14 @@ if 'raw' in streams:
     xout_raw = pipeline.createXLinkOut()
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
+
+if args.enable_uvc:
+    uvc = pipeline.createUVC()
+    # 'preview' resolution set here to workaround a post-processing limitation
+    cam.setPreviewSize(1920, 1080)
+    cam.video.link(uvc.input)
+    print("UVC 1080p output was enabled.")
+    print("Keep this app running, and open another viewer, e.g. guvcview")
 
 device = dai.Device(pipeline)
 device.startPipeline()
