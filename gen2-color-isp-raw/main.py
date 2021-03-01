@@ -6,6 +6,19 @@ import numpy as np
 import numba as nb
 import depthai as dai
 
+''' User controls
+'C' - to capture a set of images (from isp and/or raw streams)
+'T' - to trigger autofocus
+'IOKL,.' for manual exposure/focus:
+  Control:      key[dec/inc]  min..max
+  exposure time:     I   O      1..33000 [us]
+  sensitivity iso:   K   L    100..1600
+  focus:             ,   .      0..255 [far..near]
+To go back to auto controls:
+  'E' - autoexposure
+  'F' - autofocus (continuous)
+'''
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-u', '--enable_uvc', default=False, action="store_true",
                     help='Enable UVC output (1080p). Independent from isp/raw streams. '
@@ -56,6 +69,11 @@ else:
 cam.initialControl.setManualFocus(130)
 #cam.setFps(20.0)  # Default: 30
 
+# Camera control input
+control = pipeline.createXLinkIn()
+control.setStreamName('control')
+control.out.link(cam.inputControl)
+
 if 'isp' in streams:
     xout_isp = pipeline.createXLinkOut()
     xout_isp.setStreamName('isp')
@@ -84,6 +102,29 @@ for s in streams:
     # Make window resizable, and configure initial size
     cv2.namedWindow(s, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(s, (960, 540))
+
+controlQueue = device.getInputQueue('control')
+
+# Manual exposure/focus set step, configurable
+EXP_STEP = 500  # us
+ISO_STEP = 50
+LENS_STEP = 3
+
+# Defaults and limits for manual focus/exposure controls
+lens_pos = 150
+lens_min = 0
+lens_max = 255
+
+exp_time = 20000
+exp_min = 1
+# Note: need to reduce FPS (see .setFps) to be able to set higher exposure time
+exp_max = 33000 #50000
+
+sens_iso = 800
+sens_min = 100
+sens_max = 3200
+
+def clamp(num, v0, v1): return max(v0, min(num, v1))
 
 capture_flag = False
 while True:
@@ -132,5 +173,40 @@ while True:
     key = cv2.waitKey(1)
     if key == ord('c'):
         capture_flag = True
-    if key == ord('q'):
+    elif key == ord('t'):
+        print("Autofocus trigger (and disable continuous)")
+        ctrl = dai.CameraControl()
+        ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+        ctrl.setAutoFocusTrigger()
+        controlQueue.send(ctrl)
+    elif key == ord('f'):
+        print("Autofocus enable, continuous")
+        ctrl = dai.CameraControl()
+        ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO)
+        controlQueue.send(ctrl)
+    elif key == ord('e'):
+        print("Autoexposure enable")
+        ctrl = dai.CameraControl()
+        ctrl.setAutoExposureEnable()
+        controlQueue.send(ctrl)
+    elif key in [ord(','), ord('.')]:
+        if key == ord(','): lens_pos -= LENS_STEP
+        if key == ord('.'): lens_pos += LENS_STEP
+        lens_pos = clamp(lens_pos, lens_min, lens_max)
+        print("Setting manual focus, lens position:", lens_pos)
+        ctrl = dai.CameraControl()
+        ctrl.setManualFocus(lens_pos)
+        controlQueue.send(ctrl)
+    elif key in [ord('i'), ord('o'), ord('k'), ord('l')]:
+        if key == ord('i'): exp_time -= EXP_STEP
+        if key == ord('o'): exp_time += EXP_STEP
+        if key == ord('k'): sens_iso -= ISO_STEP
+        if key == ord('l'): sens_iso += ISO_STEP
+        exp_time = clamp(exp_time, exp_min, exp_max)
+        sens_iso = clamp(sens_iso, sens_min, sens_max)
+        print("Setting manual exposure, time:", exp_time, "iso:", sens_iso)
+        ctrl = dai.CameraControl()
+        ctrl.setManualExposure(exp_time, sens_iso)
+        controlQueue.send(ctrl)
+    elif key == ord('q'):
         break
