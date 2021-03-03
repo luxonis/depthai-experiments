@@ -17,6 +17,14 @@ import depthai as dai
 To go back to auto controls:
   'E' - autoexposure
   'F' - autofocus (continuous)
+Other controls:
+'1' - AWB mode toggle
+'2' - AWB lock (true / false)
+'3' - AE compensation decrease (min: -9)
+'4' - AE compensation increase (max: +9)
+'5' - AE lock (true / false)
+'6' - anti-banding(flicker) mode change
+'7' - effect mode toggle
 '''
 
 parser = argparse.ArgumentParser()
@@ -30,6 +38,7 @@ args = parser.parse_args()
 streams = []
 # Enable none, one or both streams
 streams.append('isp')
+# Note: comment out 'raw' when not capturing for IQ tuning, for a smoother streaming
 streams.append('raw')
 
 ''' Packing scheme for RAW10 - MIPI CSI-2
@@ -118,11 +127,51 @@ lens_max = 255
 exp_time = 20000
 exp_min = 1
 # Note: need to reduce FPS (see .setFps) to be able to set higher exposure time
-exp_max = 33000 #50000
+# With the custom FW, larger exposures can be set automatically (requirements not yet updated)
+exp_max = 1000000 #33000
 
 sens_iso = 800
 sens_min = 100
 sens_max = 3200
+
+# TODO how can we make the enums automatically iterable?
+awb_mode_idx = -1
+awb_mode_list = [
+    dai.CameraControl.AutoWhiteBalanceMode.OFF,
+    dai.CameraControl.AutoWhiteBalanceMode.AUTO,
+    dai.CameraControl.AutoWhiteBalanceMode.INCANDESCENT,
+    dai.CameraControl.AutoWhiteBalanceMode.FLUORESCENT,
+    dai.CameraControl.AutoWhiteBalanceMode.WARM_FLUORESCENT,
+    dai.CameraControl.AutoWhiteBalanceMode.DAYLIGHT,
+    dai.CameraControl.AutoWhiteBalanceMode.CLOUDY_DAYLIGHT,
+    dai.CameraControl.AutoWhiteBalanceMode.TWILIGHT,
+    dai.CameraControl.AutoWhiteBalanceMode.SHADE,
+]
+
+anti_banding_mode_idx = -1
+anti_banding_mode_list = [
+    dai.CameraControl.AntiBandingMode.OFF,
+    dai.CameraControl.AntiBandingMode.MAINS_50_HZ,
+    dai.CameraControl.AntiBandingMode.MAINS_60_HZ,
+    dai.CameraControl.AntiBandingMode.AUTO,
+]
+
+effect_mode_idx = -1
+effect_mode_list = [
+    dai.CameraControl.EffectMode.OFF,
+    dai.CameraControl.EffectMode.MONO,
+    dai.CameraControl.EffectMode.NEGATIVE,
+    dai.CameraControl.EffectMode.SOLARIZE,
+    dai.CameraControl.EffectMode.SEPIA,
+    dai.CameraControl.EffectMode.POSTERIZE,
+    dai.CameraControl.EffectMode.WHITEBOARD,
+    dai.CameraControl.EffectMode.BLACKBOARD,
+    dai.CameraControl.EffectMode.AQUA,
+]
+
+ae_comp = 0  # Valid: -9 .. +9
+ae_lock = False
+awb_lock = False
 
 def clamp(num, v0, v1): return max(v0, min(num, v1))
 
@@ -207,6 +256,47 @@ while True:
         print("Setting manual exposure, time:", exp_time, "iso:", sens_iso)
         ctrl = dai.CameraControl()
         ctrl.setManualExposure(exp_time, sens_iso)
+        controlQueue.send(ctrl)
+    elif key == ord('1'):
+        awb_mode_idx = (awb_mode_idx + 1) % len(awb_mode_list)
+        awb_mode = awb_mode_list[awb_mode_idx]
+        print("Auto white balance mode:", awb_mode)
+        ctrl = dai.CameraControl()
+        ctrl.setAutoWhiteBalanceMode(awb_mode)
+        controlQueue.send(ctrl)
+    elif key == ord('2'):
+        awb_lock = not awb_lock
+        print("Auto white balance lock:", awb_lock)
+        ctrl = dai.CameraControl()
+        ctrl.setAutoWhiteBalanceLock(awb_lock)
+        controlQueue.send(ctrl)
+    elif key == ord('3') or key == ord('4'):
+        if key == ord('3'): ae_comp -= 1
+        if key == ord('4'): ae_comp += 1
+        ae_comp = clamp(ae_comp, -9, 9)
+        print("Auto exposure compensation:", ae_comp)
+        ctrl = dai.CameraControl()
+        ctrl.setAutoExposureCompensation(ae_comp)
+        controlQueue.send(ctrl)
+    elif key == ord('5'):
+        ae_lock = not ae_lock
+        print("Auto exposure lock:", ae_lock)
+        ctrl = dai.CameraControl()
+        ctrl.setAutoExposureLock(ae_lock)
+        controlQueue.send(ctrl)
+    elif key == ord('6'):
+        anti_banding_mode_idx = (anti_banding_mode_idx + 1) % len(anti_banding_mode_list)
+        anti_banding_mode = anti_banding_mode_list[anti_banding_mode_idx]
+        print("Anti-banding mode:", anti_banding_mode)
+        ctrl = dai.CameraControl()
+        ctrl.setAntiBandingMode(anti_banding_mode)
+        controlQueue.send(ctrl)
+    elif key == ord('7'):
+        effect_mode_idx = (effect_mode_idx + 1) % len(effect_mode_list)
+        effect_mode = effect_mode_list[effect_mode_idx]
+        print("Effect mode:", effect_mode)
+        ctrl = dai.CameraControl()
+        ctrl.setEffectMode(effect_mode)
         controlQueue.send(ctrl)
     elif key == ord('q'):
         break
