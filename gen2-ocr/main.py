@@ -1,19 +1,25 @@
+#!/usr/bin/env python3
+
 from pathlib import Path
 
 import cv2
 import numpy as np
-import depthai
+import depthai as dai
 import east
 
-pipeline = depthai.Pipeline()
+pipeline = dai.Pipeline()
 
 colorCam = pipeline.createColorCamera()
 colorCam.setPreviewSize(256, 256)
-colorCam.setAutoFocusMode(depthai.RawCameraControl.AutoFocusMode.AUTO)
-colorCam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
+colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 colorCam.setInterleaved(False)
-colorCam.setCamId(0)
+colorCam.setBoardSocket(dai.CameraBoardSocket.RGB)
 colorCam.setFps(10)
+
+controlIn = pipeline.createXLinkIn()
+controlIn.setStreamName('control')
+controlIn.out.link(colorCam.inputControl)
+
 
 cam_xout = pipeline.createXLinkOut()
 cam_xout.setStreamName("preview")
@@ -52,7 +58,7 @@ nn2_xout = pipeline.createXLinkOut()
 nn2_xout.setStreamName("recognitions")
 nn2.out.link(nn2_xout.input)
 
-device = depthai.Device(pipeline)
+device = dai.Device(pipeline)
 device.startPipeline()
 
 def to_tensor_result(packet):
@@ -69,6 +75,8 @@ q_rec = device.getOutputQueue("recognitions")
 q_manip_img = device.getInputQueue("manip_img")
 q_manip_cfg = device.getInputQueue("manip_cfg")
 q_manip_out = device.getOutputQueue("manip_out")
+
+controlQueue = device.getInputQueue('control')
 
 frame = None
 cropped_stacked = None
@@ -124,6 +132,11 @@ class CTCCodec(object):
 
 characters = '0123456789abcdefghijklmnopqrstuvwxyz#'
 codec = CTCCodec(characters)
+
+ctrl = dai.CameraControl()
+ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+ctrl.setAutoFocusTrigger()
+controlQueue.send(ctrl)
 
 while True:
     in_prev = q_prev.tryGet()
@@ -184,13 +197,13 @@ while True:
 
                 # TODO make it work taking args like in OpenCV:
                 # rr = ((256, 256), (128, 64), 30)
-                rr = depthai.RawImageManipConfig.RotatedRect()
+                rr = dai.RotatedRect()
                 rr.center.x    = rotated_rect[0][0]
                 rr.center.y    = rotated_rect[0][1]
                 rr.size.width  = rotated_rect[1][0]
                 rr.size.height = rotated_rect[1][1]
                 rr.angle       = rotated_rect[2]
-                cfg = depthai.ImageManipConfig()
+                cfg = dai.ImageManipConfig()
                 cfg.setCropRotatedRect(rr, False)
                 cfg.setResize(120, 32)
                 # Send frame and config to device
@@ -215,5 +228,12 @@ while True:
             in_det = None
 
             cv2.imshow('preview', frame)
-            if cv2.waitKey(1) == ord('q'):
+            key = cv2.waitKey(1)
+            if  key == ord('q'):
                 break
+            elif key == ord('t'):
+                print("Autofocus trigger (and disable continuous)")
+                ctrl = dai.CameraControl()
+                ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+                ctrl.setAutoFocusTrigger()
+                controlQueue.send(ctrl)
