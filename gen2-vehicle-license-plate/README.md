@@ -1,16 +1,20 @@
-# Pedestrian reidentification
+# Vehicle License Plate identification
 
 This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pipeline Builder.
 
 Original OpenVINO demo, on which this example was made, is [here](https://docs.openvinotoolkit.org/2020.1/_demos_pedestrian_tracker_demo_README.html).
 
+https://docs.openvinotoolkit.org/2019_R1/_vehicle_license_plate_detection_barrier_0106_description_vehicle_license_plate_detection_barrier_0106.html
+
 ## Demo
+
+NOTE - TO be updated:
 
 [![Pedestrian Re-Identification](https://user-images.githubusercontent.com/32992551/108567421-71e6b180-72c5-11eb-8af0-c6e5c3382874.png)](https://www.youtube.com/watch?v=QlXGtMWVV18 "Person Re-ID on DepthAI")
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
+1. Purchase a DepthAI camera (see [shop.luxonis.com](https://shop.luxonis.com/))
 2. Install requirements
    ```
    python3 -m pip install -r requirements.txt
