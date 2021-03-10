@@ -5,7 +5,7 @@
 This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI Gen2 API.  
 
 Example of running on OAK-D:
-![image](https://user-images.githubusercontent.com/32992551/94463964-fc920d00-017a-11eb-9e99-8a023cdc8a72.png)
+![image](https://user-images.githubusercontent.com/32992551/110709334-44e93880-81b9-11eb-8901-59b7381a49c6.png)
 
 ### How to Run
 
