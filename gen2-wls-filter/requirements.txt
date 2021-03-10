@@ -1,0 +1,5 @@
+opencv-python
+
+opencv-contrib-python
+
+depthai==2.0.0.1
