@@ -5,7 +5,7 @@ import sys
 import cv2
 import depthai as dai
 import numpy as np
-
+import math
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
@@ -72,11 +72,19 @@ class wlsFilter:
         # https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp#L99
         self.wlsFilter.setSigmaColor(self._sigma)
         filteredDisp = self.wlsFilter.filter(disparity, right)
-        cv2.imshow(self.wlsStream, filteredDisp)
 
-        cv2.normalize(filteredDisp, filteredDisp, 0, 255, cv2.NORM_MINMAX)
-        coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_JET)
-        cv2.imshow(self.wlsStream + "_color", coloredDisp)
+        baseline = 75 #mm
+        focal   = disparity.shape[1] / (2. * math.tan(71.86 / 2 / 180. * math.pi))
+        disp_levels = 96
+        # Compute depth from disparity (32 levels)
+        with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
+            depthScaleFactor = baseline * focal
+            # raw depth values
+            depthFrame = (depthScaleFactor / filteredDisp).astype(np.uint16)
+
+
+        return filteredDisp, depthFrame
+       
 
 
 wlsFilter = wlsFilter(_lambda=8000, _sigma=1.5)
@@ -105,8 +113,22 @@ with dai.Device(pipeline) as device:
         disparityFrame = inDisparity.getFrame()
         cv2.imshow("disparity", disparityFrame)
 
-        wlsFilter.filter(disparityFrame, rightFrame)
-       
+        filteredDisp, depthFrame = wlsFilter.filter(disparityFrame, rightFrame)
+        depthFrame = np.clip(depthFrame, 0, 5000)
+
+        cv2.imshow("wls raw depth", depthFrame)
+
+        depthFrameColor = cv2.normalize(depthFrame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8UC1)
+        depthFrameColor = cv2.equalizeHist(depthFrameColor)
+        depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
+        cv2.imshow("wls colored depth", depthFrameColor)
+
+        cv2.equalizeHist(filteredDisp)
+        cv2.imshow(wlsFilter.wlsStream, filteredDisp)
+
+        cv2.normalize(filteredDisp, filteredDisp, 0, 255, cv2.NORM_MINMAX)
+        coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_JET)
+        cv2.imshow("wls colored disp", coloredDisp)
 
         if cv2.waitKey(1) == ord('q'):
             break
