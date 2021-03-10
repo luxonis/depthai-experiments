@@ -66,19 +66,16 @@ class wlsFilter:
         self.lambdaTrackbar = trackbar('Lambda', self.wlsStream, 0, 255, 80, self.on_trackbar_change_lambda)
         self.sigmaTrackbar  = trackbar('Sigma',  self.wlsStream, 0, 100, 15, self.on_trackbar_change_sigma)
 
-    def filter(self, disparity, right, left=None):
+    def filter(self, disparity, right, depthScaleFactor):
         # https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp#L92
         self.wlsFilter.setLambda(self._lambda)
         # https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp#L99
         self.wlsFilter.setSigmaColor(self._sigma)
         filteredDisp = self.wlsFilter.filter(disparity, right)
 
-        baseline = 75 #mm
-        focal   = disparity.shape[1] / (2. * math.tan(71.86 / 2 / 180. * math.pi))
-        disp_levels = 96
+
         # Compute depth from disparity (32 levels)
         with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
-            depthScaleFactor = baseline * focal
             # raw depth values
             depthFrame = (depthScaleFactor / filteredDisp).astype(np.uint16)
 
@@ -88,6 +85,10 @@ class wlsFilter:
 
 
 wlsFilter = wlsFilter(_lambda=8000, _sigma=1.5)
+
+baseline = 75 #mm
+disp_levels = 96
+fov = 71.86
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
@@ -113,21 +114,17 @@ with dai.Device(pipeline) as device:
         disparityFrame = inDisparity.getFrame()
         cv2.imshow("disparity", disparityFrame)
 
-        filteredDisp, depthFrame = wlsFilter.filter(disparityFrame, rightFrame)
-        depthFrame = np.clip(depthFrame, 0, 5000)
+        focal = disparityFrame.shape[1] / (2. * math.tan(math.radians(fov / 2)))
+        depthScaleFactor = baseline * focal
+
+        filteredDisp, depthFrame = wlsFilter.filter(disparityFrame, rightFrame, depthScaleFactor)
 
         cv2.imshow("wls raw depth", depthFrame)
 
-        depthFrameColor = cv2.normalize(depthFrame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8UC1)
-        depthFrameColor = cv2.equalizeHist(depthFrameColor)
-        depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
-        cv2.imshow("wls colored depth", depthFrameColor)
-
-        cv2.equalizeHist(filteredDisp)
+        filteredDisp = (filteredDisp * (255/(disp_levels-1))).astype(np.uint8)
         cv2.imshow(wlsFilter.wlsStream, filteredDisp)
 
-        cv2.normalize(filteredDisp, filteredDisp, 0, 255, cv2.NORM_MINMAX)
-        coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_JET)
+        coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_HOT)
         cv2.imshow("wls colored disp", coloredDisp)
 
         if cv2.waitKey(1) == ord('q'):
