@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 from pose import getKeypoints, getValidPairs, getPersonwiseKeypoints
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 from imutils.video import FPS
 
@@ -38,16 +38,18 @@ def to_planar(arr: np.ndarray, shape: tuple) -> list:
 
 def create_pipeline():
     print("Creating pipeline...")
-    pipeline = depthai.Pipeline()
+    pipeline = dai.Pipeline()
+    pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
+    
 
     if args.camera:
         # ColorCamera
         print("Creating Color Camera...")
         cam = pipeline.createColorCamera()
         cam.setPreviewSize(456, 256)
-        cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
-        cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
+        cam.setBoardSocket(dai.CameraBoardSocket.RGB)
         cam_xout = pipeline.createXLinkOut()
         cam_xout.setStreamName("cam_out")
         cam.preview.link(cam_xout.input)
@@ -78,7 +80,7 @@ POSE_PAIRS = [[1, 2], [1, 5], [2, 3], [3, 4], [5, 6], [6, 7], [1, 8], [8, 9], [9
               [1, 0], [0, 14], [14, 16], [0, 15], [15, 17], [2, 17], [5, 16]]
 
 
-with depthai.Device(create_pipeline()) as device:
+with dai.Device(create_pipeline()) as device:
     print("Starting pipeline...")
     device.startPipeline()
     if args.camera:
@@ -165,8 +167,16 @@ with depthai.Device(create_pipeline()) as device:
             if debug:
                 cv2.imshow("rgb", debug_frame)
 
-            if cv2.waitKey(1) == ord('q'):
+            key = cv2.waitKey(1)
+            if key == ord('q'):
                 break
+                
+            elif key == ord('t'):
+                print("Autofocus trigger (and disable continuous)")
+                ctrl = dai.CameraControl()
+                ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+                ctrl.setAutoFocusTrigger()
+                controlQueue.send(ctrl)            
 
     except KeyboardInterrupt:
         pass
