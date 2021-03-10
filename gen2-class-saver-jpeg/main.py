@@ -15,6 +15,8 @@ if len(sys.argv) > 1:
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
+pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
+
 
 # Define a source - color camera
 cam_rgb = pipeline.createColorCamera()
@@ -136,6 +138,9 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
 
         if cv2.waitKey(1) == ord('q'):
             break
+
+    if KeyboardInterrupt:
+        pass                
 
     if thread is not None:
         thread.join()
