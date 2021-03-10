@@ -167,11 +167,11 @@ with dai.Device(create_pipeline()) as device:
             if debug:
                 cv2.imshow("rgb", debug_frame)
 
-             key = cv2.waitKey(1)
-             if key == ord('q'):
+            key = cv2.waitKey(1)
+            if key == ord('q'):
                 break
                 
-             elif key == ord('t'):
+            elif key == ord('t'):
                 print("Autofocus trigger (and disable continuous)")
                 ctrl = dai.CameraControl()
                 ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
