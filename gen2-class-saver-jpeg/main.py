@@ -64,7 +64,6 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
     def store_data(in_frame, in_bboxes,  in_labels):
         timestamp = int(time.time() * 10000)
         raw_frame_path = f'data/raw/{timestamp}.jpg'
-        time.sleep(1)
         cv2.imwrite(raw_frame_path, in_frame)
         for raw_bbox, label in zip(in_bboxes, in_labels):
             debug_frame = in_frame.copy()
@@ -75,7 +74,6 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
             cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
             cv2.putText(debug_frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             overlay_path = f'data/{texts[label]}/{timestamp}_overlay.jpg'
-            time.sleep(1)
             cv2.imwrite(overlay_path, debug_frame)
 
             data = {
