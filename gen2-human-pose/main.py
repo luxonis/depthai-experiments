@@ -61,9 +61,9 @@ def create_pipeline():
     print("Creating Human Pose Estimation Neural Network...")
     pose_nn = pipeline.createNeuralNetwork()
     if args.camera:
-        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001.blob.sh12").resolve().absolute()))
+        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001_openvino_2021.1_6shave.blob").resolve().absolute()))
     else:
-        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001.blob.sh16").resolve().absolute()))
+        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001_openvino_2021.1_8shave.blob").resolve().absolute()))
     # Increase threads for detection
     pose_nn.setNumInferenceThreads(2)
     # Specify that network takes latest arriving frame in non-blocking manner
