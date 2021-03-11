@@ -6,7 +6,7 @@ in ADAS applications. This is a MobileNetV2 + SSD-based vehicle and license plat
 
 ## Demo
 
-[![Gen2 Age & Gender recognition](https://github.com/dhruvsheth-ai/depthai-experiments/blob/patch-7/gen2-vehicle-license-plate/vehicle.png)
+![Gen2 Age & Gender recognition](https://github.com/dhruvsheth-ai/depthai-experiments/blob/patch-7/gen2-vehicle-license-plate/vehicle.png)
 
 ## Pre-requisites
 
