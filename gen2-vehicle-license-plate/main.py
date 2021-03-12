@@ -32,6 +32,9 @@ elif args.camera is False and args.video is None:
     raise ValueError("Missing inference source! Either use \"-cam\" to run on DepthAI camera or \"-vid <path>\" to run on video file")
 
 
+texts = ["", "vehicle", "license-plate", "", "", "", "", "", "", "", "",
+         "", "", "", "", "", "", "", "", "", ""]
+
 def cos_dist(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
@@ -45,6 +48,7 @@ def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
+    pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_2)
 
     if camera:
         # ColorCamera
@@ -63,18 +67,9 @@ def create_pipeline():
             cam.preview.link(cam_xout.input)
 
     # NeuralNetwork
-    print("Creating Person Detection Neural Network...")
-    detection_nn = pipeline.createMobileNetDetectionNetwork()
-    # detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013_openvino_2020.1_4shave.blob").resolve().absolute()))
+    print("Creating Vehicle license plate Detection Neural Network...")
+    detection_nn = pipeline.createNeuralNetwork()
     detection_nn.setBlobPath(str(Path("models/vehicle-license-plate-detection-barrier-0106.2021.2.4shave4slice.blob").resolve().absolute()))
-
-    # Confidence
-    detection_nn.setConfidenceThreshold(0.2)
-    # Increase threads for detection
-    detection_nn.setNumInferenceThreads(2)
-    # Specify that network takes latest arriving frame in non-blocking manner
-    detection_nn.input.setQueueSize(1)
-    detection_nn.input.setBlocking(False)
 
     detection_nn_xout = pipeline.createXLinkOut()
     detection_nn_xout.setStreamName("detection_nn")
@@ -86,31 +81,22 @@ def create_pipeline():
     if camera:
         print('linked cam.preview to detection_nn.input')
         cam.preview.link(detection_nn.input)
+
+        xout_rgb = pipeline.createXLinkOut()
+        xout_rgb.setStreamName("rgb")
+
+        cam.preview.link(xout_rgb.input)
     else:
         detection_in = pipeline.createXLinkIn()
         detection_in.setStreamName("detection_in")
         detection_in.out.link(detection_nn.input)
 
+        xout_rgb = pipeline.createXLinkOut()
+        xout_rgb.setStreamName("rgb")
+        detection_in.out.link(xout_rgb.input)
+
     detection_nn.out.link(detection_nn_xout.input)
     detection_nn.passthrough.link(detection_nn_passthrough.input)
-
-
-    # NeuralNetwork
-    print("Creating Person Reidentification Neural Network...")
-    reid_in = pipeline.createXLinkIn()
-    reid_in.setStreamName("reid_in")
-    reid_nn = pipeline.createNeuralNetwork()
-    # reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031_openvino_2020.1_4shave.blob").resolve().absolute()))
-    reid_nn.setBlobPath(str(Path("models/license-plate-recognition-barrier-0001.2021.2.4shave4slice.blob").resolve().absolute()))
-    # reid_nn.setBlobPath(str(Path("models/vehicle-attributes-recognition-barrier-0039.2021.2.4shave4slice.blob").resolve().absolute()))
-
-    # Decrease threads for reidentification
-    reid_nn.setNumInferenceThreads(1)
-    
-    reid_nn_xout = pipeline.createXLinkOut()
-    reid_nn_xout.setStreamName("reid_nn")
-    reid_in.out.link(reid_nn.input)
-    reid_nn.out.link(reid_nn_xout.input)
 
     print("Pipeline created.")
     return pipeline
@@ -141,121 +127,71 @@ class Main:
         return False
 
     def inference_task(self):
-        # Queues
-        detection_passthrough = self.device.getOutputQueue("detection_passthrough")
-        detection_nn = self.device.getOutputQueue("detection_nn")
+        # Output queues will be used to get the rgb frames and nn data from the outputs defined above
+        q_rgb = self.device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        q_nn = self.device.getOutputQueue(name="detection_nn", maxSize=4, blocking=False)
 
+        frame = None
         bboxes = []
-        results = {}
-        results_path = {}
-        next_id = 0
-
-        # Match up frames and detections
-        try:
-            prev_passthrough = detection_passthrough.getAll()[0]
-            prev_inference = detection_nn.getAll()[0]
-        except RuntimeError:
-            pass
-
+        confidences = []
+        labels = []
+        start_time = time.time()
+        counter = 0
         fps = 0
-        t_fps = time.time()
-        while self.running:
-            try:
 
-                # Get current detection
-                passthrough = detection_passthrough.getAll()[0]
-                inference = detection_nn.getAll()[0]
+        # nn data, being the bounding box locations, are in <0..1> range - they need to be normalized with frame width/height
+        def frame_norm(frame, bbox):
+            norm_vals = np.full(len(bbox), frame.shape[0])
+            norm_vals[::2] = frame.shape[1]
+            return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
 
-                # Count NN fps
-                fps = fps + 1
 
-                # Combine all frames to current inference
-                frames = []
-                while True:
+        while True:
+            # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
+            in_rgb = q_rgb.tryGet()
+            in_nn = q_nn.tryGet()
 
-                    frm = self.frame_queue.get()
-                    if camera and hq:
-                        # Convert NV12 to BGR
-                        yuv = frm.getData().reshape((frm.getHeight() * 3 // 2, frm.getWidth()))
-                        cv_frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)                      
-                    else:
-                        # get the frames corresponding to inference
-                        cv_frame = np.ascontiguousarray(frm.getData().reshape(3, frm.getHeight(), frm.getWidth()).transpose(1,2,0))
+            if in_rgb is not None:
+                # if the data from the rgb camera is available, transform the 1D data into a HxWxC frame
+                shape = (3, in_rgb.getHeight(), in_rgb.getWidth())
+                frame = in_rgb.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
+                frame = np.ascontiguousarray(frame)
 
-                    frames.append(cv_frame)
+            if in_nn is not None:
+                # one detection has 7 numbers, and the last detection is followed by -1 digit, which later is filled with 0
+                bboxes = np.array(in_nn.getFirstLayerFp16())
+                # transform the 1D array into Nx7 matrix
+                bboxes = bboxes.reshape((bboxes.size // 7, 7))
+                # filter out the results which confidence less than a defined threshold
+                bboxes = bboxes[bboxes[:, 2] > 0.3]
+                # Cut bboxes and labels
+                labels = bboxes[:, 1].astype(int)
+                confidences = bboxes[:, 2]
+                bboxes = bboxes[:, 3:7]
+                counter+=1
+                current_time = time.time()
+                if (current_time - start_time) > 1 :
+                    fps = counter / (current_time - start_time)
+                    counter = 0
+                    start_time = current_time
+                print("bboxes: %r", bboxes)
+                print("labels: %r", labels)
+                print("confidences: %r", confidences)
 
-                    # Break out once all frames received for the current inference
-                    if frm.getSequenceNum() >= prev_passthrough.getSequenceNum() - 1:
-                        break
+            color = (255, 255, 255)
 
-                infered_frame = frames[0]
-
-                # Send bboxes to be infered upon
-                for det in inference.detections:
-                    raw_bbox = [det.xmin, det.ymin, det.xmax, det.ymax]
-                    bbox = frame_norm(infered_frame, raw_bbox)
-                    det_frame = infered_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-                    nn_data = dai.NNData()
-                    nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
-                    self.device.getInputQueue("reid_in").send(nn_data)
-
-                 
-                # Retrieve infered bboxes
-                for det in inference.detections:
-
-                    raw_bbox = [det.xmin, det.ymin, det.xmax, det.ymax]
-                    bbox = frame_norm(infered_frame, raw_bbox)
-
-                    reid_result = self.device.getOutputQueue("reid_nn").get().getFirstLayerFp16()
-                    print(reid_result)
-
-                    # for person_id in results:
-                    #     dist = cos_dist(reid_result, results[person_id])
-                    #     if dist > 0.7:
-                    #         result_id = person_id
-                    #         results[person_id] = reid_result
-                    #         break
-                    # else:
-                    #     result_id = next_id
-                    #     results[result_id] = reid_result
-                    #     results_path[result_id] = []
-                    #     next_id += 1
-
-                    # if debug:
-                    #     for frame in frames:
-                    #         cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
-                    #         x = (bbox[0] + bbox[2]) // 2
-                    #         y = (bbox[1] + bbox[3]) // 2
-                    #         results_path[result_id].append([x, y])
-                    #         cv2.putText(frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-                    #         if len(results_path[result_id]) > 1:
-                    #             cv2.polylines(frame, [np.array(results_path[result_id], dtype=np.int32)], False, (255, 0, 0), 2)
-                    # else:
-                    #     print(f"Saw id: {result_id}")
-
-                # Send of to visualization thread
-                for frame in frames:
-                    # put nn_fps
-                    if debug:
-                        cv2.putText(frame, 'NN FPS: '+str(self.nn_fps), (5,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255,0,0), 2)
+            if frame is not None:
+                # if the frame is available, draw bounding boxes on it and show the frame
+                for raw_bbox, label, conf in zip(bboxes, labels, confidences):
+                    bbox = frame_norm(frame, raw_bbox)
+                    cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+                    cv2.putText(frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                    cv2.putText(frame, f"{int(conf * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                    cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
 
                     if self.visualization_queue.full():
                         self.visualization_queue.get_nowait()
                     self.visualization_queue.put(frame)
-            
-
-                # Move current to prev
-                prev_passthrough = passthrough
-                prev_inference = inference
-
-                if time.time() - t_fps >= 1.0:
-                    self.nn_fps = round(fps / (time.time() - t_fps), 2)
-                    fps = 0
-                    t_fps = time.time()
-
-            except RuntimeError:
-                continue
-
 
 
     def input_task(self):
@@ -298,7 +234,7 @@ class Main:
                     self.frame_queue.put(frame_orig)
                 # else send resized frames
                 else: 
-                    self.frame_queue.put(frame_nn)                
+                    self.frame_queue.put(frame_nn)
 
                 seq_num = seq_num + 1
 
@@ -320,7 +256,7 @@ class Main:
             if first or not self.visualization_queue.empty():
                 frame = self.visualization_queue.get()
                 aspect_ratio = frame.shape[1] / frame.shape[0]
-                cv2.imshow("frame", cv2.resize(frame, (int(args.width),  int(args.width / aspect_ratio))))
+                cv2.imshow("rgb", cv2.resize(frame, (int(args.width),  int(args.width / aspect_ratio))))
                 first = False
 
             # sleep if required
@@ -335,10 +271,8 @@ class Main:
                 self.running = False
                 break
 
-            
 
     def run(self):
-
 
         pipeline = create_pipeline()
 
