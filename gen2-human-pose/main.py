@@ -61,9 +61,9 @@ def create_pipeline():
     print("Creating Human Pose Estimation Neural Network...")
     pose_nn = pipeline.createNeuralNetwork()
     if args.camera:
-        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001_openvino_2021.1_6shave.blob").resolve().absolute()))
+        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001_openvino_2021.2_6shave.blob").resolve().absolute()))
     else:
-        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001_openvino_2021.1_8shave.blob").resolve().absolute()))
+        pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001_openvino_2021.2_8shave.blob").resolve().absolute()))
     # Increase threads for detection
     pose_nn.setNumInferenceThreads(2)
     # Specify that network takes latest arriving frame in non-blocking manner
@@ -187,7 +187,7 @@ with dai.Device(create_pipeline()) as device:
     else:
         pose_in = device.getInputQueue("pose_in")
     pose_nn = device.getOutputQueue("pose_nn", 1, False)
-    t = threading.Thread(target=pose_thread, args=(pose_nn, ), daemon=True)
+    t = threading.Thread(target=pose_thread, args=(pose_nn, ))
     t.start()
 
     def should_run():
