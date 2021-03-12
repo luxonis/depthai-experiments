@@ -189,16 +189,18 @@ detections = []
 det_q = queue.Queue()
 
 
-def det_thread(dev):
+def det_thread(q_pass, dev):
     global detections, frame
     q_det = dev.getOutputQueue("detections")
-    q_pass = device.getOutputQueue("detections_pass")
     q_manip_cfg = dev.getInputQueue("manip_cfg")
     q_manip_img = dev.getInputQueue("manip_img")
 
     while running:
-        in_rgb = q_pass.get()
-        detections = q_det.get().detections
+        try:
+            in_rgb = q_pass.get()
+            detections = q_det.get().detections
+        except RuntimeError:
+            continue
 
         q_manip_img.send(in_rgb)
         fps.tick_fps('det')
@@ -218,9 +220,12 @@ def rec_thread(dev):
     q_pass = dev.getOutputQueue("recognitions_pass")
 
     while running:
-        rec_data = np.array(q_rec.get().getFirstLayerFp16()).reshape(30, 1, 37)
-        rec_frame = q_pass.get().getCvFrame()
-        bbox = det_q.get()
+        try:
+            rec_data = np.array(q_rec.get().getFirstLayerFp16()).reshape(30, 1, 37)
+            rec_frame = q_pass.get().getCvFrame()
+            bbox = det_q.get(timeout=3)
+        except RuntimeError:
+            continue
         decoded_text = codec.decode(rec_data)[0]
         print(decoded_text)
         fps.tick_fps('rec')
@@ -229,13 +234,14 @@ def rec_thread(dev):
 with depthai.Device(pipeline) as device:
     device.startPipeline()
 
+    q_pass = device.getOutputQueue("detections_pass")
     if args.camera:
         cam_out = device.getOutputQueue("preview", 1, True)
     else:
         nn_in = device.getInputQueue("nn_in")
 
     threads = [
-        threading.Thread(target=det_thread, args=(device, )),
+        threading.Thread(target=det_thread, args=(q_pass, device, )),
         threading.Thread(target=rec_thread, args=(device, )),
     ]
 
@@ -253,7 +259,7 @@ with depthai.Device(pipeline) as device:
             return True, np.array(cam_out.get().getData()).reshape((3, 256, 456)).transpose(1, 2, 0).astype(np.uint8)
 
     while should_run():
-        read_correctly, frame = get_frame
+        read_correctly, frame = get_frame()
 
         if not read_correctly:
             break
@@ -277,7 +283,7 @@ with depthai.Device(pipeline) as device:
 
             cv2.putText(frame, f"RGB FPS: {round(fps.fps(), 1)}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             cv2.putText(frame, f"DET FPS:  {round(fps.tick_fps('det'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-            cv2.putText(frame, f"REC FPS:  {round(fps.tick_fps('rec'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, f"REC FPS:  {round(fps.tick_fps('rec'), 1)}", (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             cv2.imshow('preview', frame)
 
         if cv2.waitKey(1) == ord('q'):
