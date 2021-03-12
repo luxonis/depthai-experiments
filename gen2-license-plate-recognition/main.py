@@ -37,8 +37,6 @@ if args.camera:
 nn = pipeline.createMobileNetDetectionNetwork()
 nn.setConfidenceThreshold(0.5)
 nn.setBlobPath(str((Path(__file__).parent / Path('models/vehicle-license-plate-detection-barrier-0106.blob')).resolve().absolute()))
-nn.setNumPoolFrames(1)
-nn.input.setBlocking(False)
 if args.camera:
     colorCam.preview.link(nn.input)
 else:
