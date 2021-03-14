@@ -1,13 +1,13 @@
-# Gen2 Age & Gender recognition
+# Gen2 License Plates Recognition
 
 This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pipeline Builder.
-First, a face is detected on the image and then the cropped face frame is sent to age gender recognition network, which
-produces the estimated results
+First, a license plate is detected on the image and then the cropped license frame is sent to text detection network, 
+which tries to decode the license plates texts
 
 
 ## Demo
 
-[![Gen2 Age & Gender recognition](https://user-images.githubusercontent.com/5244214/106005496-954a8200-60b4-11eb-923e-b84df9de9fff.gif)](https://www.youtube.com/watch?v=PwnVrPaF-vs "Age/Gender recognition on DepthAI")
+[![Gen2 License Plates recognition](https://user-images.githubusercontent.com/5244214/111067985-158f4000-84c7-11eb-9cea-b276a516342d.gif)](https://www.youtube.com/watch?v=buZOWnL9vm0 "License Plates recognition on DepthAI")
 
 ## Pre-requisites
 
@@ -33,7 +33,7 @@ optional arguments:
 To use with a video file, run the script with the following arguments
 
 ```
-python3 main.py -vid ./input.mp4
+python3 main.py -vid ./chineese_traffic.mp4
 ```
 
 To use with DepthAI 4K RGB camera, use instead
