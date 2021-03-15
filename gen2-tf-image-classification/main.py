@@ -24,7 +24,10 @@ pipeline = dai.Pipeline()
 # NeuralNetwork
 print("Creating Neural Network...")
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str(Path("flower.blob").resolve().absolute()))
+if camera:
+    detection_nn.setBlobPath(str(Path("flower_openvino_2021.2_6shave.blob").resolve().absolute()))
+else:
+    detection_nn.setBlobPath(str(Path("flower_openvino_2021.2_8shave.blob").resolve().absolute()))
 
 if camera:
     print("Creating Color Camera...")
@@ -124,7 +127,7 @@ with dai.Device(pipeline) as device:
         if in_nn is not None:
             data = softmax(in_nn.getFirstLayerFp16())
             result_conf = np.max(data)
-            if result_conf > 0.5:
+            if result_conf > 0.4:
                 result = {
                     "name": class_names[np.argmax(data)],
                     "conf": round(100 * result_conf, 2)
