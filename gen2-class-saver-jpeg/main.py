@@ -9,13 +9,12 @@ import depthai as dai
 import numpy as np
 
 # Get argument first
-mobilenet_path = str((Path(__file__).parent / Path('models/mobilenet.blob')).resolve().absolute())
+mobilenet_path = str((Path(__file__).parent / Path('models/mobilenet-ssd_openvino_2021.2_13shave.blob')).resolve().absolute())
 if len(sys.argv) > 1:
     mobilenet_path = sys.argv[1]
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
-pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
 
 
 # Define a source - color camera

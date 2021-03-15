@@ -51,7 +51,10 @@ def create_pipeline():
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
     detection_nn = pipeline.createNeuralNetwork()
-    detection_nn.setBlobPath(str(Path("models/face-detection-retail-0004.blob").resolve().absolute()))
+    if args.camera:
+        detection_nn.setBlobPath(str(Path("models/face-detection-retail-0004_openvino_2021.2_6shave.blob").resolve().absolute()))
+    else:
+        detection_nn.setBlobPath(str(Path("models/face-detection-retail-0004_openvino_2021.2_8shave.blob").resolve().absolute()))
     detection_nn_xout = pipeline.createXLinkOut()
     detection_nn_xout.setStreamName("detection_nn")
     detection_nn.out.link(detection_nn_xout.input)
@@ -68,7 +71,11 @@ def create_pipeline():
     age_gender_in = pipeline.createXLinkIn()
     age_gender_in.setStreamName("age_gender_in")
     age_gender_nn = pipeline.createNeuralNetwork()
-    age_gender_nn.setBlobPath(str(Path("models/age-gender-recognition-retail-0013.blob").resolve().absolute()))
+    if args.camera:
+        age_gender_nn.setBlobPath(str(Path("models/age-gender-recognition-retail-0013_openvino_2021.2_6shave.blob").resolve().absolute()))
+    else:
+        age_gender_nn.setBlobPath(str(Path("models/age-gender-recognition-retail-0013_openvino_2021.2_8shave.blob").resolve().absolute()))
+
     age_gender_nn_xout = pipeline.createXLinkOut()
     age_gender_nn_xout.setStreamName("age_gender_nn")
     age_gender_in.out.link(age_gender_nn.input)
