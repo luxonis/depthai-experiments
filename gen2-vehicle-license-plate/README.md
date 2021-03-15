@@ -59,3 +59,37 @@ python3 main.py -cam
 https://github.com/livezingy/license-plate-recognition/blob/master/testOpenVINO.py#L78
 https://answers.opencv.org/question/205754/how-to-run-pretrained-model-with-openvino-on-rpi/
 https://docs.openvinotoolkit.org/2019_R1/_vehicle_license_plate_detection_barrier_0106_description_vehicle_license_plate_detection_barrier_0106.html
+
+
+## Notes
+
+export OPEN_MODEL_DOWNLOADER='/opt/intel//openvino_2021.2.185/deployment_tools/open_model_zoo/tools/downloader/downloader.py'
+
+
+$OPEN_MODEL_DOWNLOADER --name vehicle-attributes-recognition-barrier-0039 --output_dir ~/open_model_zoo_downloads/
+
+
+################|| Downloading vehicle-license-plate-detection-barrier-0106 ||################
+        3. ################|| Downloading license-plate-recognition-barrier-0001 ||################
+        4. ################|| Downloading vehicle-attributes-recognition-barrier-0039 ||################
+        5.
+
+
+/opt/intel//openvino_2021.2.185/deployment_tools/inference_engine/lib/intel64/myriad_compile
+
+
+$MYRIAD_COMPILE -m ~/open_model_zoo_downloads/intel/face-detection-retail-0004/FP16/face-detection-retail-0004.xml -ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+
+
+$MYRIAD_COMPILE -m /Users/wferrell/open_model_zoo_downloads/intel/vehicle-license-plate-detection-barrier-0106/FP16/vehicle-license-plate-detection-barrier-0106.xml -ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+
+
+$MYRIAD_COMPILE -m /Users/wferrell/open_model_zoo_downloads/intel/license-plate-recognition-barrier-0001/FP16/license-plate-recognition-barrier-0001.xml -ip U8 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+
+$MYRIAD_COMPILE -m /Users/wferrell/open_model_zoo_downloads/intel/vehicle-attributes-recognition-barrier-0039/FP16/vehicle-attributes-recognition-barrier-0039.xml -ip U8 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+
+
+
+$MYRIAD_COMPILE=/opt/intel/openvino_2021.2.185/deployment_tools/inference_engine/lib/intel64/myriad_compile
+sudo install_name_tool -add_rpath $(dirname $(find /opt/intel/openvino_2021.2.185 -name libtbb.dylib)) $MYRIAD_COMPILE
+sudo codesign --remove-signature $MYRIAD_COMPILE
