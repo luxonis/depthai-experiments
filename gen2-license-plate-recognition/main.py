@@ -94,6 +94,21 @@ def create_pipeline():
     rec_xin.setStreamName("rec_in")
     rec_xin.out.link(rec_nn.input)
 
+    attr_nn = pipeline.createNeuralNetwork()
+    attr_nn.setBlobPath(str((Path(__file__).parent / Path('models/vehicle-attributes-recognition-barrier-0039.blob')).resolve().absolute()))
+    attr_nn.input.setBlocking(False)
+    attr_nn.setNumInferenceThreads(2)
+    attr_nn.input.setQueueSize(1)
+    attr_xout = pipeline.createXLinkOut()
+    attr_xout.setStreamName("attr_nn")
+    attr_nn.out.link(attr_xout.input)
+    attr_pass = pipeline.createXLinkOut()
+    attr_pass.setStreamName("attr_pass")
+    attr_nn.passthrough.link(attr_pass.input)
+    attr_xin = pipeline.createXLinkIn()
+    attr_xin.setStreamName("attr_in")
+    attr_xin.out.link(attr_nn.input)
+
     print("Pipeline created.")
     return pipeline
 
@@ -136,7 +151,8 @@ class FPSHandler:
 
 running = True
 detections = []
-results = []
+rec_results = []
+attr_results = []
 licese_frame = None
 frame_det_seq = 0
 frame_det_seq_map = {}
@@ -148,12 +164,12 @@ else:
     fps = FPSHandler(cap)
 
 
-def det_thread(det_queue, det_pass, rec_queue):
+def det_thread(det_queue, det_pass, rec_queue, attr_queue):
     global detections, licese_frame
 
     while running:
         try:
-            in_det = det_queue.get().detections
+            detections = det_queue.get().detections
             in_pass = det_pass.get()
             orig_frame = frame_det_seq_map.get(in_pass.getSequenceNum(), None)
             if orig_frame is None:
@@ -163,19 +179,25 @@ def det_thread(det_queue, det_pass, rec_queue):
             for map_key in list(filter(lambda item: item <= in_pass.getSequenceNum(), frame_det_seq_map.keys())):
                 del frame_det_seq_map[map_key]
 
-            detections = [detection for detection in in_det if detection.label == 2]
-
             for detection in detections:
                 bbox = frame_norm(orig_frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-                licese_frame = orig_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+                cropped_frame = orig_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+
                 tstamp = time.monotonic()
                 img = dai.ImgFrame()
-                img.setData(to_planar(licese_frame, (94, 24)))
                 img.setTimestamp(tstamp)
                 img.setType(dai.RawImgFrame.Type.BGR888p)
-                img.setWidth(94)
-                img.setHeight(24)
-                rec_queue.send(img)
+
+                if detection.label == 2:  # license plate
+                    img.setData(to_planar(cropped_frame, (94, 24)))
+                    img.setWidth(94)
+                    img.setHeight(24)
+                    rec_queue.send(img)
+                elif detection.label == 1:  # car
+                    img.setData(to_planar(cropped_frame, (72, 72)))
+                    img.setWidth(72)
+                    img.setHeight(72)
+                    attr_queue.send(img)
 
             fps.tick('det')
         except RuntimeError:
@@ -191,7 +213,7 @@ items = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "<Anhui>", "<Beijing>
 
 
 def rec_thread(q_rec, q_pass):
-    global results
+    global rec_results
 
     while running:
         try:
@@ -205,8 +227,34 @@ def rec_thread(q_rec, q_pass):
             if idx == -1:
                 break
             decoded_text += items[int(idx)]
-        results = [(cv2.resize(rec_frame, (200, 64)), decoded_text)] + results[:9]
+        rec_results = [(cv2.resize(rec_frame, (200, 64)), decoded_text)] + rec_results[:9]
         fps.tick_fps('rec')
+
+
+def attr_thread(q_attr, q_pass):
+    global attr_results
+
+    while running:
+        try:
+            attr_data = q_attr.get()
+            attr_frame = q_pass.get().getCvFrame()
+        except RuntimeError:
+            continue
+
+        colors = ["white", "gray", "yellow", "red", "green", "blue", "black"]
+        types = ["car", "bus", "truck", "van"]
+
+        in_color = np.array(attr_data.getLayerFp16("color"))
+        in_type = np.array(attr_data.getLayerFp16("type"))
+
+        color = colors[in_color.argmax()]
+        color_prob = float(in_color.max())
+        type = types[in_type.argmax()]
+        type_prob = float(in_type.max())
+
+        attr_results = [(attr_frame, color, type, color_prob, type_prob)] + attr_results[:9]
+
+        fps.tick_fps('attr')
 
 
 with dai.Device(create_pipeline()) as device:
@@ -217,15 +265,20 @@ with dai.Device(create_pipeline()) as device:
     else:
         det_in = device.getInputQueue("det_in")
     rec_in = device.getInputQueue("rec_in")
+    attr_in = device.getInputQueue("attr_in")
     det_nn = device.getOutputQueue("det_nn", 1, False)
     det_pass = device.getOutputQueue("det_pass", 1, False)
     rec_nn = device.getOutputQueue("rec_nn", 1, False)
     rec_pass = device.getOutputQueue("rec_pass", 1, False)
+    attr_nn = device.getOutputQueue("attr_nn", 1, False)
+    attr_pass = device.getOutputQueue("attr_pass", 1, False)
 
-    det_t = threading.Thread(target=det_thread, args=(det_nn, det_pass, rec_in))
+    det_t = threading.Thread(target=det_thread, args=(det_nn, det_pass, rec_in, attr_in))
     det_t.start()
     rec_t = threading.Thread(target=rec_thread, args=(rec_nn, rec_pass))
     rec_t.start()
+    attr_t = threading.Thread(target=attr_thread, args=(attr_nn, attr_pass))
+    attr_t.start()
 
 
     def should_run():
@@ -270,25 +323,47 @@ with dai.Device(create_pipeline()) as device:
                             (0, 255, 0))
                 cv2.putText(debug_frame, f"NN FPS:  {round(fps.tick_fps('det'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX,
                             0.5, (0, 255, 0))
+                cv2.putText(debug_frame, f"REC FPS:  {round(fps.tick_fps('rec'), 1)}", (5, 45), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5, (0, 255, 0))
+                cv2.putText(debug_frame, f"ATTR FPS:  {round(fps.tick_fps('attr'), 1)}", (5, 60), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5, (0, 255, 0))
                 cv2.imshow("rgb", debug_frame)
 
                 if licese_frame is not None:
                     cv2.imshow("license plate", licese_frame)
 
-                stacked = None
+                rec_stacked = None
 
-                for decoded_img, decoded_text in results:
+                for rec_img, rec_text in rec_results:
                     rec_placeholder_img = np.zeros((64, 200, 3), np.uint8)
-                    cv2.putText(rec_placeholder_img, decoded_text, (5, 25), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0))
-                    combined = np.hstack((decoded_img, rec_placeholder_img))
+                    cv2.putText(rec_placeholder_img, rec_text, (5, 25), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0))
+                    rec_combined = np.hstack((rec_img, rec_placeholder_img))
 
-                    if stacked is None:
-                        stacked = combined
+                    if rec_stacked is None:
+                        rec_stacked = rec_combined
                     else:
-                        stacked = np.vstack((stacked, combined))
+                        rec_stacked = np.vstack((rec_stacked, rec_combined))
 
-                if stacked is not None:
-                    cv2.imshow("recognitions", stacked)
+                if rec_stacked is not None:
+                    cv2.imshow("Recognized plates", rec_stacked)
+
+                attr_stacked = None
+
+                for attr_img, attr_color, attr_type, color_prob, type_prob in attr_results:
+                    attr_placeholder_img = np.zeros((72, 200, 3), np.uint8)
+                    cv2.putText(attr_placeholder_img, attr_color, (15, 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0))
+                    cv2.putText(attr_placeholder_img, attr_type, (15, 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0))
+                    cv2.putText(attr_placeholder_img, f"{int(color_prob * 100)}%", (150, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+                    cv2.putText(attr_placeholder_img, f"{int(type_prob * 100)}%", (150, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+                    attr_combined = np.hstack((attr_img, attr_placeholder_img))
+
+                    if attr_stacked is None:
+                        attr_stacked = attr_combined
+                    else:
+                        attr_stacked = np.vstack((attr_stacked, attr_combined))
+
+                if attr_stacked is not None:
+                    cv2.imshow("Attributes", attr_stacked)
 
             key = cv2.waitKey(1)
             if key == ord('q'):
@@ -301,6 +376,7 @@ with dai.Device(create_pipeline()) as device:
 
 det_t.join()
 rec_t.join()
+attr_t.join()
 print("FPS: {:.2f}".format(fps.fps()))
 if not args.camera:
     cap.release()
