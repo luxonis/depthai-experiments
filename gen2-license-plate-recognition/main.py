@@ -80,7 +80,7 @@ def create_pipeline():
         det_xin.out.link(det_nn.input)
 
     rec_nn = pipeline.createNeuralNetwork()
-    rec_nn.setBlobPath(str((Path(__file__).parent / Path('models/text-recognition-0012.blob')).resolve().absolute()))
+    rec_nn.setBlobPath(str((Path(__file__).parent / Path('models/license-plate-recognition-barrier-0007.blob')).resolve().absolute()))
     rec_nn.input.setBlocking(False)
     rec_nn.setNumInferenceThreads(2)
     rec_nn.input.setQueueSize(1)
@@ -96,55 +96,6 @@ def create_pipeline():
 
     print("Pipeline created.")
     return pipeline
-
-
-class CTCCodec:
-    """ Convert between text-label and text-index """
-
-    def __init__(self, characters):
-        # characters (str): set of the possible characters.
-        dict_character = list(characters)
-
-        self.dict = {}
-        for i, char in enumerate(dict_character):
-            self.dict[char] = i + 1
-
-        self.characters = dict_character
-
-    def decode(self, preds):
-        """ convert text-index into text-label. """
-        texts = []
-        index = 0
-        # Select max probabilty (greedy decoding) then decode index to character
-        preds = preds.astype(np.float16)
-        preds_index = np.argmax(preds, 2)
-        preds_index = preds_index.transpose(1, 0)
-        preds_index_reshape = preds_index.reshape(-1)
-        preds_sizes = np.array([preds_index.shape[1]] * preds_index.shape[0])
-
-        for l in preds_sizes:
-            t = preds_index_reshape[index:index + l]
-
-            # NOTE: t might be zero size
-            if t.shape[0] == 0:
-                continue
-
-            char_list = []
-            for i in range(l):
-                # removing repeated characters and blank.
-                if t[i] != 0 and (not (i > 0 and t[i - 1] == t[i])):
-                    if self.characters[t[i]] != '#':
-                        char_list.append(self.characters[t[i]])
-            text = ''.join(char_list)
-            texts.append(text)
-
-            index += l
-
-        return texts
-
-
-characters = '0123456789abcdefghijklmnopqrstuvwxyz#'
-codec = CTCCodec(characters)
 
 
 class FPSHandler:
@@ -219,11 +170,11 @@ def det_thread(det_queue, det_pass, rec_queue):
                 licese_frame = orig_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
                 tstamp = time.monotonic()
                 img = dai.ImgFrame()
-                img.setData(to_planar(licese_frame, (120, 32)))
+                img.setData(to_planar(licese_frame, (94, 24)))
                 img.setTimestamp(tstamp)
                 img.setType(dai.RawImgFrame.Type.BGR888p)
-                img.setWidth(120)
-                img.setHeight(32)
+                img.setWidth(94)
+                img.setHeight(24)
                 rec_queue.send(img)
 
             fps.tick('det')
@@ -231,16 +182,29 @@ def det_thread(det_queue, det_pass, rec_queue):
             continue
 
 
+items = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "<Anhui>", "<Beijing>", "<Chongqing>", "<Fujian>", "<Gansu>",
+         "<Guangdong>", "<Guangxi>", "<Guizhou>", "<Hainan>", "<Hebei>", "<Heilongjiang>", "<Henan>", "<HongKong>",
+         "<Hubei>", "<Hunan>", "<InnerMongolia>", "<Jiangsu>", "<Jiangxi>", "<Jilin>", "<Liaoning>", "<Macau>",
+         "<Ningxia>", "<Qinghai>", "<Shaanxi>", "<Shandong>", "<Shanghai>", "<Shanxi>", "<Sichuan>", "<Tianjin>",
+         "<Tibet>", "<Xinjiang>", "<Yunnan>", "<Zhejiang>", "<police>", "A", "B", "C", "D", "E", "F", "G", "H", "I",
+         "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+
+
 def rec_thread(q_rec, q_pass):
     global results
 
     while running:
         try:
-            rec_data = np.array(q_rec.get().getFirstLayerFp16()).reshape(30, 1, 37)
+            rec_data = q_rec.get().getFirstLayerFp16()
             rec_frame = q_pass.get().getCvFrame()
         except RuntimeError:
             continue
-        decoded_text = codec.decode(rec_data)[0]
+
+        decoded_text = ""
+        for idx in rec_data:
+            if idx == -1:
+                break
+            decoded_text += items[int(idx)]
         results = [(cv2.resize(rec_frame, (200, 64)), decoded_text)] + results[:9]
         fps.tick_fps('rec')
 
@@ -315,7 +279,7 @@ with dai.Device(create_pipeline()) as device:
 
                 for decoded_img, decoded_text in results:
                     rec_placeholder_img = np.zeros((64, 200, 3), np.uint8)
-                    cv2.putText(rec_placeholder_img, decoded_text, (5, 25), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 255, 0))
+                    cv2.putText(rec_placeholder_img, decoded_text, (5, 25), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0))
                     combined = np.hstack((decoded_img, rec_placeholder_img))
 
                     if stacked is None:
