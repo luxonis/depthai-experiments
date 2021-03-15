@@ -9,7 +9,6 @@ import cv2
 import depthai as dai
 print('depthai module: ', dai.__file__)
 import numpy as np
-from imutils.video import FPS
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
@@ -45,7 +44,6 @@ def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
-    pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
 
     if camera:
         # ColorCamera
@@ -66,7 +64,11 @@ def create_pipeline():
     # NeuralNetwork
     print("Creating Person Detection Neural Network...")
     detection_nn = pipeline.createMobileNetDetectionNetwork()
-    detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013_openvino_2020.1_4shave.blob").resolve().absolute()))
+    if camera:
+        detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013_openvino_2021.2_6shave.blob").resolve().absolute()))
+    else:
+        detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013_openvino_2021.2_8shave.blob").resolve().absolute()))
+
     # Confidence
     detection_nn.setConfidenceThreshold(0.7)
     # Increase threads for detection
@@ -99,7 +101,11 @@ def create_pipeline():
     reid_in = pipeline.createXLinkIn()
     reid_in.setStreamName("reid_in")
     reid_nn = pipeline.createNeuralNetwork()
-    reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031_openvino_2020.1_4shave.blob").resolve().absolute()))
+    if camera:
+        reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0288_openvino_2021.2_6shave.blob").resolve().absolute()))
+    else:
+        reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0288_openvino_2021.2_8shave.blob").resolve().absolute()))
+
     
     # Decrease threads for reidentification
     reid_nn.setNumInferenceThreads(1)
@@ -193,7 +199,7 @@ class Main:
                     bbox = frame_norm(infered_frame, raw_bbox)
                     det_frame = infered_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
                     nn_data = dai.NNData()
-                    nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
+                    nn_data.setLayer("data", to_planar(det_frame, (128, 256)))
                     self.device.getInputQueue("reid_in").send(nn_data)
 
                  
