@@ -4,11 +4,12 @@ This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pip
 First, a license plate is detected on the image and then the cropped license frame is sent to text detection network, 
 which tries to decode the license plates texts
 
-> :warning: **This demo is adjusted to detect and recognize Chinese License**! It may not work with other license plates
+
+> :warning: **This demo is adjusted to detect and recognize chinese license plates**! It may not work with other license plates
 
 ## Demo
 
-[![Gen2 License Plates recognition](https://user-images.githubusercontent.com/5244214/111067985-158f4000-84c7-11eb-9cea-b276a516342d.gif)](https://www.youtube.com/watch?v=buZOWnL9vm0 "License Plates recognition on DepthAI")
+[![Gen2 License Plates recognition](https://user-images.githubusercontent.com/5244214/111202991-c62f3980-85c4-11eb-8bce-a3c517abeca1.gif)](https://www.youtube.com/watch?v=tB_-mVVNIro "License Plates recognition on DepthAI")
 
 ## Pre-requisites
 
