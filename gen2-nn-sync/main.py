@@ -20,11 +20,11 @@ cam_rgb.setInterleaved(False)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str((Path(__file__).parent / Path('face-detection-retail-0004.blob')).resolve().absolute()))
+detection_nn.setBlobPath(str((Path(__file__).parent / Path('face-detection-retail-0004_openvino_2021.2_6shave.blob')).resolve().absolute()))
 cam_rgb.preview.link(detection_nn.input)
 
 landmarks_nn = pipeline.createNeuralNetwork()
-landmarks_nn.setBlobPath(str((Path(__file__).parent / Path('landmarks-regression-retail-0009.blob')).resolve().absolute()))
+landmarks_nn.setBlobPath(str((Path(__file__).parent / Path('landmarks-regression-retail-0009_openvino_2021.2_6shave.blob')).resolve().absolute()))
 
 # Create outputs
 xin_rgb = pipeline.createXLinkIn()
