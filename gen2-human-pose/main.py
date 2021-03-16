@@ -39,8 +39,6 @@ def to_planar(arr: np.ndarray, shape: tuple) -> list:
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
-    pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
-    
 
     if args.camera:
         # ColorCamera
@@ -57,7 +55,7 @@ def create_pipeline():
     # NeuralNetwork
     print("Creating Human Pose Estimation Neural Network...")
     pose_nn = pipeline.createNeuralNetwork()
-    pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001.blob").resolve().absolute()))
+    pose_nn.setBlobPath(str(Path("models/human-pose-estimation-0001-2021.2-8shave.blob").resolve().absolute()))
     pose_nn_xout = pipeline.createXLinkOut()
     pose_nn_xout.setStreamName("pose_nn")
     pose_nn.out.link(pose_nn_xout.input)
@@ -119,7 +117,7 @@ with dai.Device(create_pipeline()) as device:
             debug_frame = frame.copy()
 
             if not args.camera:
-                nn_data = depthai.NNData()
+                nn_data = dai.NNData()
                 nn_data.setLayer("input", to_planar(frame, (456, 256)))
                 pose_in.send(nn_data)
 

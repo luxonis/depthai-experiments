@@ -41,3 +41,9 @@ To use with DepthAI 4K RGB camera, use instead
 ```
 python3 main.py -cam
 ``` 
+
+
+Note: Intel provides 3 different pre-trained models for human pose estimation:
+- human-pose-estimation-0001 (the one that we are using)
+- human-pose-estimation-3d-0001
+- single-human-pose-estimation-0001
