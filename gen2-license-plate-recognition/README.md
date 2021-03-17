@@ -35,7 +35,7 @@ optional arguments:
 To use with a video file, run the script with the following arguments
 
 ```
-python3 main.py -vid ./chineese_traffic.mp4
+python3 main.py -vid ./chinese_traffic.mp4
 ```
 
 To use with DepthAI 4K RGB camera, use instead
