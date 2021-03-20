@@ -37,7 +37,6 @@ print("depthai version:", dai.__version__)
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-cam.setEnablePreviewStillVideoStreams(False)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
 
 if 'isp' in streams:
