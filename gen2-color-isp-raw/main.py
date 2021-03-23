@@ -33,13 +33,15 @@ parser.add_argument('-u', '--enable_uvc', default=False, action="store_true",
                          'Needs a sensor resolution of 4K (with ISP 2x downscale), or 1080p')
 parser.add_argument('-1', '--res_1080p',  default=False, action="store_true",
                     help='Set sensor res to 1080p, instead of 4K (with UVC) / 12MP')
+parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
+                    help='Enable the color RAW stream')
 args = parser.parse_args()
 
 streams = []
 # Enable none, one or both streams
 streams.append('isp')
-# Note: comment out 'raw' when not capturing for IQ tuning, for a smoother streaming
-streams.append('raw')
+if args.enable_raw:
+    streams.append('raw')
 
 ''' Packing scheme for RAW10 - MIPI CSI-2
 - 4 pixels: p0[9:0], p1[9:0], p2[9:0], p3[9:0]
