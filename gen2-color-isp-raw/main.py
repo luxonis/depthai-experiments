@@ -18,13 +18,22 @@ To go back to auto controls:
   'E' - autoexposure
   'F' - autofocus (continuous)
 Other controls:
-'1' - AWB mode toggle
-'2' - AWB lock (true / false)
-'3' - AE compensation decrease (min: -9)
-'4' - AE compensation increase (max: +9)
-'5' - AE lock (true / false)
-'6' - anti-banding(flicker) mode change
-'7' - effect mode toggle
+'1' - AWB lock (true / false)
+'2' - AE lock (true / false)
+'3' - Select control: AWB mode
+'4' - Select control: AE compensation
+'5' - Select control: anti-banding/flicker mode
+'6' - Select control: effect mode
+'7' - Select control: brightness
+'8' - Select control: contrast
+'9' - Select control: saturation
+'0' - Select control: sharpness
+'[' - Select control: luma denoise
+']' - Select control: chroma denoise
+
+For the 'Select control: ...' options, use these keys to modify the value:
+  '-' or '_' to decrease
+  '+' or '=' to increase
 '''
 
 parser = argparse.ArgumentParser()
@@ -174,6 +183,13 @@ effect_mode_list = [
 ae_comp = 0  # Valid: -9 .. +9
 ae_lock = False
 awb_lock = False
+saturation = 0
+contrast = 0
+brightness = 0
+sharpness = 0
+luma_denoise = 0
+chroma_denoise = 0
+control = 'none'
 
 def clamp(num, v0, v1): return max(v0, min(num, v1))
 
@@ -260,45 +276,82 @@ while True:
         ctrl.setManualExposure(exp_time, sens_iso)
         controlQueue.send(ctrl)
     elif key == ord('1'):
-        awb_mode_idx = (awb_mode_idx + 1) % len(awb_mode_list)
-        awb_mode = awb_mode_list[awb_mode_idx]
-        print("Auto white balance mode:", awb_mode)
-        ctrl = dai.CameraControl()
-        ctrl.setAutoWhiteBalanceMode(awb_mode)
-        controlQueue.send(ctrl)
-    elif key == ord('2'):
         awb_lock = not awb_lock
         print("Auto white balance lock:", awb_lock)
         ctrl = dai.CameraControl()
         ctrl.setAutoWhiteBalanceLock(awb_lock)
         controlQueue.send(ctrl)
-    elif key == ord('3') or key == ord('4'):
-        if key == ord('3'): ae_comp -= 1
-        if key == ord('4'): ae_comp += 1
-        ae_comp = clamp(ae_comp, -9, 9)
-        print("Auto exposure compensation:", ae_comp)
-        ctrl = dai.CameraControl()
-        ctrl.setAutoExposureCompensation(ae_comp)
-        controlQueue.send(ctrl)
-    elif key == ord('5'):
+    elif key == ord('2'):
         ae_lock = not ae_lock
         print("Auto exposure lock:", ae_lock)
         ctrl = dai.CameraControl()
         ctrl.setAutoExposureLock(ae_lock)
         controlQueue.send(ctrl)
-    elif key == ord('6'):
-        anti_banding_mode_idx = (anti_banding_mode_idx + 1) % len(anti_banding_mode_list)
-        anti_banding_mode = anti_banding_mode_list[anti_banding_mode_idx]
-        print("Anti-banding mode:", anti_banding_mode)
+    elif key >= 0 and chr(key) in '34567890[]':
+        if   key == ord('3'): control = 'awb_mode'
+        elif key == ord('4'): control = 'ae_comp'
+        elif key == ord('5'): control = 'anti_banding_mode'
+        elif key == ord('6'): control = 'effect_mode'
+        elif key == ord('7'): control = 'brightness'
+        elif key == ord('8'): control = 'contrast'
+        elif key == ord('9'): control = 'saturation'
+        elif key == ord('0'): control = 'sharpness'
+        elif key == ord('['): control = 'luma_denoise'
+        elif key == ord(']'): control = 'chroma_denoise'
+        print("Selected control:", control)
+    elif key in [ord('-'), ord('_'), ord('+'), ord('=')]:
+        change = 0
+        if key in [ord('-'), ord('_')]: change = -1
+        if key in [ord('+'), ord('=')]: change = 1
         ctrl = dai.CameraControl()
-        ctrl.setAntiBandingMode(anti_banding_mode)
-        controlQueue.send(ctrl)
-    elif key == ord('7'):
-        effect_mode_idx = (effect_mode_idx + 1) % len(effect_mode_list)
-        effect_mode = effect_mode_list[effect_mode_idx]
-        print("Effect mode:", effect_mode)
-        ctrl = dai.CameraControl()
-        ctrl.setEffectMode(effect_mode)
+        if control == 'none':
+            print("Please select a control first using keys 3..9 0 [ ]")
+        elif control == 'ae_comp':
+            ae_comp = clamp(ae_comp + change, -9, 9)
+            print("Auto exposure compensation:", ae_comp)
+            ctrl.setAutoExposureCompensation(ae_comp)
+        elif control == 'anti_banding_mode':
+            cnt = len(anti_banding_mode_list)
+            anti_banding_mode_idx = (anti_banding_mode_idx + cnt + change) % cnt
+            anti_banding_mode = anti_banding_mode_list[anti_banding_mode_idx]
+            print("Anti-banding mode:", anti_banding_mode)
+            ctrl.setAntiBandingMode(anti_banding_mode)
+        elif control == 'awb_mode':
+            cnt = len(awb_mode_list)
+            awb_mode_idx = (awb_mode_idx + cnt + change) % cnt
+            awb_mode = awb_mode_list[awb_mode_idx]
+            print("Auto white balance mode:", awb_mode)
+            ctrl.setAutoWhiteBalanceMode(awb_mode)
+        elif control == 'effect_mode':
+            cnt = len(effect_mode_list)
+            effect_mode_idx = (effect_mode_idx + cnt + change) % cnt
+            effect_mode = effect_mode_list[effect_mode_idx]
+            print("Effect mode:", effect_mode)
+            ctrl.setEffectMode(effect_mode)
+        elif control == 'brightness':
+            brightness = clamp(brightness + change, -10, 10)
+            print("Brightness:", brightness)
+            ctrl.setBrightness(brightness)
+        elif control == 'contrast':
+            contrast = clamp(contrast + change, -10, 10)
+            print("Contrast:", contrast)
+            ctrl.setContrast(contrast)
+        elif control == 'saturation':
+            saturation = clamp(saturation + change, -10, 10)
+            print("Saturation:", saturation)
+            ctrl.setSaturation(saturation)
+        elif control == 'sharpness':
+            sharpness = clamp(sharpness + change, 0, 4)
+            print("Sharpness:", sharpness)
+            ctrl.setSharpness(sharpness)
+        elif control == 'luma_denoise':
+            luma_denoise = clamp(luma_denoise + change, 0, 4)
+            print("Luma denoise:", luma_denoise)
+            ctrl.setLumaDenoise(luma_denoise)
+        elif control == 'chroma_denoise':
+            chroma_denoise = clamp(chroma_denoise + change, 0, 4)
+            print("Chroma denoise:", chroma_denoise)
+            ctrl.setChromaDenoise(chroma_denoise)
         controlQueue.send(ctrl)
     elif key == ord('q'):
         break
