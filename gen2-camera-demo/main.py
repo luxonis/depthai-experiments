@@ -14,6 +14,39 @@ are enabled, then:
  - with subpixel, if both depth and disparity are used, only depth is valid.
 '''
 
+
+M_right = np.array([[855.000122,    0.000000,  644.814514],
+                    [0.000000,  855.263794,  407.305450],
+                    [0.000000,    0.000000,    1.000000]]) 
+M_right [1,2] -= 40
+
+R2_right = np.array([[0.999763,   -0.012779,   -0.017639],
+                     [0.012732,    0.999915,   -0.002802],
+                     [0.017673,    0.002577,    0.999840]])
+
+R       = np.array([[0.999986,    0.004985,    0.001887],
+              [-0.004995,    0.999974,    0.005245],
+              [-0.001861,   -0.005254,    0.999984]])
+
+R_inv = np.linalg.inv(R)
+
+M_RGB = np.array([[1479.458984,    0.000000,  950.694458],
+                  [0.000000, 1477.587158,  530.697632],
+                  [0.000000,    0.000000,    1.000000]])
+
+scale_width = 1280/1920
+m_scale = [[scale_width,      0,   0],
+            [0,         scale_width,        0],
+            [0,             0,         1]]
+
+M_RGB = np.matmul(m_scale, M_RGB)
+
+H = np.matmul(np.linalg.inv(R2_right), np.linalg.inv(M_right))
+
+alignCenter = np.matmul(M_RGB, R_inv)
+
+alignCenterUndoHomo = np.matmul(alignCenter, H)
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-pcl", "--pointcloud", help="enables point cloud convertion and visualization", default=False, action="store_true")
 parser.add_argument("-static", "--static_frames", default=False, action="store_true",
@@ -282,10 +315,10 @@ def convert_to_cv2_frame(name, image):
         with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
             depth = (disp_levels * baseline * focal / frame).astype(np.uint16)
 
-        if 1:  # Optionally, extend disparity range to better visualize it
+        if 0:  # Optionally, extend disparity range to better visualize it
             frame = (frame * 255. / max_disp).astype(np.uint8)
 
-        if 1:  # Optionally, apply a color map
+        if 0:  # Optionally, apply a color map
             frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
             # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
 
@@ -305,8 +338,10 @@ def convert_to_cv2_frame(name, image):
             last_rectif_right = frame
     return frame
 
-
+color = None
+depth = None
 def test_pipeline():
+    global color, depth
     pipeline = dai.Pipeline()
     streams = build_pipeline(pipeline)
 
@@ -374,6 +409,24 @@ def test_pipeline():
                 # Skip some streams for now, to reduce CPU load
                 if name in ['left', 'right']: continue
                 frame = convert_to_cv2_frame(name, image)
+
+                if name == 'rgb_video':
+                    color = frame
+                if name == 'disparity':
+                    depth = frame                    
+                    # if 
+                    # alignedDepth = depth
+                    alignedDepth = cv2.warpPerspective(depth, alignCenterUndoHomo, depth.shape[::-1],
+                                                cv2.INTER_CUBIC +
+                                                cv2.WARP_FILL_OUTLIERS +
+                                                cv2.WARP_INVERSE_MAP)
+                    alignedDepth = (alignedDepth * 255. / 96).astype(np.uint8)
+                    alignedDepth = cv2.applyColorMap(alignedDepth, cv2.COLORMAP_HOT)
+                    added_image = cv2.addWeighted(color,0.6,alignedDepth,0.3,0)
+                    cv2.imshow('RGBD overlay ', added_image)
+                    # frame = (frame * 255. / 96).astype(np.uint8)
+                    # frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
+
                 cv2.imshow(name, frame)
             if cv2.waitKey(1) == ord('q'):
                 break
