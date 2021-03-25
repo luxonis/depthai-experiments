@@ -10,54 +10,85 @@ import argparse
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
 are enabled, then:
- - depth output is FP16. TODO enable U16.
  - median filtering is disabled on device. TODO enable.
- - with subpixel, either depth or disparity has valid data.
-
-Otherwise, depth output is U16 (mm) and median is functional.
-But like on Gen1, either depth or disparity has valid data. TODO enable both.
+ - with subpixel, if both depth and disparity are used, only depth is valid.
 '''
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-pcl", "--pointcloud", help="enables point cloud convertion and visualization", default=False, action="store_true")
 parser.add_argument("-static", "--static_frames", default=False, action="store_true",
                     help="Run stereo on static frames passed from host 'dataset' folder")
-parser.add_argument("-rgb", "--enable_rgb", default=False, action="store_true",
-                    help="Add RGB camera to the pipeline")
+parser.add_argument("-rgb", "--enable_rgb", const="1080", choices={"1080", "4k", "12mp"}, nargs="?",
+                    help="Add RGB camera to the pipeline, while also optionally "
+                    "selecting resolution (default: %(const)s)")
+parser.add_argument("-depth", "--enable_depth", default=False, action="store_true",
+                    help="Enable StereoDepth 'depth' output. By default only disparity "
+                    "is enabled")
+parser.add_argument("-conf", "--enable_confidence", default=False, action="store_true",
+                    help="Enable StereoDepth confidence map output")
 parser.add_argument("-ns", "--no_stereo", default=False, action="store_true",
                     help="Disable stereo")
-parser.add_argument("-pw", "--preview_width", type=int, default=540,
+parser.add_argument("-lrc", "--lr_check", type=int, default=1, choices={0, 1},
+                    help="Enable 'Left-Right Check' mode, providing better "
+                    "handling for occlusions. App default: %(default)s")
+parser.add_argument("-ext", "--extended_disparity", type=int, default=0, choices={0, 1},
+                    help="Enable 'Extended Disparity' mode, for a closer-in minimum "
+                    "distance, disparity range is doubled. App default: %(default)s")
+parser.add_argument("-sub", "--subpixel", type=int, default=1, choices={0, 1},
+                    help="Enable 'Subpixel' mode, for better accuracy at longer "
+                    "distance, fractional disparity 32-levels. App default: %(default)s")
+parser.add_argument("-med", "--median_size", default=7, type=int, choices={0, 3, 5, 7},
+                    help="Disparity / depth median filter kernel size (N x N) . "
+                    "0 = filtering disabled. Default: %(default)s")
+parser.add_argument("-pw", "--preview_width", type=int, default=300,
                     help="RGB preview width")
-parser.add_argument("-ph", "--preview_height", type=int, default=540,
+parser.add_argument("-ph", "--preview_height", type=int, default=300,
                     help="RGB preview height")
 parser.add_argument("-manip", "--preview_manip", default=False, action="store_true",
                     help="Use ImageManip to generate RGB preview")
+parser.add_argument("-nn", "--run_nn", const="rgb", choices={"rgb", "left", "right"}, nargs="?",
+                    help="Run NN on the selected camera (default: %(const)s)")
+
 args = parser.parse_args()
 
-point_cloud    = args.pointcloud   # Create point cloud visualizer. Depends on 'out_rectified'
+point_cloud = args.pointcloud  # Create point cloud visualizer. Depends on 'out_rectified'
+print(args.enable_rgb)
 enable_rgb = args.enable_rgb
 enable_stereo = not args.no_stereo
+enable_nn = args.run_nn
+if enable_nn == 'rgb': enable_rgb = True
 
 # StereoDepth config options. TODO move to command line options
-source_camera  = not args.static_frames
-out_depth      = False  # Disparity by default
-out_rectified  = True   # Output and display rectified streams
-lrcheck  = True   # Better handling for occlusions
-extended = False  # Closer-in minimum depth, disparity range is doubled 
-subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
-# Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7 
-median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+source_camera = not args.static_frames
+out_depth = args.enable_depth
+out_confidence = args.enable_confidence
+out_rectified = 1  # Output and display rectified streams
+lrcheck = args.lr_check
+extended = args.extended_disparity
+subpixel = args.subpixel
 
-# Sanitize some incompatible options
-if lrcheck or extended or subpixel:
-    median   = dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF # TODO
+median_opts = {
+    0: dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF,
+    3: dai.StereoDepthProperties.MedianFilter.KERNEL_3x3,
+    5: dai.StereoDepthProperties.MedianFilter.KERNEL_5x5,
+    7: dai.StereoDepthProperties.MedianFilter.KERNEL_7x7,
+}
+median = median_opts.get(args.median_size)
+
+
+rgb_res_opts = {
+    '1080': dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+    '4k'  : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+    '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+}
+rgb_res = rgb_res_opts.get(args.enable_rgb)
 
 print("StereoDepth config options:")
 print("    Left-Right check:  ", lrcheck)
 print("    Extended disparity:", extended)
 print("    Subpixel:          ", subpixel)
 print("    Median filtering:  ", median)
+print("    Depth output:      ", out_depth)
 
 # TODO add API to read this from device / calib data
 right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
@@ -73,141 +104,156 @@ if point_cloud:
     else:
         print("Disabling point-cloud visualizer, as out_rectified is not set")
 
-def add_rgb(pipeline):
-    print("Adding to pipeline: RGB CAM -> XLINK OUT")
-    cam          = pipeline.createColorCamera()
-    xout_preview = pipeline.createXLinkOut()
-    xout_video   = pipeline.createXLinkOut()
 
-    if args.preview_manip:
-        print("rgb_preview generated with ImageManip")
-        manip = pipeline.createImageManip()
-        manip.setResize(args.preview_width, args.preview_height)
-        manip.setMaxOutputFrameSize(1920 * 1080 * 3)
-        #manip.setKeepAspectRatio(False)
-        cam.setPreviewSize(1920, 1080)
-    else:
-        print("rgb_preview generated by ColorCamera")
+def build_pipeline(pipeline):
+    streams = []
+    if enable_rgb:
+        print("Adding to pipeline: RGB CAM -> XLINK OUT")
+        cam = pipeline.createColorCamera()
+        xout_preview = pipeline.createXLinkOut()
+        xout_video = pipeline.createXLinkOut()
+    
         cam.setPreviewSize(args.preview_width, args.preview_height)
-        #cam.setPreviewKeepAspectRatio(False)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-    cam.initialControl.setManualFocus(130)
+        # cam.setPreviewKeepAspectRatio(False)
+        cam.setResolution(rgb_res)
+        cam.setIspScale(2, 3)
+        cam.setInterleaved(False)
+        cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+        cam.initialControl.setManualFocus(130)
+    
+        xout_preview.setStreamName('rgb_preview')
+        xout_video  .setStreamName('rgb_video')
+    
+        streams.append('rgb_video')
+        if 1:
+            cam.isp.link(xout_video.input)
+        else:
+            cam.video.link(xout_video.input)
+    
+        if enable_nn:
+            streams.append('rgb_preview')
+            cam.preview.link(xout_preview.input)
 
-    xout_preview.setStreamName('rgb_preview')
-    xout_video  .setStreamName('rgb_video')
+# TODO ISP out test
+    # print("==== ", cam.getIspSize(), cam.getIspWidth(), cam.getIspHeight())
 
-    if args.preview_manip:
-        cam.preview.link(manip.inputImage)
-        manip.out.link(xout_preview.input)
-    else:
-        cam.preview.link(xout_preview.input)
-    cam.video  .link(xout_video.input)
+    if enable_stereo:
+        print("Adding Stereo Depth to pipeline: ", end='')
+        if source_camera:
+            print("MONO CAMS -> STEREO -> XLINK OUT")
+        else:
+            print("XLINK IN -> STEREO -> XLINK OUT")
+    
+        if source_camera:
+            cam_left = pipeline.createMonoCamera()
+            cam_right = pipeline.createMonoCamera()
+        else:
+            cam_left = pipeline.createXLinkIn()
+            cam_right = pipeline.createXLinkIn()
+        stereo = pipeline.createStereoDepth()
+        xout_left = pipeline.createXLinkOut()
+        xout_right = pipeline.createXLinkOut()
+        xout_depth = pipeline.createXLinkOut()
+        xout_disparity = pipeline.createXLinkOut()
+        xout_confidence = pipeline.createXLinkOut()
+        xout_rectif_left = pipeline.createXLinkOut()
+        xout_rectif_right = pipeline.createXLinkOut()
+    
+        if source_camera:
+            cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
+            cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+            for c in [cam_left, cam_right]:  # Common config
+                c.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+                c.setFps(30.0)
+        else:
+            cam_left .setStreamName('in_left')
+            cam_right.setStreamName('in_right')
+    
+    #    stereo.setOutputDepth(out_depth)
+    #    stereo.setOutputRectified(out_rectified)
+        #stereo.setBaselineOverrideCm(123.4)
+        #stereo.setFovOverrideDegrees(1)
+        stereo.setConfidenceThreshold(200)
+        stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout
+        stereo.setMedianFilter(median)  # KERNEL_7x7 default
+        stereo.setLeftRightCheck(lrcheck)
+        stereo.setExtendedDisparity(extended)
+        stereo.setSubpixel(subpixel)
+        stereo.setDepthAlign(dai.StereoDepthProperties.DepthAlign.CENTER)
+        if source_camera:
+            # Default: EEPROM calib is used, and resolution taken from MonoCamera nodes
+            # stereo.loadCalibrationFile(path)
+            pass
+        else:
+            stereo.setEmptyCalibration()  # Set if the input frames are already rectified
+            stereo.setInputResolution(1280, 720)
+    
+        xout_left        .setStreamName('left')
+        xout_right       .setStreamName('right')
+        xout_depth       .setStreamName('depth')
+        xout_disparity   .setStreamName('disparity')
+        xout_confidence  .setStreamName('confidence')
+        xout_rectif_left .setStreamName('rectified_left')
+        xout_rectif_right.setStreamName('rectified_right')
 
-    streams = ['rgb_preview', 'rgb_video']
+        streams.extend(['left', 'right'])
 
-    return streams
+        cam_left .out        .link(stereo.left)
+        cam_right.out        .link(stereo.right)
+        stereo.syncedLeft    .link(xout_left.input)
+        stereo.syncedRight   .link(xout_right.input)
+        if out_rectified:
+            stereo.rectifiedLeft .link(xout_rectif_left.input)
+            stereo.rectifiedRight.link(xout_rectif_right.input)
+            streams.extend(['rectified_left', 'rectified_right'])
+        if not (out_depth and subpixel):
+            stereo.disparity     .link(xout_disparity.input)
+            streams.append('disparity')
+        if out_depth:
+            stereo.depth.link(xout_depth.input)
+            streams.append('depth')
+        if out_confidence:
+            stereo.confidence.link(xout_confidence.input)
+            streams.append('confidence')
 
-def create_mono_cam_pipeline():
-    print("Creating pipeline: MONO CAMS -> XLINK OUT")
-    pipeline = dai.Pipeline()
+    if enable_nn:
+        mobilenet_path = '/home/user/Downloads/mobilenet.blob'
+        detection_nn = pipeline.createNeuralNetwork()
+        detection_nn.setBlobPath(mobilenet_path)
+        if enable_nn == 'rgb':
+            cam.preview.link(detection_nn.input)
+        else:
+            manip = pipeline.createImageManip()
+            manip.setResize(args.preview_width, args.preview_height)
+#            manip.setResizeThumbnail(args.preview_width, args.preview_height, 0, 0, 0)
 
-    cam_left   = pipeline.createMonoCamera()
-    cam_right  = pipeline.createMonoCamera()
-    xout_left  = pipeline.createXLinkOut()
-    xout_right = pipeline.createXLinkOut()
+            manip.setMaxOutputFrameSize(1920 * 1080 * 3)
+            manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            xout_manip = pipeline.createXLinkOut()
+            xout_manip.setStreamName('manip')
+            
+            # manip.setKeepAspectRatio(False)
+            if enable_nn == 'left':
+                stereo.rectifiedLeft.link(manip.inputImage)
+            elif enable_nn == 'right':
+                stereo.rectifiedRight.link(manip.inputImage)
+            manip.out.link(xout_manip.input)
+            manip.out.link(detection_nn.input)
+            
+            streams.append("manip")
 
-    cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
-    cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-    for cam in [cam_left, cam_right]: # Common config
-        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-        #cam.setFps(20.0)
+        xout_nn = pipeline.createXLinkOut()
+        xout_nn.setStreamName("nn")
+        detection_nn.out.link(xout_nn.input)
 
-    xout_left .setStreamName('left')
-    xout_right.setStreamName('right')
-
-    cam_left .out.link(xout_left.input)
-    cam_right.out.link(xout_right.input)
-
-    streams = ['left', 'right']
-
-    return pipeline, streams
-
-def add_stereo_depth(pipeline, from_camera=True):
-    print("Adding Stereo Depth to pipeline: ", end='')
-    if from_camera:
-        print("MONO CAMS -> STEREO -> XLINK OUT")
-    else:
-        print("XLINK IN -> STEREO -> XLINK OUT")
-
-    if from_camera:
-        cam_left      = pipeline.createMonoCamera()
-        cam_right     = pipeline.createMonoCamera()
-    else:
-        cam_left      = pipeline.createXLinkIn()
-        cam_right     = pipeline.createXLinkIn()
-    stereo            = pipeline.createStereoDepth()
-    xout_left         = pipeline.createXLinkOut()
-    xout_right        = pipeline.createXLinkOut()
-    xout_depth        = pipeline.createXLinkOut()
-    xout_disparity    = pipeline.createXLinkOut()
-    xout_rectif_left  = pipeline.createXLinkOut()
-    xout_rectif_right = pipeline.createXLinkOut()
-
-    if from_camera:
-        cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
-        cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-        for cam in [cam_left, cam_right]: # Common config
-            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-            #cam.setFps(20.0)
-    else:
-        cam_left .setStreamName('in_left')
-        cam_right.setStreamName('in_right')
-
-    stereo.setOutputDepth(out_depth)
-    stereo.setOutputRectified(out_rectified)
-    stereo.setConfidenceThreshold(200)
-    stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
-    stereo.setMedianFilter(median) # KERNEL_7x7 default
-    stereo.setLeftRightCheck(lrcheck)
-    stereo.setExtendedDisparity(extended)
-    stereo.setSubpixel(subpixel)
-    if from_camera:
-        # Default: EEPROM calib is used, and resolution taken from MonoCamera nodes
-        #stereo.loadCalibrationFile(path)
-        pass
-    else:
-        stereo.setEmptyCalibration() # Set if the input frames are already rectified
-        stereo.setInputResolution(1280, 720)
-
-    xout_left        .setStreamName('left')
-    xout_right       .setStreamName('right')
-    xout_depth       .setStreamName('depth')
-    xout_disparity   .setStreamName('disparity')
-    xout_rectif_left .setStreamName('rectified_left')
-    xout_rectif_right.setStreamName('rectified_right')
-
-    cam_left .out        .link(stereo.left)
-    cam_right.out        .link(stereo.right)
-    stereo.syncedLeft    .link(xout_left.input)
-    stereo.syncedRight   .link(xout_right.input)
-    stereo.depth         .link(xout_depth.input)
-    stereo.disparity     .link(xout_disparity.input)
-    stereo.rectifiedLeft .link(xout_rectif_left.input)
-    stereo.rectifiedRight.link(xout_rectif_right.input)
-
-    streams = ['left', 'right']
-    if out_rectified:
-        streams.extend(['rectified_left', 'rectified_right'])
-    streams.extend(['disparity', 'depth'])
+        streams.append('nn')
 
     return streams
 
 # The operations done here seem very CPU-intensive, TODO
 def convert_to_cv2_frame(name, image):
     global last_rectif_right
-    baseline = 75 #mm
+    baseline = 75  # mm
     focal = right_intrinsic[0][0]
     max_disp = 96
     disp_type = np.uint8
@@ -221,37 +267,37 @@ def convert_to_cv2_frame(name, image):
 
     data, w, h = image.getData(), image.getWidth(), image.getHeight()
     # TODO check image frame type instead of name
-    if name == 'rgb_preview':
+    if name in ['rgb_preview', 'manip']:
         frame = np.array(data).reshape((3, h, w)).transpose(1, 2, 0).astype(np.uint8)
-    elif name == 'rgb_video': # YUV NV12
+    elif name == 'rgb_video':  # YUV NV12
         yuv = np.array(data).reshape((h * 3 // 2, w)).astype(np.uint8)
-        frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
+        frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_IYUV)
     elif name == 'depth':
         # TODO: this contains FP16 with (lrcheck or extended or subpixel)
         frame = np.array(data).astype(np.uint8).view(np.uint16).reshape((h, w))
     elif name == 'disparity':
-        disp = np.array(data).astype(np.uint8).view(disp_type).reshape((h, w))
+        frame = np.array(data).astype(np.uint8).view(disp_type).reshape((h, w))
 
         # Compute depth from disparity (32 levels)
-        with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
-            depth = (disp_levels * baseline * focal / disp).astype(np.uint16)
+        with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
+            depth = (disp_levels * baseline * focal / frame).astype(np.uint16)
 
-        if 1: # Optionally, extend disparity range to better visualize it
-            frame = (disp * 255. / max_disp).astype(np.uint8)
+        if 1:  # Optionally, extend disparity range to better visualize it
+            frame = (frame * 255. / max_disp).astype(np.uint8)
 
-        if 1: # Optionally, apply a color map
+        if 1:  # Optionally, apply a color map
             frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
-            #frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
+            # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
 
         if pcl_converter is not None:
-            if 0: # Option 1: project colorized disparity
+            if 0:  # Option 1: project colorized disparity
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 pcl_converter.rgbd_to_projection(depth, frame_rgb, True)
-            else: # Option 2: project rectified right
+            else:  # Option 2: project rectified right
                 pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
             pcl_converter.visualize_pcd()
 
-    else: # mono streams / single channel
+    else:  # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
         if name.startswith('rectified_'):
             frame = cv2.flip(frame, 1)
@@ -259,14 +305,10 @@ def convert_to_cv2_frame(name, image):
             last_rectif_right = frame
     return frame
 
+
 def test_pipeline():
     pipeline = dai.Pipeline()
-    streams = []
-    if enable_rgb:
-        streams.extend(add_rgb(pipeline))
-   #pipeline, streams = create_mono_cam_pipeline()
-    if enable_stereo:
-        streams.extend(add_stereo_depth(pipeline, source_camera))
+    streams = build_pipeline(pipeline)
 
     print("Creating DepthAI device")
     with dai.Device(pipeline) as device:
@@ -303,9 +345,9 @@ def test_pipeline():
                 for q in in_q_list:
                     name = q.getName()
                     path = 'dataset/' + str(index) + '/' + name + '.png'
-                    data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
-                    tstamp = datetime.timedelta(seconds = timestamp_ms // 1000,
-                                                milliseconds = timestamp_ms % 1000)
+                    data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720 * 1280)
+                    tstamp = datetime.timedelta(seconds=timestamp_ms // 1000,
+                                                milliseconds=timestamp_ms % 1000)
                     img = dai.ImgFrame()
                     img.setData(data)
                     img.setTimestamp(tstamp)
@@ -315,15 +357,22 @@ def test_pipeline():
                     print("Sent frame: {:25s}".format(path), 'timestamp_ms:', timestamp_ms)
                 timestamp_ms += frame_interval_ms
                 index = (index + 1) % dataset_size
-                if 1: # Optional delay between iterations, host driven pipeline
+                if 1:  # Optional delay between iterations, host driven pipeline
                     sleep(frame_interval_ms / 1000)
             # Handle output streams
             for q in q_list:
-                name  = q.getName()
-                image = q.get()
-                #print("Received frame:", name)
+                name = q.getName()
+                if name == 'nn':
+                    in_nn = q.tryGet()
+                    if in_nn is not None:
+                        print("Got NN output")
+                    continue
+                image = q.tryGet()
+                if image is None:
+                    continue
+                #print("Received frame:", name, "tstamp", image.getTimestamp().total_seconds())
                 # Skip some streams for now, to reduce CPU load
-                if name in ['left', 'right', 'depth']: continue
+                if name in ['left', 'right']: continue
                 frame = convert_to_cv2_frame(name, image)
                 cv2.imshow(name, frame)
             if cv2.waitKey(1) == ord('q'):
