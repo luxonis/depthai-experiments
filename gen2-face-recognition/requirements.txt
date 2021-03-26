@@ -1,0 +1,5 @@
+depthai
+opencv-python
+numpy
+scipy
+imutils
