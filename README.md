@@ -101,7 +101,7 @@ This is a simple application which creates rgbd image from `rgb` and `depth` str
 ![rgbd-pcl](https://media.giphy.com/media/UeAlkPpeHaxItO0NJ6/giphy.gif)
 
 
-## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/wls-filter))
+## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-wls-filter))
 
 This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI.  
 
