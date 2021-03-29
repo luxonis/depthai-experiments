@@ -39,7 +39,7 @@ parser.add_argument(
     "-n",
     "--name",
     type=str,
-    default='',
+    default="",
     help="Data name (used with -db) [Optional]",
 )
 
@@ -412,20 +412,28 @@ class Main(DepthAI):
 
     def create_nns(self):
         self.create_mobilenet_nn(
-            "models/face-detection-retail-0004_openvino_2021.2_4shave.blob", "mfd", first=self.camera
+            "models/face-detection-retail-0004_openvino_2021.2_4shave.blob",
+            "mfd",
+            first=self.camera,
         )
 
-        self.create_nn("models/head-pose-estimation-adas-0001_openvino_2021.2_4shave.blob", "head_pose")
-        self.create_nn("models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob", "arcface")
+        self.create_nn(
+            "models/head-pose-estimation-adas-0001_openvino_2021.2_4shave.blob",
+            "head_pose",
+        )
+        self.create_nn(
+            "models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob",
+            "arcface",
+        )
 
     def start_nns(self):
         if not self.camera:
             self.mfd_in = self.device.getInputQueue("mfd_in")
-        self.mfd_nn = self.device.getOutputQueue("mfd_nn")
-        self.head_pose_in = self.device.getInputQueue("head_pose_in")
-        self.head_pose_nn = self.device.getOutputQueue("head_pose_nn")
-        self.arcface_in = self.device.getInputQueue("arcface_in")
-        self.arcface_nn = self.device.getOutputQueue("arcface_nn")
+        self.mfd_nn = self.device.getOutputQueue("mfd_nn", 4, False)
+        self.head_pose_in = self.device.getInputQueue("head_pose_in", 4, False)
+        self.head_pose_nn = self.device.getOutputQueue("head_pose_nn", 4, False)
+        self.arcface_in = self.device.getInputQueue("arcface_in", 4, False)
+        self.arcface_nn = self.device.getOutputQueue("arcface_nn", 4, False)
 
     def run_face_mn(self):
         if not self.camera:
