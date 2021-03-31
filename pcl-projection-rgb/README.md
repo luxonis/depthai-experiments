@@ -7,12 +7,13 @@
 
 In this experiment `rgbd_creating_o3d.py/rgbd_creating_no_o3d.py` allows you to convert depth in rectified_right frame to rgb camera frame
 
-`rgbd_creating_no_o3d.py` will consists of some noise.
+`rgbd_creating_no_o3d.py` will have some noise.
 
 # Point cloud with rgb 
 ![demogif](https://media.giphy.com/media/UeAlkPpeHaxItO0NJ6/giphy.gif)
 
-use `colorized_point_cloud.py` to obtain point could in rgb camera reference frame with color.(if you don't need color overlapped with rgb you can skip 2 steps)
+
+ - Use `colorized_point_cloud.py` to obtain point could in rgb camera reference frame with color.(if you don't need color overlapped with rgb you can skip 2 steps)
 
 ## Installation
 
