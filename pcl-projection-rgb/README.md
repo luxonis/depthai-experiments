@@ -13,7 +13,7 @@ In this experiment `rgbd_creating_o3d.py/rgbd_creating_no_o3d.py` allows you to 
 ![demogif](https://media.giphy.com/media/UeAlkPpeHaxItO0NJ6/giphy.gif)
 
 
- - Use `colorized_point_cloud.py` to obtain point could in rgb camera reference frame with color.(if you don't need color overlapped with rgb you can skip 2 steps)
+ - Use `colorized_pont_cloud.py` to obtain point could in rgb camera reference frame with color.(if you don't need color overlapped with rgb you can skip 2 steps)
 
 ## Installation
 
