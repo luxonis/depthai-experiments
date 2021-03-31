@@ -6,7 +6,6 @@ from uuid import uuid4
 from multiprocessing import Process
 import cv2
 import depthai as dai
-print(dai.__version__)
 
 
 def check_range(min_val, max_val):
