@@ -173,11 +173,25 @@ procs = []
 
 def store_frames(frames_dict):
     global procs
+
+    def store_frame(path, data, retries=0):
+        try:
+            cv2.imwrite(path, data)
+        except OSError as ex:
+            print("Failed to write frame to {}, error: {}".format(path, ex))
+            if retries < 5:
+                retries += 1
+                print("Retrying to write frame to path {}... [{} retries left]".format(path, 5 - retries))
+                return store_frame(path, data, retries)
+            else:
+                print("Frame at path {} will not be stored... [no retries left]")
+                return
+
     frames_path = dest / Path(str(uuid4()))
     frames_path.mkdir(parents=False, exist_ok=False)
     new_procs = [
         Process(
-            target=cv2.imwrite,
+            target=store_frame,
             args=(str(frames_path / Path(f"{stream_name}.png")), extract_frame[stream_name](item))
         )
         for stream_name, item in frames_dict.items()
