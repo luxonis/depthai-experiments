@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 from time import monotonic
 from uuid import uuid4
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 import cv2
 import depthai as dai
 
@@ -168,39 +168,22 @@ extract_frame = {
     "disparity": lambda item: cv2.applyColorMap(item.getFrame(), cv2.COLORMAP_JET),
 }
 
-procs = []
+frame_q = Queue()
 
 
-def store_frames(frames_dict):
-    global procs
-
-    def store_frame(path, data, retries=0):
-        try:
-            cv2.imwrite(path, data)
-        except OSError as ex:
-            print("Failed to write frame to {}, error: {}".format(path, ex))
-            if retries < 5:
-                retries += 1
-                print("Retrying to write frame to path {}... [{} retries left]".format(path, 5 - retries))
-                return store_frame(path, data, retries)
-            else:
-                print("Frame at path {} will not be stored... [no retries left]")
-                return
-
-    frames_path = dest / Path(str(uuid4()))
-    frames_path.mkdir(parents=False, exist_ok=False)
-    new_procs = [
-        Process(
-            target=store_frame,
-            args=(str(frames_path / Path(f"{stream_name}.png")), extract_frame[stream_name](item))
-        )
-        for stream_name, item in frames_dict.items()
-    ]
-    for proc in new_procs:
-        proc.start()
-    procs += new_procs
+def store_frames(in_q):
+    while True:
+        frames_dict = in_q.get()
+        if frames_dict is None:
+            return
+        frames_path = dest / Path(str(uuid4()))
+        frames_path.mkdir(parents=False, exist_ok=False)
+        for stream_name, item in frames_dict.items():
+            cv2.imwrite(str(frames_path / Path(f"{stream_name}.png")), item)
 
 
+store_p = Process(target=store_frames, args=(frame_q, ))
+store_p.start()
 ps = PairingSystem()
 
 # Pipeline defined, now the device is connected to
@@ -229,10 +212,11 @@ with dai.Device(pipeline) as device:
 
         pairs = ps.get_pairs()
         for pair in pairs:
+            extracted_pair = {stream_name: extract_frame[stream_name](item) for stream_name, item in pair.items()}
             if not args.prod:
-                for stream_name, item in pair.items():
-                    cv2.imshow(stream_name, extract_frame[stream_name](item))
-            store_frames(pair)
+                for stream_name, item in extracted_pair.items():
+                    cv2.imshow(stream_name, item)
+            frame_q.put(extracted_pair)
 
         if not args.prod and cv2.waitKey(1) == ord('q'):
             break
@@ -240,5 +224,5 @@ with dai.Device(pipeline) as device:
         if monotonic() - start_ts > args.time:
             break
 
-for proc in procs:
-    proc.join()
+frame_q.put(None)
+store_p.join()
