@@ -93,7 +93,7 @@ This is a simple application which creates rgbd image from `right` and `depth_ra
 ![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
 
 
-## RGB-D and PCL([here](https://github.com/luxonis/depthai-experiments/tree/master/pcl-projection-rgb))
+## RGB-D and PCL ([here](https://github.com/luxonis/depthai-experiments/tree/master/pcl-projection-rgb))
 
 This is a simple application which creates rgbd image from `rgb` and `depth` stream and projects it into rgb with depth overlay and point clouds. There is also a interactive point cloud visualizer.
 
@@ -107,3 +107,9 @@ This gives an example of doing host-side WLS filtering using the `rectified_righ
 
 Example running on [BW1092](https://shop.luxonis.com/collections/all/products/bw1092-pre-order) shown below:
 ![image](https://user-images.githubusercontent.com/32992551/94463964-fc920d00-017a-11eb-9e99-8a023cdc8a72.png)
+
+## Multiple devices per host ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices))
+
+This demo shows how you can use multiple devices per host. The demo will find all devices connected to the host and display an RGB preview from each of them.
+
+[![Multiple devices per host](https://user-images.githubusercontent.com/18037362/113307040-01d83c00-9305-11eb-9a42-c69c72a5dba5.gif)](https://www.youtube.com/watch?v=N1IY2CfhmEc "Multiple devices per host")
