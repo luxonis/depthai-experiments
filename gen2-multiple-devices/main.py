@@ -25,6 +25,7 @@ q_rgb_list = []
 with contextlib.ExitStack() as stack:
     for device_info in dai.Device.getAllAvailableDevices():
         device = stack.enter_context(dai.Device(pipeline, device_info))
+        print("Conected to " + device_info.getMxId())
         device.startPipeline()
         # Output queue will be used to get the rgb frames from the output defined above
         q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)

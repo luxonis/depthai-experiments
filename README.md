@@ -112,4 +112,4 @@ Example running on [BW1092](https://shop.luxonis.com/collections/all/products/bw
 
 This demo shows how you can use multiple devices per host. The demo will find all devices connected to the host and display an RGB preview from each of them.
 
-![multiple-devices](https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/images/multiple-devices.png)
+[![Multiple devices per host](https://user-images.githubusercontent.com/18037362/113307040-01d83c00-9305-11eb-9a42-c69c72a5dba5.gif)](https://www.youtube.com/watch?v=N1IY2CfhmEc "Multiple devices per host")
