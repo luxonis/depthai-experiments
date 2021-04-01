@@ -1,6 +1,6 @@
 # Gen2 multiple devices per host
 
-This example shows how you can use multiple DepthAI's on a single host. The demo will find all devices connected to the host and display an RGB preview from each of them. Note that at the end of the code we have to close the connection to all devices since we don't use context manager.
+This example shows how you can use multiple DepthAI's on a single host. The demo will find all devices connected to the host and display an RGB preview from each of them.
 
 ## Demo
 
