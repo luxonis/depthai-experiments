@@ -37,11 +37,8 @@ For the 'Select control: ...' options, use these keys to modify the value:
 '''
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-u', '--enable_uvc', default=False, action="store_true",
-                    help='Enable UVC output (1080p). Independent from isp/raw streams. '
-                         'Needs a sensor resolution of 4K (with ISP 2x downscale), or 1080p')
-parser.add_argument('-1', '--res_1080p',  default=False, action="store_true",
-                    help='Set sensor res to 1080p, instead of 4K (with UVC) / 12MP')
+parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k', '12mp'},
+                    help="Select RGB resolution. Default: %(default)s")
 parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
 args = parser.parse_args()
@@ -74,19 +71,21 @@ def unpack_raw10(input, out, expand16bit):
     return out
 
 print("depthai version:", dai.__version__)
+
+rgb_res_opts = {
+    '1080': dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+    '4k'  : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+    '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+}
+rgb_res = rgb_res_opts.get(args.resolution)
+
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-if args.res_1080p:
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-elif args.enable_uvc:
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-    cam.setIspScale(1, 2)
-else:
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
-
+cam.setResolution(rgb_res)
 # Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
 cam.initialControl.setManualFocus(130)
+#cam.setIspScale(1, 2)
 #cam.setFps(20.0)  # Default: 30
 
 # Camera control input
@@ -103,14 +102,6 @@ if 'raw' in streams:
     xout_raw = pipeline.createXLinkOut()
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
-
-if args.enable_uvc:
-    uvc = pipeline.createUVC()
-    # 'preview' resolution set here to workaround a post-processing limitation
-    cam.setPreviewSize(1920, 1080)
-    cam.video.link(uvc.input)
-    print("UVC 1080p output was enabled.")
-    print("Keep this app running, and open another viewer, e.g. guvcview")
 
 device = dai.Device(pipeline)
 device.startPipeline()
