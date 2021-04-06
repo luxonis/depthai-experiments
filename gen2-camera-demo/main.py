@@ -284,6 +284,8 @@ def test_pipeline():
                     img.setWidth(1280)
                     img.setHeight(720)
                     q.send(img)
+                    if timestamp_ms == 0:  # Send twice for first iteration
+                        q.send(img)
                     print("Sent frame: {:25s}".format(path), 'timestamp_ms:', timestamp_ms)
                 timestamp_ms += frame_interval_ms
                 index = (index + 1) % dataset_size
