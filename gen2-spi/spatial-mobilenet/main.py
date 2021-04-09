@@ -132,7 +132,7 @@ with dai.Device(pipeline) as device:
             fps = counter / (current_time - start_time)
             counter = 0
             start_time = current_time
-        
+
         frame = inPreview.getCvFrame()
         depthFrame = depth.getFrame()
 
