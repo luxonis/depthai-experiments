@@ -4,11 +4,23 @@ import cv2
 import depthai as dai
 import numpy as np
 from time import sleep
+import argparse
 
-viewDepth = False
-spiOut = True
+parser = argparse.ArgumentParser()
+parser.add_argument('-debug', action="store_true", help="Debug host-device difference in depth calculation.", default=False)
+parser.add_argument('-showdepth', action="store_true", help="Display depth output.", default=False)
+parser.add_argument('-usb', action="store_true", help="Use usb instead of spi.", default=False)
+
+args = parser.parse_args()
+
+debug = args.debug
+showDepth = args.showdepth
+spiOut = not args.usb
+if debug or showDepth:
+    showDepth = True
+    spiOut = False
 if spiOut:
-    viewDepth = False
+    showDepth = False
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
@@ -20,10 +32,9 @@ stereo = pipeline.createStereoDepth()
 spatialLocationCalculator = pipeline.createSpatialLocationCalculator()
 
 # Create output
-if(viewDepth):
+if(showDepth):
     xoutDepth = pipeline.createXLinkOut()
     xoutDepth.setStreamName("depth")
-    stereo.depth.link(xoutDepth.input)
     spatialLocationCalculator.passthroughDepth.link(xoutDepth.input)
 
 if spiOut:
@@ -46,8 +57,8 @@ monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 outputDepth = True
 # Only standard mode is supported in this example.
 outputRectified = False
-lrcheck = False
-subpixel = False
+lrcheck = True
+subpixel = True
 
 # StereoDepth
 stereo.setOutputDepth(outputDepth)
@@ -64,7 +75,7 @@ stereo.depth.link(spatialLocationCalculator.inputDepth)
 
 # can be either normalized
 topLeft = dai.Point2f(0.2, 0.2)
-bottomRight = dai.Point2f(0.6, 0.6)
+bottomRight = dai.Point2f(0.3, 0.3)
 # or absolute ATTENTION on boundaries, relative to sensor config (640x400 in this example)
 # topLeft = dai.Point2f(128, 80)
 # bottomRight = dai.Point2f(384, 240)
@@ -83,7 +94,7 @@ with dai.Device(pipeline) as device:
     device.startPipeline()
 
     # Output queue will be used to get the depth frames from the outputs defined above
-    if(viewDepth):
+    if(showDepth):
         depthQueue = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
     if not spiOut:
         spatialQueue = device.getOutputQueue(name="spatialData", maxSize=4, blocking=False)
@@ -110,7 +121,7 @@ with dai.Device(pipeline) as device:
             euclideanDistance = np.sqrt(x*x + y*y + z*z)
             print(f"Euclidean distance {int(euclideanDistance)} mm, X: {int(x)} mm, Y: {int(y)} mm, Z: {int(z)} mm")
 
-        if(viewDepth):
+        if(showDepth):
             depth = depthQueue.get()
             depthFrame = depth.getFrame()
 
@@ -135,6 +146,22 @@ with dai.Device(pipeline) as device:
                 cv2.putText(depthFrameColor, f"X: {int(spatialData.spatialCoordinates.x)} mm", (xmin + 10, ymin + 20), fontType, 0.5, color)
                 cv2.putText(depthFrameColor, f"Y: {int(spatialData.spatialCoordinates.y)} mm", (xmin + 10, ymin + 35), fontType, 0.5, color)
                 cv2.putText(depthFrameColor, f"Z: {int(spatialData.spatialCoordinates.z)} mm", (xmin + 10, ymin + 50), fontType, 0.5, color)
+
+                if debug:
+                    depthSum = int(0)
+                    pixelCount = int(0)
+                    lowerThreshold = spatialData.config.depthThresholds.lowerThreshold
+                    upperThreshold = spatialData.config.depthThresholds.upperThreshold
+                    for i in range(int(roi.topLeft().y), int(roi.bottomRight().y)):
+                        for j in range(int(roi.topLeft().x), int(roi.bottomRight().x)):
+                            depthValue = depthFrame[i][j]
+                            if depthValue > lowerThreshold and depthValue < upperThreshold:
+                                depthSum += depthValue
+                                pixelCount += 1
+                    # print(f"{pixelCount} {depthSum}")
+                    dbgDepthConfidence = pixelCount/roi.area()
+                    dbgAvgDepth = 0 if pixelCount == 0 else depthSum / pixelCount
+                    print(f"Host-device difference: confidence: {dbgDepthConfidence-depthConfidence}, average: {int(dbgAvgDepth-avgDepth)}")
 
 
             # frame is transformed, the color map will be applied to highlight the depth info

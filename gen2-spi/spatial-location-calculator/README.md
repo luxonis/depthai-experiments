@@ -12,8 +12,6 @@ In main.py, a basic pipeline consisting of just 2 nodes is built and sent over t
 3. The SPIOut Node receives parsed results from SpatialLocationCalculator and sends them to the ESP32 via SPI.
 4. Expected output: average depth of ROI + initial config for it (ROI, lower, upper threshold)
 
-### Limitations:
-1. Stereo LR-check/subpixel modes are not supported for now due to a BUG in stereo node. The examples will be updated once the BUG is fixed.
 
 ### On the ESP32:
 The ESP32 is running a custom protocol to communicate over SPI with the DepthAI. This protocol is hidden behind a simple API that lives in components/depthai-spi-api. 
