@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import argparse
+import queue
 from pathlib import Path
-from time import monotonic
+from time import monotonic, strftime
 from uuid import uuid4
 from multiprocessing import Process, Queue
 import cv2
 import depthai as dai
+import numpy as np
 
 
 def check_range(min_val, max_val):
@@ -24,12 +26,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--threshold', default=0.3, type=float, help="Maximum difference between packet timestamps to be considered as synced")
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
-parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
+parser.add_argument('-nd', '--no-debug', dest="prod", action="store_true", default=False, help="Do not display debug output")
 parser.add_argument('-m', '--time', type=float, default=float("inf"), help="Finish execution after X seconds")
 parser.add_argument('-af', '--autofocus', type=str, default=None, help="Set AutoFocus mode of the RGB camera", choices=list(filter(lambda name: name[0].isupper(), vars(dai.CameraControl.AutoFocusMode))))
 parser.add_argument('-mf', '--manualfocus', type=check_range(0, 255), help="Set manual focus of the RGB camera [0..255]")
 parser.add_argument('-et', '--exposure-time', type=check_range(1, 33000), help="Set manual exposure time of the RGB camera [1..33000]")
 parser.add_argument('-ei', '--exposure-iso', type=check_range(100, 1600), help="Set manual exposure ISO of the RGB camera [100..1600]")
+parser.add_argument('-enc', '--encode', action="store_true", help="Encode the mono/color/depth output using H.264/H.265 encoding")
 args = parser.parse_args()
 
 exposure = [args.exposure_time, args.exposure_iso]
@@ -88,6 +91,45 @@ right.out.link(rightOut.input)
 depthOut = pipeline.createXLinkOut()
 depthOut.setStreamName("disparity")
 depth.disparity.link(depthOut.input)
+
+if args.encode:
+    # Create encoders, one for each camera, consuming the frames and encoding them using H.264 / H.265 encoding
+    veL = pipeline.createVideoEncoder()
+    veL.setDefaultProfilePreset(640, 400, 30, dai.VideoEncoderProperties.Profile.H264_MAIN)
+    left.out.link(veL.input)
+
+    veC = pipeline.createVideoEncoder()
+    veC.setDefaultProfilePreset(1920, 1080, 30, dai.VideoEncoderProperties.Profile.H265_MAIN)
+    rgb.video.link(veC.input)
+
+    veR = pipeline.createVideoEncoder()
+    veR.setDefaultProfilePreset(640, 400, 30, dai.VideoEncoderProperties.Profile.H264_MAIN)
+    right.out.link(veR.input)
+
+    veDIn = pipeline.createXLinkIn()
+    veDIn.setStreamName('ve_disparity_in')
+
+    veD = pipeline.createVideoEncoder()
+    veD.setDefaultProfilePreset(640, 400, 30, dai.VideoEncoderProperties.Profile.H264_MAIN)
+    veDIn.out.link(veD.input)
+
+    # Create outputs
+    veLOut = pipeline.createXLinkOut()
+    veLOut.setStreamName('ve_left')
+    veL.bitstream.link(veLOut.input)
+
+    veCOut = pipeline.createXLinkOut()
+    veCOut.setStreamName('ve_color')
+    veC.bitstream.link(veCOut.input)
+
+    veROut = pipeline.createXLinkOut()
+    veROut.setStreamName('ve_right')
+    veR.bitstream.link(veROut.input)
+
+    veDOut = pipeline.createXLinkOut()
+    veDOut.setStreamName('ve_disparity')
+    veD.bitstream.link(veDOut.input)
+
 
 # https://stackoverflow.com/a/7859208/5494277
 def step_norm(value):
@@ -168,18 +210,62 @@ extract_frame = {
     "disparity": lambda item: cv2.applyColorMap(item.getFrame(), cv2.COLORMAP_JET),
 }
 
+def to_planar(arr: np.ndarray, shape: tuple) -> list:
+    return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
+
+
 frame_q = Queue()
 
 
 def store_frames(in_q):
+    retries = 0
     while True:
-        frames_dict = in_q.get()
+        try:
+            frames_dict = in_q.get(timeout=100)
+        except queue.Empty:
+            return
         if frames_dict is None:
             return
         frames_path = dest / Path(str(uuid4()))
         frames_path.mkdir(parents=False, exist_ok=False)
         for stream_name, item in frames_dict.items():
             cv2.imwrite(str(frames_path / Path(f"{stream_name}.png")), item)
+
+
+def store_encodings(dev):
+    encLeft = dev.getOutputQueue(name='ve_left', maxSize=30, blocking=True)
+    encColor = dev.getOutputQueue(name='ve_color', maxSize=30, blocking=True)
+    encRight = dev.getOutputQueue(name='ve_right', maxSize=30, blocking=True)
+    encDisparity = device.getOutputQueue(name='ve_disparity', maxSize=30, blocking=True)
+
+    timestamp_str = strftime("%Y%m%d-%H%M%S")
+    fileLeft = open(f'data/left_{timestamp_str}.h264', 'wb')
+    fileColor = open(f'data/color_{timestamp_str}.h265', 'wb')
+    fileRight = open(f'data/right_{timestamp_str}.h264', 'wb')
+    fileDisparity = open(f'data/disparity_{timestamp_str}.h264', 'wb')
+
+    try:
+        while True:
+            if args.encode:
+                while encLeft.has():
+                    encLeft.get().getData().tofile(fileLeft)
+                while encColor.has():
+                    encColor.get().getData().tofile(fileColor)
+                while encRight.has():
+                    encRight.get().getData().tofile(fileRight)
+                while encDisparity.has():
+                    encDisparity.get().getData().tofile(fileDisparity)
+    except RuntimeError:
+        pass
+    finally:
+        fileLeft.close()
+        fileColor.close()
+        fileRight.close()
+        print("To view the encoded data, convert the stream file (.h264/.h265) into a video file (.mp4), using commands below:")
+        cmd = "ffmpeg -framerate 30 -i {} -c copy {}"
+        print(cmd.format(fileLeft.name, str(Path(fileLeft.name).with_suffix('.mp4'))))
+        print(cmd.format(fileRight.name, str(Path(fileRight.name).with_suffix('.mp4'))))
+        print(cmd.format(fileColor.name, str(Path(fileColor.name).with_suffix('.mp4'))))
 
 
 store_p = Process(target=store_frames, args=(frame_q, ))
@@ -190,8 +276,10 @@ ps = PairingSystem()
 with dai.Device(pipeline) as device:
     # Start pipeline
     device.startPipeline()
-
     qControl = device.getInputQueue('control')
+    ve_disparity_in = device.getInputQueue(name='ve_disparity_in')
+    enc_p = Process(target=store_encodings, args=(device,))
+    enc_p.start()
 
     ctrl = dai.CameraControl()
     if args.autofocus:
@@ -208,7 +296,16 @@ with dai.Device(pipeline) as device:
     start_ts = monotonic()
     while True:
         for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
-            ps.add_packets(device.getOutputQueue(queueName).tryGetAll(), queueName)
+            packets = device.getOutputQueue(queueName).tryGetAll()
+            if packets and queueName == "disparity":
+                for packet in packets:
+                    img = dai.ImgFrame()
+                    img.setData(to_planar(extract_frame[queueName](packet), (640, 400)))
+                    img.setTimestamp(monotonic())
+                    img.setWidth(640)
+                    img.setHeight(400)
+                    ve_disparity_in.send(img)
+            ps.add_packets(packets, queueName)
 
         pairs = ps.get_pairs()
         for pair in pairs:
@@ -226,3 +323,4 @@ with dai.Device(pipeline) as device:
 
 frame_q.put(None)
 store_p.join()
+enc_p.join()
