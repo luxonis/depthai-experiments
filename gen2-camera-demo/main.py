@@ -32,9 +32,9 @@ source_camera  = not args.static_frames
 out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
 lrcheck  = True   # Better handling for occlusions
-extended = False  # Closer-in minimum depth, disparity range is doubled 
+extended = False  # Closer-in minimum depth, disparity range is doubled
 subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
-# Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7 
+# Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7
 median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 
 # Sanitize some incompatible options
@@ -254,9 +254,11 @@ def test_pipeline():
             # We make sure to send first the right frame, then left.
             in_streams.extend(['in_right', 'in_left'])
         in_q_list = []
+        inStreamsCameraID = []
         for s in in_streams:
             q = device.getInputQueue(s)
             in_q_list.append(q)
+            inStreamsCameraID = [dai.CameraBoardSocket.RIGHT, dai.CameraBoardSocket.LEFT]
 
         # Create a receive queue for each stream
         q_list = []
@@ -272,7 +274,7 @@ def test_pipeline():
             if in_q_list:
                 dataset_size = 2  # Number of image pairs
                 frame_interval_ms = 33
-                for q in in_q_list:
+                for i, q in enumerate(in_q_list):
                     name = q.getName()
                     path = 'dataset/' + str(index) + '/' + name + '.png'
                     data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
@@ -281,6 +283,8 @@ def test_pipeline():
                     img = dai.ImgFrame()
                     img.setData(data)
                     img.setTimestamp(tstamp)
+                    img.setInstanceNum(inStreamsCameraID[i])
+                    img.setType(dai.ImgFrame.Type.RAW8)
                     img.setWidth(1280)
                     img.setHeight(720)
                     q.send(img)
