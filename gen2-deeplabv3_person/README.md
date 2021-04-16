@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 ## [Gen2] Deeplabv3 on DepthAI 
 
 This example shows how to run Deeplabv3+ on DepthAI in the Gen2 API system.  

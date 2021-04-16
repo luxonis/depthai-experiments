@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 ## Gen2 Camera Demo
 This example shows how to use the DepthAI/megaAI/OAK cameras in the Gen2 Pipeline Builder over USB.  
 

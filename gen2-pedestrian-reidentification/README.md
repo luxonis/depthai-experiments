@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Pedestrian reidentification
 
 This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pipeline Builder.
