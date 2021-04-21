@@ -170,8 +170,9 @@ def create_stereo_depth_pipeline(from_camera=True):
     stereo.syncedRight   .link(xout_right.input)
     stereo.depth         .link(xout_depth.input)
     stereo.disparity     .link(xout_disparity.input)
-    stereo.rectifiedLeft .link(xout_rectif_left.input)
-    stereo.rectifiedRight.link(xout_rectif_right.input)
+    if out_rectified:
+        stereo.rectifiedLeft .link(xout_rectif_left.input)
+        stereo.rectifiedRight.link(xout_rectif_right.input)
 
     streams = ['left', 'right']
     if out_rectified:
