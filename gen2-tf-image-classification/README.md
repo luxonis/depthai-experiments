@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 Tensorflow Image Classification example
 
 This example demonstrates how to run a neural network created using [TensorFlow Image Classification tutorial](https://colab.research.google.com/drive/1oNxfvx5jOfcmk1Nx0qavjLN8KtWcLRn6?usp=sharing)

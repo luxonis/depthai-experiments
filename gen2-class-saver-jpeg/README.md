@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 Class Saver (JPEG)
 
 This example demonstrates how to run MobilenetSSD and collect images of detected objects, grouped by detection label.

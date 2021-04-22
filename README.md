@@ -1,3 +1,5 @@
+[depthai_experiments中文文档](README.zh-CN.md)
+
 # depthai-experiments
 Experimental projects we've done with DepthAI.  
 

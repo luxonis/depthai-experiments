@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 COVID-19 mask detection
 
 

@@ -1,4 +1,4 @@
-
+[中文文档](README.zh-CN.md)
 
 # Sample video
 ![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)

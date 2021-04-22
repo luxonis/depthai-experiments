@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Reshaping OpenVINO model
 
 This script allows you to reshape the OpenVINO model input layer.
