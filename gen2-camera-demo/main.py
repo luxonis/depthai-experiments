@@ -117,6 +117,7 @@ def build_pipeline(pipeline):
         # cam.setPreviewKeepAspectRatio(False)
         cam.setResolution(rgb_res)
         cam.setIspScale(2, 3)
+        
         cam.setInterleaved(False)
         cam.setBoardSocket(dai.CameraBoardSocket.RGB)
         cam.initialControl.setManualFocus(130)
@@ -173,7 +174,7 @@ def build_pipeline(pipeline):
     #    stereo.setOutputRectified(out_rectified)
         #stereo.setBaselineOverrideCm(123.4)
         #stereo.setFovOverrideDegrees(1)
-        stereo.setConfidenceThreshold(200)
+        stereo.setConfidenceThreshold(100)
         stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout
         stereo.setMedianFilter(median)  # KERNEL_7x7 default
         stereo.setLeftRightCheck(lrcheck)
@@ -297,11 +298,14 @@ def convert_to_cv2_frame(name, image):
                 pcl_converter.rgbd_to_projection(depth, frame_rgb, True)
             else:  # Option 2: project rectified right or rgb
                 if enable_rgb:
-                    project_frame = cv2.cvtColor(last_frame_rgb_video, cv2.COLOR_BGR2RGB)
-                    pcl_converter.rgbd_to_projection(depth, project_frame, True)
+                    if not last_frame_rgb_video is None:
+                        project_frame = cv2.cvtColor(last_frame_rgb_video, cv2.COLOR_BGR2RGB)
+                        pcl_converter.rgbd_to_projection(depth, project_frame, True)
                 else:
-                    pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
-                pcl_converter.visualize_pcd()
+                    if not last_rectif_right is None:
+                        pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
+            
+            pcl_converter.visualize_pcd()
 
     else:  # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
