@@ -82,6 +82,7 @@ rgb_res_opts = {
     '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
 }
 rgb_res = rgb_res_opts.get(args.enable_rgb)
+last_frame_rgb_video = None
 
 print("StereoDepth config options:")
 print("    Left-Right check:  ", lrcheck)
@@ -180,7 +181,10 @@ def build_pipeline(pipeline):
         stereo.setLeftRightCheck(lrcheck)
         stereo.setExtendedDisparity(extended)
         stereo.setSubpixel(subpixel)
-        stereo.setDepthAlign(dai.StereoDepthProperties.DepthAlign.CENTER)
+        if enable_rgb:
+            stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+        else:
+            stereo.setDepthAlign(dai.StereoDepthProperties.DepthAlign.CENTER)
         if source_camera:
             # Default: EEPROM calib is used, and resolution taken from MonoCamera nodes
             # stereo.loadCalibrationFile(path)
@@ -298,11 +302,15 @@ def convert_to_cv2_frame(name, image):
                 pcl_converter.rgbd_to_projection(depth, frame_rgb, True)
             else:  # Option 2: project rectified right or rgb
                 if enable_rgb:
-                    if not last_frame_rgb_video is None:
-                        project_frame = cv2.cvtColor(last_frame_rgb_video, cv2.COLOR_BGR2RGB)
+                    if last_frame_rgb_video is not None:
+                        if len(last_frame_rgb_video) != 720:
+                            project_frame = cv2.resize(last_frame_rgb_video, (1280,720))
+                        else:
+                            project_frame = last_frame_rgb_video
+                        project_frame = cv2.cvtColor(project_frame, cv2.COLOR_BGR2RGB)
                         pcl_converter.rgbd_to_projection(depth, project_frame, True)
                 else:
-                    if not last_rectif_right is None:
+                    if last_rectif_right is not None:
                         pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
             
             pcl_converter.visualize_pcd()
@@ -319,6 +327,9 @@ def convert_to_cv2_frame(name, image):
 def test_pipeline():
     pipeline = dai.Pipeline()
     streams = build_pipeline(pipeline)
+
+    global last_rectif_right
+    global last_frame_rgb_video
 
     print("Creating DepthAI device")
     with dai.Device(pipeline) as device:
@@ -382,9 +393,21 @@ def test_pipeline():
                     continue
                 #print("Received frame:", name, "tstamp", image.getTimestamp().total_seconds())
                 # Skip some streams for now, to reduce CPU load
-                if name in ['left', 'right']: continue
+                if name in ['left', 'right', 'rectified_left', 'rectified_right']: continue
                 frame = convert_to_cv2_frame(name, image)
                 cv2.imshow(name, frame)
+                # This code shows that stereo.setDepthAlign(dai.CameraBoardSocket.RGB) is working
+                # if name == 'disparity' and last_frame_rgb_video is not None:
+                #     rgb = last_frame_rgb_video
+                #     if len(rgb) != 720:
+                #         rgb = cv2.resize(rgb, (1280,720))
+                        
+                #     #print('shape grey: {}, {}'.format(frame.shape, rgb.shape))
+                #     if len(frame.shape) < 3:                        
+                #         blended = cv2.addWeighted(rgb, 0.5, cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR), 0.5, 0)
+                #     else:
+                #         blended = cv2.addWeighted(rgb, 0.5, frame, 0.5, 0)
+                #     cv2.imshow('rectified_blend', blended)
             if cv2.waitKey(1) == ord('q'):
                 break
 
