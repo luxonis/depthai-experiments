@@ -23,8 +23,14 @@ optional arguments:
   -d, --dirty           允许目标路径不为空
   -nd, --no-debug       不显示调试输出
   -m TIME, --time TIME  X秒后完成执行
-  -af {AF_MODE_AUTO,AF_MODE_MACRO,AF_MODE_CONTINUOUS_VIDEO,AF_MODE_CONTINUOUS_PICTURE,AF_MODE_EDOF}, --autofocus {AF_MODE_AUTO,AF_MODE_MACRO,AF_MODE_CONTINUOUS_VIDEO,AF_MODE_CONTINUOUS_PICTURE,AF_MODE_EDOF}
+  -af {OFF,AUTO,MACRO,CONTINUOUS_VIDEO,CONTINUOUS_PICTURE,EDOF}, --autofocus {OFF,AUTO,MACRO,CONTINUOUS_VIDEO,CONTINUOUS_PICTURE,EDOF}
                         设置RGB相机的自动对焦模式
+  -mf MANUALFOCUS, --manualfocus MANUALFOCUS
+                        设置RGB相机的手动对焦[0..255]
+  -et EXPOSURE_TIME, --exposure-time EXPOSURE_TIME
+                        设置RGB相机的手动曝光时间[1..33000]
+  -ei EXPOSURE_ISO, --exposure-iso EXPOSURE_ISO
+                        设置RGB相机的手动曝光ISO [100..1600]
 
 ```
 
