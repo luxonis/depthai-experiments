@@ -103,7 +103,7 @@ class DepthAI:
             self.cam = self.pipeline.createColorCamera()
             self.cam.setPreviewSize(self._cam_size[1], self._cam_size[0])
             self.cam.setResolution(
-                depthai.ColorCameraProperties.SensorResolution.THE_4_K
+                depthai.ColorCameraProperties.SensorResolution.THE_1080_P
             )
             self.cam.setInterleaved(False)
             self.cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
@@ -385,7 +385,7 @@ class Main(DepthAI):
 
     def create_nns(self):
         self.create_nn(
-            "models/palm_detection_openvino_2020.1_4shave.blob", "palm", first=True
+            "models/palm_detection_openvino_2021.3_6shave.blob", "palm", first=True
         )
 
     def start_nns(self):
@@ -445,7 +445,7 @@ class Main(DepthAI):
         ]
 
         if len(self.palm_coords) == 0:
-            return False
+            return
 
         self.palm_coords = non_max_suppression(
             boxes=np.concatenate(self.palm_coords).reshape(-1, 4),
