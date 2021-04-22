@@ -393,21 +393,9 @@ def test_pipeline():
                     continue
                 #print("Received frame:", name, "tstamp", image.getTimestamp().total_seconds())
                 # Skip some streams for now, to reduce CPU load
-                if name in ['left', 'right', 'rectified_left', 'rectified_right']: continue
+                if name in ['left', 'right']: continue
                 frame = convert_to_cv2_frame(name, image)
                 cv2.imshow(name, frame)
-                # This code shows that stereo.setDepthAlign(dai.CameraBoardSocket.RGB) is working
-                # if name == 'disparity' and last_frame_rgb_video is not None:
-                #     rgb = last_frame_rgb_video
-                #     if len(rgb) != 720:
-                #         rgb = cv2.resize(rgb, (1280,720))
-                        
-                #     #print('shape grey: {}, {}'.format(frame.shape, rgb.shape))
-                #     if len(frame.shape) < 3:                        
-                #         blended = cv2.addWeighted(rgb, 0.5, cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR), 0.5, 0)
-                #     else:
-                #         blended = cv2.addWeighted(rgb, 0.5, frame, 0.5, 0)
-                #     cv2.imshow('rectified_blend', blended)
             if cv2.waitKey(1) == ord('q'):
                 break
 
