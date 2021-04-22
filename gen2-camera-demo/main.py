@@ -253,6 +253,7 @@ def build_pipeline(pipeline):
 # The operations done here seem very CPU-intensive, TODO
 def convert_to_cv2_frame(name, image):
     global last_rectif_right
+    global last_frame_rgb_video
     baseline = 75  # mm
     focal = right_intrinsic[0][0]
     max_disp = 96
@@ -272,6 +273,7 @@ def convert_to_cv2_frame(name, image):
     elif name == 'rgb_video':  # YUV NV12
         yuv = np.array(data).reshape((h * 3 // 2, w)).astype(np.uint8)
         frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_IYUV)
+        last_frame_rgb_video = frame
     elif name == 'depth':
         # TODO: this contains FP16 with (lrcheck or extended or subpixel)
         frame = np.array(data).astype(np.uint8).view(np.uint16).reshape((h, w))
@@ -293,9 +295,13 @@ def convert_to_cv2_frame(name, image):
             if 0:  # Option 1: project colorized disparity
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 pcl_converter.rgbd_to_projection(depth, frame_rgb, True)
-            else:  # Option 2: project rectified right
-                pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
-            pcl_converter.visualize_pcd()
+            else:  # Option 2: project rectified right or rgb
+                if enable_rgb:
+                    project_frame = cv2.cvtColor(last_frame_rgb_video, cv2.COLOR_BGR2RGB)
+                    pcl_converter.rgbd_to_projection(depth, project_frame, True)
+                else:
+                    pcl_converter.rgbd_to_projection(depth, last_rectif_right, False)
+                pcl_converter.visualize_pcd()
 
     else:  # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
