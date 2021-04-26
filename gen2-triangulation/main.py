@@ -10,7 +10,7 @@ p = dai.Pipeline()
 
 left_camera_position = (0.107, -0.038, 0.008)
 right_camera_position = (0.109, 0.039, 0.008)
-cameras = ((0.107, -0.038, 0.008), (0.109, 0.039, 0.008))
+cameras = (left_camera_position, right_camera_position)
 
 def populatePipeline(p, name):
     cam = p.create(dai.node.MonoCamera)
@@ -65,6 +65,7 @@ while True:
     manip_crop = p.create(dai.node.ImageManip)
     face_nn.passthrough.link(manip_crop.inputImage)
     image_manip_script.outputs['to_manip'].link(manip_crop.inputConfig)
+    manip_crop.initialConfig.setResize(48, 48)
     manip_crop.setWaitForConfigInput(False)
 
     # Send ImageManipConfig to host so it can visualize the landmarks
@@ -135,35 +136,35 @@ with dai.Device(p) as device:
             inCrop = queues[i*4 + 1].get()
             cropped_frame = inCrop.getCvFrame()
 
-            inConfig = queues[i*4 + 3].get()
-            xmin = int(300 * inConfig.getCropXMin())
-            ymin = int(300 * inConfig.getCropYMin())
-            xmax = int(300 * inConfig.getCropXMax())
-            ymax = int(300 * inConfig.getCropYMax())
-            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+            inConfig = queues[i*4 + 3].tryGet()
+            if inConfig is not None:
+                xmin = int(300 * inConfig.getCropXMin())
+                ymin = int(300 * inConfig.getCropYMin())
+                xmax = int(300 * inConfig.getCropXMax())
+                ymax = int(300 * inConfig.getCropYMax())
+                cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
 
-            width = inConfig.getCropXMax()-inConfig.getCropXMin()
-            height = inConfig.getCropYMax()-inConfig.getCropYMin()
+                width = inConfig.getCropXMax()-inConfig.getCropXMin()
+                height = inConfig.getCropYMax()-inConfig.getCropYMin()
 
-            # Facial landmarks from the second NN
-            inLandmarks = queues[i*4 + 2].get()
-            landmarks_layer = inLandmarks.getFirstLayerFp16()
-            landmarks = np.array(landmarks_layer).reshape(5, 2)
+                # Facial landmarks from the second NN
+                inLandmarks = queues[i*4 + 2].get()
+                landmarks_layer = inLandmarks.getFirstLayerFp16()
+                landmarks = np.array(landmarks_layer).reshape(5, 2)
 
-            lr_landmarks.append(list(map(get_landmark_3d, landmarks)))
-            for landmark in landmarks:
-                get_landmark_3d(landmark)
-                cv2.circle(cropped_frame, (int(48*landmark[0]), int(48*landmark[1])), 3, (0, 255, 0))
-                w = landmark[0] * width + inConfig.getCropXMin()
-                h = landmark[1] * height + inConfig.getCropYMin()
-                cv2.circle(frame, (int(w * 300), int(h * 300)), 3, (0,255,0))
+                lr_landmarks.append(list(map(get_landmark_3d, landmarks)))
+                for landmark in landmarks:
+                    cv2.circle(cropped_frame, (int(48*landmark[0]), int(48*landmark[1])), 3, (0, 255, 0))
+                    w = landmark[0] * width + inConfig.getCropXMin()
+                    h = landmark[1] * height + inConfig.getCropYMin()
+                    cv2.circle(frame, (int(w * 300), int(h * 300)), 3, (0,255,0))
 
             # Display both mono/cropped frames
             cv2.imshow("mono_"+name, frame)
             cv2.imshow("crop_"+name, cropped_frame)
 
         # 3D visualization
-        if len(lr_landmarks[0]) > 0 and len(lr_landmarks[1]) > 0:
+        if len(lr_landmarks) == 2 and len(lr_landmarks[0]) > 0 and len(lr_landmarks[1]) > 0:
                 mid_intersects = []
                 for i in range(5):
                     left_vector = get_vector_direction(left_camera_position, lr_landmarks[0][i])

@@ -10,7 +10,7 @@ Consider it a draft/reference at this point.
 
 ## Demo
 
-[![Spatial AI](https://user-images.githubusercontent.com/5244214/90748450-7c9e9a80-e2d2-11ea-9e9e-da65b5d9e6f0.gif)](https://www.youtube.com/watch?v=Cs8xo3mPBMg "3D Facial Landmark visualization")
+[![Spatial AI](https://user-images.githubusercontent.com/18037362/116149182-bc2b4b00-a6d9-11eb-91a5-ad5359ca85ad.gif)](https://www.youtube.com/watch?v=YalHMcsZODs&feature=youtu.be "3D Facial Landmark visualization")
 
 Note that this is Gen1 video demo
 
