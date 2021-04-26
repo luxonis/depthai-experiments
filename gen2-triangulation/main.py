@@ -30,11 +30,6 @@ def populatePipeline(p, name):
     face_nn.setBlobPath(str(Path("models/face-detection-retail-0004_2021.3_6shaves.blob").resolve().absolute()))
     face_manip.out.link(face_nn.input)
 
-    # Send bouding box from the NN to host via XLink
-    nn_xout = p.createXLinkOut()
-    nn_xout.setStreamName("nn_" + name)
-    face_nn.out.link(nn_xout.input)
-
     # Send mono frames to the host via XLink
     cam_xout = p.create(dai.node.XLinkOut)
     cam_xout.setStreamName("mono_" + name)
@@ -60,6 +55,7 @@ while True:
         cfg = ImageManipConfig()
         cfg.setCropRect(x_min, y_min, x_max, y_max)
         cfg.setResize(48, 48)
+        cfg.setKeepAspectRatio(False)
         node.io['to_manip'].send(cfg)
         #node.warn(f"1 from nn_in: {x_min}, {y_min}, {x_max}, {y_max}")
 """)
@@ -70,6 +66,11 @@ while True:
     face_nn.passthrough.link(manip_crop.inputImage)
     image_manip_script.outputs['to_manip'].link(manip_crop.inputConfig)
     manip_crop.setWaitForConfigInput(False)
+
+    # Send ImageManipConfig to host so it can visualize the landmarks
+    config_xout = p.create(dai.node.XLinkOut)
+    config_xout.setStreamName("config_" + name)
+    image_manip_script.outputs['to_manip'].link(config_xout.input)
 
     crop_xout = p.createXLinkOut()
     crop_xout.setStreamName("crop_" + name)
@@ -120,8 +121,8 @@ with dai.Device(p) as device:
     for name in ["left", "right"]:
         queues.append(device.getOutputQueue(name="mono_"+name, maxSize=4, blocking=False))
         queues.append(device.getOutputQueue(name="crop_"+name, maxSize=4, blocking=False))
-        queues.append(device.getOutputQueue(name="nn_"+name, maxSize=4, blocking=False))
         queues.append(device.getOutputQueue(name="landmarks_"+name, maxSize=4, blocking=False))
+        queues.append(device.getOutputQueue(name="config_"+name, maxSize=4, blocking=False))
     while True:
         lr_landmarks = []
         for i in range(2):
@@ -131,30 +132,31 @@ with dai.Device(p) as device:
             frame = inMono.getCvFrame()
 
             # Cropped+streched (48x48) mono image frame
-            inCrop = queues[i*4 + 1] .get()
+            inCrop = queues[i*4 + 1].get()
             cropped_frame = inCrop.getCvFrame()
 
-            # Face detection data from the first NN
-            inNn = queues[i*4 + 2].get()
-            nn_arr=np.array(inNn.getFirstLayerFp16())
-            nn_data = nn_arr[2:7]
-            face_xmin, face_ymin, face_xmax, face_ymax = nn_data[1:5]
-            cv2.rectangle(frame, (int(300 * face_xmin), int(300 * face_ymin)), (int(300 * face_xmax), int(300 * face_ymax)), (0, 255, 0), 2)
+            inConfig = queues[i*4 + 3].get()
+            xmin = int(300 * inConfig.getCropXMin())
+            ymin = int(300 * inConfig.getCropYMin())
+            xmax = int(300 * inConfig.getCropXMax())
+            ymax = int(300 * inConfig.getCropYMax())
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+
+            width = inConfig.getCropXMax()-inConfig.getCropXMin()
+            height = inConfig.getCropYMax()-inConfig.getCropYMin()
 
             # Facial landmarks from the second NN
-            inLandmarks = queues[i*4 + 3].get()
+            inLandmarks = queues[i*4 + 2].get()
             landmarks_layer = inLandmarks.getFirstLayerFp16()
             landmarks = np.array(landmarks_layer).reshape(5, 2)
-            nn_w = nn_data[3]-nn_data[1]
-            nn_h = nn_data[4]-nn_data[2]
 
             lr_landmarks.append(list(map(get_landmark_3d, landmarks)))
             for landmark in landmarks:
                 get_landmark_3d(landmark)
-                w = landmark[0] * nn_w + nn_data[1]
-                h = landmark[1] * nn_h + nn_data[2]
                 cv2.circle(cropped_frame, (int(48*landmark[0]), int(48*landmark[1])), 3, (0, 255, 0))
-                cv2.circle(frame, (int(300 * w), int(300 * h)), 3, (0,255,0))
+                w = landmark[0] * width + inConfig.getCropXMin()
+                h = landmark[1] * height + inConfig.getCropYMin()
+                cv2.circle(frame, (int(w * 300), int(h * 300)), 3, (0,255,0))
 
             # Display both mono/cropped frames
             cv2.imshow("mono_"+name, frame)
