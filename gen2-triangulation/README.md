@@ -1,6 +1,5 @@
 # Gen2 Triangulation 3D visualizer
 
-This is a Gen2 equivalent of `triangulation-3D-visualizer`.
 Because there are often application-specific host-side filtering to be done on the stereo
 neural inference results, and because these calculations are lightweight
 (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
@@ -11,8 +10,6 @@ Consider it a draft/reference at this point.
 ## Demo
 
 [![Spatial AI](https://user-images.githubusercontent.com/18037362/116149182-bc2b4b00-a6d9-11eb-91a5-ad5359ca85ad.gif)](https://www.youtube.com/watch?v=YalHMcsZODs&feature=youtu.be "3D Facial Landmark visualization")
-
-Note that this is Gen1 video demo
 
 ## Installation
 
