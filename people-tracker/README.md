@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # People tracker
 
 This application counts how many people went upwards / downwards / leftwards / rightwards in the video stream, allowing you to

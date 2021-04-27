@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 Pose Estimation Example
 
 This example demonstrates how to run [Human Pose Estimation Network](https://docs.openvinotoolkit.org/latest/omz_models_intel_human_pose_estimation_0001_description_human_pose_estimation_0001.html) using Gen2 Pipeline Builder.

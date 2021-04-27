@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 Fatigue Detection
 
 This example demonstrates the Gen2 Pipeline Builder running [face detection network](https://docs.openvinotoolkit.org/2019_R1/_face_detection_retail_0004_description_face_detection_retail_0004.html) and head detection network

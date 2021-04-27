@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Training data collecting script
 
 This script allows to create a training dataset using the DepthAI, each entry in it will contain

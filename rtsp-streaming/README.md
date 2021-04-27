@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # RSTP Streaming
 
 This example allows you to stream frames via RTSP

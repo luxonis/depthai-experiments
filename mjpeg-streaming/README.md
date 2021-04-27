@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # MJPEG Streaming server
 
 This script allows you to:

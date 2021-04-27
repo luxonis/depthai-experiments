@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Two Stage Inference
 
 This eample shows how to perform two stage inference using DepthAI.

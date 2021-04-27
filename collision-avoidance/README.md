@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Collision avoidance
 
 This experiment's goal is to detect the vehicles moving towards the camera and alert the user if it can be dangerous pass

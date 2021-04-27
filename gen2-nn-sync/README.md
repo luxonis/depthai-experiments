@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 NN frame sync
 
 This example shows how to present the neural network inference results on the inferenced frames.
