@@ -47,23 +47,11 @@ pipeline = dai.Pipeline()
 
 pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
 
-# Define a neural network that will make predictions based on the source frames
-detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(nn_path)
-detection_nn.setNumPoolFrames(4)
-detection_nn.input.setBlocking(False)
-detection_nn.setNumInferenceThreads(2)
-
+# Right mono camera
 right = pipeline.createMonoCamera()
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-
-manip = pipeline.createImageManip()
-manip.setResize(nn_shape,nn_shape)
-manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
-right.out.link(manip.inputImage)
-manip.out.link(detection_nn.input)
-
+# Left mono camera
 left = pipeline.createMonoCamera()
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
@@ -71,8 +59,23 @@ left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 stereo = pipeline.createStereoDepth()
 stereo.setConfidenceThreshold(200)
 stereo.setOutputDepth(True)
+stereo.setOutputRectified(True)
+stereo.setRectifyMirrorFrame(False)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
+
+# Right rectified -> NN input to have the most accurate NN output/stereo mapping
+manip = pipeline.createImageManip()
+manip.setResize(nn_shape,nn_shape)
+manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
+stereo.rectifiedRight.link(manip.inputImage)
+
+# Define a neural network that will make predictions based on the source frames
+detection_nn = pipeline.createNeuralNetwork()
+detection_nn.setBlobPath(nn_path)
+detection_nn.input.setBlocking(False)
+detection_nn.setNumInferenceThreads(2)
+manip.out.link(detection_nn.input)
 
 # Create depth output
 xout_depth = pipeline.createXLinkOut()
@@ -80,13 +83,9 @@ xout_depth.setStreamName("depth")
 stereo.depth.link(xout_depth.input)
 
 # Create output for right frames
-xout_right_cropped = pipeline.createXLinkOut()
-xout_right_cropped.setStreamName("right_cropped")
-detection_nn.passthrough.link(xout_right_cropped.input)
-
-xout_right = pipeline.createXLinkOut()
-xout_right.setStreamName("right")
-right.out.link(xout_right.input)
+xout_right_rectified = pipeline.createXLinkOut()
+xout_right_rectified.setStreamName("right_rectified")
+detection_nn.passthrough.link(xout_right_rectified.input)
 
 xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
@@ -97,10 +96,9 @@ with dai.Device(pipeline) as device:
     device.startPipeline()
 
     # Output queues will be used to get the outputs from the device
-    q_cropped = device.getOutputQueue(name="right_cropped", maxSize=4, blocking=False)
+    q_right = device.getOutputQueue(name="right_rectified", maxSize=4, blocking=False)
     q_depth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
-    q_right = device.getOutputQueue(name="right", maxSize=4, blocking=False)
 
     start_time = time.time()
     counter = 0
@@ -110,17 +108,12 @@ with dai.Device(pipeline) as device:
     depth_frame = None
 
     while True:
-        # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
-        in_cropped = q_cropped.tryGet()
+        in_right = q_right.tryGet()
         in_nn = q_nn.tryGet()
         in_depth = q_depth.tryGet()
 
-        in_right = q_right.tryGet()
         if in_right is not None:
-            cv2.imshow("right", in_right.getCvFrame())
-
-        if in_cropped is not None:
-            frame = in_cropped.getCvFrame()
+            frame = in_right.getCvFrame()
 
         if in_depth is not None:
             depth_frame = in_depth.getFrame()
@@ -128,6 +121,9 @@ with dai.Device(pipeline) as device:
             depth_frame = depth_frame[0:400, 120:520]
             # Resize it so it will match the NN output
             depth_frame = cv2.resize(depth_frame, (nn_shape,nn_shape))
+
+            # Since we are using setRectifyMirrorFrame(False), we have to flip depth frame
+            depth_frame = cv2.flip(depth_frame, 1)
 
             # Remove this to disable showing depth frames
             depthFrameColor = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
@@ -152,8 +148,7 @@ with dai.Device(pipeline) as device:
             if frame is not None:
                 frame = show_deeplabv3p(output_colors, frame)
                 cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
-                cv2.imshow("nn_input", frame)
-
+                cv2.imshow("nn", frame)
 
             # You can add custom code here, for example depth averaging
             if depth_frame is not None:
