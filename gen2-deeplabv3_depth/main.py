@@ -20,15 +20,12 @@ python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo_tf.py   --input_
 '''
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-nn", "--nn_model", help="select camera input source for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
+parser.add_argument("-shape", "--nn_shape", help="select NN model shape", default=256, type=int)
+parser.add_argument("-nn", "--nn_path", help="select model path for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
 args = parser.parse_args()
 
-nn_path = args.nn_model
-
-
-nn_shape = 256
-if '513' in nn_path:
-    nn_shape = 513
+nn_shape = args.nn_shape
+nn_path = args.nn_path
 
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
