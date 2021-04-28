@@ -66,6 +66,20 @@ stereo.setRectifyMirrorFrame(False)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
+# Depth output is 640x400. Rectified frame that gets resized has 1:1 (w:h) ratio
+# 400/640=0.625  1-0.625=0.375  0.375/2=0.1875  1-0.1875=0.8125
+topLeft = dai.Point2f(0.1875, 0)
+bottomRight = dai.Point2f(0.8125, 1)
+# This ROI will convert 640x400 depth frame into 400x400 depth frame, which we will resize on the host to match NN out
+crop_depth = pipeline.createImageManip()
+crop_depth.initialConfig.setCropRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
+stereo.depth.link(crop_depth.inputImage)
+
+# Create depth output
+xout_depth = pipeline.createXLinkOut()
+xout_depth.setStreamName("depth")
+crop_depth.out.link(xout_depth.input)
+
 # Right rectified -> NN input to have the most accurate NN output/stereo mapping
 manip = pipeline.createImageManip()
 manip.setResize(nn_shape,nn_shape)
@@ -79,10 +93,6 @@ detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 manip.out.link(detection_nn.input)
 
-# Create depth output
-xout_depth = pipeline.createXLinkOut()
-xout_depth.setStreamName("depth")
-stereo.depth.link(xout_depth.input)
 
 # Create output for right frames
 xout_right_rectified = pipeline.createXLinkOut()
@@ -119,8 +129,6 @@ with dai.Device(pipeline) as device:
 
         if in_depth is not None:
             depth_frame = in_depth.getFrame()
-            # Crop the depth map
-            depth_frame = depth_frame[0:400, 120:520]
             # Resize it so it will match the NN output
             depth_frame = cv2.resize(depth_frame, (nn_shape,nn_shape))
 
