@@ -2,7 +2,7 @@
 
 This example shows how to run Deeplabv3+ on DepthAI in the Gen2 API and crop the depth image based on the models output.
 
-[![Semantic Segmentation on DepthAI](https://user-images.githubusercontent.com/32992551/109359126-25a9ed00-7842-11eb-9071-cddc7439e3ca.png)](https://www.youtube.com/watch?v=zjcUChyyNgI "Deeplabv3+ Custom Training for DepthAI")
+[![Semantic Segmentation on DepthAI](https://user-images.githubusercontent.com/18037362/116380966-5e4b5000-a80c-11eb-8013-74e2b2cb7515.gif)](https://www.youtube.com/watch?v=HiHrvJ8YtSM "Deeplabv3")
 
 ## Pre-requisites
 
