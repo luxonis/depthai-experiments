@@ -2,11 +2,6 @@ import cv2
 import numpy as np
 import os
 import glob
-import depthai
-
-
-
-
 
 class StereoSGBM:
     def __init__(self, baseline, H_right, H_left = np.identity(3, dtype=np.float32)):
