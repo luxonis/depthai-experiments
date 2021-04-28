@@ -80,13 +80,13 @@
 
 [![Watch the demo](https://user-images.githubusercontent.com/5244214/90751105-fc7a3400-e2d5-11ea-82fe-3c7797e99e3e.gif)](https://youtu.be/M0xQI1kXju4)
 
-## 人物追踪器 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/people-tracker))
+## 人物追踪器 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker))
 
 此应用程序统计视频流中有多少人向上/向下/向左/向右移动，从而使您可以接收有关多少人进入房间或​​经过走廊的信息。
 
-在这个例子中使用的模型是 [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) 从OpenVIN模型动物园。图片来源：Adrian Rosebrock，OpenCV人员计数器，PyImageSearch， [https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/), 于2020年8月6日访问。
+在这个例子中使用的模型是 [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) 从OpenVIN模型动物园。
 
-[![Watch the demo](https://user-images.githubusercontent.com/5244214/90752628-ee2d1780-e2d7-11ea-8e48-ca94b02a7674.gif)](https://youtu.be/8RiHkkGKdj0)
+[![Watch the demo](https://user-images.githubusercontent.com/18037362/116413235-56e96e00-a82f-11eb-8007-bfcdb27d015c.gif)](https://www.youtube.com/watch?v=MHmzp--pqUA)
 
 
 ## 点云投影 ([点击查看详情](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection))
