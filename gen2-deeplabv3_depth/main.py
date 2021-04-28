@@ -38,6 +38,11 @@ def decode_deeplabv3p(output_tensor):
 def show_deeplabv3p(output_colors, frame):
     return cv2.addWeighted(frame,1, output_colors,0.2,0)
 
+def dispay_colored_depth(frame, name):
+    frame_colored = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+    frame_colored = cv2.equalizeHist(frame_colored)
+    frame_colored = cv2.applyColorMap(frame_colored, cv2.COLORMAP_HOT)
+    cv2.imshow(name, frame_colored)
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
@@ -123,10 +128,7 @@ with dai.Device(pipeline) as device:
             depth_frame = cv2.flip(depth_frame, 1)
 
             # Remove this to disable showing depth frames
-            depthFrameColor = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            depthFrameColor = cv2.equalizeHist(depthFrameColor)
-            depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
-            cv2.imshow("depth", depthFrameColor)
+            dispay_colored_depth(depth_frame, "depth")
 
         if in_nn is not None:
             # print("NN received")
@@ -147,13 +149,10 @@ with dai.Device(pipeline) as device:
                 cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
                 cv2.imshow("nn", frame)
 
-            # You can add custom code here, for example depth averaging
             if depth_frame is not None:
                 depth_overlay = lay1*depth_frame
-                depthFrameOverlay = cv2.normalize(depth_overlay, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                depthFrameOverlay = cv2.equalizeHist(depthFrameOverlay)
-                depthFrameOverlay = cv2.applyColorMap(depthFrameOverlay, cv2.COLORMAP_HOT)
-                cv2.imshow("depth_overlay", depthFrameOverlay)
+                dispay_colored_depth(depth_overlay, "depth_overlay")
+                # You can add custom code here, for example depth averaging
 
         if cv2.waitKey(1) == ord('q'):
             break
