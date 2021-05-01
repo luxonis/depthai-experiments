@@ -50,7 +50,7 @@ class MainDebug(Main):
     def make_bird_frame(self):
         fov = 68.7938
         min_distance = 0.827
-        frame = np.zeros((300, 100, 3), np.uint8)
+        frame = np.zeros((384, 100, 3), np.uint8)
         min_y = int((1 - (min_distance - self.min_z) / (self.max_z - self.min_z)) * frame.shape[0])
         cv2.rectangle(frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1)
 
@@ -104,8 +104,9 @@ class MainDebug(Main):
             draw_pts = np.array([(self.calc_x(pt[0]), self.calc_z(pt[1])) for pt in points])
             cv2.polylines(bird_frame, [draw_pts], False, color=color)
 
-        cv2.imshow("Frame", frame)
-        cv2.imshow("Bird", bird_frame)
+        numpy_horizontal = np.hstack((frame, bird_frame))
+        cv2.imshow("DetectionFrame", numpy_horizontal)
+        
         cv2.moveWindow("Bird", 1050, 200)
         cv2.moveWindow("Frame", 1370, 200)
         key = cv2.waitKey(1)
