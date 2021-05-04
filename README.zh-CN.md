@@ -60,7 +60,7 @@
 
 ![DemoUI](./demo-ui/preview.png)
 
-## MJPEG和JSON流式传输 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
+## MJPEG和JSON流式传输 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-mjpeg-streaming))
 
 [![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
 

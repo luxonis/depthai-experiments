@@ -59,7 +59,7 @@ console outputs and preview windows.
 
 ![DemoUI](./demo-ui/preview.png)
 
-## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
+## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-mjpeg-streaming))
 
 [![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
 
@@ -67,7 +67,7 @@ This lay the groundwork to make DepthAI [OpenDataCam](https://github.com/opendat
 
 ## Stereo Neural Inference Results Visualizer ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-triangulation))
 
-Because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host. 
+Because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
 
 [![Spatial AI](https://user-images.githubusercontent.com/18037362/116149182-bc2b4b00-a6d9-11eb-91a5-ad5359ca85ad.gif)](https://www.youtube.com/watch?v=YalHMcsZODs&feature=youtu.be "3D Facial Landmark visualization")
 
@@ -105,7 +105,7 @@ This is a simple application which creates rgbd image from `rgb` and `depth` str
 
 ## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-wls-filter))
 
-This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI.  
+This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI.
 
 Example running on [BW1092](https://shop.luxonis.com/collections/all/products/bw1092-pre-order) shown below:
 ![image](https://user-images.githubusercontent.com/32992551/94463964-fc920d00-017a-11eb-9e99-8a023cdc8a72.png)
