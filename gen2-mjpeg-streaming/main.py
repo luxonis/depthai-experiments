@@ -12,6 +12,7 @@ import numpy as np
 import cv2
 from PIL import Image
 
+HTTP_SERVER_PORT = 8090
 
 class TCPServerRequest(socketserver.BaseRequestHandler):
     def handle(self):
@@ -59,7 +60,7 @@ th.start()
 
 
 # start MJPEG HTTP Server
-server_HTTP = ThreadedHTTPServer(('localhost', 8090), VideoStreamHandler)
+server_HTTP = ThreadedHTTPServer(('localhost', HTTP_SERVER_PORT), VideoStreamHandler)
 th2 = threading.Thread(target=server_HTTP.serve_forever)
 th2.daemon = True
 th2.start()
@@ -101,6 +102,8 @@ texts = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", 
 with dai.Device(pipeline) as device:
     # Start pipeline
     device.startPipeline()
+
+    print(f"DepthAI is up & running. Navigate to 'localhost:{str(HTTP_SERVER_PORT)}' with Chrome to see the mjpeg stream")
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
