@@ -25,7 +25,7 @@ Run the application
 python3 main.py
 ```
 
-To see the streamed frames, open [localhost:8090](http://localhost:8090)
+To see the streamed frames, open [localhost:8090](http://localhost:8090).  This works in Chrome, but not Firefox or Safari.
 
 To see the streamed data, use
 
