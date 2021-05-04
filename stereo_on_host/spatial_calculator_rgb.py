@@ -2,6 +2,10 @@
 
 import cv2
 import depthai as dai
+import numpy as np
+import cmapy
+
+print(dai.__version__)
 
 # -------------------------
 # Change this if needed:
@@ -12,6 +16,20 @@ SAVE_EVERY = 30 # AKA 30FPS / 30 SAVE_EVERY => 1 log per second
 
 
 stepSize = 0.05
+
+showDisparity = 1  # Instead of passthrough depth (note: may not be properly synced)
+lrcheck  = 0
+extended = 0
+subpixel = 0 # Warning: if enabled, showDisparity will be disabled, as disparity and depth can't work together
+disparityConfidenceThreshold = 200
+if 1:  # OpenCV predefined maps
+    colorMap = cv2.COLORMAP_JET  # COLORMAP_HOT, COLORMAP_TURBO, ...
+else:  # matplotlib maps, see: https://matplotlib.org/stable/tutorials/colors/colormaps.html
+    colorMap = cmapy.cmap('inferno')
+
+if showDisparity and subpixel:
+    print("Can't use both disparity and depth with subpixel enabled -- reverting to showing depth")
+    showDisparity = False
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
@@ -44,19 +62,21 @@ monoRight.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG);
 monoRight.initialControl.setManualFocus(135)
 
 
-lrcheck = False
-subpixel = False
-
 # StereoDepth
-stereo.setConfidenceThreshold(200)
+stereo.setConfidenceThreshold(disparityConfidenceThreshold)
 stereo.setRectifyEdgeFillColor(0)
 stereo.setLeftRightCheck(lrcheck)
+stereo.setExtendedDisparity(extended)
 stereo.setSubpixel(subpixel)
 
 monoLeft.out.link(stereo.left)
 monoRight.isp.link(stereo.right)
 
-spatialLocationCalculator.passthroughDepth.link(xoutDepth.input)
+if showDisparity:
+    stereo.disparity.link(xoutDepth.input)
+else:
+    spatialLocationCalculator.passthroughDepth.link(xoutDepth.input)
+    
 stereo.depth.link(spatialLocationCalculator.inputDepth)
 
 topLeft = dai.Point2f(0.5, 0.5)
@@ -98,10 +118,16 @@ with dai.Device(pipeline) as device, open("log.txt", "a") as file:
         inDepthAvg = spatialCalcQueue.get() # Blocking call, will wait until a new data has arrived
 
         depthFrame = inDepth.getFrame()
-        depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        depthFrameColor = cv2.equalizeHist(depthFrameColor)
-        depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
-
+        if showDisparity:
+            maxDisparity = 95
+            if extended: maxDisparity *= 2
+            if subpixel: maxDisparity *= 32
+            depthFrame = (depthFrame * 255. / maxDisparity).astype(np.uint8)
+            depthFrameColor = cv2.applyColorMap(depthFrame, colorMap)
+        else:
+            depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+            depthFrameColor = cv2.equalizeHist(depthFrameColor)
+            depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
 
         spatialData = inDepthAvg.getSpatialLocations()
         for depthData in spatialData:
