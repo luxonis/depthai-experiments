@@ -9,30 +9,42 @@ import time
 import argparse
 from time import monotonic
 
-# Whether we want to use video from host or rgb camera
-VIDEO = False
-# Whether we want to send tracklets via SPI to the MCU
-SPI = True
-# Minimum distance the person has to move (across the x/y axis) to be considered a real movement
-THRESH_DIST_DELTA = 0.25
-
 # Labels
 labelMap = ["background", "person" ]
 
 # Get argument first
+parser = argparse.ArgumentParser()
+parser.add_argument('-nn', '--nn', type=str, help=".blob path")
+parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
+parser.add_argument('-spi', '--spi', action='store_true', default=False, help="Send tracklets to the MCU via SPI")
+parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI RGB camera for inference (conflicts with -vid)")
+parser.add_argument('-t', '--threshold', default=0.25, type=float,
+    help="Minimum distance the person has to move (across the x/y axis) to be considered a real movement")
+args = parser.parse_args()
+
 parentDir = Path(__file__).parent
-videoPath = str((parentDir / Path('demo/example_01.mp4')).resolve().absolute())
-if len(sys.argv) > 2:
-    nnPath = sys.argv[1]
-    videoPath = sys.argv[2]
+
+videoPath = parentDir / Path('demo/example_01.mp4')
+if args.video: videoPath = args.video
+
+nnPath = parentDir / Path('model/person-detection-retail-0013_2021.3_7shaves.blob')
+if args.nn: nnPath = args.nn
+
+# Whether we want to use video from host or rgb camera
+VIDEO = not args.camera
+
+# Whether we want to send tracklets via SPI to the MCU
+SPI = args.spi
+
+# Minimum distance the person has to move (across the x/y axis) to be considered a real movement
+THRESH_DIST_DELTA = args.threshold
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
 # Create and configure the detection network
 detectionNetwork = pipeline.createMobileNetDetectionNetwork()
-nnPath = str((parentDir / Path('model/person-detection-retail-0013_2021.3_7shaves.blob')).resolve().absolute())
-detectionNetwork.setBlobPath(nnPath)
+detectionNetwork.setBlobPath(str(Path(nnPath).resolve().absolute()))
 detectionNetwork.setConfidenceThreshold(0.5)
 detectionNetwork.input.setBlocking(False)
 
@@ -187,7 +199,7 @@ with dai.Device(pipeline) as device:
     if VIDEO:
         videoQ = device.getInputQueue("video_in")
 
-        cap = cv2.VideoCapture(videoPath)
+        cap = cv2.VideoCapture(str(Path(videoPath).resolve().absolute()))
         while cap.isOpened():
             read_correctly, video_frame = cap.read()
             if not read_correctly:
