@@ -49,14 +49,28 @@ parser.add_argument("-manip", "--preview_manip", default=False, action="store_tr
 parser.add_argument("-nn", "--run_nn", const="rgb", choices={"rgb", "left", "right"}, nargs="?",
                     help="Run NN on the selected camera (default: %(const)s)")
 
+stereo_align_options = {
+    'left': dai.StereoDepthProperties.DepthAlign.RECTIFIED_LEFT,
+    "right": dai.StereoDepthProperties.DepthAlign.RECTIFIED_RIGHT,
+    'rgb': dai.CameraBoardSocket.RGB,
+    'center': dai.StereoDepthProperties.DepthAlign.CENTER
+}
+
+parser.add_argument("-sa", "--stereo_align", const="right", choices=stereo_align_options, nargs="?",
+                    help="Set stereo alignment (default: %(const)s)")
+
+
 args = parser.parse_args()
 
 point_cloud = args.pointcloud  # Create point cloud visualizer. Depends on 'out_rectified'
-print(args.enable_rgb)
+#print(args.enable_rgb)
 enable_rgb = args.enable_rgb
 enable_stereo = not args.no_stereo
 enable_nn = args.run_nn
+stereo_align = stereo_align_options[args.stereo_align] if args.stereo_align is not None else stereo_align_options['right']
 if enable_nn == 'rgb': enable_rgb = True
+
+#stereo_align = 
 
 # StereoDepth config options. TODO move to command line options
 source_camera = not args.static_frames
@@ -82,7 +96,16 @@ rgb_res_opts = {
     '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
 }
 rgb_res = rgb_res_opts.get(args.enable_rgb)
+
 last_frame_rgb_video = None
+
+if enable_rgb and stereo_align != dai.CameraBoardSocket.RGB:
+    if args.stereo_align is None:
+        print('Force enabling --stereo_align rgb because RGB camera enabled.')
+        stereo_align = stereo_align_options['rgb']
+    else:
+        print('Warning: --stereo_align should be set to rgb when -rgb is enabled.')
+
 
 print("StereoDepth config options:")
 print("    Left-Right check:  ", lrcheck)
@@ -90,6 +113,9 @@ print("    Extended disparity:", extended)
 print("    Subpixel:          ", subpixel)
 print("    Median filtering:  ", median)
 print("    Depth output:      ", out_depth)
+print("    Stereo Align:      ", stereo_align)
+if args.enable_rgb:
+    print("    Enable RGB:        ", True)
 
 # TODO add API to read this from device / calib data
 right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
@@ -181,10 +207,8 @@ def build_pipeline(pipeline):
         stereo.setLeftRightCheck(lrcheck)
         stereo.setExtendedDisparity(extended)
         stereo.setSubpixel(subpixel)
-        if enable_rgb:
-            stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-        else:
-            stereo.setDepthAlign(dai.StereoDepthProperties.DepthAlign.CENTER)
+        stereo.setDepthAlign(stereo_align)
+
         if source_camera:
             # Default: EEPROM calib is used, and resolution taken from MonoCamera nodes
             # stereo.loadCalibrationFile(path)
