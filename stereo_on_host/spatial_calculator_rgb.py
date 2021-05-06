@@ -8,6 +8,7 @@ import cmapy
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-lrc', '--lrcheck',  default=False, action="store_true")
+parser.add_argument('-r', '--rotate',  default=False, action="store_true")
 parser.add_argument('-ext', '--extended', default=False, action="store_true")
 parser.add_argument('-sub', '--subpixel', default=False, action="store_true")
 parser.add_argument('-dct', '--disp-confidence-thr', default=230, type=int)
@@ -64,16 +65,19 @@ xinSpatialCalcConfig.setStreamName("spatialCalcConfig")
 monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
 monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
 monoLeft.setFps(FPS)
-monoLeft.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
 monoRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
 monoRight.setBoardSocket(dai.CameraBoardSocket.RGB)
 monoRight.setFps(FPS)
 monoRight.setIspScale(1, 3)
-monoRight.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 monoRight.initialControl.setManualFocus(135)
 if args.camera_tuning is not None:
     monoRight.setCameraTuningBlobPath(args.camera_tuning)
+
+if args.rotate:
+    monoLeft.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+    monoRight.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+
 
 # StereoDepth
 stereo.setConfidenceThreshold(args.disp_confidence_thr)

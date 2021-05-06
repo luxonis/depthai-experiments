@@ -8,4 +8,4 @@ blobconverter==0.0.7
 cmapy
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.2.1.0.dev+dc0b81001eb0a061c80bc4ddbfb0c1d35e39d599
+depthai==2.2.1.0.dev+be1c6141a19760b6fb9b4e93bf27ebc118468031
