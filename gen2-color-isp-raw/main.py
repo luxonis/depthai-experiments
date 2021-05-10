@@ -44,6 +44,8 @@ parser.add_argument('-1', '--res_1080p',  default=False, action="store_true",
                     help='Set sensor res to 1080p, instead of 4K (with UVC) / 12MP')
 parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
+parser.add_argument("-m", "--mono-camera", const=800, choices={800, 720, 400}, nargs="?",
+                    help="Enable Mono camera and select resolution (default: %(const)s)")
 args = parser.parse_args()
 
 streams = []
@@ -51,6 +53,8 @@ streams = []
 streams.append('isp')
 if args.enable_raw:
     streams.append('raw')
+if args.mono_camera:
+    streams.append('mono')
 
 ''' Packing scheme for RAW10 - MIPI CSI-2
 - 4 pixels: p0[9:0], p1[9:0], p2[9:0], p3[9:0]
@@ -103,6 +107,19 @@ if 'raw' in streams:
     xout_raw = pipeline.createXLinkOut()
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
+
+if 'mono' in streams:
+    mono_res_opts = {
+        400: dai.MonoCameraProperties.SensorResolution.THE_400_P,
+        720: dai.MonoCameraProperties.SensorResolution.THE_720_P,
+        800: dai.MonoCameraProperties.SensorResolution.THE_800_P,
+    }
+    mono = pipeline.createMonoCamera()
+    mono.setBoardSocket(dai.CameraBoardSocket.LEFT)
+    mono.setResolution(mono_res_opts.get(args.mono_camera))
+    xout_mono = pipeline.createXLinkOut()
+    xout_mono.setStreamName('mono')
+    mono.out.link(xout_mono.input)
 
 if args.enable_uvc:
     uvc = pipeline.createUVC()
@@ -197,7 +214,8 @@ capture_flag = False
 while True:
     for q in q_list:
         name = q.getName()
-        data = q.get()
+        data = q.tryGet()
+        if data is None: continue
         width, height = data.getWidth(), data.getHeight()
         payload = data.getData()
         capture_file_info_str = ('capture_' + name
@@ -212,7 +230,7 @@ while True:
             shape = (height * 3 // 2, width)
             yuv420p = payload.reshape(shape).astype(np.uint8)
             bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
-        if name == 'raw':
+        elif name == 'raw':
             # Preallocate the output buffer
             unpacked = np.empty(payload.size * 4 // 5, dtype=np.uint16)
             if capture_flag:
@@ -228,6 +246,10 @@ while True:
             # See this for the ordering, at the end of page:
             # https://docs.opencv.org/4.5.1/de/d25/imgproc_color_conversions.html
             bgr = cv2.cvtColor(bayer, cv2.COLOR_BayerBG2BGR)
+        else:
+            # 'mono', etc. Not really bgr, just reusing logic
+            shape = (height, width)
+            bgr = payload.reshape(shape)
         if capture_flag:  # Save to disk if `c` was pressed
             filename = capture_file_info_str + '.png'
             print("Saving to file:", filename)
