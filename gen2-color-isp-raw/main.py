@@ -46,6 +46,8 @@ parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
 parser.add_argument("-m", "--mono-camera", const=800, choices={800, 720, 400}, nargs="?",
                     help="Enable Mono camera and select resolution (default: %(const)s)")
+parser.add_argument("-rm", "--rgb-as-mono", default=False, action="store_true",
+                    help="Show RGB camera as Mono, taking only Luma plane")
 args = parser.parse_args()
 
 streams = []
@@ -208,6 +210,8 @@ luma_denoise = 0
 chroma_denoise = 0
 control = 'none'
 
+rgb_as_mono = args.rgb_as_mono
+
 def clamp(num, v0, v1): return max(v0, min(num, v1))
 
 capture_flag = False
@@ -229,7 +233,10 @@ while True:
                 payload.tofile(filename)
             shape = (height * 3 // 2, width)
             yuv420p = payload.reshape(shape).astype(np.uint8)
-            bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
+            if rgb_as_mono:
+                bgr = yuv420p
+            else:
+                bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
         elif name == 'raw':
             # Preallocate the output buffer
             unpacked = np.empty(payload.size * 4 // 5, dtype=np.uint16)
@@ -375,5 +382,7 @@ while True:
             print("Chroma denoise:", chroma_denoise)
             ctrl.setChromaDenoise(chroma_denoise)
         controlQueue.send(ctrl)
+    elif key == ord('/'):
+        rgb_as_mono = not rgb_as_mono
     elif key == ord('q'):
         break
