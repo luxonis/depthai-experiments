@@ -54,21 +54,20 @@ with dai.Device(p) as device:
 
     while True:
         inRgb = qRgb.get()
-        data = inRgb.getData()
         # Model needs FP16 so we have to convert color frame back to U8 on the host
-        frame = np.array(data).view(np.float16).reshape(shape).transpose(1, 2, 0).astype(np.uint8).copy()
+        frame = np.array(inRgb.getData()).view(np.float16).reshape(shape).transpose(1, 2, 0).astype(np.uint8).copy()
 
-        data = qNn.tryGet()
-        if data is not None:
+        in_nn = qNn.tryGet()
+        if in_nn is not None:
             fps.next_iter()
             cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, SHAPE - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
 
             # You can use the line below to print all the (output) layers and their info
-            # [print(f"Layer name: {l.name}, Type: {l.dataType}, Dimensions: {l.dims}") for l in data.getAllLayers()]
+            # [print(f"Layer name: {l.name}, Type: {l.dataType}, Dimensions: {l.dims}") for l in in_nn.getAllLayers()]
 
-            bb = np.array(data.getLayerFp16('Identity')).reshape(25, 4)
-            label = data.getLayerInt32('Identity_1')
-            conf = data.getLayerFp16('Identity_2')
+            bb = np.array(in_nn.getLayerFp16('Identity')).reshape(25, 4)
+            label = in_nn.getLayerInt32('Identity_1')
+            conf = in_nn.getLayerFp16('Identity_2')
 
             for i in range(len(conf)):
                 if CONF_THRESHOLD < conf[i]:
