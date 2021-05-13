@@ -1,6 +1,6 @@
 [中文文档](README.zh-CN.md)
 
-# GEN1 Point Cloud Visualizer
+# Gen1 Point Cloud Visualizer
 
 This experiment allows you to run and visualize the point clouds generated using depth map and right camera.
 # Sample video
