@@ -28,10 +28,12 @@ optional arguments:
                         Set manual exposure time of the RGB camera [1..33000]
   -ei EXPOSURE_ISO, --exposure-iso EXPOSURE_ISO
                         Set manual exposure ISO of the RGB camera [100..1600]
-   -e, --encode         Encode mono frames into jpeg
-   -disp, --disp      Store disparity frames as well
+   -e, --encode         Encode mono frames into jpeg. If set, it will enable --mono as well
+   -nd, --no-depth      Do not save depth map
+   -mono, --mono        Save mono frames
 ```
 
+By default, script will save encoded (jpeg) color frames and depth map.
 ## Replay usage
 ```
 usage: replay.py [-p PATH]

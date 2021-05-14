@@ -5,12 +5,15 @@ import os
 from multiprocessing import Process, Queue
 import cv2
 import depthai as dai
+import sys
+import numpy as np
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
+parser.add_argument('-d', '--depth', action='store_true', default=False, help="Use saved depth maps")
 args = parser.parse_args()
 
 # Get the stored frames path
@@ -20,33 +23,35 @@ frames_sorted = sorted([int(i) for i in frames])
 
 pipeline = dai.Pipeline()
 
-left_in = pipeline.createXLinkIn()
-right_in = pipeline.createXLinkIn()
 rgb_in = pipeline.createXLinkIn()
-
-left_in.setStreamName("left")
-right_in.setStreamName("right")
 rgb_in.setStreamName("rgbIn")
 
-stereo = pipeline.createStereoDepth()
-stereo.setConfidenceThreshold(240)
-median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
-stereo.setMedianFilter(median)
-stereo.setLeftRightCheck(False)
-stereo.setExtendedDisparity(False)
-stereo.setSubpixel(False)
-stereo.setInputResolution(640,400)
+if not args.depth:
+    left_in = pipeline.createXLinkIn()
+    right_in = pipeline.createXLinkIn()
+    left_in.setStreamName("left")
+    right_in.setStreamName("right")
 
-left_in.out.link(stereo.left)
-right_in.out.link(stereo.right)
+    stereo = pipeline.createStereoDepth()
+    stereo.setConfidenceThreshold(240)
+    median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+    stereo.setMedianFilter(median)
+    # stereo.setEmptyCalibration()
+    stereo.setLeftRightCheck(False)
+    stereo.setExtendedDisparity(False)
+    stereo.setSubpixel(False)
+    stereo.setInputResolution(640,400)
 
-right_s_out = pipeline.createXLinkOut()
-right_s_out.setStreamName("rightS")
-stereo.syncedRight.link(right_s_out.input)
+    left_in.out.link(stereo.left)
+    right_in.out.link(stereo.right)
 
-left_s_out = pipeline.createXLinkOut()
-left_s_out.setStreamName("leftS")
-stereo.syncedLeft.link(left_s_out.input)
+    right_s_out = pipeline.createXLinkOut()
+    right_s_out.setStreamName("rightS")
+    stereo.syncedRight.link(right_s_out.input)
+
+    left_s_out = pipeline.createXLinkOut()
+    left_s_out.setStreamName("leftS")
+    stereo.syncedLeft.link(left_s_out.input)
 
 spatialDetectionNetwork = pipeline.createMobileNetSpatialDetectionNetwork()
 spatialDetectionNetwork.setBlobPath("models/mobilenet-ssd_openvino_2021.2_6shave.blob")
@@ -56,7 +61,13 @@ spatialDetectionNetwork.setBoundingBoxScaleFactor(0.3)
 spatialDetectionNetwork.setDepthLowerThreshold(100)
 spatialDetectionNetwork.setDepthUpperThreshold(5000)
 
-stereo.depth.link(spatialDetectionNetwork.inputDepth)
+if args.depth:
+    depth_in = pipeline.createXLinkIn()
+    depth_in.setStreamName("depthIn")
+    depth_in.out.link(spatialDetectionNetwork.inputDepth)
+else:
+    stereo.depth.link(spatialDetectionNetwork.inputDepth)
+
 rgb_in.out.link(spatialDetectionNetwork.input)
 
 bbOut = pipeline.createXLinkOut()
@@ -75,68 +86,111 @@ rgbOut = pipeline.createXLinkOut()
 rgbOut.setStreamName("rgb")
 spatialDetectionNetwork.passthrough.link(rgbOut.input)
 
-def to_planar(arr, shape):
-    return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
+class Replay:
+    def __init__(self, path):
+        self.path = path
+
+    def to_planar(self, arr, shape):
+        return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
+
+    def read_files(self, frame_folder, files):
+        frames = []
+        for file in files:
+            file_path = str((Path(self.path) / str(frame_folder) / file).resolve().absolute())
+            print(file_path)
+            if file.startswith("right") or file.startswith("left"):
+                frame = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+            elif file.startswith("depth"):
+                with open(file_path, "rb") as depth_file:
+                    frame = list(depth_file.read())
+            elif file.startswith("color"):
+                frame = cv2.imread(file_path)
+            else: print(f"Unknown file found! {file}")
+            frames.append(frame)
+        return frames
+
+    def get_files(self, frame_folder):
+        return os.listdir(str((Path(self.path) / str(frame_folder)).resolve().absolute()))
+
+    def send_mono(self, q, img, right):
+        h, w = img.shape
+        frame = dai.ImgFrame()
+        frame.setData(cv2.flip(img, 1)) # Flip the rectified frame
+        frame.setType(dai.RawImgFrame.Type.RAW8)
+        frame.setWidth(w)
+        frame.setHeight(h)
+        frame.setInstanceNum((2 if right else 1))
+        q.send(frame)
+    def send_rgb(self, q, img):
+        preview = img[0:1080, 420:1500] # Crop before sending
+        frame = dai.ImgFrame()
+        frame.setType(dai.RawImgFrame.Type.BGR888p)
+        frame.setData(self.to_planar(preview, (300, 300)))
+        frame.setWidth(300)
+        frame.setHeight(300)
+        frame.setInstanceNum(0)
+        q.send(frame)
+    def send_depth(self, q, depth):
+        # print("depth size", type(depth))
+        # depth_frame = np.array(depth).astype(np.uint8).view(np.uint16).reshape((400, 640))
+        # depthFrameColor = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        # depthFrameColor = cv2.equalizeHist(depthFrameColor)
+        # depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
+        # cv2.imshow("depth", depthFrameColor)
+        frame = dai.ImgFrame()
+        frame.setType(dai.RawImgFrame.Type.RAW16)
+        frame.setData(depth)
+        frame.setWidth(640)
+        frame.setHeight(400)
+        frame.setInstanceNum(0)
+        q.send(frame)
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
     device.startPipeline()
 
-    qLeft = device.getInputQueue('left')
-    qRight = device.getInputQueue('right')
+    if args.depth:
+        qDepthIn = device.getInputQueue('depthIn')
+    else:
+        # Use mono frames
+        qLeft = device.getInputQueue('left')
+        qRight = device.getInputQueue('right')
+        qLeftS = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
+        qRightS = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
+
     qRgbIn = device.getInputQueue('rgbIn')
 
-    qLeftS = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
-    qRightS = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
     qDepth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
 
     qBb = device.getOutputQueue(name="bb", maxSize=4, blocking=False)
     qDet = device.getOutputQueue(name="det", maxSize=4, blocking=False)
     qRgbOut = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
 
+    replay = Replay(args.path)
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     for frame_folder in frames_sorted:
-        files = os.listdir(str((Path(args.path) / str(frame_folder)).resolve().absolute()))
+        files = replay.get_files(frame_folder)
 
-        # If there is no rgb/left/right frame in the folder, skip this "frame"
-        if [file.startswith("color") or file.startswith("left") or file.startswith("right") for file in files].count(True) < 3: continue
-
-        # Read the images from the FS
-        images = [cv2.imread(str((Path(args.path) / str(frame_folder) / file).resolve().absolute()), cv2.IMREAD_GRAYSCALE if file.startswith("right") or file.startswith("left") else None) for file in files]
+        # Read the frames from the FS
+        images = replay.read_files(frame_folder, files)
 
         for i in range(len(files)):
             right = files[i].startswith("right")
-            if right or files[i].startswith("left"):
-                h, w = images[i].shape
-                frame = dai.ImgFrame()
-                frame.setData(cv2.flip(images[i], 1)) # Flip the rectified frame
-                frame.setType(dai.RawImgFrame.Type.RAW8)
-                frame.setWidth(w)
-                frame.setHeight(h)
-                frame.setInstanceNum((2 if right else 1))
-                if right: qRight.send(frame)
-                else: qLeft.send(frame)
-
-            # elif files[i].startswith("disparity"):
-            #     cv2.imshow("original disparity", images[i])
-
+            # Send recorded frames from the host to the depthai
+            if (right or files[i].startswith("left")) and not args.depth:
+                replay.send_mono(qRight if right else qLeft, images[i], right)
+            elif files[i].startswith("depth") and args.depth:
+                replay.send_depth(qDepthIn, images[i])
             elif files[i].startswith("color"):
-                preview = images[i][0:1080, 420:1500] # Crop before sending
-                frame = dai.ImgFrame()
-                frame.setType(dai.RawImgFrame.Type.BGR888p)
-                frame.setData(to_planar(preview, (300, 300)))
-                frame.setWidth(300)
-                frame.setHeight(300)
-                frame.setInstanceNum(0)
-                qRgbIn.send(frame)
-                # cv2.imshow("preview", preview)
+                replay.send_rgb(qRgbIn, images[i])
 
         inRgb = qRgbOut.get()
         rgbFrame = inRgb.getCvFrame().reshape((300, 300, 3))
 
-        cv2.imshow("left", qLeftS.get().getCvFrame())
-        cv2.imshow("right", qRightS.get().getCvFrame())
+        if not args.depth:
+            cv2.imshow("left", qLeftS.get().getCvFrame())
+            cv2.imshow("right", qRightS.get().getCvFrame())
 
         depthFrame = qDepth.get().getFrame()
         depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
