@@ -2,11 +2,10 @@
 import argparse
 from pathlib import Path
 from time import monotonic
-import numpy as np
 from multiprocessing import Process, Queue
 import cv2
 import depthai as dai
-from datetime import datetime
+import contextlib
 
 
 def check_range(min_val, max_val):
@@ -27,20 +26,12 @@ parser.add_argument('-p', '--path', default="data", type=str, help="Path where t
 parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
 # parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
 parser.add_argument('-m', '--time', type=float, default=float("inf"), help="Finish execution after X seconds")
-parser.add_argument('-af', '--autofocus', type=str, default=None, help="Set AutoFocus mode of the RGB camera", choices=list(filter(lambda name: name[0].isupper(), vars(dai.CameraControl.AutoFocusMode))))
-parser.add_argument('-mf', '--manualfocus', type=check_range(0, 255), help="Set manual focus of the RGB camera [0..255]")
-parser.add_argument('-et', '--exposure-time', type=check_range(1, 33000), help="Set manual exposure time of the RGB camera [1..33000]")
-parser.add_argument('-ei', '--exposure-iso', type=check_range(100, 1600), help="Set manual exposure ISO of the RGB camera [100..1600]")
 
 parser.add_argument('-nd', '--no-depth', action='store_true', default=False, help="Do not save depth map. If set, mono frames will be saved")
 parser.add_argument('-mono', '--mono', action='store_true', default=False, help="Save mono frames")
 parser.add_argument('-e', '--encode', action='store_true', default=False, help="Encode mono frames into jpeg. If set, it will enable -mono as well")
 
 args = parser.parse_args()
-
-exposure = [args.exposure_time, args.exposure_iso]
-if any(exposure) and not all(exposure):
-    raise RuntimeError("Both --exposure-time and --exposure-iso needs to be provided")
 
 SAVE_MONO = args.encode or args.mono or args.no_depth
 
@@ -123,37 +114,30 @@ if SAVE_MONO:
 # https://stackoverflow.com/a/7859208/5494277
 def step_norm(value):
     return round(value / args.threshold) * args.threshold
-
-
 def seq(packet):
     return packet.getSequenceNum()
-
-
 def tst(packet):
     return packet.getTimestamp().total_seconds()
-
-
 # https://stackoverflow.com/a/10995203/5494277
 def has_keys(obj, keys):
     return all(stream in obj for stream in keys)
 
-
 class PairingSystem:
-    seq_streams = []
-    if SAVE_MONO:
-        seq_streams.append("left")
-        seq_streams.append("right")
-    if not args.no_depth:
-        seq_streams.append("depth")
-    print(seq_streams)
-    ts_streams = ["color"]
-    seq_ts_mapping_stream = seq_streams[0]
-
-    def __init__(self):
+    def __init__(self, save_mono, save_depth):
         self.ts_packets = {}
         self.seq_packets = {}
         self.last_paired_ts = None
         self.last_paired_seq = None
+
+        self.seq_streams = []
+        if save_mono:
+            self.seq_streams.append("left")
+            self.seq_streams.append("right")
+        if save_depth:
+            self.seq_streams.append("depth")
+        print(self.seq_streams)
+        self.ts_streams = ["color"]
+        self.seq_ts_mapping_stream = self.seq_streams[0]
 
     def add_packets(self, packets, stream_name):
         if packets is None:
@@ -197,62 +181,47 @@ class PairingSystem:
             if key <= self.last_paired_ts:
                 del self.ts_packets[key]
 
-frame_q = Queue()
+class Record:
+    def __init__(self, dest, device, mxId):
+        self.ps = PairingSystem(SAVE_MONO, not args.no_depth)
+        self.folder_num = 0
 
-folder_num = 0
-def store_frames(in_q):
-    global folder_num
-    def save_png(frames_path, name, item):
-        cv2.imwrite(str(frames_path / Path(f"{stream_name}.png")), item)
-    def save_jpeg(frames_path, name, item):
-        with open(str(frames_path / Path(f"{stream_name}.jpeg")), "wb") as f:
-            f.write(bytearray(item))
-    def save_depth(frames_path, name, item):
-        with open(str(frames_path / Path(f"{stream_name}")), "wb") as f:
-            f.write(bytearray(item))
-    while True:
-        frames_dict = in_q.get()
-        if frames_dict is None:
-            return
-        frames_path = dest / Path(str(folder_num))
-        folder_num = folder_num + 1
-        frames_path.mkdir(parents=False, exist_ok=False)
+        self.dest = dest
+        if mxId is not None: self.dest = self.dest / mxId
 
-        for stream_name, item in frames_dict.items():
-            if stream_name == "depth": save_depth(frames_path, stream_name, item)
-            elif stream_name == "color": save_jpeg(frames_path, stream_name, item)
-            elif args.encode: save_jpeg(frames_path, stream_name, item)
-            else: save_png(frames_path, stream_name, item)
+        self.frame_q = Queue()
+        self.device = device
 
-store_p = Process(target=store_frames, args=(frame_q, ))
-store_p.start()
-ps = PairingSystem()
+        self.store_p = Process(target=self.store_frames, args=(self.frame_q, ))
+        self.store_p.start()
 
-# Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device:
-    # Start pipeline
-    device.startPipeline()
+    def store_frames(self, in_q):
+        def save_png(frames_path, name, item):
+            cv2.imwrite(str(frames_path / f"{name}.png"), item)
+        def save_jpeg(frames_path, name, item):
+            with open(str(frames_path / f"{name}.jpeg"), "wb") as f:
+                f.write(bytearray(item))
+        def save_depth(frames_path, name, item):
+            with open(str(frames_path / f"{name}"), "wb") as f:
+                f.write(bytearray(item))
+        while True:
+            frames_dict = in_q.get()
+            if frames_dict is None:
+                return
+            frames_path = self.dest / str(self.folder_num)
+            frames_path.mkdir(parents=True, exist_ok=False)
+            self.folder_num += 1
+            for stream_name, item in frames_dict.items():
+                if stream_name == "depth": save_depth(frames_path, stream_name, item)
+                elif stream_name == "color": save_jpeg(frames_path, stream_name, item)
+                elif args.encode: save_jpeg(frames_path, stream_name, item)
+                else: save_png(frames_path, stream_name, item)
 
-    qControl = device.getInputQueue('control')
+    def get_queues(self):
+        for queueName in self.ps.seq_streams + self.ps.ts_streams:
+            self.ps.add_packets(self.device.getOutputQueue(queueName).tryGetAll(), queueName)
 
-    ctrl = dai.CameraControl()
-    if args.autofocus:
-        ctrl.setAutoFocusMode(getattr(dai.CameraControl.AutoFocusMode, args.autofocus))
-    if args.manualfocus:
-        ctrl.setManualFocus(args.manualfocus)
-    if all(exposure):
-        ctrl.setManualExposure(*exposure)
-
-    qControl.send(ctrl)
-
-    cfg = dai.ImageManipConfig()
-
-    start_ts = monotonic()
-    while True:
-        for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
-            ps.add_packets(device.getOutputQueue(queueName).tryGetAll(), queueName)
-
-        pairs = ps.get_pairs()
+        pairs = self.ps.get_pairs()
         for pair in pairs:
             obj = { "color": pair["color"].getData() }
             if SAVE_MONO:
@@ -265,18 +234,29 @@ with dai.Device(pipeline) as device:
             if not args.no_depth:
                 obj["depth"] = pair["depth"].getFrame()
 
-            frame_q.put(obj)
-            # extracted_pair = {stream_name: extract_frame[stream_name](item) for stream_name, item in pair.items()}
-            # if not args.prod:
-                # for stream_name, item in extracted_pair.items():
-                    # cv2.imshow(stream_name, item)
-            # frame_q.put(extracted_pair)
+            self.frame_q.put(obj)
+    def close(self):
+        self.frame_q.put(None)
+        self.store_p.join()
 
-        if cv2.waitKey(1) == ord('q'):
-            break
+# https://docs.python.org/3/library/contextlib.html#contextlib.ExitStack
+with contextlib.ExitStack() as stack:
+    recording_devices = []
+    for device_info in dai.Device.getAllAvailableDevices():
+        device = stack.enter_context(dai.Device(pipeline, device_info))
+        print(f"Connecting to MX", device_info.getMxId())
+        recording_devices.append(Record(dest=dest, device=device, mxId=device_info.getMxId()))
+        device.startPipeline()
 
-        if monotonic() - start_ts > args.time:
-            break
+    start_ts = monotonic()
+    while True:
+        for recording_device in recording_devices:
+            recording_device.get_queues()
+            if cv2.waitKey(1) == ord('q'):
+                break
+            if monotonic() - start_ts > args.time:
+                break
+    # Close all devices
+    for recording_device in recording_devices:
+        recording_device.close()
 
-frame_q.put(None)
-store_p.join()
