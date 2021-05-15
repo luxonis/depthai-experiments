@@ -7,6 +7,7 @@ import cv2
 import depthai as dai
 import sys
 import numpy as np
+import time
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
@@ -87,17 +88,30 @@ rgbOut.setStreamName("rgb")
 spatialDetectionNetwork.passthrough.link(rgbOut.input)
 
 class Replay:
-    def __init__(self, path):
+    def __init__(self, path, device):
         self.path = path
+
+        # Create input queues
+        inputs = ["rgbIn"]
+        if args.depth:
+            inputs.append("depthIn")
+        else: # Use mono frames
+            inputs.append("left")
+            inputs.append("right")
+        self.q = {}
+        for input_name in inputs:
+            self.q[input_name] = device.getInputQueue(input_name)
+        print(self.q.items())
+        print(type(device))
+        print(device.getMxId())
 
     def to_planar(self, arr, shape):
         return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
 
     def read_files(self, frame_folder, files):
-        frames = []
+        frames = {}
         for file in files:
             file_path = str((Path(self.path) / str(frame_folder) / file).resolve().absolute())
-            print(file_path)
             if file.startswith("right") or file.startswith("left"):
                 frame = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
             elif file.startswith("depth"):
@@ -106,22 +120,36 @@ class Replay:
             elif file.startswith("color"):
                 frame = cv2.imread(file_path)
             else: print(f"Unknown file found! {file}")
-            frames.append(frame)
+            frames[os.path.splitext(file)[0]] = frame
         return frames
 
     def get_files(self, frame_folder):
         return os.listdir(str((Path(self.path) / str(frame_folder)).resolve().absolute()))
 
-    def send_mono(self, q, img, right):
+    def send_frames(self, images):
+        for name, img in images.items():
+            replay.send_frame(name, img)
+
+    # Send recorded frames from the host to the depthai
+    def send_frame(self, name, frame):
+        print("sending frame", name)
+        if name in ["left", "right"] and not args.depth:
+            self.send_mono(frame, name)
+        elif name == "depth" and args.depth:
+            self.send_depth(frame)
+        elif name == "color":
+            self.send_rgb(frame)
+
+    def send_mono(self, img, name):
         h, w = img.shape
         frame = dai.ImgFrame()
         frame.setData(cv2.flip(img, 1)) # Flip the rectified frame
         frame.setType(dai.RawImgFrame.Type.RAW8)
         frame.setWidth(w)
         frame.setHeight(h)
-        frame.setInstanceNum((2 if right else 1))
-        q.send(frame)
-    def send_rgb(self, q, img):
+        frame.setInstanceNum((2 if name == "right" else 1))
+        self.q[name].send(frame)
+    def send_rgb(self, img):
         preview = img[0:1080, 420:1500] # Crop before sending
         frame = dai.ImgFrame()
         frame.setType(dai.RawImgFrame.Type.BGR888p)
@@ -129,8 +157,8 @@ class Replay:
         frame.setWidth(300)
         frame.setHeight(300)
         frame.setInstanceNum(0)
-        q.send(frame)
-    def send_depth(self, q, depth):
+        self.q["rgbIn"].send(frame)
+    def send_depth(self, depth):
         # print("depth size", type(depth))
         # depth_frame = np.array(depth).astype(np.uint8).view(np.uint16).reshape((400, 640))
         # depthFrameColor = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
@@ -143,22 +171,15 @@ class Replay:
         frame.setWidth(640)
         frame.setHeight(400)
         frame.setInstanceNum(0)
-        q.send(frame)
+        self.q["depthIn"].send(frame)
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
     device.startPipeline()
 
-    if args.depth:
-        qDepthIn = device.getInputQueue('depthIn')
-    else:
-        # Use mono frames
-        qLeft = device.getInputQueue('left')
-        qRight = device.getInputQueue('right')
+    if not args.depth:
         qLeftS = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
         qRightS = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
-
-    qRgbIn = device.getInputQueue('rgbIn')
 
     qDepth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
 
@@ -166,7 +187,7 @@ with dai.Device(pipeline) as device:
     qDet = device.getOutputQueue(name="det", maxSize=4, blocking=False)
     qRgbOut = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
 
-    replay = Replay(args.path)
+    replay = Replay(path=args.path, device=device)
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     for frame_folder in frames_sorted:
@@ -175,17 +196,12 @@ with dai.Device(pipeline) as device:
         # Read the frames from the FS
         images = replay.read_files(frame_folder, files)
 
-        for i in range(len(files)):
-            right = files[i].startswith("right")
-            # Send recorded frames from the host to the depthai
-            if (right or files[i].startswith("left")) and not args.depth:
-                replay.send_mono(qRight if right else qLeft, images[i], right)
-            elif files[i].startswith("depth") and args.depth:
-                replay.send_depth(qDepthIn, images[i])
-            elif files[i].startswith("color"):
-                replay.send_rgb(qRgbIn, images[i])
+        replay.send_frames(images)
+        # Send first frames twice for first iteration (depthai FW limitation)
+        if frame_folder == 0: replay.send_frames(images)
 
         inRgb = qRgbOut.get()
+        print("ASD")
         rgbFrame = inRgb.getCvFrame().reshape((300, 300, 3))
 
         if not args.depth:
