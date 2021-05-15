@@ -5,6 +5,10 @@ This example shows how to send two different streams through the SPI to the ESP3
 
 This demo requires an ESP32 board connected via SPI to the DepthAI. The easiest way to accomplish this is to get a hold of an BW1092 board. It has an integrated ESP32 already connected to the DepthAI.
 
+### Demo
+
+[![depthai](https://user-images.githubusercontent.com/18037362/118379752-bdfb7680-b5d4-11eb-9a56-848c2fdb57e8.gif)](https://www.youtube.com/watch?v=Ctiem0mHbkQ)
+
 ### On the DepthAI:
 In main.py, a pipeline that has NN and SpatialLocationCalculator (SLC) is created. Pipeline sends NN (mobilenet) and SLC output to both host and ESP32.
 
