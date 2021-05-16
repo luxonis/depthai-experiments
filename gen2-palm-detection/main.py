@@ -1,43 +1,10 @@
 # coding=utf-8
-import argparse
 from pathlib import Path
 
 import cv2
 import depthai
 import numpy as np
 from imutils.video import FPS
-
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-nd", "--no-debug", action="store_true", help="prevent debug output"
-)
-parser.add_argument(
-    "-cam",
-    "--camera",
-    action="store_true",
-    help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)",
-)
-
-parser.add_argument(
-    "-vid",
-    "--video",
-    type=str,
-    help="The path of the video file used for inference (conflicts with -cam)",
-)
-
-args = parser.parse_args()
-
-debug = not args.no_debug
-
-if args.camera and args.video:
-    raise ValueError(
-        'Command line parameter error! "-Cam" cannot be used together with "-vid"!'
-    )
-elif args.camera is False and args.video is None:
-    raise ValueError(
-        'Missing inference source! Use "-cam" to run on DepthAI cameras, or use "-vid <path>" to run on video files'
-    )
-
 
 def to_planar(arr: np.ndarray, shape: tuple):
     return cv2.resize(arr, shape).transpose((2, 0, 1)).flatten()
@@ -78,40 +45,71 @@ def run_nn(x_in, x_out, in_dict):
 
 
 class DepthAI:
-    def __init__(
-        self,
-        file=None,
-        camera=False,
-    ):
+    def __init__(self,file=None):
         print("Loading pipeline...")
         self.file = file
-        self.camera = camera
         self.fps_cam = FPS()
         self.fps_nn = FPS()
         self.create_pipeline()
         self.start_pipeline()
-        self.fontScale = 1 if self.camera else 2
-        self.lineType = 0 if self.camera else 3
+        self.fontScale = 1
+        self.lineType = 0
 
     def create_pipeline(self):
         print("Creating pipeline...")
         self.pipeline = depthai.Pipeline()
 
-        if self.camera:
-            # ColorCamera
-            print("Creating Color Camera...")
-            self.cam = self.pipeline.createColorCamera()
-            self.cam.setPreviewSize(self._cam_size[1], self._cam_size[0])
-            self.cam.setResolution(
-                depthai.ColorCameraProperties.SensorResolution.THE_1080_P
-            )
-            self.cam.setInterleaved(False)
-            self.cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
-            self.cam.setColorOrder(depthai.ColorCameraProperties.ColorOrder.BGR)
+        cam = self.pipeline.createColorCamera()
+        cam.setPreviewSize(300, 300)
+        cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        cam.setVideoSize(720,720)
+        cam.setInterleaved(False)
+        cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
+        cam.setColorOrder(depthai.ColorCameraProperties.ColorOrder.BGR)
+        cam.setIspScale(2, 3)
 
-            self.cam_xout = self.pipeline.createXLinkOut()
-            self.cam_xout.setStreamName("preview")
-            self.cam.preview.link(self.cam_xout.input)
+        self.manip = self.pipeline.createImageManip()
+        self.manip.initialConfig.setResize(128, 128)
+        cam.preview.link(self.manip.inputImage)
+
+        vid_xout = self.pipeline.createXLinkOut()
+        vid_xout.setStreamName("preview")
+        cam.video.link(vid_xout.input)
+
+        # left = self.pipeline.createMonoCamera()
+        # left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+        # left.setBoardSocket(depthai.CameraBoardSocket.LEFT)
+
+        # right = self.pipeline.createMonoCamera()
+        # right.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
+        # right.setBoardSocket(depthai.CameraBoardSocket.RIGHT)
+
+        # # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
+        # stereo = self.pipeline.createStereoDepth()
+        # stereo.setConfidenceThreshold(245)
+        # stereo.setMedianFilter(depthai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+        # stereo.setDepthAlign(depthai.CameraBoardSocket.RGB)
+        # left.out.link(stereo.left)
+        # right.out.link(stereo.right)
+
+        # sdn = self.pipeline.createMobileNetSpatialDetectionNetwork()
+        # sdn.setBlobPath("models/mobilenet-ssd_openvino_2021.2_6shave.blob")
+        # sdn.setConfidenceThreshold(0.5)
+        # sdn.input.setBlocking(False)
+        # sdn.setBoundingBoxScaleFactor(0.3)
+        # sdn.setDepthLowerThreshold(100)
+        # sdn.setDepthUpperThreshold(25000)
+
+        # cam.preview.link(sdn.input)
+        # stereo.depth.link(sdn.inputDepth)
+
+        # sdn_out = self.pipeline.createXLinkOut()
+        # sdn_out.setStreamName("det")
+        # sdn.out.link(sdn_out.input)
+
+        # depth_out = self.pipeline.createXLinkOut()
+        # depth_out.setStreamName("depth")
+        # sdn.passthroughDepth.link(depth_out.input)
 
         self.create_nns()
 
@@ -133,13 +131,9 @@ class DepthAI:
         model_nn = self.pipeline.createNeuralNetwork()
         model_nn.setBlobPath(str(Path(f"{model_path}").resolve().absolute()))
         model_nn.input.setBlocking(False)
-        if first and self.camera:
-            print("linked cam.preview to model_nn.input")
-            self.cam.preview.link(model_nn.input)
-        else:
-            model_in = self.pipeline.createXLinkIn()
-            model_in.setStreamName(f"{model_name}_in")
-            model_in.out.link(model_nn.input)
+        if first:
+            print("linked manip.out to model_nn.input")
+            self.manip.out.link(model_nn.input)
 
         model_nn_xout = self.pipeline.createXLinkOut()
         model_nn_xout.setStreamName(f"{model_name}_nn")
@@ -152,10 +146,10 @@ class DepthAI:
 
         self.start_nns()
 
-        if self.camera:
-            self.preview = self.device.getOutputQueue(
-                name="preview", maxSize=4, blocking=False
-            )
+        self.preview = self.device.getOutputQueue(name="preview", maxSize=4, blocking=False)
+
+        # self.preview = self.device.getOutputQueue(name="preview", maxSize=4, blocking=False)
+        # self.depth = self.device.getOutputQueue(name="preview", maxSize=4, blocking=False)
 
     def start_nns(self):
         pass
@@ -184,52 +178,27 @@ class DepthAI:
         )
 
     def parse(self):
-        if debug:
-            self.debug_frame = self.frame.copy()
+        self.debug_frame = self.frame.copy()
 
         self.parse_fun()
 
-        if debug:
-            cv2.imshow(
-                "Camera_view",
-                self.debug_frame,
-            )
-            self.fps_cam.update()
-            if cv2.waitKey(1) == ord("q"):
-                cv2.destroyAllWindows()
-                self.fps_cam.stop()
-                self.fps_nn.stop()
-                print(
-                    f"FPS_CAMERA: {self.fps_cam.fps():.2f} , FPS_NN: {self.fps_nn.fps():.2f}"
-                )
-                raise StopIteration()
+        cv2.imshow("Camera_view",self.debug_frame)
+        self.fps_cam.update()
+        if cv2.waitKey(1) == ord("q"):
+            cv2.destroyAllWindows()
+            self.fps_cam.stop()
+            self.fps_nn.stop()
+            print(f"FPS_CAMERA: {self.fps_cam.fps():.2f} , FPS_NN: {self.fps_nn.fps():.2f}")
+            raise StopIteration()
 
     def parse_fun(self):
         pass
-
-    def run_video(self):
-        cap = cv2.VideoCapture(str(Path(self.file).resolve().absolute()))
-        while cap.isOpened():
-            read_correctly, self.frame = cap.read()
-            if not read_correctly:
-                break
-
-            try:
-                self.parse()
-            except StopIteration:
-                break
-
-        cap.release()
 
     def run_camera(self):
         while True:
             in_rgb = self.preview.tryGet()
             if in_rgb is not None:
-                shape = (3, in_rgb.getHeight(), in_rgb.getWidth())
-                self.frame = (
-                    in_rgb.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
-                )
-                self.frame = np.ascontiguousarray(self.frame)
+                self.frame = in_rgb.getCvFrame()
                 try:
                     self.parse()
                 except StopIteration:
@@ -246,16 +215,12 @@ class DepthAI:
     def run(self):
         self.fps_cam.start()
         self.fps_nn.start()
-        if self.file is not None:
-            self.run_video()
-        else:
-            self.run_camera()
+        self.run_camera()
         del self.device
 
 
 def distance(pt1, pt2):
     return np.sqrt(np.float_power(np.array(pt1) - pt2, 2).sum())
-
 
 def point_mapping(dot, center, original_side_length, target_side_length):
     """
@@ -275,10 +240,8 @@ def point_mapping(dot, center, original_side_length, target_side_length):
         np.array(target_side_length) / original_side_length
     )
 
-
 def sigmoid(x):
     return (1.0 + np.tanh(0.5 * x)) * 0.5
-
 
 def decode_boxes(raw_boxes, anchors, shape, num_keypoints):
     """
@@ -310,7 +273,6 @@ def decode_boxes(raw_boxes, anchors, shape, num_keypoints):
 
     return boxes
 
-
 def raw_to_detections(raw_box_tensor, raw_score_tensor, anchors_, shape, num_keypoints):
     """
 
@@ -330,7 +292,6 @@ def raw_to_detections(raw_box_tensor, raw_score_tensor, anchors_, shape, num_key
         scores = np.expand_dims(detection_scores[i], -1)
         output_detections.append(np.concatenate((boxes, scores), -1))
     return output_detections
-
 
 def non_max_suppression(boxes, probs=None, angles=None, overlapThresh=0.3):
     if len(boxes) == 0:
@@ -379,9 +340,8 @@ def non_max_suppression(boxes, probs=None, angles=None, overlapThresh=0.3):
 
 
 class Main(DepthAI):
-    def __init__(self, file=None, camera=False):
-        self.cam_size = (128, 128)
-        super().__init__(file, camera)
+    def __init__(self, file=None):
+        super().__init__(file)
 
     def create_nns(self):
         self.create_nn(
@@ -389,10 +349,6 @@ class Main(DepthAI):
         )
 
     def start_nns(self):
-        if not self.camera:
-            self.palm_in = self.device.getInputQueue(
-                "palm_in", maxSize=4, blocking=False
-            )
         self.palm_nn = self.device.getOutputQueue("palm_nn", maxSize=4, blocking=False)
 
     def run_palm(self):
@@ -408,14 +364,7 @@ class Main(DepthAI):
         min_score_thresh = 0.7
         anchors = np.load("anchors_palm.npy")
 
-        if not self.camera:
-            nn_data = run_nn(
-                self.palm_in,
-                self.palm_nn,
-                {"input": to_planar(self.frame, shape)},
-            )
-        else:
-            nn_data = self.palm_nn.tryGet()
+        nn_data = self.palm_nn.tryGet()
 
         if nn_data is None:
             return
@@ -462,7 +411,4 @@ class Main(DepthAI):
 
 
 if __name__ == "__main__":
-    if args.video:
-        Main(file=args.video).run()
-    else:
-        Main(camera=args.camera).run()
+    Main().run()
