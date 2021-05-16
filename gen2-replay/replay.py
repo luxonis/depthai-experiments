@@ -101,9 +101,6 @@ class Replay:
         self.q = {}
         for input_name in inputs:
             self.q[input_name] = device.getInputQueue(input_name)
-        print(self.q.items())
-        print(type(device))
-        print(device.getMxId())
 
     def to_planar(self, arr, shape):
         return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
@@ -132,7 +129,6 @@ class Replay:
 
     # Send recorded frames from the host to the depthai
     def send_frame(self, name, frame):
-        print("sending frame", name)
         if name in ["left", "right"] and not args.depth:
             self.send_mono(frame, name)
         elif name == "depth" and args.depth:
@@ -198,10 +194,12 @@ with dai.Device(pipeline) as device:
 
         replay.send_frames(images)
         # Send first frames twice for first iteration (depthai FW limitation)
-        if frame_folder == 0: replay.send_frames(images)
+        if frame_folder == 0: # TODO: debug
+            replay.send_frames(images)
+            replay.send_frames(images)
+            replay.send_frames(images)
 
         inRgb = qRgbOut.get()
-        print("ASD")
         rgbFrame = inRgb.getCvFrame().reshape((300, 300, 3))
 
         if not args.depth:
