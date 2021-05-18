@@ -7,19 +7,6 @@ import cv2
 import depthai as dai
 import contextlib
 
-
-def check_range(min_val, max_val):
-    def check_fn(value):
-        ivalue = int(value)
-        if min_val <= ivalue <= max_val:
-            return ivalue
-        else:
-            raise argparse.ArgumentTypeError(
-                "{} is an invalid int value, must be in range {}..{}".format(value, min_val, max_val)
-            )
-    return check_fn
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--threshold', default=0.3, type=float, help="Maximum difference between packet timestamps to be considered as synced")
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
@@ -27,13 +14,33 @@ parser.add_argument('-d', '--dirty', action='store_true', default=False, help="A
 # parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
 parser.add_argument('-m', '--time', type=float, default=float("inf"), help="Finish execution after X seconds")
 
-parser.add_argument('-nd', '--no-depth', action='store_true', default=False, help="Do not save depth map. If set, mono frames will be saved")
+parser.add_argument('-depth', '--depth', action='store_true', default=False, help="Save depth map as well")
 parser.add_argument('-mono', '--mono', action='store_true', default=False, help="Save mono frames")
 parser.add_argument('-e', '--encode', action='store_true', default=False, help="Encode mono frames into jpeg. If set, it will enable -mono as well")
+parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
+                    help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
+parser.add_argument("-monor", "--mono_resolution", default=720, type=int, choices=[400,720,800],
+                    help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
 
 args = parser.parse_args()
 
-SAVE_MONO = args.encode or args.mono or args.no_depth
+def getRgbResolution():
+    if args.rgb_resolution == 2160:
+        return dai.ColorCameraProperties.SensorResolution.THE_4_K
+    elif args.rgb_resolution == 3040:
+        return dai.ColorCameraProperties.SensorResolution.THE_12_MP
+    else:
+        return dai.ColorCameraProperties.SensorResolution.THE_1080_P
+
+def getMonoResolution():
+    if args.mono_resolution == 400:
+        return dai.MonoCameraProperties.SensorResolution.THE_400_P
+    elif args.mono_resolution == 800:
+        return dai.MonoCameraProperties.SensorResolution.THE_800_P
+    else:
+        return dai.MonoCameraProperties.SensorResolution.THE_720_P
+
+SAVE_MONO = args.encode or args.mono
 
 dest = Path(args.path).resolve().absolute()
 dest_count = len(list(dest.glob('*')))
@@ -46,7 +53,7 @@ pipeline = dai.Pipeline()
 rgb = pipeline.createColorCamera()
 
 rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+rgb.setResolution(getRgbResolution())
 rgb.setInterleaved(False)
 rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
@@ -62,11 +69,11 @@ rgb_encoder.bitstream.link(rgbOut.input)
 
 # Create mono cameras
 left = pipeline.createMonoCamera()
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+left.setResolution(getMonoResolution())
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
 right = pipeline.createMonoCamera()
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+right.setResolution(getMonoResolution())
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 stereo = pipeline.createStereoDepth()
@@ -80,7 +87,7 @@ stereo.setSubpixel(False)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
-if not args.no_depth:
+if args.depth:
     depthOut = pipeline.createXLinkOut()
     depthOut.setStreamName("depth")
     stereo.depth.link(depthOut.input)
@@ -183,7 +190,7 @@ class PairingSystem:
 
 class Record:
     def __init__(self, dest, device, mxId):
-        self.ps = PairingSystem(SAVE_MONO, not args.no_depth)
+        self.ps = PairingSystem(SAVE_MONO, args.depth)
         self.folder_num = 0
 
         self.dest = dest
@@ -231,7 +238,7 @@ class Record:
                 else:
                     obj["left"] = pair["left"].getCvFrame()
                     obj["right"] = pair["right"].getCvFrame()
-            if not args.no_depth:
+            if args.depth:
                 obj["depth"] = pair["depth"].getFrame()
 
             self.frame_q.put(obj)
