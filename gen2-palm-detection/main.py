@@ -2,24 +2,21 @@
 from pathlib import Path
 
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
 from imutils.video import FPS
 
 def to_planar(arr: np.ndarray, shape: tuple):
     return cv2.resize(arr, shape).transpose((2, 0, 1)).flatten()
 
-
 def to_nn_result(nn_data):
     return np.array(nn_data.getFirstLayerFp16())
-
 
 def to_tensor_result(packet):
     return {
         name: np.array(packet.getLayerFp16(name))
         for name in [tensor.name for tensor in packet.getRaw().tensors]
     }
-
 
 def frame_norm(frame, *xy_vals):
     """
@@ -37,7 +34,7 @@ def frame_norm(frame, *xy_vals):
 
 
 def run_nn(x_in, x_out, in_dict):
-    nn_data = depthai.NNData()
+    nn_data = dai.NNData()
     for key in in_dict:
         nn_data.setLayer(key, in_dict[key])
     x_in.send(nn_data)
@@ -57,72 +54,83 @@ class DepthAI:
 
     def create_pipeline(self):
         print("Creating pipeline...")
-        self.pipeline = depthai.Pipeline()
+        self.pipeline = dai.Pipeline()
 
-        # cam = self.pipeline.createColorCamera()
-        # cam.setPreviewSize(300, 300)
-        # cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        # cam.setVideoSize(720,720)
-        # cam.setInterleaved(False)
-        # cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
-        # cam.setColorOrder(depthai.ColorCameraProperties.ColorOrder.BGR)
-        # cam.initialControl.setManualFocus(130)
-        # cam.setIspScale(2, 3)
+        cam = self.pipeline.createColorCamera()
+        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        cam.setIspScale(2, 3) # To match 720P mono cameras
+        cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+        cam.initialControl.setManualFocus(130)
+        # For MobileNet NN
+        cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+        cam.setPreviewSize(300, 300)
+        cam.setInterleaved(False)
 
+        isp_xout = self.pipeline.createXLinkOut()
+        isp_xout.setStreamName("cam")
+        cam.isp.link(isp_xout.input)
 
-        # vid_xout = self.pipeline.createXLinkOut()
-        # vid_xout.setStreamName("video")
-        # cam.video.link(vid_xout.input)
+        # For Palm-detection NN
+        self.manip = self.pipeline.createImageManip()
+        self.manip.initialConfig.setResize(128, 128)
+        cam.preview.link(self.manip.inputImage)
 
         left = self.pipeline.createMonoCamera()
-        left.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
-        left.setBoardSocket(depthai.CameraBoardSocket.LEFT)
+        left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
         right = self.pipeline.createMonoCamera()
-        right.setResolution(depthai.MonoCameraProperties.SensorResolution.THE_720_P)
-        right.setBoardSocket(depthai.CameraBoardSocket.RIGHT)
+        right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
         stereo = self.pipeline.createStereoDepth()
         stereo.setConfidenceThreshold(245)
-        # stereo.setLeftRightCheck(True)
+        stereo.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+        stereo.setLeftRightCheck(True)
+        stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
         left.out.link(stereo.left)
         right.out.link(stereo.right)
 
-        # For palm detection NN
-        self.manip = self.pipeline.createImageManip()
-        self.manip.initialConfig.setResize(128, 128)
-        self.manip.initialConfig.setFrameType(depthai.ImgFrame.Type.BGR888p)
-        stereo.rectifiedRight.link(self.manip.inputImage)
+        sdn = self.pipeline.createMobileNetSpatialDetectionNetwork()
+        sdn.setBlobPath("models/mobilenet-ssd_openvino_2021.2_6shave.blob")
+        sdn.setConfidenceThreshold(0.5)
+        sdn.input.setBlocking(False)
+        sdn.setBoundingBoxScaleFactor(0.3)
+        sdn.setDepthLowerThreshold(200)
+        sdn.setDepthUpperThreshold(5000)
 
-        mobilenet_manip = self.pipeline.createImageManip()
-        mobilenet_manip.initialConfig.setResize(300, 300)
-        mobilenet_manip.initialConfig.setFrameType(depthai.ImgFrame.Type.BGR888p)
-        stereo.rectifiedRight.link(mobilenet_manip.inputImage)
+        cam.preview.link(sdn.input)
+        stereo.depth.link(sdn.inputDepth)
 
-        vid_xout = self.pipeline.createXLinkOut()
-        vid_xout.setStreamName("video")
-        stereo.rectifiedRight.link(vid_xout.input)
-
-        mobilenet_nn = self.pipeline.createMobileNetSpatialDetectionNetwork()
-        mobilenet_nn.setConfidenceThreshold(0.5)
-        mobilenet_nn.input.setBlocking(False)
-        mobilenet_nn.setBoundingBoxScaleFactor(0.3)
-        mobilenet_nn.setDepthLowerThreshold(200)
-        mobilenet_nn.setDepthUpperThreshold(3000)
-        mobilenet_nn.setBlobPath(str(Path("models/mobilenet-ssd_openvino_2021.2_6shave.blob").resolve().absolute()))
-        mobilenet_nn.setNumInferenceThreads(2)
-
-        mobilenet_manip.out.link(mobilenet_nn.input)
-        stereo.depth.link(mobilenet_nn.inputDepth)
-
-        detOut = self.pipeline.createXLinkOut()
-        detOut.setStreamName("det")
-        mobilenet_nn.out.link(detOut.input)
+        sdn_out = self.pipeline.createXLinkOut()
+        sdn_out.setStreamName("det")
+        sdn.out.link(sdn_out.input)
 
         depth_out = self.pipeline.createXLinkOut()
         depth_out.setStreamName("depth")
-        mobilenet_nn.passthroughDepth.link(depth_out.input)
+        sdn.passthroughDepth.link(depth_out.input)
+
+        # SpatialLocationCalculator, we will send ROI back after palm detection
+        # slc = self.pipeline.createSpatialLocationCalculator()
+
+        # config = dai.SpatialLocationCalculatorConfigData()
+        # config.depthThresholds.lowerThreshold = 200
+        # config.depthThresholds.upperThreshold = 5000
+        # config.roi = dai.Rect(dai.Point2f(0.4, 0.4), dai.Point2f(0.6, 0.6))
+        # slc.initialConfig.addROI(config)
+        # slc.setWaitForConfigInput(True)
+
+        # stereo.depth.link(slc.inputDepth)
+
+        # slc_conf = self.pipeline.createXLinkIn()
+        # slc_conf.setStreamName("roi")
+        # slc_conf.out.link(slc.inputConfig)
+
+        # spatial_out = self.pipeline.createXLinkOut()
+        # spatial_out.setStreamName("depth")
+        # slc.out.link(spatial_out.input)
+
 
         self.create_nns()
 
@@ -151,14 +159,21 @@ class DepthAI:
         model_nn_xout.setStreamName(f"{model_name}_nn")
         model_nn.out.link(model_nn_xout.input)
 
+    def crop_to_rect(self, frame):
+        height = frame.shape[0]
+        width  = frame.shape[1]
+        delta = int((width-height) / 2)
+        # print(height, width, delta)
+        return frame[0:height, delta:width-delta]
+
     def start_pipeline(self):
-        self.device = depthai.Device(self.pipeline)
+        self.device = dai.Device(self.pipeline)
         print("Starting pipeline...")
         self.device.startPipeline()
 
         self.start_nns()
 
-        self.vidQ = self.device.getOutputQueue(name="video", maxSize=4, blocking=False)
+        self.vidQ = self.device.getOutputQueue(name="cam", maxSize=4, blocking=False)
 
         self.detQ = self.device.getOutputQueue(name="det", maxSize=4, blocking=False)
         self.depthQ = self.device.getOutputQueue(name="depth", maxSize=4, blocking=False)
@@ -196,30 +211,36 @@ class DepthAI:
             thickness=2,
         )
 
+    def drawSpatialCoords(self,frame, detection):
+        color = (255,0,0)
+        height = frame.shape[0]
+        width  = frame.shape[1]
+        # Denormalize bounding box
+        x1 = int(detection.xmin * width)
+        x2 = int(detection.xmax * width)
+        y1 = int(detection.ymin * height)
+        y2 = int(detection.ymax * height)
+        cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+        return (x1, y1)
+
+
     def drawDetections(self, frame):
         # MobilenetSSD label texts
         labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
                     "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
-        height = frame.shape[0]
-        width  = frame.shape[1]
+
         color = (250,0,0)
         for detection in self.detections:
-            # Denormalize bounding box
-            x1 = int(detection.xmin * width)
-            x2 = int(detection.xmax * width)
-            y1 = int(detection.ymin * height)
-            y2 = int(detection.ymax * height)
+            (x1, y1) = self.drawSpatialCoords(frame, detection)
             try:
                 label = labelMap[detection.label]
             except:
                 label = detection.label
             cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
 
     def parse(self):
         self.debug_frame = self.frame.copy()
@@ -242,33 +263,10 @@ class DepthAI:
             print(f"FPS_CAMERA: {self.fps_cam.fps():.2f} , FPS_NN: {self.fps_nn.fps():.2f}")
             raise StopIteration()
 
-
-    def averageDepth(self, roi):
-        if self.depth is None: return 0
-        bbox = np.array(roi)
-        offsetX = int((bbox[2] - bbox[0]) / 2.5)
-        offsetY = int((bbox[3] - bbox[1]) / 2.5)
-        bbox[0] += offsetX
-        bbox[1] += offsetY
-        bbox[2] -= offsetX
-        bbox[3] -= offsetY
-        cv2.imshow("rgbCropped", self.debug_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]])
-        depthRoi = self.depth[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-        depthRoi[depthRoi < 200] = 200
-        depthRoi[depthRoi > 2000] = 2000
-        print(np.average(depthRoi))
-        cv2.rectangle(self.depthFrameColor, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (100, 0, 100), 4)
-        cv2.rectangle(self.debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (100, 0, 100), 4)
-
-
     def parse_fun(self):
         pass
 
     def run_camera(self):
-        baseline = 75 #mm
-        disp_levels = 91
-        focal = 857.0
-
         self.depthFrameColor = None
         self.detections = []
         self.depth = None
@@ -277,7 +275,8 @@ class DepthAI:
             in_rgb = self.vidQ.tryGet()
             if in_rgb is not None:
                 self.frame = in_rgb.getCvFrame()
-                self.frame = self.frame[0:720, 280:1000]
+                # cv2.imshow("video", self.frame)
+                self.frame = self.crop_to_rect(self.frame)
                 try:
                     self.parse()
                 except StopIteration:
@@ -287,16 +286,13 @@ class DepthAI:
             if in_det is not None:
                 self.detections = in_det.detections
 
-            in_disp = self.depthQ.tryGet()
-            if in_disp is not None:
-                disp = in_disp.getFrame()
-                # Crop image to be 1:1 as RGB frame
-                disp = disp[0:720, 280:1000]
-                with np.errstate(divide='ignore'):
-                    self.depth = (disp_levels * baseline * focal / disp).astype(np.uint16)
-                depthFrameColor = cv2.normalize(self.depth, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                depthFrameColor = cv2.equalizeHist(depthFrameColor)
-                self.depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
+            in_depth = self.depthQ.tryGet()
+            if in_depth is not None:
+                depth = in_depth.getFrame()
+                depth = cv2.normalize(depth, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                depth = cv2.equalizeHist(depth)
+                depth = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
+                self.depthFrameColor = self.crop_to_rect(depth)
             # in_det = self.detQ.tryGet()
 
     def run(self):
