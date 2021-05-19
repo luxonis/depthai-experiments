@@ -103,7 +103,7 @@ class DepthAI:
         sdn.setBlobPath("models/mobilenet-ssd_openvino_2021.2_6shave.blob")
         sdn.setConfidenceThreshold(0.5)
         sdn.input.setBlocking(False)
-        sdn.setBoundingBoxScaleFactor(0.3)
+        sdn.setBoundingBoxScaleFactor(0.2)
         sdn.setDepthLowerThreshold(200)
         sdn.setDepthUpperThreshold(5000)
 
@@ -207,17 +207,36 @@ class DepthAI:
         cv2.putText(frame, f"Z: {int(spatial.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
 
-        # Check the distance of the hand to dangerous object
-        if self.dangerCoords is not None:
-            x_delta = (spatial.spatialCoordinates.x - self.dangerCoords.x) ** 2
-            y_delta = (spatial.spatialCoordinates.y - self.dangerCoords.y) ** 2
-            z_delta = (spatial.spatialCoordinates.z - self.dangerCoords.z) ** 2
-            dist = math.sqrt(x_delta + y_delta + z_delta)
+    def calc_spatial_distance(self, x,y,z):
+        for det in self.detections:
+            if det.label != 9: continue
+            dist = math.sqrt((det.spatialCoordinates.x-x)**2 + (det.spatialCoordinates.y-y)**2 + (det.spatialCoordinates.z-z)**2)
             print(dist)
+            if dist < 500:
+                print("DANGER!")
+                # First we crop the sub-rect from the image
+                # Denormalize bounding box
+                height = self.frame.shape[0]
+                x1 = int(det.xmin * height)
+                x2 = int(det.xmax * height)
+                y1 = int(det.ymin * height)
+                y2 = int(det.ymax * height)
+
+                sub_img = self.debug_frame[y1:y2, x1:x2]
+                red_rect = np.ones(sub_img.shape, dtype=np.uint8) * 255
+                red_rect[:,:,0] = 0
+                red_rect[:,:,1] = 0
+
+                res = cv2.addWeighted(sub_img, 0.5, red_rect, 0.5, 1.0)
+
+                # Putting the image back to its position
+                self.debug_frame[y1:y2, x1:x2] = res
+
 
     def drawDetections(self, frame):
         color = (250,0,0)
         for detection in self.detections:
+            if detection.label != 9: continue # Only chairs:)
             height = frame.shape[0]
             width  = frame.shape[1]
             # Denormalize bounding box
@@ -234,8 +253,6 @@ class DepthAI:
                 label = labelMap[detection.label]
             except:
                 label = detection.label
-            if label == LABEL_WARNING:
-                self.dangerCoords = detection.spatialCoordinates
 
             cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
@@ -274,7 +291,6 @@ class DepthAI:
                 self.frame = in_rgb.getCvFrame()
                 # cv2.imshow("video", self.frame)
                 self.frame = self.crop_to_rect(self.frame)
-                # self.drawSlc(self.frame, self.spatials)
                 try:
                     self.parse()
                 except StopIteration:
@@ -485,13 +501,8 @@ class Main(DepthAI):
     def calc_spatials(self, bbox):
         DEPTH_THRESH_HIGH = 3000
         DEPTH_THRESH_LOW = 200
-        # Using mono resolution of 1280x720. Original 1280x800 (sensor resolution) has VFOV 50 degrees and DFOV 81 degrees
-        # So 1280x720 => VFOV=45, DFOV=81
-        degreesPerYpixel = 45 / 720.0 # Vertical
-        degreesPerXpixel = 81 / 1280.0 # Horizontal
-        croppedDepth = self.crop_to_rect(self.depth)
-        # print(croppedDepth.shape)
 
+        croppedDepth = self.crop_to_rect(self.depth)
         # Decrese the ROI to 1/3 of the original ROI
         deltaX = int((bbox[2] - bbox[0]) * 0.33)
         deltaY = int((bbox[3] - bbox[1]) * 0.33)
@@ -523,25 +534,22 @@ class Main(DepthAI):
         bb_x_pos = centroidX - mid
         bb_y_pos = centroidY - mid
 
-        def calc_angle(x_or_y_centered):
-            hfov = 71.8 # Mono HFOV
+        def calc_angle(offset):
+            hfov = np.deg2rad(73.5) # Mono HFOV
             depthWidth = 1280.0
-            return math.atan(math.tan(hfov / 2.0) * x_or_y_centered / (depthWidth / 2.0));
+            ret = math.atan(math.tan(hfov / 2.0) * offset / (depthWidth / 2.0))
+            return ret
 
         angle_x = calc_angle(bb_x_pos)
-        print(f"Horizonstal degrees {np.rad2deg(angle_x)}")
         angle_y = calc_angle(bb_y_pos)
-        print(f"Vertical degrees {np.rad2deg(angle_y)}")
 
         z = averageDepth;
         x = z * math.tan(angle_x)
         y = -z * math.tan(angle_y)
 
-        # spatialData.spatialCoordinates.z = z;
-        # spatialData.spatialCoordinates.x = x;
-        # spatialData.spatialCoordinates.y = y;
-
-        print(f"X: {x}mm, Y: {y} mm, Z: {z} mm")
+        # print(f"X: {x}mm, Y: {y} mm, Z: {z} mm")
+        self.calc_spatial_distance(x,y,z)
+        return [x,y,z]
 
 
     # @timer
