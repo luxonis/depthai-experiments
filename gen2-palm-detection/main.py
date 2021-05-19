@@ -118,20 +118,6 @@ class DepthAI:
         depth_out.setStreamName("depth")
         sdn.passthroughDepth.link(depth_out.input)
 
-        # SpatialLocationCalculator, we will send ROI back after palm detection
-        slc = self.pipeline.createSpatialLocationCalculator()
-        slc.setWaitForConfigInput(False)
-
-        stereo.depth.link(slc.inputDepth)
-
-        slc_conf = self.pipeline.createXLinkIn()
-        slc_conf.setStreamName("roi")
-        slc_conf.out.link(slc.inputConfig)
-
-        spatial_out = self.pipeline.createXLinkOut()
-        spatial_out.setStreamName("slc")
-        slc.out.link(spatial_out.input)
-
         self.create_nns()
 
         print("Pipeline created.")
@@ -177,9 +163,6 @@ class DepthAI:
 
         self.detQ = self.device.getOutputQueue(name="det", maxSize=4, blocking=False)
         self.depthQ = self.device.getOutputQueue(name="depth", maxSize=4, blocking=False)
-        self.slcQ = self.device.getOutputQueue(name="slc", maxSize=4, blocking=False)
-
-        self.roi_input = self.device.getInputQueue("roi")
 
     def start_nns(self):
         pass
@@ -210,35 +193,29 @@ class DepthAI:
         draw(self.debug_frame)
         draw(self.depthFrameColor)
 
-    def drawSlc(self, frame, spatials):
+    def drawSlc(self, frame, spatial):
         color = (10, 245, 10)
 
-        for spatial in spatials:
-            # If palm detection is more than 1sec old, disregard it
-            if self.lastPalmDetection < time.time() - 1:
-                return
-            roi = spatial.config.roi
-            roi = roi.denormalize(width=frame.shape[1], height=frame.shape[0])
-            x1 = int(roi.topLeft().x)
-            y1 = int(roi.topLeft().y)
-            x2 = int(roi.bottomRight().x)
-            y2 = int(roi.bottomRight().y)
+        roi = roi.denormalize(width=frame.shape[1], height=frame.shape[0])
+        x1 = int(roi.topLeft().x)
+        y1 = int(roi.topLeft().y)
+        x2 = int(roi.bottomRight().x)
+        y2 = int(roi.bottomRight().y)
 
-            cv2.putText(frame, f"X: {int(spatial.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"Y: {int(spatial.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"Z: {int(spatial.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+        cv2.putText(frame, f"X: {int(spatial.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Y: {int(spatial.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Z: {int(spatial.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
 
-            # Check the distance of the hand to dangerous object
-            if self.dangerCoords is not None:
-                x_delta = (spatial.spatialCoordinates.x - self.dangerCoords.x) ** 2
-                y_delta = (spatial.spatialCoordinates.y - self.dangerCoords.y) ** 2
-                z_delta = (spatial.spatialCoordinates.z - self.dangerCoords.z) ** 2
-                dist = math.sqrt(x_delta + y_delta + z_delta)
-                print(dist)
+        # Check the distance of the hand to dangerous object
+        if self.dangerCoords is not None:
+            x_delta = (spatial.spatialCoordinates.x - self.dangerCoords.x) ** 2
+            y_delta = (spatial.spatialCoordinates.y - self.dangerCoords.y) ** 2
+            z_delta = (spatial.spatialCoordinates.z - self.dangerCoords.z) ** 2
+            dist = math.sqrt(x_delta + y_delta + z_delta)
+            print(dist)
 
     def drawDetections(self, frame):
-
         color = (250,0,0)
         for detection in self.detections:
             height = frame.shape[0]
@@ -290,7 +267,6 @@ class DepthAI:
         self.depthFrameColor = None
         self.detections = []
         self.depth = None
-        self.spatials = []
 
         while True:
             in_rgb = self.vidQ.tryGet()
@@ -298,7 +274,7 @@ class DepthAI:
                 self.frame = in_rgb.getCvFrame()
                 # cv2.imshow("video", self.frame)
                 self.frame = self.crop_to_rect(self.frame)
-                self.drawSlc(self.frame, self.spatials)
+                # self.drawSlc(self.frame, self.spatials)
                 try:
                     self.parse()
                 except StopIteration:
@@ -310,16 +286,13 @@ class DepthAI:
 
             in_depth = self.depthQ.tryGet()
             if in_depth is not None:
-                depth = in_depth.getFrame()
-                depth = cv2.normalize(depth, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                depth = cv2.equalizeHist(depth)
-                depth = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
-                self.depthFrameColor = self.crop_to_rect(depth)
-                self.drawSlc(self.depthFrameColor, self.spatials)
-
-            in_slc = self.slcQ.tryGet()
-            if in_slc is not None:
-                self.spatials = in_slc.getSpatialLocations()
+                self.depth = in_depth.getFrame()
+                # print(type(self.depth)) #np.ndarray
+                depthFrameColor = cv2.normalize(self.depth, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                depthFrameColor = cv2.equalizeHist(depthFrameColor)
+                depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
+                self.depthFrameColor = self.crop_to_rect(depthFrameColor)
+                # self.drawSlc(self.depthFrameColor, self.spatials)
 
             # in_det = self.detQ.tryGet()
 
@@ -507,23 +480,69 @@ class Main(DepthAI):
 
         for bbox in self.palm_coords:
             self.draw_bbox(bbox, (10, 245, 10))
-            self.send_slc_roi(bbox)
+            self.calc_spatials(bbox)
 
-    def send_slc_roi(self, bbox):
-        self.lastPalmDetection = time.time()
-        bbox = bbox/self.frame.shape[0] # Denormalize
-        config = dai.SpatialLocationCalculatorConfigData()
+    def calc_spatials(self, bbox):
+        DEPTH_THRESH_HIGH = 3000
+        DEPTH_THRESH_LOW = 200
+        # Using mono resolution of 1280x720. Original 1280x800 (sensor resolution) has VFOV 50 degrees and DFOV 81 degrees
+        # So 1280x720 => VFOV=45, DFOV=81
+        degreesPerYpixel = 45 / 720.0 # Vertical
+        degreesPerXpixel = 81 / 1280.0 # Horizontal
+        croppedDepth = self.crop_to_rect(self.depth)
+        # print(croppedDepth.shape)
 
-        # Decrese the SLC ROI to 1/3 of the original ROI
-        deltaX = (bbox[2] - bbox[0]) * 0.35
-        deltaY = (bbox[3] - bbox[1]) * 0.30
+        # Decrese the ROI to 1/3 of the original ROI
+        deltaX = int((bbox[2] - bbox[0]) * 0.33)
+        deltaY = int((bbox[3] - bbox[1]) * 0.33)
+        bbox[0] = bbox[0] + deltaX
+        bbox[1] = bbox[1] + deltaY
+        bbox[2] = bbox[2] - deltaX
+        bbox[3] = bbox[3] - deltaY
 
-        topLeft = dai.Point2f(bbox[0] + deltaX, bbox[1] + deltaY)
-        bottomRight = dai.Point2f(bbox[2] - deltaX, bbox[3] - deltaY)
-        config.roi = dai.Rect(topLeft, bottomRight)
-        cfg = dai.SpatialLocationCalculatorConfig()
-        cfg.addROI(config)
-        self.roi_input.send(cfg)
+        # Calculate the average depth in the ROI. TODO: median, median /w bins, mod
+        cnt = 0.0
+        sum = 0.0
+        for x in range(bbox[2] - bbox[0]):
+            for y in range(bbox[3] - bbox[1]):
+                depthPixel = croppedDepth[bbox[1] + y][bbox[0] + x]
+                if DEPTH_THRESH_LOW < depthPixel and depthPixel < DEPTH_THRESH_HIGH:
+                    cnt+=1.0
+                    sum+=depthPixel
+
+        averageDepth = sum / cnt if 0 < cnt else 0
+        # print(f"Average depth: {averageDepth}")
+
+        # Palm detection centroid
+        centroidX = int((bbox[2] - bbox[0]) / 2) + bbox[0]
+        centroidY = int((bbox[3] - bbox[1]) / 2) + bbox[1]
+        cv2.circle(self.depthFrameColor, (centroidX, centroidY), 10, (0, 255, 0))
+        cv2.rectangle(self.depthFrameColor,(bbox[0], bbox[1]),(bbox[2], bbox[3]),(0, 255, 0), 2)
+
+        mid = int(croppedDepth.shape[0] / 2) # middle of the depth img
+        bb_x_pos = centroidX - mid
+        bb_y_pos = centroidY - mid
+
+        def calc_angle(x_or_y_centered):
+            hfov = 71.8 # Mono HFOV
+            depthWidth = 1280.0
+            return math.atan(math.tan(hfov / 2.0) * x_or_y_centered / (depthWidth / 2.0));
+
+        angle_x = calc_angle(bb_x_pos)
+        print(f"Horizonstal degrees {np.rad2deg(angle_x)}")
+        angle_y = calc_angle(bb_y_pos)
+        print(f"Vertical degrees {np.rad2deg(angle_y)}")
+
+        z = averageDepth;
+        x = z * math.tan(angle_x)
+        y = -z * math.tan(angle_y)
+
+        # spatialData.spatialCoordinates.z = z;
+        # spatialData.spatialCoordinates.x = x;
+        # spatialData.spatialCoordinates.y = y;
+
+        print(f"X: {x}mm, Y: {y} mm, Z: {z} mm")
+
 
     # @timer
     def parse_fun(self):
