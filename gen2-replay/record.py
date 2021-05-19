@@ -24,14 +24,6 @@ parser.add_argument("-monor", "--mono_resolution", default=720, type=int, choice
 
 args = parser.parse_args()
 
-def getRgbResolution():
-    if args.rgb_resolution == 2160:
-        return dai.ColorCameraProperties.SensorResolution.THE_4_K
-    elif args.rgb_resolution == 3040:
-        return dai.ColorCameraProperties.SensorResolution.THE_12_MP
-    else:
-        return dai.ColorCameraProperties.SensorResolution.THE_1080_P
-
 def getMonoResolution():
     if args.mono_resolution == 400:
         return dai.MonoCameraProperties.SensorResolution.THE_400_P
@@ -53,7 +45,15 @@ pipeline = dai.Pipeline()
 rgb = pipeline.createColorCamera()
 
 rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-rgb.setResolution(getRgbResolution())
+
+if args.rgb_resolution == 2160:
+    rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+elif args.rgb_resolution == 3040:
+    rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
+else:
+    rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+    rgb.setIspScale(1,2) # For better sharpness, resulting in 1080P
+
 rgb.setInterleaved(False)
 rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
@@ -63,7 +63,7 @@ rgbOut.setStreamName("color")
 
 rgb_encoder = pipeline.createVideoEncoder()
 rgb_encoder.setDefaultProfilePreset(rgb.getVideoSize(), rgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-rgb_encoder.setLossless(True)
+# rgb_encoder.setLossless(True)
 rgb.video.link(rgb_encoder.input)
 rgb_encoder.bitstream.link(rgbOut.input)
 
@@ -105,13 +105,13 @@ if SAVE_MONO:
     if args.encode:
         left_encoder = pipeline.createVideoEncoder()
         left_encoder.setDefaultProfilePreset(left.getResolutionSize(), left.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-        left_encoder.setLossless(True)
+        # left_encoder.setLossless(True)
         stereo.rectifiedLeft.link(left_encoder.input)
         left_encoder.bitstream.link(leftOut.input)
 
         right_encoder = pipeline.createVideoEncoder()
         right_encoder.setDefaultProfilePreset(right.getResolutionSize(), right.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-        right_encoder.setLossless(True)
+        # right_encoder.setLossless(True)
         stereo.rectifiedRight.link(right_encoder.input)
         right_encoder.bitstream.link(rightOut.input)
     else:

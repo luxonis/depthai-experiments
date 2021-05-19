@@ -20,6 +20,7 @@ args = parser.parse_args()
 # Get the stored frames path
 dest = Path(args.path).resolve().absolute()
 frames = os.listdir(str(dest))
+# TODO: if not int parsable, skip
 frames_sorted = sorted([int(i) for i in frames])
 
 class Replay:
