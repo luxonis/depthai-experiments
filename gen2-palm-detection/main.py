@@ -1,10 +1,17 @@
 # coding=utf-8
 from pathlib import Path
-
+import math
 import cv2
 import depthai as dai
 import numpy as np
 from imutils.video import FPS
+import time
+
+LABEL_WARNING = "tvmonitor"
+
+# MobilenetSSD label texts
+labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
+            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
 def to_planar(arr: np.ndarray, shape: tuple):
     return cv2.resize(arr, shape).transpose((2, 0, 1)).flatten()
@@ -112,25 +119,18 @@ class DepthAI:
         sdn.passthroughDepth.link(depth_out.input)
 
         # SpatialLocationCalculator, we will send ROI back after palm detection
-        # slc = self.pipeline.createSpatialLocationCalculator()
+        slc = self.pipeline.createSpatialLocationCalculator()
+        slc.setWaitForConfigInput(False)
 
-        # config = dai.SpatialLocationCalculatorConfigData()
-        # config.depthThresholds.lowerThreshold = 200
-        # config.depthThresholds.upperThreshold = 5000
-        # config.roi = dai.Rect(dai.Point2f(0.4, 0.4), dai.Point2f(0.6, 0.6))
-        # slc.initialConfig.addROI(config)
-        # slc.setWaitForConfigInput(True)
+        stereo.depth.link(slc.inputDepth)
 
-        # stereo.depth.link(slc.inputDepth)
+        slc_conf = self.pipeline.createXLinkIn()
+        slc_conf.setStreamName("roi")
+        slc_conf.out.link(slc.inputConfig)
 
-        # slc_conf = self.pipeline.createXLinkIn()
-        # slc_conf.setStreamName("roi")
-        # slc_conf.out.link(slc.inputConfig)
-
-        # spatial_out = self.pipeline.createXLinkOut()
-        # spatial_out.setStreamName("depth")
-        # slc.out.link(spatial_out.input)
-
+        spatial_out = self.pipeline.createXLinkOut()
+        spatial_out.setStreamName("slc")
+        slc.out.link(spatial_out.input)
 
         self.create_nns()
 
@@ -177,6 +177,9 @@ class DepthAI:
 
         self.detQ = self.device.getOutputQueue(name="det", maxSize=4, blocking=False)
         self.depthQ = self.device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+        self.slcQ = self.device.getOutputQueue(name="slc", maxSize=4, blocking=False)
+
+        self.roi_input = self.device.getInputQueue("roi")
 
     def start_nns(self):
         pass
@@ -196,50 +199,67 @@ class DepthAI:
         )
 
     def draw_bbox(self, bbox, color):
-        cv2.rectangle(
-            img=self.debug_frame,
-            pt1=(bbox[0], bbox[1]),
-            pt2=(bbox[2], bbox[3]),
-            color=color,
-            thickness=2,
-        )
-        cv2.rectangle(
-            img=self.depthFrameColor,
-            pt1=(bbox[0], bbox[1]),
-            pt2=(bbox[2], bbox[3]),
-            color=color,
-            thickness=2,
-        )
+        def draw(img):
+            cv2.rectangle(
+                img=img,
+                pt1=(bbox[0], bbox[1]),
+                pt2=(bbox[2], bbox[3]),
+                color=color,
+                thickness=2,
+            )
+        draw(self.debug_frame)
+        draw(self.depthFrameColor)
 
-    def drawSpatialCoords(self,frame, detection):
-        color = (255,0,0)
-        height = frame.shape[0]
-        width  = frame.shape[1]
-        # Denormalize bounding box
-        x1 = int(detection.xmin * width)
-        x2 = int(detection.xmax * width)
-        y1 = int(detection.ymin * height)
-        y2 = int(detection.ymax * height)
-        cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-        return (x1, y1)
+    def drawSlc(self, frame, spatials):
+        color = (10, 245, 10)
 
+        for spatial in spatials:
+            # If palm detection is more than 1sec old, disregard it
+            if self.lastPalmDetection < time.time() - 1:
+                return
+            roi = spatial.config.roi
+            roi = roi.denormalize(width=frame.shape[1], height=frame.shape[0])
+            x1 = int(roi.topLeft().x)
+            y1 = int(roi.topLeft().y)
+            x2 = int(roi.bottomRight().x)
+            y2 = int(roi.bottomRight().y)
+
+            cv2.putText(frame, f"X: {int(spatial.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(frame, f"Y: {int(spatial.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(frame, f"Z: {int(spatial.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+
+            # Check the distance of the hand to dangerous object
+            if self.dangerCoords is not None:
+                x_delta = (spatial.spatialCoordinates.x - self.dangerCoords.x) ** 2
+                y_delta = (spatial.spatialCoordinates.y - self.dangerCoords.y) ** 2
+                z_delta = (spatial.spatialCoordinates.z - self.dangerCoords.z) ** 2
+                dist = math.sqrt(x_delta + y_delta + z_delta)
+                print(dist)
 
     def drawDetections(self, frame):
-        # MobilenetSSD label texts
-        labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-                    "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
         color = (250,0,0)
         for detection in self.detections:
-            (x1, y1) = self.drawSpatialCoords(frame, detection)
+            height = frame.shape[0]
+            width  = frame.shape[1]
+            # Denormalize bounding box
+            x1 = int(detection.xmin * width)
+            x2 = int(detection.xmax * width)
+            y1 = int(detection.ymin * height)
+            y2 = int(detection.ymax * height)
+            cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
             try:
                 label = labelMap[detection.label]
             except:
                 label = detection.label
+            if label == LABEL_WARNING:
+                self.dangerCoords = detection.spatialCoordinates
+
             cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
     def parse(self):
@@ -270,6 +290,7 @@ class DepthAI:
         self.depthFrameColor = None
         self.detections = []
         self.depth = None
+        self.spatials = []
 
         while True:
             in_rgb = self.vidQ.tryGet()
@@ -277,6 +298,7 @@ class DepthAI:
                 self.frame = in_rgb.getCvFrame()
                 # cv2.imshow("video", self.frame)
                 self.frame = self.crop_to_rect(self.frame)
+                self.drawSlc(self.frame, self.spatials)
                 try:
                     self.parse()
                 except StopIteration:
@@ -293,6 +315,12 @@ class DepthAI:
                 depth = cv2.equalizeHist(depth)
                 depth = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
                 self.depthFrameColor = self.crop_to_rect(depth)
+                self.drawSlc(self.depthFrameColor, self.spatials)
+
+            in_slc = self.slcQ.tryGet()
+            if in_slc is not None:
+                self.spatials = in_slc.getSpatialLocations()
+
             # in_det = self.detQ.tryGet()
 
     def run(self):
@@ -449,17 +477,13 @@ class Main(DepthAI):
 
         if nn_data is None:
             return
-
         # Run the neural network
         results = to_tensor_result(nn_data)
 
         raw_box_tensor = results.get("regressors").reshape(-1, 896, 18)  # regress
         raw_score_tensor = results.get("classificators").reshape(-1, 896, 1)  # classification
 
-        detections = raw_to_detections(
-            raw_box_tensor, raw_score_tensor, anchors, shape, num_keypoints
-        )
-        # print(detections.shape)
+        detections = raw_to_detections(raw_box_tensor, raw_score_tensor, anchors, shape, num_keypoints)
 
         self.palm_coords = [
             frame_norm(self.frame, *obj[:4])
@@ -483,6 +507,23 @@ class Main(DepthAI):
 
         for bbox in self.palm_coords:
             self.draw_bbox(bbox, (10, 245, 10))
+            self.send_slc_roi(bbox)
+
+    def send_slc_roi(self, bbox):
+        self.lastPalmDetection = time.time()
+        bbox = bbox/self.frame.shape[0] # Denormalize
+        config = dai.SpatialLocationCalculatorConfigData()
+
+        # Decrese the SLC ROI to 1/3 of the original ROI
+        deltaX = (bbox[2] - bbox[0]) * 0.35
+        deltaY = (bbox[3] - bbox[1]) * 0.30
+
+        topLeft = dai.Point2f(bbox[0] + deltaX, bbox[1] + deltaY)
+        bottomRight = dai.Point2f(bbox[2] - deltaX, bbox[3] - deltaY)
+        config.roi = dai.Rect(topLeft, bottomRight)
+        cfg = dai.SpatialLocationCalculatorConfig()
+        cfg.addROI(config)
+        self.roi_input.send(cfg)
 
     # @timer
     def parse_fun(self):
