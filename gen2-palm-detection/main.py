@@ -7,7 +7,8 @@ import numpy as np
 from imutils.video import FPS
 import time
 
-LABEL_WARNING = "tvmonitor"
+DEPTH_THRESH_HIGH = 3000
+DEPTH_THRESH_LOW = 1000
 
 # MobilenetSSD label texts
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
@@ -104,8 +105,8 @@ class DepthAI:
         sdn.setConfidenceThreshold(0.5)
         sdn.input.setBlocking(False)
         sdn.setBoundingBoxScaleFactor(0.2)
-        sdn.setDepthLowerThreshold(200)
-        sdn.setDepthUpperThreshold(5000)
+        sdn.setDepthLowerThreshold(DEPTH_THRESH_LOW)
+        sdn.setDepthUpperThreshold(DEPTH_THRESH_HIGH)
 
         cam.preview.link(sdn.input)
         stereo.depth.link(sdn.inputDepth)
@@ -193,45 +194,33 @@ class DepthAI:
         draw(self.debug_frame)
         draw(self.depthFrameColor)
 
-    def drawSlc(self, frame, spatial):
-        color = (10, 245, 10)
-
-        roi = roi.denormalize(width=frame.shape[1], height=frame.shape[0])
-        x1 = int(roi.topLeft().x)
-        y1 = int(roi.topLeft().y)
-        x2 = int(roi.bottomRight().x)
-        y2 = int(roi.bottomRight().y)
-
-        cv2.putText(frame, f"X: {int(spatial.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Y: {int(spatial.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Z: {int(spatial.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-
-    def calc_spatial_distance(self, x,y,z):
+    def calc_spatial_distance(self, x,y,z, centroidX, centroidY):
         for det in self.detections:
             if det.label != 9: continue
             dist = math.sqrt((det.spatialCoordinates.x-x)**2 + (det.spatialCoordinates.y-y)**2 + (det.spatialCoordinates.z-z)**2)
+            height = self.frame.shape[0]
+            x1 = int(det.xmin * height)
+            x2 = int(det.xmax * height)
+            y1 = int(det.ymin * height)
+            y2 = int(det.ymax * height)
+            objectCenterX = int((x1+x2)/2)
+            objectCenterY = int((y1+y2)/2)
+            cv2.line(self.debug_frame, (centroidX, centroidY), (objectCenterX, objectCenterY), (4,220,180), 4)
+            cv2.putText(self.debug_frame,f" {int(dist)} mm",org=(int((centroidX+objectCenterX)/2),int((centroidY+objectCenterY)/2)),fontFace=cv2.FONT_HERSHEY_COMPLEX,fontScale=1.0,color=(4,220,180))
             print(dist)
-            if dist < 500:
-                print("DANGER!")
-                # First we crop the sub-rect from the image
-                # Denormalize bounding box
-                height = self.frame.shape[0]
-                x1 = int(det.xmin * height)
-                x2 = int(det.xmax * height)
-                y1 = int(det.ymin * height)
-                y2 = int(det.ymax * height)
-
+            if dist < 700:
+                # Color chair BB in red
                 sub_img = self.debug_frame[y1:y2, x1:x2]
                 red_rect = np.ones(sub_img.shape, dtype=np.uint8) * 255
+                # Setting blue/green to 0
                 red_rect[:,:,0] = 0
                 red_rect[:,:,1] = 0
-
                 res = cv2.addWeighted(sub_img, 0.5, red_rect, 0.5, 1.0)
-
                 # Putting the image back to its position
                 self.debug_frame[y1:y2, x1:x2] = res
 
+                cv2.putText(img=self.debug_frame,text="Danger!",org=(x1+5,y1-5),fontFace=cv2.FONT_HERSHEY_COMPLEX,fontScale=1.5,color=(0,0,255))
+        cv2.imshow("color", self.debug_frame)
 
     def drawDetections(self, frame):
         color = (250,0,0)
@@ -263,7 +252,7 @@ class DepthAI:
 
         self.drawDetections(self.debug_frame)
 
-        cv2.imshow("Camera_view", self.debug_frame)
+        cv2.imshow("color", self.debug_frame)
 
         if self.depthFrameColor is not None:
             self.drawDetections(self.depthFrameColor)
@@ -494,14 +483,15 @@ class Main(DepthAI):
             overlapThresh=0.1,
         )
 
+        color = (10, 245, 10)
         for bbox in self.palm_coords:
-            self.draw_bbox(bbox, (10, 245, 10))
-            self.calc_spatials(bbox)
+            self.draw_bbox(bbox, color)
+            x,y,z = self.calc_spatials(bbox)
+            cv2.putText(self.debug_frame, f"X: {int(x)} mm", (bbox[0], bbox[1]), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(self.debug_frame, f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(self.debug_frame, f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
     def calc_spatials(self, bbox):
-        DEPTH_THRESH_HIGH = 3000
-        DEPTH_THRESH_LOW = 200
-
         croppedDepth = self.crop_to_rect(self.depth)
         # Decrese the ROI to 1/3 of the original ROI
         deltaX = int((bbox[2] - bbox[0]) * 0.33)
@@ -527,8 +517,6 @@ class Main(DepthAI):
         # Palm detection centroid
         centroidX = int((bbox[2] - bbox[0]) / 2) + bbox[0]
         centroidY = int((bbox[3] - bbox[1]) / 2) + bbox[1]
-        cv2.circle(self.depthFrameColor, (centroidX, centroidY), 10, (0, 255, 0))
-        cv2.rectangle(self.depthFrameColor,(bbox[0], bbox[1]),(bbox[2], bbox[3]),(0, 255, 0), 2)
 
         mid = int(croppedDepth.shape[0] / 2) # middle of the depth img
         bb_x_pos = centroidX - mid
@@ -548,8 +536,8 @@ class Main(DepthAI):
         y = -z * math.tan(angle_y)
 
         # print(f"X: {x}mm, Y: {y} mm, Z: {z} mm")
-        self.calc_spatial_distance(x,y,z)
-        return [x,y,z]
+        self.calc_spatial_distance(x,y,z, centroidX, centroidY)
+        return (x,y,z)
 
 
     # @timer
