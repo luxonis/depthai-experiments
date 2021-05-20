@@ -7,9 +7,9 @@ import numpy as np
 from imutils.video import FPS
 import time
 
-DEPTH_THRESH_HIGH = 3000
-DEPTH_THRESH_LOW = 1000
-
+DEPTH_THRESH_HIGH = 2000
+DEPTH_THRESH_LOW = 600
+WARNING_DIST = 300
 # MobilenetSSD label texts
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
@@ -196,8 +196,8 @@ class DepthAI:
 
     def calc_spatial_distance(self, x,y,z, centroidX, centroidY):
         for det in self.detections:
-            if det.label != 9: continue
-            dist = math.sqrt((det.spatialCoordinates.x-x)**2 + (det.spatialCoordinates.y-y)**2 + (det.spatialCoordinates.z-z)**2)
+            if det.label != 5: continue
+            self.distance = math.sqrt((det.spatialCoordinates.x-x)**2 + (det.spatialCoordinates.y-y)**2 + (det.spatialCoordinates.z-z)**2)
             height = self.frame.shape[0]
             x1 = int(det.xmin * height)
             x2 = int(det.xmax * height)
@@ -205,10 +205,9 @@ class DepthAI:
             y2 = int(det.ymax * height)
             objectCenterX = int((x1+x2)/2)
             objectCenterY = int((y1+y2)/2)
-            cv2.line(self.debug_frame, (centroidX, centroidY), (objectCenterX, objectCenterY), (4,220,180), 4)
-            cv2.putText(self.debug_frame,f" {int(dist)} mm",org=(int((centroidX+objectCenterX)/2),int((centroidY+objectCenterY)/2)),fontFace=cv2.FONT_HERSHEY_COMPLEX,fontScale=1.0,color=(4,220,180))
-            print(dist)
-            if dist < 700:
+            cv2.line(self.debug_frame, (centroidX, centroidY), (objectCenterX, objectCenterY), (50,220,100), 4)
+
+            if self.distance < WARNING_DIST:
                 # Color chair BB in red
                 sub_img = self.debug_frame[y1:y2, x1:x2]
                 red_rect = np.ones(sub_img.shape, dtype=np.uint8) * 255
@@ -219,13 +218,14 @@ class DepthAI:
                 # Putting the image back to its position
                 self.debug_frame[y1:y2, x1:x2] = res
 
-                cv2.putText(img=self.debug_frame,text="Danger!",org=(x1+5,y1-5),fontFace=cv2.FONT_HERSHEY_COMPLEX,fontScale=1.5,color=(0,0,255))
+                cv2.putText(img=self.debug_frame,text="Drink water instead",org=(100,int(height/3)),fontFace=cv2.FONT_HERSHEY_TRIPLEX,fontScale=1.7,color=(0,0,255))
+                cv2.putText(img=self.debug_frame,text="Drink water instead",org=(101,int(height/3)),fontFace=cv2.FONT_HERSHEY_TRIPLEX,fontScale=1.7,color=(0,0,255))
         cv2.imshow("color", self.debug_frame)
 
     def drawDetections(self, frame):
         color = (250,0,0)
         for detection in self.detections:
-            if detection.label != 9: continue # Only chairs:)
+            if detection.label != 5: continue # Only chairs:)
             height = frame.shape[0]
             width  = frame.shape[1]
             # Denormalize bounding box
@@ -251,7 +251,9 @@ class DepthAI:
         self.parse_fun()
 
         self.drawDetections(self.debug_frame)
-
+        cv2.putText(img=self.debug_frame,text=f"Distance: {int(self.distance)} mm",org=(50,700),fontFace=cv2.FONT_HERSHEY_TRIPLEX,fontScale=1.4,color=(50,220, 110))
+        cv2.putText(img=self.debug_frame,text=f"Distance: {int(self.distance)} mm",org=(51,700),fontFace=cv2.FONT_HERSHEY_TRIPLEX,fontScale=1.4,color=(50,220, 110))
+        cv2.putText(img=self.debug_frame,text=f"Distance: {int(self.distance)} mm",org=(52,700),fontFace=cv2.FONT_HERSHEY_TRIPLEX,fontScale=1.4,color=(50,220, 110))
         cv2.imshow("color", self.debug_frame)
 
         if self.depthFrameColor is not None:
@@ -273,21 +275,25 @@ class DepthAI:
         self.depthFrameColor = None
         self.detections = []
         self.depth = None
+        self.distance = 1000
 
         while True:
             in_rgb = self.vidQ.tryGet()
             if in_rgb is not None:
                 self.frame = in_rgb.getCvFrame()
                 # cv2.imshow("video", self.frame)
+
+                # Check for mobilenet detections
+                in_det = self.detQ.tryGet()
+                if in_det is not None:
+                    self.detections = in_det.detections
+
                 self.frame = self.crop_to_rect(self.frame)
                 try:
                     self.parse()
                 except StopIteration:
                     break
 
-            in_det = self.detQ.tryGet()
-            if in_det is not None:
-                self.detections = in_det.detections
 
             in_depth = self.depthQ.tryGet()
             if in_depth is not None:
