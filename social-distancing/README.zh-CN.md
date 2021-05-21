@@ -6,9 +6,9 @@
 
 [![COVID-19 Social Distancing with DepthAI](https://user-images.githubusercontent.com/5244214/90741333-73f89500-e2cf-11ea-919b-b1f47dc55c4a.gif)](https://www.youtube.com/watch?v=-Ut9TemGZ8I "DepthAI Social Distancing Proof of Concept")
 
-## 先决条件
+## DepthAI购买渠道
 
-购买DepthAI模型(请参阅 https://shop.luxonis.com/)
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
 
 ## 安装依赖
 

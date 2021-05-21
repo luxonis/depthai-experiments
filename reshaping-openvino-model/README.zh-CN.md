@@ -6,6 +6,10 @@
 
 这样，如果您的模型通常接受300x300输入，则可以将尺寸更改为任意值，例如200x200
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ## 使用docker
 
 ```

@@ -4,6 +4,10 @@
 
 该管道执行文本检测（EAST），然后对检测到的文本进行光学字符识别。它实现了问题 [#124](https://github.com/luxonis/depthai/issues/124).
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ## 怎么跑
 
 本示例使用 [Gen2 Pipeline Builder](https://github.com/luxonis/depthai/issues/136), 因此请确保安装以下要求以确保适当的Gen2 API版本。

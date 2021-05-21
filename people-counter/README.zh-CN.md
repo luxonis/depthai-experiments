@@ -16,9 +16,9 @@ DepthAI用法的基本示例之一-在镜头前对人数进行计数并将结果
 
 [![Watch the demo](https://user-images.githubusercontent.com/5244214/90751105-fc7a3400-e2d5-11ea-82fe-3c7797e99e3e.gif)](https://youtu.be/M0xQI1kXju4)
 
-## 先决条件
+## DepthAI购买渠道
 
-购买DepthAI模型(请参阅 https://shop.luxonis.com/)
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
 
 ## 安装项目依赖
 

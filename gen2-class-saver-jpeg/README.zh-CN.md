@@ -46,7 +46,7 @@ timestamp,label,left,top,right,bottom,raw_frame,overlay_frame,cropped_frame
 
 ## 先决条件
 
-1. 购买DepthAI模型 (请参考 [shop.luxonis.com](https://shop.luxonis.com/))
+1. 购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
 2. 安装依赖
    ```
    python3 -m pip install -r requirements.txt

@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 multiple devices per host
 
 This example shows how you can use multiple DepthAI's on a single host. The demo will find all devices connected to the host and display an RGB preview from each of them. In this demo, all devices are using the same pipeline (that just displays the color camera preview). This does not have to be the case, and each device can run a separate pipeline.

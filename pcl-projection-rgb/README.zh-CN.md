@@ -3,6 +3,10 @@
 # 范例视频
 ![rgb-d](https://media.giphy.com/media/SnW9p4r3feMQGOmayy/giphy.gif)
 
+# DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 # RGB-D 转换
 
 在此实验中 `rgbd_creating_o3d.py/rgbd_creating_no_o3d.py` 您可以将rectified_right帧中的深度转换为RGB摄像机帧

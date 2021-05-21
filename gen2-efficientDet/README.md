@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # EfficientDet
 
 You can read more about the EfficientDet model in [automl's repo](https://github.com/google/automl/tree/master/efficientdet).

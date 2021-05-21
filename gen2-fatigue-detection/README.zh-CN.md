@@ -10,7 +10,7 @@
 
 ## 先决条件
 
-1. 购买DepthAI模型(请参见 [shop.luxonis.com](https://shop.luxonis.com/))
+1. 购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
 2. 安装依赖
 ```
 python -m pip install -r requirements.txt

@@ -10,6 +10,9 @@
 
 ![image](https://user-images.githubusercontent.com/5244214/104956823-36f31480-59cd-11eb-9568-64c0f0003dd0.gif)
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
 
 ## 设置
 

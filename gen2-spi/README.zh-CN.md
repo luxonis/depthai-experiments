@@ -3,6 +3,10 @@
 # Gen2 SPI 示例
 该目录包含一些有关如何在Gen2 Pipeline构建器中使用SPI接口的示例。这些示例的ESP32端可以在esp32-spi-message-demo子模块中找到。示例的MyriadX端在此目录中，并在下面进行描述。
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ### 安装依赖项和初始化子模块:
 请注意，所有这些示例均取决于requirements.txt中指定的要求，并且可能具有git子模块。
 

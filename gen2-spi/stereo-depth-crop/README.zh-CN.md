@@ -5,6 +5,10 @@
 ### 概述:
 此演示需要一个通过SPI连接到DepthAI的ESP32板。实现此目的的最简单方法是持有BW1092板。它具有已经连接到DepthAI的集成ESP32。
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ### 在DepthAI上:
 本示例说明如何裁剪StereoDepth节点的输出并将该数据长时间传递给ESP32。它的核心是gen2-camera-demo的简化版本。它将创建一个管道，该管道将向StereoDepth节点提供来自板载左右单目摄像头的输入，然后将StereoDepth节点的深度输出传递到SPI输出节点。SPIOut节点将使用自定义SPI协议将数据输出到ESP32。
 
