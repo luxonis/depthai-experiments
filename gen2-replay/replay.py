@@ -156,6 +156,38 @@ class Replay:
         frame.setInstanceNum(0)
         self.q["depthIn"].send(frame)
 
+# Draw spatial detections / tracklets to the frame
+def display_spatials(frame, detections, tracklets = []):
+    for tracklet in tracklets:
+        roi = tracklet.roi.denormalize(frame.shape[1], frame.shape[0])
+        x1 = int(roi.topLeft().x)
+        y1 = int(roi.topLeft().y)
+        x2 = int(roi.bottomRight().x)
+        y2 = int(roi.bottomRight().y)
+        # If these are tracklets, display ID as well
+        cv2.putText(frame, f"ID: {[tracklet.id]}", (x1 + 10, y1 -20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, tracklet.status.name, (x1 + 10, y1 - 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+    h = frame.shape[0]
+    w = frame.shape[1]
+    for detection in detections:
+        # Denormalize bounding box
+        x1 = int(detection.xmin * w)
+        x2 = int(detection.xmax * w)
+        y1 = int(detection.ymin * h)
+        y2 = int(detection.ymax * h)
+        try:
+            label = labelMap[detection.label]
+        except:
+            label = detection.label
+        cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+
 # Create the pipeline
 def create_pipeline(replay):
     pipeline = dai.Pipeline()
@@ -209,9 +241,6 @@ def create_pipeline(replay):
 
     rgb_in.out.link(spatialDetectionNetwork.input)
 
-    detOut = pipeline.createXLinkOut()
-    detOut.setStreamName("det")
-    spatialDetectionNetwork.out.link(detOut.input)
 
     depthOut = pipeline.createXLinkOut()
     depthOut.setStreamName("depth")
@@ -221,12 +250,14 @@ def create_pipeline(replay):
     rgbOut.setStreamName("rgb")
     spatialDetectionNetwork.passthrough.link(rgbOut.input)
 
+    detOut = pipeline.createXLinkOut()
+    detOut.setStreamName("det")
     if args.tracker:
         tracker = pipeline.createObjectTracker()
 
         tracker.setDetectionLabelsToTrack([1])  # track only vehicle
         # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
-        tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
+        tracker.setTrackerType(dai.TrackerType.ZERO_TERM_IMAGELESS)
         # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
         tracker.setTrackerIdAssigmentPolicy(dai.TrackerIdAssigmentPolicy.SMALLEST_ID)
 
@@ -236,9 +267,11 @@ def create_pipeline(replay):
 
         trackerOut = pipeline.createXLinkOut()
         trackerOut.setStreamName("tracklets")
-
         tracker.out.link(trackerOut.input)
 
+        tracker.passthroughDetections.link(detOut.input)
+    else:
+        spatialDetectionNetwork.out.link(detOut.input)
     return pipeline
 
 # Pipeline defined, now the device is connected to
@@ -277,7 +310,6 @@ with dai.Device() as device:
 
         inRgb = qRgbOut.get()
         rgbFrame = inRgb.getCvFrame().reshape((model_height, model_width, 3))
-        print("Rgb shape ",rgbFrame.shape)
 
         if not args.depth and args.monos:
             leftS = qLeftS.get().getCvFrame()
@@ -287,7 +319,6 @@ with dai.Device() as device:
 
         def get_colored_depth(frame):
             frame = replay.crop_frame(frame)
-            print("Depthj shape ",frame.shape)
             depthFrameColor = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
             depthFrameColor = cv2.equalizeHist(depthFrameColor)
             return cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
@@ -298,34 +329,13 @@ with dai.Device() as device:
         height = inRgb.getHeight()
         width = inRgb.getWidth()
 
-        inDet = qDet.tryGet()
-        if inDet is not None:
 
-            def display_spatials(frame, inDet):
-                # Display (spatial) object detections on the color frame
-                h = frame.shape[0]
-                w = frame.shape[1]
-
-                for detection in inDet.detections:
-                    # Denormalize bounding box
-                    x1 = int(detection.xmin * w)
-                    x2 = int(detection.xmax * w)
-                    y1 = int(detection.ymin * h)
-                    y2 = int(detection.ymax * h)
-                    try:
-                        label = labelMap[detection.label]
-                    except:
-                        label = detection.label
-                    cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-
-            display_spatials(rgbFrame, inDet)
-            display_spatials(depthFrameColor, inDet)
+        detections = qDet.get().detections
+        tracklets = []
+        if args.tracker:
+            tracklets = qTracklets.get().tracklets
+        display_spatials(rgbFrame, detections, tracklets)
+        display_spatials(depthFrameColor, detections, tracklets)
 
         cv2.imshow("rgb", rgbFrame)
         cv2.imshow("depth", depthFrameColor)
