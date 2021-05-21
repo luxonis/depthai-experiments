@@ -7,6 +7,10 @@
 
 该示例说明了如何仅接收消息的一部分，例如图像的一小部分。
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ### 在DepthAI上:
 在 main.py 中，我们只是设置了一个SPIOut节点，该节点将输出300x300的颜色预览流。
 

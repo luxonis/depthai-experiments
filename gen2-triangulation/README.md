@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 Triangulation 3D visualizer
 
 Because there are often application-specific host-side filtering to be done on the stereo

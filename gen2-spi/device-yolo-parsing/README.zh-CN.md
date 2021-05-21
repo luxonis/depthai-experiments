@@ -7,6 +7,10 @@
 
 此演示展示了针对已知网络类型的设备端结果解析。诸如YOLO之类的网络的原始结果很快变得超出ESP32的处理能力。为了处理常见的网络类型，可以使用DetectionNetwork节点。DetectionNetwork节点接收一个神经网络Blob，并以ESP32可以读取的简化格式输出对象检测结果。
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ### 在DepthAI上:
 在 main.py 中，构建了一个仅包含3个节点的基本管道，并将其发送到DepthAI。
 1. 来自ColorCamera节点的预览将传递到YoloDetectionNetwork节点中。

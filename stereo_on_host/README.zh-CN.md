@@ -3,6 +3,10 @@
 # 视差深度 RGB right
 本示例使用右摄像头和RGB摄像头创建视差，但是此示例希望您的RGB已校准
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ## 安装依赖
 
 ```

@@ -3,6 +3,10 @@
 # 范例视频
 ![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
 
+# DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 # 点云可视化器
 
 通过此实验，您可以运行和可视化使用深度图和右摄像头生成的点云。

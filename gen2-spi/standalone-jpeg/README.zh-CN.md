@@ -7,6 +7,10 @@
 
 此演示需要一个通过SPI连接到DepthAI的ESP32板。实现此目的的最简单方法是持有BW1092板。它具有已经连接到DepthAI的集成ESP32。
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ### 在DepthAI上:
 在 main.py 中，构建了一个仅包含3个节点的基本管道，并将其发送到DepthAI。该管道从板载彩色摄像机获取输出，将其编码为jpeg，然后将该jpeg发送到SPI接口。
 

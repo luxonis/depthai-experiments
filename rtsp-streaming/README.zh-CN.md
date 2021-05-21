@@ -4,6 +4,10 @@
 
 此示例使您可以通过RTSP流式传输帧
 
+## DepthAI购买渠道
+
+购买DepthAI(请参见 [淘宝](https://item.taobao.com/item.htm?id=626257175462))
+
 ## 安装依赖
 
 ```
