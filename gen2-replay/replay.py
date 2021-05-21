@@ -3,6 +3,8 @@ import argparse
 from pathlib import Path
 import os
 import cv2
+import numpy as np
+import math
 import depthai as dai
 from crash_avoidance import CrashAvoidance
 
@@ -18,7 +20,10 @@ args = parser.parse_args()
 
 model_width = 672
 model_height = 384
+MIN_Z = 2000
+MAX_Z = 35000
 model_path = "models/vehicle-detection-adas-0002.blob"
+# model_path = "models/vehicle-detection-0200-5shaves.blob"
 
 # Get the stored frames path
 dest = Path(args.path).resolve().absolute()
@@ -165,13 +170,41 @@ class Replay:
         self.q["depthIn"].send(frame)
 
 
+def create_bird_frame():
+    fov = 68.3
+    frame = np.zeros((300, 100, 3), np.uint8)
+    cv2.rectangle(frame, (0, 283), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1)
+
+    alpha = (180 - fov) / 2
+    center = int(frame.shape[1] / 2)
+    max_p = frame.shape[0] - int(math.tan(math.radians(alpha)) * center)
+    fov_cnt = np.array([
+        (0, frame.shape[0]),
+        (frame.shape[1], frame.shape[0]),
+        (frame.shape[1], max_p),
+        (center, frame.shape[0]),
+        (0, max_p),
+        (0, frame.shape[0]),
+    ])
+    cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
+    return frame
+
+def draw_bird_frame(frame, y, z, id = None):
+    global MAX_Z
+    max_y = 2000 #mm
+    pointY = frame.shape[0] - int(z / (MAX_Z - 10000) * frame.shape[0]) - 20
+    pointX = int(y / max_y * frame.shape[1] + frame.shape[1]/2)
+    # print(f"Y {y}, Z {z} - Birds: X {pointX}, Y {pointY}")
+    if id is not None:
+        cv2.putText(frame, str(id), (pointX - 30, pointY + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0))
+    cv2.circle(frame, (pointX, pointY), 2, (0, 255, 0), thickness=5, lineType=8, shift=0)
+
 crashAvoidance = CrashAvoidance()
 # Draw spatial detections / tracklets to the frame
-lost_tracklets = []
 def display_spatials(frame, detections, tracker = False):
-    global lost_tracklets
     h = frame.shape[0]
     w = frame.shape[1]
+    birdFrame = create_bird_frame()
     for detection in detections:
         # Denormalize bounding box
         imgDet = detection.srcImgDetection if tracker else detection
@@ -180,8 +213,6 @@ def display_spatials(frame, detections, tracker = False):
         y1 = int(imgDet.ymin * h)
         y2 = int(imgDet.ymax * h)
 
-        # If vehicle is too far away, coordinate estimation is off so don't display them
-        if (x2-x1)*(y2-y1) < 600: continue
         try:
             label = labelMap[detection.label]
         except:
@@ -199,12 +230,15 @@ def display_spatials(frame, detections, tracker = False):
         # else:
             # cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         # cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+        # If vehicle is too far away, coordinate estimation is off so don't display them
+        if (x2-x1)*(y2-y1) < 600: continue
+        draw_bird_frame(birdFrame, detection.spatialCoordinates.y, detection.spatialCoordinates.z, detection.id if tracker else None)
         cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-
+    cv2.imshow("Bird view", birdFrame)
 
 # Create the pipeline
 def create_pipeline(replay):
@@ -247,8 +281,8 @@ def create_pipeline(replay):
     spatialDetectionNetwork.setConfidenceThreshold(0.5)
     spatialDetectionNetwork.input.setBlocking(False)
     spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
-    spatialDetectionNetwork.setDepthLowerThreshold(2000)
-    spatialDetectionNetwork.setDepthUpperThreshold(40000)
+    spatialDetectionNetwork.setDepthLowerThreshold(MIN_Z)
+    spatialDetectionNetwork.setDepthUpperThreshold(MAX_Z)
 
     if args.depth:
         depth_in = pipeline.createXLinkIn()
@@ -310,7 +344,7 @@ with dai.Device() as device:
     # if args.tracker:
     #     qTracklets = device.getOutputQueue(name="tracklets", maxSize=4, blocking=False)
 
-    color = (255, 0, 0)
+    color = (30, 211, 255)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     for frame_folder in frames_sorted:
         files = replay.get_files(frame_folder)
@@ -319,14 +353,9 @@ with dai.Device() as device:
         images = replay.read_files(frame_folder, files)
 
         replay.send_frames(images)
-        # Send first frames twice for first iteration (depthai FW limitation)
-        if frame_folder == 0: # TODO: debug
-            replay.send_frames(images)
 
         inRgb = qRgbOut.tryGet()
-        print("Folder", frame_folder)
         if inRgb is not None:
-            print("RGB not none", frame_folder)
             rgbFrame = inRgb.getCvFrame().reshape((model_height, model_width, 3))
 
             def get_colored_depth(frame):
@@ -337,7 +366,7 @@ with dai.Device() as device:
             depthFrameColor = get_colored_depth(qDepth.get().getFrame())
 
             if args.tracker: detections = qDet.get().tracklets
-            else: qDet.get().detections
+            else: detections = qDet.get().detections
 
             display_spatials(rgbFrame, detections, args.tracker)
             # display_spatials(depthFrameColor, detections, args.tracker)
