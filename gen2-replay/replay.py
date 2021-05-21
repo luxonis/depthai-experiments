@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import cv2
 import depthai as dai
+from crash_avoidance import CrashAvoidance
 
 labelMap = ["background", "vehicle"]
 
@@ -11,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 parser.add_argument('-d', '--depth', action='store_true', default=False, help="Use saved depth maps")
 parser.add_argument('-m', '--monos', action='store_true', default=False, help="Display synced mono frames as well")
+parser.add_argument('-mh', '--monohost', action='store_true', default=False, help="Display  mono frames from the host")
 parser.add_argument('-t', '--tracker', action='store_true', default=False, help="Use object tracker")
 args = parser.parse_args()
 
@@ -20,9 +22,15 @@ model_path = "models/vehicle-detection-adas-0002.blob"
 
 # Get the stored frames path
 dest = Path(args.path).resolve().absolute()
-frames = os.listdir(str(dest))
-# TODO: if not int parsable, skip
-frames_sorted = sorted([int(i) for i in frames])
+frame_folders = os.listdir(str(dest))
+
+frames_sorted = []
+for frame_folder in frame_folders:
+    try:
+        frames_sorted.append(int(frame_folder))
+    except Exception as e:
+        print(f"Folder named {frame_folder} is invalid! Skipping it")
+frames_sorted = sorted(frames_sorted)
 
 class Replay:
     def __init__(self, path, device):
@@ -88,7 +96,7 @@ class Replay:
     def read_color(self,path):
         return cv2.imread(path)
     def read_mono(self,path):
-        return cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        return cv2.flip(cv2.imread(path, cv2.IMREAD_GRAYSCALE), 1)
     def read_depth(self,path):
         with open(path, "rb") as depth_file:
             return list(depth_file.read())
@@ -132,7 +140,7 @@ class Replay:
     def send_mono(self, img, name):
         h, w = img.shape
         frame = dai.ImgFrame()
-        frame.setData(cv2.flip(img, 1)) # Flip the rectified frame
+        frame.setData(img) # Flip the rectified frame
         frame.setType(dai.RawImgFrame.Type.RAW8)
         frame.setWidth(w)
         frame.setHeight(h)
@@ -156,37 +164,47 @@ class Replay:
         frame.setInstanceNum(0)
         self.q["depthIn"].send(frame)
 
-# Draw spatial detections / tracklets to the frame
-def display_spatials(frame, detections, tracklets = []):
-    for tracklet in tracklets:
-        roi = tracklet.roi.denormalize(frame.shape[1], frame.shape[0])
-        x1 = int(roi.topLeft().x)
-        y1 = int(roi.topLeft().y)
-        x2 = int(roi.bottomRight().x)
-        y2 = int(roi.bottomRight().y)
-        # If these are tracklets, display ID as well
-        cv2.putText(frame, f"ID: {[tracklet.id]}", (x1 + 10, y1 -20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, tracklet.status.name, (x1 + 10, y1 - 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
+crashAvoidance = CrashAvoidance()
+# Draw spatial detections / tracklets to the frame
+lost_tracklets = []
+def display_spatials(frame, detections, tracker = False):
+    global lost_tracklets
     h = frame.shape[0]
     w = frame.shape[1]
     for detection in detections:
         # Denormalize bounding box
-        x1 = int(detection.xmin * w)
-        x2 = int(detection.xmax * w)
-        y1 = int(detection.ymin * h)
-        y2 = int(detection.ymax * h)
+        imgDet = detection.srcImgDetection if tracker else detection
+        x1 = int(imgDet.xmin * w)
+        x2 = int(imgDet.xmax * w)
+        y1 = int(imgDet.ymin * h)
+        y2 = int(imgDet.ymax * h)
+
+        # If vehicle is too far away, coordinate estimation is off so don't display them
+        if (x2-x1)*(y2-y1) < 600: continue
         try:
             label = labelMap[detection.label]
         except:
             label = detection.label
-        cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+        if tracker:
+            if crashAvoidance.remove_lost_tracklet(detection): continue
+            # If these are tracklets, display ID as well
+            cv2.putText(frame, f"Car {detection.id}", (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            # cv2.putText(frame, detection.status.name, (x1 + 10, y1 - 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            # cv2.putText(frame, "{:.2f}".format(detection.srcImgDetection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            # speed = crashAvoidance.calculate_speed(detection)
+            # cv2.putText(frame, "{:.1f} km/h".format(speed), (x1 + 10, y1 - 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+        # else:
+            # cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        # cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+
 
 # Create the pipeline
 def create_pipeline(replay):
@@ -207,7 +225,7 @@ def create_pipeline(replay):
         stereo.setMedianFilter(median)
         stereo.setLeftRightCheck(False)
         stereo.setExtendedDisparity(False)
-        stereo.setSubpixel(True)
+        stereo.setSubpixel(False)
         mono_size = replay.mono_size
         stereo.setInputResolution(mono_size[1], mono_size[0])
         # Since frames are already rectified
@@ -257,9 +275,9 @@ def create_pipeline(replay):
 
         tracker.setDetectionLabelsToTrack([1])  # track only vehicle
         # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
-        tracker.setTrackerType(dai.TrackerType.ZERO_TERM_IMAGELESS)
+        tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
         # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
-        tracker.setTrackerIdAssigmentPolicy(dai.TrackerIdAssigmentPolicy.SMALLEST_ID)
+        tracker.setTrackerIdAssigmentPolicy(dai.TrackerIdAssigmentPolicy.UNIQUE_ID)
 
         spatialDetectionNetwork.passthrough.link(tracker.inputTrackerFrame)
         spatialDetectionNetwork.passthrough.link(tracker.inputDetectionFrame)
@@ -267,9 +285,9 @@ def create_pipeline(replay):
 
         trackerOut = pipeline.createXLinkOut()
         trackerOut.setStreamName("tracklets")
-        tracker.out.link(trackerOut.input)
+        tracker.out.link(detOut.input)
 
-        tracker.passthroughDetections.link(detOut.input)
+        # tracker.passthroughDetections.link(detOut.input)
     else:
         spatialDetectionNetwork.out.link(detOut.input)
     return pipeline
@@ -289,8 +307,8 @@ with dai.Device() as device:
     qDet = device.getOutputQueue(name="det", maxSize=4, blocking=False)
     qRgbOut = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
 
-    if args.tracker:
-        qTracklets = device.getOutputQueue(name="tracklets", maxSize=4, blocking=False)
+    # if args.tracker:
+    #     qTracklets = device.getOutputQueue(name="tracklets", maxSize=4, blocking=False)
 
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
@@ -304,41 +322,39 @@ with dai.Device() as device:
         # Send first frames twice for first iteration (depthai FW limitation)
         if frame_folder == 0: # TODO: debug
             replay.send_frames(images)
-            replay.send_frames(images)
-            replay.send_frames(images)
-            replay.send_frames(images)
 
-        inRgb = qRgbOut.get()
-        rgbFrame = inRgb.getCvFrame().reshape((model_height, model_width, 3))
+        inRgb = qRgbOut.tryGet()
+        print("Folder", frame_folder)
+        if inRgb is not None:
+            print("RGB not none", frame_folder)
+            rgbFrame = inRgb.getCvFrame().reshape((model_height, model_width, 3))
 
-        if not args.depth and args.monos:
-            leftS = qLeftS.get().getCvFrame()
-            rightS = qRightS.get().getCvFrame()
-            cv2.imshow("left", leftS)
-            cv2.imshow("right", rightS)
+            def get_colored_depth(frame):
+                frame = replay.crop_frame(frame)
+                depthFrameColor = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                depthFrameColor = cv2.equalizeHist(depthFrameColor)
+                return cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
+            depthFrameColor = get_colored_depth(qDepth.get().getFrame())
 
-        def get_colored_depth(frame):
-            frame = replay.crop_frame(frame)
-            depthFrameColor = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            depthFrameColor = cv2.equalizeHist(depthFrameColor)
-            return cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
-        depthFrameColor = get_colored_depth(qDepth.get().getFrame())
-        # cv2.imshow("replayed depth", depthFrameColor)
-        # cv2.imshow("recorded depth", get_colored_depth(np.array(images["depth"]).astype(np.uint8).view(np.uint16).reshape(replay.mono_size)))
+            if args.tracker: detections = qDet.get().tracklets
+            else: qDet.get().detections
 
-        height = inRgb.getHeight()
-        width = inRgb.getWidth()
+            display_spatials(rgbFrame, detections, args.tracker)
+            # display_spatials(depthFrameColor, detections, args.tracker)
 
+            h = rgbFrame.shape[0]
+            w = rgbFrame.shape[1]
+            if not args.depth and args.monos:
+                leftS = qLeftS.get().getCvFrame()
+                rightS = qRightS.get().getCvFrame()
+                cv2.imshow("left", cv2.resize(leftS, (w,h)))
+                cv2.imshow("right", cv2.resize(rightS, (w,h)))
+            if args.monohost:
+                cv2.imshow("left", cv2.resize(images["left"], (w,h)))
+                cv2.imshow("right", cv2.resize(images["right"], (w,h)))
 
-        detections = qDet.get().detections
-        tracklets = []
-        if args.tracker:
-            tracklets = qTracklets.get().tracklets
-        display_spatials(rgbFrame, detections, tracklets)
-        display_spatials(depthFrameColor, detections, tracklets)
-
-        cv2.imshow("rgb", rgbFrame)
-        cv2.imshow("depth", depthFrameColor)
+            cv2.imshow("rgb", rgbFrame)
+            cv2.imshow("depth", cv2.resize(depthFrameColor, (w,h)))
 
         if cv2.waitKey(1) == ord('q'):
             break
