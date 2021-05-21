@@ -12,6 +12,8 @@ Specify the number of Shaves to install accordingly. This command requires Blobc
 
 ## Demo
 
+The demo classifies the animals in the images as Ibex (Mountain Goat) accurately. Also classifies most common objects.
+
 ![result](https://user-images.githubusercontent.com/67831664/119170640-2b9a1d80-ba81-11eb-8a3f-a3837af38a73.jpg)
 
 ## Installation
