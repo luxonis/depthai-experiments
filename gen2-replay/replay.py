@@ -2,20 +2,21 @@
 import argparse
 from pathlib import Path
 import os
-from multiprocessing import Process, Queue
 import cv2
 import depthai as dai
-import sys
-import numpy as np
-import time
 
-labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+labelMap = ["background", "vehicle"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 parser.add_argument('-d', '--depth', action='store_true', default=False, help="Use saved depth maps")
+parser.add_argument('-m', '--monos', action='store_true', default=False, help="Display synced mono frames as well")
+parser.add_argument('-t', '--tracker', action='store_true', default=False, help="Use object tracker")
 args = parser.parse_args()
+
+model_width = 672
+model_height = 384
+model_path = "models/vehicle-detection-adas-0002.blob"
 
 # Get the stored frames path
 dest = Path(args.path).resolve().absolute()
@@ -29,6 +30,29 @@ class Replay:
         self.mono_size = self.__get_mono_size()
         self.color_size = self.__get_color_size()
         self.device = device
+
+    # Crop & resize the frame (with the correct aspect ratio)
+    def crop_frame(self, frame):
+        shape = frame.shape
+        h = shape[0]
+        w = shape[1]
+        ratio = model_width / model_height
+        current_ratio = w / h
+
+        # Crop width/heigth to match the aspect ratio needed by the NN
+        if ratio < current_ratio: # Crop width
+            # Use full height, crop width
+            new_w = (ratio/current_ratio) * w
+            crop = int((w - new_w) / 2)
+            preview = frame[:, crop:w-crop]
+        else: # Crop height
+            # Use full width, crop height
+            new_h = (current_ratio/ratio) * h
+            crop = int((h - new_h) / 2)
+            preview = frame[crop:h-crop,:]
+
+        # Resize to match the NN input
+        return preview
 
     def create_input_queues(self):
         # Create input queues
@@ -58,7 +82,7 @@ class Replay:
             return frame.shape
         return None
 
-    def to_planar(self, arr, shape):
+    def __to_planar(self, arr, shape):
         return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
 
     def read_color(self,path):
@@ -94,7 +118,6 @@ class Replay:
 
     def send_frames(self, images):
         for name, img in images.items():
-            print(f"sending frame {name}")
             replay.send_frame(name, img)
 
     # Send recorded frames from the host to the depthai
@@ -116,12 +139,12 @@ class Replay:
         frame.setInstanceNum((2 if name == "right" else 1))
         self.q[name].send(frame)
     def send_rgb(self, img):
-        preview = img[0:1080, 420:1500] # Crop before sending
         frame = dai.ImgFrame()
         frame.setType(dai.RawImgFrame.Type.BGR888p)
-        frame.setData(self.to_planar(preview, (300, 300)))
-        frame.setWidth(300)
-        frame.setHeight(300)
+        preview = self.crop_frame(img)
+        frame.setData(self.__to_planar(preview, (model_width, model_height)))
+        frame.setWidth(model_width)
+        frame.setHeight(model_height)
         frame.setInstanceNum(0)
         self.q["rgbIn"].send(frame)
     def send_depth(self, depth):
@@ -152,7 +175,7 @@ def create_pipeline(replay):
         stereo.setMedianFilter(median)
         stereo.setLeftRightCheck(False)
         stereo.setExtendedDisparity(False)
-        stereo.setSubpixel(False)
+        stereo.setSubpixel(True)
         mono_size = replay.mono_size
         stereo.setInputResolution(mono_size[1], mono_size[0])
         # Since frames are already rectified
@@ -160,22 +183,22 @@ def create_pipeline(replay):
 
         left_in.out.link(stereo.left)
         right_in.out.link(stereo.right)
+        if args.monos:
+            right_s_out = pipeline.createXLinkOut()
+            right_s_out.setStreamName("rightS")
+            stereo.syncedRight.link(right_s_out.input)
 
-        right_s_out = pipeline.createXLinkOut()
-        right_s_out.setStreamName("rightS")
-        stereo.syncedRight.link(right_s_out.input)
-
-        left_s_out = pipeline.createXLinkOut()
-        left_s_out.setStreamName("leftS")
-        stereo.syncedLeft.link(left_s_out.input)
+            left_s_out = pipeline.createXLinkOut()
+            left_s_out.setStreamName("leftS")
+            stereo.syncedLeft.link(left_s_out.input)
 
     spatialDetectionNetwork = pipeline.createMobileNetSpatialDetectionNetwork()
-    spatialDetectionNetwork.setBlobPath("models/mobilenet-ssd_openvino_2021.2_6shave.blob")
+    spatialDetectionNetwork.setBlobPath(model_path)
     spatialDetectionNetwork.setConfidenceThreshold(0.5)
     spatialDetectionNetwork.input.setBlocking(False)
-    spatialDetectionNetwork.setBoundingBoxScaleFactor(0.3)
-    spatialDetectionNetwork.setDepthLowerThreshold(100)
-    spatialDetectionNetwork.setDepthUpperThreshold(5000)
+    spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
+    spatialDetectionNetwork.setDepthLowerThreshold(2000)
+    spatialDetectionNetwork.setDepthUpperThreshold(40000)
 
     if args.depth:
         depth_in = pipeline.createXLinkIn()
@@ -185,10 +208,6 @@ def create_pipeline(replay):
         stereo.depth.link(spatialDetectionNetwork.inputDepth)
 
     rgb_in.out.link(spatialDetectionNetwork.input)
-
-    bbOut = pipeline.createXLinkOut()
-    bbOut.setStreamName("bb")
-    spatialDetectionNetwork.boundingBoxMapping.link(bbOut.input)
 
     detOut = pipeline.createXLinkOut()
     detOut.setStreamName("det")
@@ -202,6 +221,24 @@ def create_pipeline(replay):
     rgbOut.setStreamName("rgb")
     spatialDetectionNetwork.passthrough.link(rgbOut.input)
 
+    if args.tracker:
+        tracker = pipeline.createObjectTracker()
+
+        tracker.setDetectionLabelsToTrack([1])  # track only vehicle
+        # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
+        tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
+        # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
+        tracker.setTrackerIdAssigmentPolicy(dai.TrackerIdAssigmentPolicy.SMALLEST_ID)
+
+        spatialDetectionNetwork.passthrough.link(tracker.inputTrackerFrame)
+        spatialDetectionNetwork.passthrough.link(tracker.inputDetectionFrame)
+        spatialDetectionNetwork.out.link(tracker.inputDetections)
+
+        trackerOut = pipeline.createXLinkOut()
+        trackerOut.setStreamName("tracklets")
+
+        tracker.out.link(trackerOut.input)
+
     return pipeline
 
 # Pipeline defined, now the device is connected to
@@ -210,15 +247,17 @@ with dai.Device() as device:
     device.startPipeline(create_pipeline(replay))
     replay.create_input_queues()
 
-    if not args.depth:
+    if not args.depth and args.monos:
         qLeftS = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
         qRightS = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
 
     qDepth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
 
-    qBb = device.getOutputQueue(name="bb", maxSize=4, blocking=False)
     qDet = device.getOutputQueue(name="det", maxSize=4, blocking=False)
     qRgbOut = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+
+    if args.tracker:
+        qTracklets = device.getOutputQueue(name="tracklets", maxSize=4, blocking=False)
 
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
@@ -234,17 +273,21 @@ with dai.Device() as device:
             replay.send_frames(images)
             replay.send_frames(images)
             replay.send_frames(images)
+            replay.send_frames(images)
 
         inRgb = qRgbOut.get()
-        rgbFrame = inRgb.getCvFrame().reshape((300, 300, 3))
+        rgbFrame = inRgb.getCvFrame().reshape((model_height, model_width, 3))
+        print("Rgb shape ",rgbFrame.shape)
 
-        if not args.depth:
+        if not args.depth and args.monos:
             leftS = qLeftS.get().getCvFrame()
             rightS = qRightS.get().getCvFrame()
             cv2.imshow("left", leftS)
             cv2.imshow("right", rightS)
 
         def get_colored_depth(frame):
+            frame = replay.crop_frame(frame)
+            print("Depthj shape ",frame.shape)
             depthFrameColor = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
             depthFrameColor = cv2.equalizeHist(depthFrameColor)
             return cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
@@ -257,39 +300,32 @@ with dai.Device() as device:
 
         inDet = qDet.tryGet()
         if inDet is not None:
-            if len(inDet.detections) != 0:
-                # Display boundingbox mappings on the depth frame
-                bbMapping = qBb.get()
-                roiDatas = bbMapping.getConfigData()
-                for roiData in roiDatas:
-                    roi = roiData.roi
-                    roi = roi.denormalize(depthFrameColor.shape[1], depthFrameColor.shape[0])
-                    topLeft = roi.topLeft()
-                    bottomRight = roi.bottomRight()
-                    xmin = int(topLeft.x)
-                    ymin = int(topLeft.y)
-                    xmax = int(bottomRight.x)
-                    ymax = int(bottomRight.y)
-                    cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), (0,255,0), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
-            # Display (spatial) object detections on the color frame
-            for detection in inDet.detections:
-                # Denormalize bounding box
-                x1 = int(detection.xmin * 300)
-                x2 = int(detection.xmax * 300)
-                y1 = int(detection.ymin * 300)
-                y2 = int(detection.ymax * 300)
-                try:
-                    label = labelMap[detection.label]
-                except:
-                    label = detection.label
-                cv2.putText(rgbFrame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            def display_spatials(frame, inDet):
+                # Display (spatial) object detections on the color frame
+                h = frame.shape[0]
+                w = frame.shape[1]
 
-                cv2.rectangle(rgbFrame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+                for detection in inDet.detections:
+                    # Denormalize bounding box
+                    x1 = int(detection.xmin * w)
+                    x2 = int(detection.xmax * w)
+                    y1 = int(detection.ymin * h)
+                    y2 = int(detection.ymax * h)
+                    try:
+                        label = labelMap[detection.label]
+                    except:
+                        label = detection.label
+                    cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+
+            display_spatials(rgbFrame, inDet)
+            display_spatials(depthFrameColor, inDet)
 
         cv2.imshow("rgb", rgbFrame)
         cv2.imshow("depth", depthFrameColor)
