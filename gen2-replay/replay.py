@@ -5,8 +5,11 @@ import os
 import cv2
 import numpy as np
 import math
+import time
 import depthai as dai
 from crash_avoidance import CrashAvoidance
+
+IMG_SAVE_PATH = "/home/erik/imgs_folder"
 
 for device in dai.Device.getAllAvailableDevices():
     print(f"{device.getMxId()} {device.state}")
@@ -27,8 +30,7 @@ model_width = 672
 model_height = 384
 MIN_Z = 2000
 MAX_Z = 35000
-# model_path = "models/vehicle-detection-adas-0002.blob"
-model_path = "models/vehicle-detection-0200-5shaves.blob"
+model_path = "models/vehicle-detection-adas-0002.blob"
 
 # Get the stored frames path
 dest = Path(args.path).resolve().absolute()
@@ -148,10 +150,10 @@ class Replay:
             self.send_rgb(frame)
 
     def send_mono(self, img, name):
-        h, w = img.shape
         frame = dai.ImgFrame()
         frame.setData(img) # Flip the rectified frame
         frame.setType(dai.RawImgFrame.Type.RAW8)
+        h, w = img.shape
         frame.setWidth(w)
         frame.setHeight(h)
         frame.setInstanceNum((2 if name == "right" else 1))
@@ -173,7 +175,6 @@ class Replay:
         frame.setHeight(400)
         frame.setInstanceNum(0)
         self.q["depthIn"].send(frame)
-
 
 def create_bird_frame():
     fov = 68.3
@@ -223,13 +224,16 @@ def display_spatials(frame, detections, tracker = False):
         except:
             label = detection.label
 
+
         if tracker:
             if crashAvoidance.remove_lost_tracklet(detection): continue
             # If these are tracklets, display ID as well
             cv2.putText(frame, f"Car {detection.id}", (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            # frame = crashAvoidance.drawArrows(frame, detection)
             # cv2.putText(frame, detection.status.name, (x1 + 10, y1 - 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             # cv2.putText(frame, "{:.2f}".format(detection.srcImgDetection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             # speed = crashAvoidance.calculate_speed(detection)
+
             # cv2.putText(frame, "{:.1f} km/h".format(speed), (x1 + 10, y1 - 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
         # else:
@@ -240,10 +244,10 @@ def display_spatials(frame, detections, tracker = False):
         # If vehicle is too far away, coordinate estimation is off so don't display them
         if (x2-x1)*(y2-y1) < 600: continue
         draw_bird_frame(birdFrame, detection.spatialCoordinates.y, detection.spatialCoordinates.z, detection.id if tracker else None)
-        cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-    if args.birdsview: cv2.imshow("Bird view", birdFrame)
+        cv2.putText(frame, "X: {:.1f} m".format(int(detection.spatialCoordinates.x) / 1000.0), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, "Y: {:.1f} m".format(int(detection.spatialCoordinates.y) / 1000.0), (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        cv2.putText(frame, "Z: {:.1f} m".format(int(detection.spatialCoordinates.z) / 1000.0), (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+    if args.birdsview: return birdFrame
 
 # Create the pipeline
 def create_pipeline(replay):
@@ -298,7 +302,6 @@ def create_pipeline(replay):
 
     rgb_in.out.link(spatialDetectionNetwork.input)
 
-
     depthOut = pipeline.createXLinkOut()
     depthOut.setStreamName("depth")
     spatialDetectionNetwork.passthroughDepth.link(depthOut.input)
@@ -312,7 +315,7 @@ def create_pipeline(replay):
     if args.tracker:
         tracker = pipeline.createObjectTracker()
 
-        tracker.setDetectionLabelsToTrack([1])  # track only vehicle
+        tracker.setDetectionLabelsToTrack(range(20))  # track only vehicle
         # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
         tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
         # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
@@ -354,7 +357,6 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
     # if args.tracker:
     #     qTracklets = device.getOutputQueue(name="tracklets", maxSize=4, blocking=False)
-
     color = (30, 211, 255)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     for frame_folder in frames_sorted:
@@ -379,22 +381,38 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             if args.tracker: detections = qDet.get().tracklets
             else: detections = qDet.get().detections
 
-            display_spatials(rgbFrame, detections, args.tracker)
+            birdsView = display_spatials(rgbFrame, detections, args.tracker)
             # display_spatials(depthFrameColor, detections, args.tracker)
+            def save_png(folder, name, item):
+                frames_path = Path(IMG_SAVE_PATH) / str(name)
+                frames_path.mkdir(parents=True, exist_ok=True)
+                if folder < 10: folder = "000" + str(folder)
+                elif folder < 100: folder = "00" + str(folder)
+                elif folder < 1000: folder = "0" + str(folder)
+                cv2.imwrite(str(frames_path / f"{folder}.png"), item)
 
             h = rgbFrame.shape[0]
             w = rgbFrame.shape[1]
             if not args.depth and args.monos:
                 leftS = qLeftS.get().getCvFrame()
                 rightS = qRightS.get().getCvFrame()
-                cv2.imshow("left", cv2.resize(leftS, (w,h)))
-                cv2.imshow("right", cv2.resize(rightS, (w,h)))
+                left = cv2.resize(leftS, (w,h))
+                right = cv2.resize(rightS, (w,h))
+                cv2.imshow("left", left)
+                cv2.imshow("right", right)
+                save_png(frame_folder, "left", left)
+                save_png(frame_folder, "right", right)
             if args.monohost:
                 cv2.imshow("left", cv2.resize(images["left"], (w,h)))
                 cv2.imshow("right", cv2.resize(images["right"], (w,h)))
 
             cv2.imshow("rgb", rgbFrame)
-            cv2.imshow("depth", cv2.resize(depthFrameColor, (w,h)))
+            depthFrameColor = cv2.resize(depthFrameColor, (w,h))
+            cv2.imshow("depth", depthFrameColor)
+            save_png(frame_folder, "rgb", rgbFrame)
+            save_png(frame_folder, "depth", depthFrameColor)
+            save_png(frame_folder, "birdsview", birdsView)
+            
 
         if cv2.waitKey(1) == ord('q'):
             break
