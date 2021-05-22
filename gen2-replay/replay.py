@@ -8,6 +8,9 @@ import math
 import depthai as dai
 from crash_avoidance import CrashAvoidance
 
+for device in dai.Device.getAllAvailableDevices():
+    print(f"{device.getMxId()} {device.state}")
+
 labelMap = ["background", "vehicle"]
 
 parser = argparse.ArgumentParser()
@@ -16,14 +19,16 @@ parser.add_argument('-d', '--depth', action='store_true', default=False, help="U
 parser.add_argument('-m', '--monos', action='store_true', default=False, help="Display synced mono frames as well")
 parser.add_argument('-mh', '--monohost', action='store_true', default=False, help="Display  mono frames from the host")
 parser.add_argument('-t', '--tracker', action='store_true', default=False, help="Use object tracker")
+parser.add_argument('-bv', '--birdsview', action='store_true', default=False, help="Show birds view")
+parser.add_argument('-mx', '--mx', default="", type=str, help="MX id")
 args = parser.parse_args()
 
 model_width = 672
 model_height = 384
 MIN_Z = 2000
 MAX_Z = 35000
-model_path = "models/vehicle-detection-adas-0002.blob"
-# model_path = "models/vehicle-detection-0200-5shaves.blob"
+# model_path = "models/vehicle-detection-adas-0002.blob"
+model_path = "models/vehicle-detection-0200-5shaves.blob"
 
 # Get the stored frames path
 dest = Path(args.path).resolve().absolute()
@@ -238,7 +243,7 @@ def display_spatials(frame, detections, tracker = False):
         cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-    cv2.imshow("Bird view", birdFrame)
+    if args.birdsview: cv2.imshow("Bird view", birdFrame)
 
 # Create the pipeline
 def create_pipeline(replay):
@@ -326,8 +331,14 @@ def create_pipeline(replay):
         spatialDetectionNetwork.out.link(detOut.input)
     return pipeline
 
+device_info = None
+if args.mx != "":
+    found, device_info = dai.Device.getDeviceByMxId(args.mx)
+    if not found: raise RuntimeError("Device not found!")
+    print("Script will use depthai", args.mx)
+
 # Pipeline defined, now the device is connected to
-with dai.Device() as device:
+with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     replay = Replay(path=args.path, device=device)
     device.startPipeline(create_pipeline(replay))
     replay.create_input_queues()
