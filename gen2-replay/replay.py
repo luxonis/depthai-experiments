@@ -207,7 +207,8 @@ def draw_bird_frame(frame, y, z, id = None):
 
 crashAvoidance = CrashAvoidance()
 # Draw spatial detections / tracklets to the frame
-def display_spatials(frame, detections, tracker = False):
+def display_spatials(frame, detections, name, tracker = False):
+    color = (255, 207, 17) if name == "depth" else (30, 211, 255)
     h = frame.shape[0]
     w = frame.shape[1]
     birdFrame = create_bird_frame()
@@ -266,7 +267,6 @@ def create_pipeline(replay):
         stereo.setConfidenceThreshold(240)
         median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
         stereo.setMedianFilter(median)
-        stereo.setLeftRightCheck(False)
         stereo.setExtendedDisparity(False)
         stereo.setSubpixel(False)
         mono_size = replay.mono_size
@@ -357,7 +357,6 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
     # if args.tracker:
     #     qTracklets = device.getOutputQueue(name="tracklets", maxSize=4, blocking=False)
-    color = (30, 211, 255)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     for frame_folder in frames_sorted:
         files = replay.get_files(frame_folder)
@@ -381,8 +380,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             if args.tracker: detections = qDet.get().tracklets
             else: detections = qDet.get().detections
 
-            birdsView = display_spatials(rgbFrame, detections, args.tracker)
-            # display_spatials(depthFrameColor, detections, args.tracker)
+            birdsView = display_spatials(rgbFrame, detections, "color", args.tracker)
             def save_png(folder, name, item):
                 frames_path = Path(IMG_SAVE_PATH) / str(name)
                 frames_path.mkdir(parents=True, exist_ok=True)
@@ -408,11 +406,12 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
             cv2.imshow("rgb", rgbFrame)
             depthFrameColor = cv2.resize(depthFrameColor, (w,h))
+            display_spatials(depthFrameColor, detections, "depth", args.tracker)
             cv2.imshow("depth", depthFrameColor)
             save_png(frame_folder, "rgb", rgbFrame)
             save_png(frame_folder, "depth", depthFrameColor)
             save_png(frame_folder, "birdsview", birdsView)
-            
+
 
         if cv2.waitKey(1) == ord('q'):
             break

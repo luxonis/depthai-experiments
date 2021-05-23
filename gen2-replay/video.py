@@ -3,7 +3,7 @@ import glob
 
 IMG_SAVE_PATH = "/home/erik/imgs_folder"
 
-streams = ["depth", "right", "rgb", "right", "birdsview"]
+streams = ["depth", "right", "rgb", "left", "birdsview"]
 for name in streams:
     if name == "birdsview": frameSize = (100, 300)
     else: frameSize = (672, 384)
