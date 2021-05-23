@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/gen2-spi/esp32-spi-message-demo" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/gen2-spi/esp32-spi-message-demo/components/depthai-spi-api" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/gen2-spi/esp32-spi-message-demo/components/depthai-spi-api/depthai-shared" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/gen2-spi/esp32-spi-message-demo/components/depthai-spi-api/depthai-spi-library" vcs="Git" />
+  </component>
+</project>
