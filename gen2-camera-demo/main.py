@@ -96,7 +96,7 @@ def create_mono_cam_pipeline():
     cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
     cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
     for cam in [cam_left, cam_right]: # Common config
-        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
         #cam.setFps(20.0)
 
     xout_left .setStreamName('left')
@@ -135,7 +135,7 @@ def create_stereo_depth_pipeline(from_camera=True):
         cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
         cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         for cam in [cam_left, cam_right]: # Common config
-            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
             #cam.setFps(20.0)
     else:
         cam_left .setStreamName('in_left')
@@ -178,7 +178,10 @@ def create_stereo_depth_pipeline(from_camera=True):
     if out_rectified:
         streams.extend(['rectified_left', 'rectified_right'])
     streams.extend(['disparity', 'depth'])
+    left_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/left_mesh.calib"
+    right_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/right_mesh.calib"
 
+    stereo.loadMeshFiles(left_mesh, right_mesh)
     return pipeline, streams
 
 # The operations done here seem very CPU-intensive, TODO
