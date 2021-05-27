@@ -5,7 +5,7 @@ import depthai as dai
 import numpy as np
 import argparse
 from time import monotonic
-import os
+import itertools
 
 parentDir = Path(__file__).parent
 
@@ -55,8 +55,6 @@ def crop_frame(frame, size):
         new_h = (current_ratio/new_ratio) * h
         crop = int((h - new_h) / 2)
         preview = frame[crop:h-crop, :]
-    # To planar
-    print("new shape", preview.shape)
     return preview
 
 
@@ -109,22 +107,16 @@ with dai.Device(pipeline) as device:
         if args.image:
             imgPaths = [args.image]
         else:
-            imgNames = list(os.listdir('./images'))
-            imgPaths = [parentDir / Path('images') / name for name in imgNames]
-        og_frames = [crop_frame(cv2.imread(str(imgPath)), size) for imgPath in imgPaths]
+            imgPaths = list(parentDir.glob('images/*.jpeg'))
+        og_frames = itertools.cycle([crop_frame(cv2.imread(str(imgPath)), size) for imgPath in imgPaths])
     else:
         rgbQ = device.getOutputQueue("preview", maxSize=4, blocking=False)
 
-    i = 0
     while True:
         if IMAGE:
-            print("new index", i)
-            og_frame = og_frames[i]
-            i += 1
-            if len(og_frames)-1 < i: i = 0
+            frame = next(og_frames).copy()
 
             img = dai.ImgFrame()
-            frame = og_frame.copy()
             img.setData(to_planar(frame, size))
             img.setType(dai.RawImgFrame.Type.BGR888p)
             img.setTimestamp(monotonic())
