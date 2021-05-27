@@ -195,11 +195,11 @@ def create_bird_frame():
     cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
     return frame
 
-def draw_bird_frame(frame, y, z, id = None):
+def draw_bird_frame(frame, x, z, id = None):
     global MAX_Z
-    max_y = 2000 #mm
+    max_x = 15000 #mm
     pointY = frame.shape[0] - int(z / (MAX_Z - 10000) * frame.shape[0]) - 20
-    pointX = int(y / max_y * frame.shape[1] + frame.shape[1]/2)
+    pointX = int(x / max_x * frame.shape[1] + frame.shape[1]/2)
     # print(f"Y {y}, Z {z} - Birds: X {pointX}, Y {pointY}")
     if id is not None:
         cv2.putText(frame, str(id), (pointX - 30, pointY + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0))
@@ -244,7 +244,7 @@ def display_spatials(frame, detections, name, tracker = False):
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
         # If vehicle is too far away, coordinate estimation is off so don't display them
         if (x2-x1)*(y2-y1) < 600: continue
-        draw_bird_frame(birdFrame, detection.spatialCoordinates.y, detection.spatialCoordinates.z, detection.id if tracker else None)
+        draw_bird_frame(birdFrame, detection.spatialCoordinates.x, detection.spatialCoordinates.z, detection.id if tracker else None)
         cv2.putText(frame, "X: {:.1f} m".format(int(detection.spatialCoordinates.x) / 1000.0), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         cv2.putText(frame, "Y: {:.1f} m".format(int(detection.spatialCoordinates.y) / 1000.0), (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
         cv2.putText(frame, "Z: {:.1f} m".format(int(detection.spatialCoordinates.z) / 1000.0), (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
@@ -410,6 +410,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             cv2.imshow("depth", depthFrameColor)
             save_png(frame_folder, "rgb", rgbFrame)
             save_png(frame_folder, "depth", depthFrameColor)
+            cv2.imshow("birdsView", birdsView)
             save_png(frame_folder, "birdsview", birdsView)
 
 
