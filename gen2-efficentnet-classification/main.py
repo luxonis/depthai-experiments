@@ -26,7 +26,7 @@ if not args.camera and not args.video:
 
 debug = not args.no_debug
 camera = not args.video
-class_names = class_names()
+labels = class_names()
 
 
 # Start defining a pipeline
@@ -35,7 +35,7 @@ pipeline = dai.Pipeline()
 # NeuralNetwork
 print("Creating Neural Network...")
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str(Path("models/efficientnet-b0_openvino_2021.3_6shave.blob").resolve().absolute()))
+detection_nn.setBlobPath(str(Path("efficientnet-b0_openvino_2021.3_6shave.blob").resolve().absolute()))
 
 if camera:
     print("Creating Color Camera...")
@@ -84,7 +84,6 @@ def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
 
 # Pipeline defined, now the device is assigned and pipeline is started
 with dai.Device(pipeline) as device:
-    device.startPipeline()
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     if camera:
@@ -132,7 +131,7 @@ with dai.Device(pipeline) as device:
             result_conf = np.max(data)
             if result_conf > 0.2:
                 result = {
-                    "name": class_names[np.argmax(data)],
+                    "name": labels[np.argmax(data)],
                     "conf": round(100 * result_conf, 2)
                 }
             else:
