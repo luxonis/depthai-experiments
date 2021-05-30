@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
 import argparse
 import time
-import sys
 
 '''
 Blob taken from the great PINTO zoo
@@ -26,6 +24,7 @@ args = parser.parse_args()
 
 nn_shape = args.nn_shape
 nn_path = args.nn_path
+TARGET_SHAPE = (400,400)
 
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
@@ -35,14 +34,22 @@ def decode_deeplabv3p(output_tensor):
     output_colors = np.take(class_colors, output, axis=0)
     return output_colors
 
+def get_multiplier(output_tensor):
+    class_binary = [[0], [1]]
+    class_binary = np.asarray(class_binary, dtype=np.uint8)
+    output = output_tensor.reshape(nn_shape,nn_shape)
+    output_colors = np.take(class_binary, output, axis=0)
+    return output_colors
+
 def show_deeplabv3p(output_colors, frame):
-    return cv2.addWeighted(frame,1, output_colors,0.2,0)
+    return cv2.addWeighted(frame,1, output_colors,0.5,0)
 
 def dispay_colored_depth(frame, name):
     frame_colored = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
     frame_colored = cv2.equalizeHist(frame_colored)
     frame_colored = cv2.applyColorMap(frame_colored, cv2.COLORMAP_HOT)
     cv2.imshow(name, frame_colored)
+    return frame_colored
 
 class FPSHandler:
     def __init__(self, cap=None):
@@ -69,7 +76,9 @@ pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
 
 cam = pipeline.createColorCamera()
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-cam.setIspScale(2, 3) # To match 720P mono cameras
+# Color cam: 1920x1080
+# Mono cam: 640x400
+cam.setIspScale(640, 1920, 400, 1080) # To match 400P mono cameras
 cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam.initialControl.setManualFocus(130)
 
@@ -97,11 +106,11 @@ detection_nn.out.link(xout_nn.input)
 
 # Left mono camera
 left = pipeline.createMonoCamera()
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 # Right mono camera
 right = pipeline.createMonoCamera()
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
@@ -113,19 +122,10 @@ stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
-# Depth output is 1280x720. Color frame has 1:1 (w:h) ratio
-# 720/1280=0.5625  1-0.625=0.4375  0.375/2=0.21875  1-0.21875=0.78125
-topLeft = dai.Point2f(0.21875, 0)
-bottomRight = dai.Point2f(0.78125, 1)
-# This ROI will convert 1280x720 depth frame into 720 depth frame
-crop_depth = pipeline.createImageManip()
-crop_depth.initialConfig.setCropRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
-stereo.depth.link(crop_depth.inputImage)
-
 # Create depth output
 xout_depth = pipeline.createXLinkOut()
 xout_depth.setStreamName("depth")
-crop_depth.out.link(xout_depth.input)
+stereo.depth.link(xout_depth.input)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pipeline) as device:
@@ -146,12 +146,12 @@ with dai.Device(pipeline) as device:
         if in_color is not None:
             frame = in_color.getCvFrame()
             frame = crop_to_square(frame)
-            frame = cv2.resize(frame, (720,720))
+            frame = cv2.resize(frame, TARGET_SHAPE)
 
         if in_depth is not None:
             depth_frame = in_depth.getFrame()
-            # Comment this out to disable showing of depth frame
-            dispay_colored_depth(depth_frame, "depth")
+            depth_frame = crop_to_square(depth_frame)
+            depth_frame = cv2.resize(depth_frame, TARGET_SHAPE)
 
         if in_nn is not None:
             fps.next_iter()
@@ -161,10 +161,9 @@ with dai.Device(pipeline) as device:
             # reshape to numpy array
             lay1 = np.asarray(layer1, dtype=np.int32).reshape((nn_shape, nn_shape))
             output_colors = decode_deeplabv3p(lay1)
-            print("output_colors1", output_colors.shape)
-            # To match 720x720 depth frames
-            output_colors = cv2.resize(output_colors, (720, 720))
-            print("output_colors2", output_colors.shape)
+
+            # To match depth frames
+            output_colors = cv2.resize(output_colors, TARGET_SHAPE)
 
             if frame is not None:
                 frame = show_deeplabv3p(output_colors, frame)
@@ -172,8 +171,15 @@ with dai.Device(pipeline) as device:
                 cv2.imshow("weighted", frame)
 
             if depth_frame is not None:
-                depth_overlay = depth_frame * output_colors
-                cv2.imshow("depth_overlay",depth_overlay)
+                # Optionally display depth frame with deeplab detection
+                colored_depth_frame = dispay_colored_depth(depth_frame, "depth")
+                colored_depth_frame = show_deeplabv3p(output_colors, colored_depth_frame)
+                cv2.imshow("weighted depth", colored_depth_frame)
+
+                multiplier = get_multiplier(lay1)
+                multiplier = cv2.resize(multiplier, TARGET_SHAPE)
+                depth_overlay = depth_frame * multiplier
+                dispay_colored_depth(depth_overlay, "depth_overlay")
                 # You can add custom code here, for example depth averaging
 
         if cv2.waitKey(1) == ord('q'):
