@@ -78,7 +78,7 @@ cam = pipeline.createColorCamera()
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 # Color cam: 1920x1080
 # Mono cam: 640x400
-cam.setIspScale(640, 1920, 400, 1080) # To match 400P mono cameras
+cam.setIspScale(2,3) # To match 400P mono cameras
 cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam.initialControl.setManualFocus(130)
 
