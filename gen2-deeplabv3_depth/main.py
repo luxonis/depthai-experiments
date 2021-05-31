@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
 import argparse
 import time
-import sys
 
 '''
 Blob taken from the great PINTO zoo
@@ -26,6 +24,7 @@ args = parser.parse_args()
 
 nn_shape = args.nn_shape
 nn_path = args.nn_path
+TARGET_SHAPE = (400,400)
 
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
@@ -35,116 +34,127 @@ def decode_deeplabv3p(output_tensor):
     output_colors = np.take(class_colors, output, axis=0)
     return output_colors
 
+def get_multiplier(output_tensor):
+    class_binary = [[0], [1]]
+    class_binary = np.asarray(class_binary, dtype=np.uint8)
+    output = output_tensor.reshape(nn_shape,nn_shape)
+    output_colors = np.take(class_binary, output, axis=0)
+    return output_colors
+
 def show_deeplabv3p(output_colors, frame):
-    return cv2.addWeighted(frame,1, output_colors,0.2,0)
+    return cv2.addWeighted(frame,1, output_colors,0.5,0)
 
 def dispay_colored_depth(frame, name):
     frame_colored = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
     frame_colored = cv2.equalizeHist(frame_colored)
     frame_colored = cv2.applyColorMap(frame_colored, cv2.COLORMAP_HOT)
     cv2.imshow(name, frame_colored)
+    return frame_colored
+
+class FPSHandler:
+    def __init__(self, cap=None):
+        self.timestamp = time.time()
+        self.start = time.time()
+        self.frame_cnt = 0
+    def next_iter(self):
+        self.timestamp = time.time()
+        self.frame_cnt += 1
+    def fps(self):
+        return self.frame_cnt / (self.timestamp - self.start)
+
+def crop_to_square(frame):
+    height = frame.shape[0]
+    width  = frame.shape[1]
+    delta = int((width-height) / 2)
+    # print(height, width, delta)
+    return frame[0:height, delta:width-delta]
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
 pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
 
-# Right mono camera
-right = pipeline.createMonoCamera()
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-# Left mono camera
-left = pipeline.createMonoCamera()
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+cam = pipeline.createColorCamera()
+cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+# Color cam: 1920x1080
+# Mono cam: 640x400
+cam.setIspScale(2,3) # To match 400P mono cameras
+cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+cam.initialControl.setManualFocus(130)
 
-stereo = pipeline.createStereoDepth()
-stereo.setConfidenceThreshold(200)
-stereo.setOutputDepth(True)
-stereo.setOutputRectified(True)
-stereo.setRectifyMirrorFrame(False)
-left.out.link(stereo.left)
-right.out.link(stereo.right)
+# For deeplabv3
+cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+cam.setPreviewSize(nn_shape, nn_shape)
+cam.setInterleaved(False)
 
-# Depth output is 640x400. Rectified frame that gets resized has 1:1 (w:h) ratio
-# 400/640=0.625  1-0.625=0.375  0.375/2=0.1875  1-0.1875=0.8125
-topLeft = dai.Point2f(0.1875, 0)
-bottomRight = dai.Point2f(0.8125, 1)
-# This ROI will convert 640x400 depth frame into 400x400 depth frame, which we will resize on the host to match NN out
-crop_depth = pipeline.createImageManip()
-crop_depth.initialConfig.setCropRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
-stereo.depth.link(crop_depth.inputImage)
-
-# Create depth output
-xout_depth = pipeline.createXLinkOut()
-xout_depth.setStreamName("depth")
-crop_depth.out.link(xout_depth.input)
-
-# Right rectified -> NN input to have the most accurate NN output/stereo mapping
-manip = pipeline.createImageManip()
-manip.setResize(nn_shape,nn_shape)
-manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
-stereo.rectifiedRight.link(manip.inputImage)
+# NN output linked to XLinkOut
+isp_xout = pipeline.createXLinkOut()
+isp_xout.setStreamName("cam")
+cam.isp.link(isp_xout.input)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
 detection_nn.setBlobPath(nn_path)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
-manip.out.link(detection_nn.input)
+cam.preview.link(detection_nn.input)
 
-
-# Create output for right frames
-xout_right_rectified = pipeline.createXLinkOut()
-xout_right_rectified.setStreamName("right_rectified")
-detection_nn.passthrough.link(xout_right_rectified.input)
-
+# NN output linked to XLinkOut
 xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
+# Left mono camera
+left = pipeline.createMonoCamera()
+left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+# Right mono camera
+right = pipeline.createMonoCamera()
+right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+
+# Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
+stereo = pipeline.createStereoDepth()
+stereo.setConfidenceThreshold(245)
+stereo.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+stereo.setLeftRightCheck(True)
+stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+left.out.link(stereo.left)
+right.out.link(stereo.right)
+
+# Create depth output
+xout_depth = pipeline.createXLinkOut()
+xout_depth.setStreamName("depth")
+stereo.depth.link(xout_depth.input)
+
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pipeline) as device:
-    device.startPipeline()
-
     # Output queues will be used to get the outputs from the device
-    q_right = device.getOutputQueue(name="right_rectified", maxSize=4, blocking=False)
+    q_color = device.getOutputQueue(name="cam", maxSize=4, blocking=False)
     q_depth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
-    start_time = time.time()
-    counter = 0
-    fps = 0
-
+    fps = FPSHandler()
     frame = None
     depth_frame = None
 
     while True:
-        in_right = q_right.tryGet()
+        in_color = q_color.tryGet()
         in_nn = q_nn.tryGet()
         in_depth = q_depth.tryGet()
 
-        if in_right is not None:
-            frame = in_right.getCvFrame()
+        if in_color is not None:
+            frame = in_color.getCvFrame()
+            frame = crop_to_square(frame)
+            frame = cv2.resize(frame, TARGET_SHAPE)
 
         if in_depth is not None:
             depth_frame = in_depth.getFrame()
-            # Resize it so it will match the NN output
-            depth_frame = cv2.resize(depth_frame, (nn_shape,nn_shape))
-
-            # Since we are using setRectifyMirrorFrame(False), we have to flip depth frame
-            depth_frame = cv2.flip(depth_frame, 1)
-
-            # Remove this to disable showing depth frames
-            dispay_colored_depth(depth_frame, "depth")
+            depth_frame = crop_to_square(depth_frame)
+            depth_frame = cv2.resize(depth_frame, TARGET_SHAPE)
 
         if in_nn is not None:
-            # print("NN received")
-            counter+=1
-            if (time.time() - start_time) > 1 :
-                fps = counter / (time.time() - start_time)
-                counter = 0
-                start_time = time.time()
+            fps.next_iter()
 
             # get layer1 data
             layer1 = in_nn.getFirstLayerInt32()
@@ -152,13 +162,23 @@ with dai.Device(pipeline) as device:
             lay1 = np.asarray(layer1, dtype=np.int32).reshape((nn_shape, nn_shape))
             output_colors = decode_deeplabv3p(lay1)
 
+            # To match depth frames
+            output_colors = cv2.resize(output_colors, TARGET_SHAPE)
+
             if frame is not None:
                 frame = show_deeplabv3p(output_colors, frame)
-                cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
-                cv2.imshow("nn", frame)
+                cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
+                cv2.imshow("weighted", frame)
 
             if depth_frame is not None:
-                depth_overlay = lay1*depth_frame
+                # Optionally display depth frame with deeplab detection
+                colored_depth_frame = dispay_colored_depth(depth_frame, "depth")
+                colored_depth_frame = show_deeplabv3p(output_colors, colored_depth_frame)
+                cv2.imshow("weighted depth", colored_depth_frame)
+
+                multiplier = get_multiplier(lay1)
+                multiplier = cv2.resize(multiplier, TARGET_SHAPE)
+                depth_overlay = depth_frame * multiplier
                 dispay_colored_depth(depth_overlay, "depth_overlay")
                 # You can add custom code here, for example depth averaging
 
