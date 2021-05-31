@@ -5,6 +5,7 @@ import depthai as dai
 import numpy as np
 import argparse
 import time
+from datetime import datetime, timedelta
 
 '''
 Blob taken from the great PINTO zoo
@@ -62,6 +63,27 @@ class FPSHandler:
     def fps(self):
         return self.frame_cnt / (self.timestamp - self.start)
 
+class HostSync:
+    def __init__(self):
+        self.arrays = {}
+    def add_msg(self, name, msg):
+        if not name in self.arrays:
+            self.arrays[name] = []
+        self.arrays[name].append(msg)
+    def get_msgs(self, timestamp):
+        ret = {}
+        for name, arr in self.arrays.items():
+            for i, msg in enumerate(arr):
+                time_diff = abs(msg.getTimestamp() - timestamp)
+                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
+                # time difference is below 20ms, it's considered as synced
+                if time_diff < timedelta(milliseconds=20):
+                    ret[name] = msg
+                    self.arrays[name] = arr[i:]
+                    break
+        return ret
+
+
 def crop_to_square(frame):
     height = frame.shape[0]
     width  = frame.shape[1]
@@ -104,6 +126,13 @@ xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
+xout_passthrough = pipeline.createXLinkOut()
+xout_passthrough.setStreamName("pass")
+# Only send metadata, we are only interested in timestamp, so we can sync
+# depth frames with NN output
+xout_passthrough.setMetadataOnly(True)
+detection_nn.passthrough.link(xout_passthrough.input)
+
 # Left mono camera
 left = pipeline.createMonoCamera()
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
@@ -133,28 +162,25 @@ with dai.Device(pipeline) as device:
     q_color = device.getOutputQueue(name="cam", maxSize=4, blocking=False)
     q_depth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
+    q_pass = device.getOutputQueue(name="pass", maxSize=4, blocking=False)
 
     fps = FPSHandler()
-    frame = None
+    sync = HostSync()
     depth_frame = None
 
     while True:
-        in_color = q_color.tryGet()
-        in_nn = q_nn.tryGet()
+        sync.add_msg("color", q_color.get())
+
         in_depth = q_depth.tryGet()
-
-        if in_color is not None:
-            frame = in_color.getCvFrame()
-            frame = crop_to_square(frame)
-            frame = cv2.resize(frame, TARGET_SHAPE)
-
         if in_depth is not None:
-            depth_frame = in_depth.getFrame()
-            depth_frame = crop_to_square(depth_frame)
-            depth_frame = cv2.resize(depth_frame, TARGET_SHAPE)
+            sync.add_msg("depth", in_depth)
 
+        in_nn = q_nn.tryGet()
         if in_nn is not None:
             fps.next_iter()
+            # Get NN output timestamp from the passthrough
+            timestamp = q_pass.get().getTimestamp()
+            msgs = sync.get_msgs(timestamp)
 
             # get layer1 data
             layer1 = in_nn.getFirstLayerInt32()
@@ -165,12 +191,20 @@ with dai.Device(pipeline) as device:
             # To match depth frames
             output_colors = cv2.resize(output_colors, TARGET_SHAPE)
 
-            if frame is not None:
+            if "color" in msgs:
+                frame = msgs["color"].getCvFrame()
+                frame = crop_to_square(frame)
+                frame = cv2.resize(frame, TARGET_SHAPE)
+
                 frame = show_deeplabv3p(output_colors, frame)
                 cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
                 cv2.imshow("weighted", frame)
 
-            if depth_frame is not None:
+            if "depth" in msgs:
+                depth_frame = msgs["depth"].getFrame()
+                depth_frame = crop_to_square(depth_frame)
+                depth_frame = cv2.resize(depth_frame, TARGET_SHAPE)
+
                 # Optionally display depth frame with deeplab detection
                 colored_depth_frame = dispay_colored_depth(depth_frame, "depth")
                 colored_depth_frame = show_deeplabv3p(output_colors, colored_depth_frame)
