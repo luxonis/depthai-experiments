@@ -27,3 +27,6 @@ This example shows how to pass back raw NeuralNetwork results over SPI. The exam
 
 #### esp32-spi-message-demo
 This sub-repo contains the code that goes on an esp32, the receiver of the SPI data being sent from our MyriadX.
+
+#### two-streams
+This example shows how to send two different streams through the SPI to the ESP32.
