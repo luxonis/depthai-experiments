@@ -9,13 +9,13 @@ class PalmDetection:
             - confidence score
         :return:
         """
+        if nn_data is None:
+            return
         shape = (128, 128)
         num_keypoints = 7
         min_score_thresh = 0.7
         anchors = np.load("anchors_palm.npy")
 
-        if nn_data is None:
-            return
         # Run the neural network
         results = self.to_tensor_result(nn_data)
 
