@@ -8,6 +8,7 @@ uses function `def calc_spatials(self, bbox, depth):` to calculate spatial coord
 
 ## Demo:
 
+[![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4)
 
 ## Pre-requisites
 
