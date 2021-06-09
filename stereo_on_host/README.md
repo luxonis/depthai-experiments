@@ -1,6 +1,6 @@
 [中文文档](README.zh-CN.md)
 
-# Stereeo rgb-right
+# Gen1 Stereeo rgb-right
 This example uses right camera and the rgb camera to create disparity.However this example expects that your rgb is calibraated
 
 
