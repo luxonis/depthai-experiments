@@ -1,0 +1,85 @@
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC demo</title>
+    <style>
+    button {
+        padding: 8px 16px;
+    }
+
+    pre {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    video {
+        margin-top: 30px;
+    }
+
+    .images-list {
+        display: inline-block;
+        float: right;
+    }
+
+    .images-list-item {
+        position: relative;
+    }
+
+    .images-list-item img {
+        display: inline-block;
+    }
+
+    .images-list-item span {
+        position: absolute;
+        top: 20px;
+        left: 20%;
+    }
+
+    .images-list-item input {
+        position: absolute;
+        top: 40px;
+        left: 40%;
+    }
+
+    </style>
+</head>
+<body>
+<div>
+<button id="start" onclick="WebRTC.start()">Start</button>
+<button id="stop" onclick="WebRTC.stop()">Stop</button>
+<button id="ping" onclick="sendMessage({type: 'ping'})">Ping</button>
+</div>
+<div>
+    <h2>Options</h2>
+    <form id="options-form">
+        <label for="cam_width">Cam width: </label>
+        <input id="cam_width" name="cam_width" type="number" value="300"/>
+        <label for="cam_height">Cam height: </label>
+        <input id="cam_height" name="cam_height" type="number" value="300"/>
+        <label for="nn_model">Neural Network</label>
+        <select name="nn_model" id="nn_model">
+            <option value="">--</option>
+            <option value="age-gender-recognition-retail-0013">age-gender-recognition-retail-0013</option>
+            <option value="face-detection-adas-0001">face-detection-adas-0001</option>
+            <option value="face-detection-retail-0004">face-detection-retail-0004</option>
+            <option value="mobilenet-ssd">mobilenet-ssd</option>
+            <option value="pedestrian-and-vehicle-detector-adas-0001">pedestrian-and-vehicle-detector-adas-0001</option>
+            <option value="pedestrian-detection-adas-0002">pedestrian-detection-adas-0002</option>
+            <option value="person-detection-retail-0013">person-detection-retail-0013</option>
+            <option value="person-vehicle-bike-detection-crossroad-1016">person-vehicle-bike-detection-crossroad-1016</option>
+            <option value="vehicle-detection-adas-0002">vehicle-detection-adas-0002</option>
+            <option value="vehicle-license-plate-detection-barrier-0106">vehicle-license-plate-detection-barrier-0106</option>
+        </select>
+    </form>
+</div>
+
+<video id="video" autoplay="true" playsinline="true"></video>
+<script>
+function sendMessage(msg) {
+  WebRTC.dataChannel.send(encodeURIComponent(JSON.stringify(msg)));
+}
+</script>
+<script src="client.js"></script>
+</body>
+</html>
