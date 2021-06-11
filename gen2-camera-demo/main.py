@@ -126,7 +126,6 @@ def create_stereo_depth_pipeline(from_camera=True):
     stereo            = pipeline.createStereoDepth()
     xout_left         = pipeline.createXLinkOut()
     xout_right        = pipeline.createXLinkOut()
-    xout_depth        = pipeline.createXLinkOut()
     xout_disparity    = pipeline.createXLinkOut()
     xout_rectif_left  = pipeline.createXLinkOut()
     xout_rectif_right = pipeline.createXLinkOut()
@@ -159,7 +158,6 @@ def create_stereo_depth_pipeline(from_camera=True):
 
     xout_left        .setStreamName('left')
     xout_right       .setStreamName('right')
-    xout_depth       .setStreamName('depth')
     xout_disparity   .setStreamName('disparity')
     xout_rectif_left .setStreamName('rectified_left')
     xout_rectif_right.setStreamName('rectified_right')
@@ -168,7 +166,6 @@ def create_stereo_depth_pipeline(from_camera=True):
     cam_right.out        .link(stereo.right)
     stereo.syncedLeft    .link(xout_left.input)
     stereo.syncedRight   .link(xout_right.input)
-    stereo.depth         .link(xout_depth.input)
     stereo.disparity     .link(xout_disparity.input)
     if out_rectified:
         stereo.rectifiedLeft .link(xout_rectif_left.input)
@@ -177,7 +174,7 @@ def create_stereo_depth_pipeline(from_camera=True):
     streams = ['left', 'right']
     if out_rectified:
         streams.extend(['rectified_left', 'rectified_right'])
-    streams.extend(['disparity', 'depth'])
+    streams.extend(['disparity'])
     left_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/left_mesh.calib"
     right_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/right_mesh.calib"
 
@@ -305,7 +302,7 @@ def test_pipeline():
                 image = q.get()
                 #print("Received frame:", name)
                 # Skip some streams for now, to reduce CPU load
-                if name in ['left', 'right', 'depth']: continue
+                if name in ['depth']: continue
                 frame = convert_to_cv2_frame(name, image)
                 cv2.imshow(name, frame)
             if cv2.waitKey(1) == ord('q'):
