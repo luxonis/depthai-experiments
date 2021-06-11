@@ -5,10 +5,16 @@ import numpy as np
 import numba as nb
 import depthai as dai
 
+print('Enter board name:')
+board = input()
+
 streams = []
 # Enable one or both streams
 streams.append('isp')
-streams.append('raw')
+#streams.append('raw')
+streams.append('left')
+streams.append('right')
+streams.append('disparity')
 
 ''' Packing scheme for RAW10 - MIPI CSI-2
 - 4 pixels: p0[9:0], p1[9:0], p2[9:0], p3[9:0]
@@ -36,6 +42,9 @@ pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
+#cam.initialControl.setManualFocus(130)
+#cam.setImageOrientation(dai.CameraImageOrientation.NORMAL)
+#cam.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
 if 'isp' in streams:
     xout_isp = pipeline.createXLinkOut()
@@ -47,6 +56,64 @@ if 'raw' in streams:
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 
+from_camera = True
+out_rectified = False
+if from_camera:
+    cam_left      = pipeline.createMonoCamera()
+    cam_right     = pipeline.createMonoCamera()
+else:
+    cam_left      = pipeline.createXLinkIn()
+    cam_right     = pipeline.createXLinkIn()
+stereo            = pipeline.createStereoDepth()
+xout_left         = pipeline.createXLinkOut()
+xout_right        = pipeline.createXLinkOut()
+xout_depth        = pipeline.createXLinkOut()
+xout_disparity    = pipeline.createXLinkOut()
+xout_rectif_left  = pipeline.createXLinkOut()
+xout_rectif_right = pipeline.createXLinkOut()
+
+if from_camera:
+    cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
+    cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+    for cam in [cam_left, cam_right]: # Common config
+        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+        #cam.setFps(20.0)
+else:
+    cam_left .setStreamName('in_left')
+    cam_right.setStreamName('in_right')
+
+stereo.setConfidenceThreshold(240)
+stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
+#stereo.setMedianFilter(median) # KERNEL_7x7 default
+stereo.setLeftRightCheck(1)
+stereo.setExtendedDisparity(0)
+stereo.setSubpixel(1)
+if from_camera:
+    # Default: EEPROM calib is used, and resolution taken from MonoCamera nodes
+    #stereo.loadCalibrationFile(path)
+    pass
+else:
+    stereo.setEmptyCalibration() # Set if the input frames are already rectified
+    stereo.setInputResolution(1280, 720)
+
+xout_left        .setStreamName('left')
+xout_right       .setStreamName('right')
+xout_depth       .setStreamName('depth')
+xout_disparity   .setStreamName('disparity')
+xout_rectif_left .setStreamName('rectified_left')
+xout_rectif_right.setStreamName('rectified_right')
+
+cam_left .out        .link(stereo.left)
+cam_right.out        .link(stereo.right)
+stereo.syncedLeft    .link(xout_left.input)
+stereo.syncedRight   .link(xout_right.input)
+#stereo.depth         .link(xout_depth.input)
+stereo.disparity     .link(xout_disparity.input)
+if out_rectified:
+    stereo.rectifiedLeft .link(xout_rectif_left.input)
+    stereo.rectifiedRight.link(xout_rectif_right.input)
+
+
 device = dai.Device(pipeline)
 device.startPipeline()
 
@@ -56,7 +123,7 @@ for s in streams:
     q_list.append(q)
     # Make window resizable, and configure initial size
     cv2.namedWindow(s, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(s, (960, 540))
+    cv2.resizeWindow(s, (3000, 1500))
 
 capture_flag = False
 while True:
@@ -65,10 +132,19 @@ while True:
         data = q.get()
         width, height = data.getWidth(), data.getHeight()
         payload = data.getData()
-        capture_file_info_str = ('capture_' + name
+        capture_file_info_str = ('capture_' + board + '_' + name
                                  + '_' + str(width) + 'x' + str(height)
                                  + '_' + str(data.getSequenceNum())
                                 )
+        if name in ['left', 'right', 'disparity']:
+            shape = (height, width)
+            if name == 'disparity':
+                max_disp = stereo.getMaxDisparity()
+                disp = np.array(payload).astype(np.uint8).view(np.uint16)
+                frame = (disp * 255. / max_disp).astype(np.uint8)
+                bgr = frame.reshape(shape).astype(np.uint8)
+            else:
+                bgr = payload.reshape(shape).astype(np.uint8)
         if name == 'isp':
             if capture_flag:
                 filename = capture_file_info_str + '_P420.yuv'
