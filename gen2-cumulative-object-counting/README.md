@@ -30,15 +30,15 @@ optional arguments:
 
 Camera example:
 ```
-python main.py -m mobilenet-ssd/mobilenet-ssd.blob
+python main.py -m models/mobilenet-ssd.blob
 ```
 
 Video example:
 ```
-python main.py -m mobilenet-ssd/mobilenet-ssd.blob -v <path to video>
+python main.py -m models/mobilenet-ssd.blob -v <path to video>
 ```
 
 ## Inspired by / Based on
 * [Tensorflow 2 Object Counting repository](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
 * [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/) 
-* [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api).
+* [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)

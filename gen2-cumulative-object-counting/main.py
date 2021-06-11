@@ -6,7 +6,6 @@ import time
 import depthai as dai
 
 from trackable_object import TrackableObject
-from centroid_tracker import CentroidTracker
 
 
 parser = argparse.ArgumentParser(
@@ -64,6 +63,25 @@ nnOut = pipeline.createXLinkOut()
 nnOut.setStreamName("nn")
 nn.out.link(nnOut.input)
 
+# Create and configure the object tracker
+objectTracker = pipeline.createObjectTracker()
+# objectTracker.setDetectionLabelsToTrack([0])  # track only person
+# possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
+objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
+# take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
+objectTracker.setTrackerIdAssigmentPolicy(
+    dai.TrackerIdAssigmentPolicy.SMALLEST_ID)
+
+# Link detection networks outputs to the object tracker
+nn.passthrough.link(objectTracker.inputTrackerFrame)
+nn.passthrough.link(objectTracker.inputDetectionFrame)
+nn.out.link(objectTracker.inputDetections)
+
+# Send tracklets to the host
+trackerOut = pipeline.createXLinkOut()
+trackerOut.setStreamName("tracklets")
+objectTracker.out.link(trackerOut.input)
+
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
 
@@ -78,6 +96,7 @@ with dai.Device(pipeline) as device:
             name="outFrame", maxSize=4, blocking=False)
 
     qDet = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
+    tracklets = device.getOutputQueue("tracklets", 4, False)
 
     if args.video_path != '':
         cap = cv2.VideoCapture(args.video_path)
@@ -112,7 +131,6 @@ with dai.Device(pipeline) as device:
     frame_count = 0
     counter = [0, 0, 0, 0]  # left, right, up, down
 
-    ct = CentroidTracker(maxDisappeared=40, maxDistance=50)
     trackableObjects = {}
 
     def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
@@ -127,6 +145,7 @@ with dai.Device(pipeline) as device:
         if args.video_path != '':
             # Prepare image frame from video for sending to device
             img = dai.ImgFrame()
+            img.setType(dai.ImgFrame.Type.BGR888p)
             img.setData(to_planar(frame, (300, 300)))
             img.setTimestamp(time.monotonic())
             img.setWidth(300)
@@ -146,53 +165,61 @@ with dai.Device(pipeline) as device:
             detections = inDet.detections
             frame_count += 1
 
+        track = tracklets.tryGet()
+
         if frame is not None:
             height = frame.shape[0]
             width = frame.shape[1]
 
-            objects = ct.update([
-                (int(detection.xmin * width), int(detection.ymin * height),
-                 int(detection.xmax * width), int(detection.ymax * height))
-                for detection in detections
-            ])
+            if track:
+                trackletsData = track.tracklets
+                for t in trackletsData:
+                    to = trackableObjects.get(t.id, None)
 
-            for (objectID, centroid) in objects.items():
-                to = trackableObjects.get(objectID, None)
+                    # calculate centroid
+                    roi = t.roi.denormalize(width, height)
+                    x1 = int(roi.topLeft().x)
+                    y1 = int(roi.topLeft().y)
+                    x2 = int(roi.bottomRight().x)
+                    y2 = int(roi.bottomRight().y)
+                    centroid = (int((x2-x1)/2+x1), int((y2-y1)/2+y1))
 
-                if to is None:
-                    to = TrackableObject(objectID, centroid)
-                else:
-                    if args.axis and not to.counted:
-                        x = [c[0] for c in to.centroids]
-                        direction = centroid[0] - np.mean(x)
+                    # If new tracklet, save its centroid
+                    if t.status == dai.Tracklet.TrackingStatus.NEW:
+                        to = TrackableObject(t.id, centroid)
+                    else:
+                        if args.axis and not to.counted:
+                            x = [c[0] for c in to.centroids]
+                            direction = centroid[0] - np.mean(x)
 
-                        if centroid[0] > args.roi_position*width and direction > 0 and np.mean(x) < args.roi_position*width:
-                            counter[1] += 1
-                            to.counted = True
-                        elif centroid[0] < args.roi_position*width and direction < 0 and np.mean(x) > args.roi_position*width:
-                            counter[0] += 1
-                            to.counted = True
+                            if centroid[0] > args.roi_position*width and direction > 0 and np.mean(x) < args.roi_position*width:
+                                counter[1] += 1
+                                to.counted = True
+                            elif centroid[0] < args.roi_position*width and direction < 0 and np.mean(x) > args.roi_position*width:
+                                counter[0] += 1
+                                to.counted = True
 
-                    elif not args.axis and not to.counted:
-                        y = [c[1] for c in to.centroids]
-                        direction = centroid[1] - np.mean(y)
+                        elif not args.axis and not to.counted:
+                            y = [c[1] for c in to.centroids]
+                            direction = centroid[1] - np.mean(y)
 
-                        if centroid[1] > args.roi_position*height and direction > 0 and np.mean(y) < args.roi_position*height:
-                            counter[3] += 1
-                            to.counted = True
-                        elif centroid[1] < args.roi_position*height and direction < 0 and np.mean(y) > args.roi_position*height:
-                            counter[2] += 1
-                            to.counted = True
+                            if centroid[1] > args.roi_position*height and direction > 0 and np.mean(y) < args.roi_position*height:
+                                counter[3] += 1
+                                to.counted = True
+                            elif centroid[1] < args.roi_position*height and direction < 0 and np.mean(y) > args.roi_position*height:
+                                counter[2] += 1
+                                to.counted = True
 
-                    to.centroids.append(centroid)
+                        to.centroids.append(centroid)
 
-                trackableObjects[objectID] = to
+                    trackableObjects[t.id] = to
 
-                text = "ID {}".format(objectID)
-                cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                cv2.circle(
-                    frame, (centroid[0], centroid[1]), 4, (255, 255, 255), -1)
+                    if t.status != dai.Tracklet.TrackingStatus.LOST and t.status != dai.Tracklet.TrackingStatus.REMOVED:
+                        text = "ID {}".format(t.id)
+                        cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                        cv2.circle(
+                            frame, (centroid[0], centroid[1]), 4, (255, 255, 255), -1)
 
             # Draw ROI line
             if args.axis:
