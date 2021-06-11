@@ -1,4 +1,3 @@
-from pathlib import Path
 import cv2
 import argparse
 import numpy as np
@@ -111,7 +110,6 @@ with dai.Device(pipeline) as device:
             height = 300
             fps = 30
 
-        print(width, height, fps)
         out = cv2.VideoWriter(args.save_path, cv2.VideoWriter_fourcc(
             'M', 'J', 'P', 'G'), fps, (width, height))
 
@@ -252,5 +250,4 @@ with dai.Device(pipeline) as device:
         cap.release()
 
     if args.save_path:
-        print('out release')
         out.release()
