@@ -11,12 +11,12 @@ python3 -m pip install -r requirements.txt
 ## Usage
 
 ```
-usage: cumulative_object_counting.py [-h] -m MODEL [-v VIDEO_PATH] [-roi ROI_POSITION] [-a] [-sh] [-sp SAVE_PATH] [-s]
+usage: main.py [-h] [-m MODEL] [-v VIDEO_PATH] [-roi ROI_POSITION] [-a] [-sh] [-sp SAVE_PATH] [-s]
 
 optional arguments:
   -h, --help            show this help message and exit
   -m MODEL, --model MODEL
-                        File path of .blob file. (default: None)
+                        File path of .blob file. (default: models/mobilenet-ssd.blob)
   -v VIDEO_PATH, --video_path VIDEO_PATH
                         Path to video. If empty OAK-RGB camera is used. (default='') (default: )
   -roi ROI_POSITION, --roi_position ROI_POSITION
@@ -35,10 +35,10 @@ python main.py -m models/mobilenet-ssd.blob
 
 Video example:
 ```
-python main.py -m models/mobilenet-ssd.blob -v <path to video>
+python main.py -m models/mobilenet-ssd.blob -v demo/example_01.mp4 -a
 ```
 
 ## Inspired by / Based on
-* [Tensorflow 2 Object Counting repository](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
+* [Tensorflow 2 Object Counting](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
 * [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/) 
 * [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)

@@ -10,7 +10,7 @@ from trackable_object import TrackableObject
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-m', '--model', type=str,
-                    required=True, help='File path of .blob file.')
+                    default='models/mobilenet-ssd.blob', help='File path of .blob file.')
 parser.add_argument('-v', '--video_path', type=str, default='',
                     help='Path to video. If empty OAK-RGB camera is used. (default=\'\')')
 parser.add_argument('-roi', '--roi_position', type=float,
