@@ -37,7 +37,7 @@ R2 = np.array(calibObj.getStereoRightRectificationRotation())
 H_left = np.matmul(np.matmul(M_right, R1), np.linalg.inv(M_left))
 H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))
 
-stereo_obj = StereoSGBM(3.25, H_right, H_left)
+stereo_obj = StereoSGBM(7.5, H_right, H_left)
 
 right = None
 left = None
