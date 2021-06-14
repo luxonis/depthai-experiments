@@ -27,12 +27,12 @@ async def test(request):
 
 
 async def index(request):
-    with (Path(__file__).parent.parent / 'client/index.html').open() as f:
+    with (Path(__file__).parent / 'client/index.html').open() as f:
         return web.Response(content_type="text/html", text=f.read())
 
 
 async def javascript(request):
-    with (Path(__file__).parent.parent / 'client/build/client.js').open() as f:
+    with (Path(__file__).parent / 'client/build/client.js').open() as f:
         return web.Response(content_type="application/javascript", text=f.read())
 
 

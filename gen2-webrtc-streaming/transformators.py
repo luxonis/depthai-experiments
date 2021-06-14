@@ -60,8 +60,6 @@ def frameNorm(frame, bbox):
 class DepthAIVideoTransformTrack(VideoTransformTrack):
     def __init__(self, application, pc_id, options):
         super().__init__(application, pc_id, options)
-        print("TEST")
-        print(options)
         self.frame = np.zeros((self.options.height, self.options.width, 3), np.uint8)
         self.frame[:] = (0, 0, 0)
         self.detections = []
