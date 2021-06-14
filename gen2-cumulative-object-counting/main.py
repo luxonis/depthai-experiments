@@ -4,8 +4,6 @@ import numpy as np
 import time
 import depthai as dai
 
-from trackable_object import TrackableObject
-
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -80,6 +78,19 @@ nn.out.link(objectTracker.inputDetections)
 trackerOut = pipeline.createXLinkOut()
 trackerOut.setStreamName("tracklets")
 objectTracker.out.link(trackerOut.input)
+
+
+# from https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/
+class TrackableObject:
+    def __init__(self, objectID, centroid):
+        # store the object ID, then initialize a list of centroids
+        # using the current centroid
+        self.objectID = objectID
+        self.centroids = [centroid]
+
+        # initialize a boolean used to indicate if the object has
+        # already been counted or not
+        self.counted = False
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
