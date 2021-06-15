@@ -8,7 +8,7 @@ from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
 
 from datachannel import setup_datachannel
-from transformators import DepthAIVideoTransformTrack
+from transformators import DepthAIVideoTransformTrack, DepthAIDepthVideoTransformTrack
 import aiohttp_cors
 
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +41,10 @@ class OptionsWrapper:
         self.raw_options = raw_options
 
     @property
+    def camera_type(self):
+        return self.raw_options.get('camera_type', 'rgb')
+
+    @property
     def width(self):
         return int(self.raw_options.get('cam_width', 300))
 
@@ -51,6 +55,22 @@ class OptionsWrapper:
     @property
     def nn(self):
         return self.raw_options.get('nn_model', '')
+
+    @property
+    def mono_camera_resolution(self):
+        return self.raw_options.get('mono_camera_resolution', 'THE_400_P')
+
+    @property
+    def median_filter(self):
+        return self.raw_options.get('median_filter', 'KERNEL_7x7')
+    
+    @property
+    def subpixel(self):
+        return bool(self.raw_options.get('subpixel', ''))
+
+    @property
+    def extended_disparity(self):
+        return bool(self.raw_options.get('extended_disparity', ''))
 
 
 async def offer(request):
@@ -70,7 +90,10 @@ async def offer(request):
     setup_datachannel(pc, pc_id, request.app)
     for t in pc.getTransceivers():
         if t.kind == "video":
-            request.app.video_transforms[pc_id] = DepthAIVideoTransformTrack(request.app, pc_id, options)
+            if options.camera_type == 'rgb':
+                request.app.video_transforms[pc_id] = DepthAIVideoTransformTrack(request.app, pc_id, options)
+            elif options.camera_type == 'depth':
+                request.app.video_transforms[pc_id] = DepthAIDepthVideoTransformTrack(request.app, pc_id, options)
             pc.addTrack(request.app.video_transforms[pc_id])
 
 
