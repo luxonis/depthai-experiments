@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 from alerting import AlertingGate, AlertingGateDebug
-from config import MODEL_LOCATION, DEBUG
+from config import MODEL_NAME, DEBUG
 from depthai_utils import DepthAI, DepthAIDebug
 from distance import DistanceGuardian, DistanceGuardianDebug
 
@@ -18,7 +18,7 @@ class Main:
     alerting_gate_class = AlertingGate
 
     def __init__(self):
-        self.depthai = self.depthai_class(MODEL_LOCATION)
+        self.depthai = self.depthai_class(MODEL_NAME)
         self.distance_guardian = self.distance_guardian_class()
         self.alerting_gate = self.alerting_gate_class()
 
@@ -44,10 +44,10 @@ class MainDebug(Main):
     depthai_class = DepthAIDebug
     distance_guardian_class = DistanceGuardianDebug
     alerting_gate_class = AlertingGateDebug
-    max_z = 6
-    min_z = 0
-    max_x = 1.3
-    min_x = -0.5
+    max_z = 4
+    min_z = 1
+    max_x = 0.9
+    min_x = -0.7
 
     def __init__(self):
         super().__init__()

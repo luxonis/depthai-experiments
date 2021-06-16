@@ -2,73 +2,105 @@ import logging
 import uuid
 from pathlib import Path
 
+import blobconverter
 import cv2
-import depthai  # access the camera and its data packets
+import depthai as dai
 from imutils.video import FPS
 
 log = logging.getLogger(__name__)
 
 
 class DepthAI:
-    def create_pipeline(self, config):
-        self.device = depthai.Device('', False)
+    def create_pipeline(self, model_name):
         log.info("Creating DepthAI pipeline...")
 
-        self.pipeline = self.device.create_pipeline(config)
-        if self.pipeline is None:
-            raise RuntimeError("Pipeline was not created.")
+        pipeline = dai.Pipeline()
+        pipeline.setOpenVINOVersion(dai.OpenVINO.Version.VERSION_2021_2)
+
+        # Define sources and outputs
+        camRgb = pipeline.createColorCamera()
+        spatialDetectionNetwork = pipeline.createMobileNetSpatialDetectionNetwork()
+        monoLeft = pipeline.createMonoCamera()
+        monoRight = pipeline.createMonoCamera()
+        stereo = pipeline.createStereoDepth()
+
+        xoutRgb = pipeline.createXLinkOut()
+        camRgb.preview.link(xoutRgb.input)
+        xoutNN = pipeline.createXLinkOut()
+
+        xoutRgb.setStreamName("rgb")
+        xoutNN.setStreamName("detections")
+
+        # Properties
+        camRgb.setPreviewSize(544, 320)
+        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        camRgb.setInterleaved(False)
+        camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+
+        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+
+        # Setting node configs
+        stereo.setConfidenceThreshold(255)
+
+        spatialDetectionNetwork.setBlobPath(str(blobconverter.from_zoo(name=model_name, shaves=6)))
+        spatialDetectionNetwork.setConfidenceThreshold(0.5)
+        spatialDetectionNetwork.input.setBlocking(False)
+        spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
+        spatialDetectionNetwork.setDepthLowerThreshold(100)
+        spatialDetectionNetwork.setDepthUpperThreshold(5000)
+
+        # Linking
+        monoLeft.out.link(stereo.left)
+        monoRight.out.link(stereo.right)
+
+        camRgb.preview.link(spatialDetectionNetwork.input)
+
+        spatialDetectionNetwork.out.link(xoutNN.input)
+        stereo.depth.link(spatialDetectionNetwork.inputDepth)
         log.info("Pipeline created.")
+        return pipeline
 
-    def __init__(self, model_location):
-        self.create_pipeline({
-            # metaout - contains neural net output
-            # previewout - color video
-            'streams': ['metaout', 'previewout'],
-            'ai': {
-                "calc_dist_to_bb": True,
-                'blob_file': str(Path(model_location, 'model.blob').absolute()),
-                'blob_file_config': str(Path(model_location, 'config.json').absolute())
-            },
-        })
-
-        self.network_results = []
+    def __init__(self, model_name):
+        self.pipeline = self.create_pipeline(model_name)
+        self.detections = []
 
     def capture(self):
-        while True:
-            nnet_packets, data_packets = self.pipeline.get_available_nnet_and_data_packets()
-            for nnet_packet in nnet_packets:
-                self.network_results = list(nnet_packet.getDetectedObjects())
-            for packet in data_packets:
-                if packet.stream_name == 'previewout':
-                    data = packet.getData()
-                    if data is None:
-                        continue
-                    # The format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
-                    # change shape (3, 300, 300) -> (300, 300, 3).
-                    data0 = data[0, :, :]
-                    data1 = data[1, :, :]
-                    data2 = data[2, :, :]
-                    frame = cv2.merge([data0, data1, data2])
+        with dai.Device(self.pipeline) as device:
+            previewQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+            detectionNNQueue = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
 
-                    img_h = frame.shape[0]
-                    img_w = frame.shape[1]
+            while True:
+                frame = previewQueue.get().getCvFrame()
+                inDet = detectionNNQueue.tryGet()
 
-                    boxes = []
-                    for e in self.network_results:
-                        boxes.append({
-                            **e.get_dict(),
-                            'id': uuid.uuid4(),
-                            'x_min': int(e.x_min * img_w),
-                            'y_min': int(e.y_min * img_h),
-                            'x_max': int(e.x_max * img_w),
-                            'y_max': int(e.y_max * img_h),
-                        })
+                if inDet is not None:
+                    self.detections = inDet.detections
 
-                    yield frame, boxes
+                bboxes = []
+                height = frame.shape[0]
+                width  = frame.shape[1]
+                for detection in self.detections:
+                    bboxes.append({
+                        'id': uuid.uuid4(),
+                        'label': detection.label,
+                        'confidence': detection.confidence,
+                        'x_min': int(detection.xmin * width),
+                        'x_max': int(detection.xmax * width),
+                        'y_min': int(detection.ymin * height),
+                        'y_max': int(detection.ymax * height),
+                        'depth_x': detection.spatialCoordinates.x / 1000,
+                        'depth_y': detection.spatialCoordinates.y / 1000,
+                        'depth_z': detection.spatialCoordinates.z / 1000,
+                    })
+
+
+                yield frame, bboxes
 
     def __del__(self):
         del self.pipeline
-        del self.device
 
 
 class DepthAIDebug(DepthAI):
@@ -86,6 +118,7 @@ class DepthAIDebug(DepthAI):
                 cv2.putText(frame, "y: {}".format(round(detection['depth_y'], 1)), (detection['x_min'], detection['y_min'] + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, "z: {}".format(round(detection['depth_z'], 1)), (detection['x_min'], detection['y_min'] + 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, "conf: {}".format(round(detection['confidence'], 1)), (detection['x_min'], detection['y_min'] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, "label: {}".format(detection['label'], 1), (detection['x_min'], detection['y_min'] + 110), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             yield frame, detections
 
     def __del__(self):

@@ -1,7 +1,6 @@
 import logging
 import os
 import sys
-from pathlib import Path
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 
 root = logging.getLogger()
@@ -17,5 +16,5 @@ root.addHandler(rotateHandler)
 root.setLevel(logging.INFO)
 root.info("Logging system initialized, kept in file {}...".format(logfile))
 
-MODEL_LOCATION = str(Path('models/person-detection-retail-0013').resolve())
+MODEL_NAME = "person-detection-retail-0013"
 DEBUG = os.getenv('DEBUG', 'true') not in ('false', '0')
