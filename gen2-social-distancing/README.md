@@ -1,6 +1,6 @@
 [中文文档](README.zh-CN.md)
 
-# Social distancing
+# Gen2 Social distancing
 
 Below you can see 3 people in a scene.  DepthAI monitors their 3D positions and alerts whenever they are closer than 2 meters, displaying `Too Close` when they are below this threshold, and also overlaying the distance betwen the people at all times and also the 3D position of each person (in x,y,z in meters) from the camera.
 
