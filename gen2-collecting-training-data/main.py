@@ -185,7 +185,6 @@ def store_frames(in_q):
 ps = PairingSystem()
 store_p = Process(target=store_frames, args=(frame_q, ))
 store_p.start()
-ps = PairingSystem()
 
 # Pipeline defined, now the device is connected to
 try:
@@ -208,9 +207,9 @@ try:
         while True:
             for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
                 packets = device.getOutputQueue(queueName).tryGetAll()
-            ps.add_packets(packets, queueName)
-            if queueName == "color" and not args.prod and len(packets) > 0:
-                cv2.imshow("preview", packets[-1].getCvFrame())
+                ps.add_packets(packets, queueName)
+                if queueName == "color" and not args.prod and len(packets) > 0:
+                    cv2.imshow("preview", packets[-1].getCvFrame())
 
             pairs = ps.get_pairs()
             for pair in pairs:
