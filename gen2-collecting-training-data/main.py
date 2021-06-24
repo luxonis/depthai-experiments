@@ -188,9 +188,6 @@ ps = PairingSystem()
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
-    # Start pipeline
-    device.startPipeline()
-
     qControl = device.getInputQueue('control')
 
     ctrl = dai.CameraControl()
@@ -208,7 +205,10 @@ with dai.Device(pipeline) as device:
     start_ts = monotonic()
     while True:
         for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
-            ps.add_packets(device.getOutputQueue(queueName).tryGetAll(), queueName)
+            packets = device.getOutputQueue(queueName).tryGetAll()
+            ps.add_packets(packets, queueName)
+            if queueName == "color" and not args.prod and len(packets) > 0:
+                cv2.imshow("preview", packets[-1].getCvFrame())
 
         pairs = ps.get_pairs()
         for pair in pairs:
