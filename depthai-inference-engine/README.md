@@ -6,6 +6,10 @@ A common use case to run your model with IE (Inference Engine) first is to check
 
 The NN model (facial cartoonization) was taken from PINTOs [model-zoo](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/062_facial_cartoonization).
 
+## Demo
+
+![demo](https://user-images.githubusercontent.com/18037362/123509323-15c9da80-d675-11eb-98c9-bdee79e10664.png)
+
 ## Installation
 
 ```
