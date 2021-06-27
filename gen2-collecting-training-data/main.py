@@ -43,51 +43,56 @@ if dest.exists() and dest_count != 0 and not args.dirty:
     raise ValueError(f"Path {dest} contains {dest_count} files. Either specify new path or use \"--dirty\" flag to use current one")
 dest.mkdir(parents=True, exist_ok=True)
 
-pipeline = dai.Pipeline()
+def create_pipeline(depth_enabled=True):
+    pipeline = dai.Pipeline()
 
-rgb = pipeline.createColorCamera()
-rgb.setPreviewSize(300, 300)
-rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-rgb.setInterleaved(False)
-rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+    rgb = pipeline.createColorCamera()
+    rgb.setPreviewSize(300, 300)
+    rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+    rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    rgb.setInterleaved(False)
+    rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
-left = pipeline.createMonoCamera()
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+    controlIn = pipeline.createXLinkIn()
+    controlIn.setStreamName('control')
+    controlIn.out.link(rgb.inputControl)
 
-right = pipeline.createMonoCamera()
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+    rgbOut = pipeline.createXLinkOut()
+    rgbOut.setStreamName("color")
+    rgb.preview.link(rgbOut.input)
 
-depth = pipeline.createStereoDepth()
-depth.setConfidenceThreshold(255)
-median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
-depth.setMedianFilter(median)
-depth.setLeftRightCheck(False)
-depth.setExtendedDisparity(False)
-depth.setSubpixel(False)
+    if depth_enabled:
+        left = pipeline.createMonoCamera()
+        left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-left.out.link(depth.left)
-right.out.link(depth.right)
+        right = pipeline.createMonoCamera()
+        right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-controlIn = pipeline.createXLinkIn()
-controlIn.setStreamName('control')
-controlIn.out.link(rgb.inputControl)
+        depth = pipeline.createStereoDepth()
+        depth.setConfidenceThreshold(255)
+        median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+        depth.setMedianFilter(median)
+        depth.setLeftRightCheck(False)
+        depth.setExtendedDisparity(False)
+        depth.setSubpixel(False)
 
-# Create output
-rgbOut = pipeline.createXLinkOut()
-rgbOut.setStreamName("color")
-rgb.preview.link(rgbOut.input)
-leftOut = pipeline.createXLinkOut()
-leftOut.setStreamName("left")
-left.out.link(leftOut.input)
-rightOut = pipeline.createXLinkOut()
-rightOut.setStreamName("right")
-right.out.link(rightOut.input)
-depthOut = pipeline.createXLinkOut()
-depthOut.setStreamName("disparity")
-depth.disparity.link(depthOut.input)
+        left.out.link(depth.left)
+        right.out.link(depth.right)
+
+        # Create output
+        leftOut = pipeline.createXLinkOut()
+        leftOut.setStreamName("left")
+        left.out.link(leftOut.input)
+        rightOut = pipeline.createXLinkOut()
+        rightOut.setStreamName("right")
+        right.out.link(rightOut.input)
+        depthOut = pipeline.createXLinkOut()
+        depthOut.setStreamName("disparity")
+        depth.disparity.link(depthOut.input)
+
+    return pipeline
 
 # https://stackoverflow.com/a/7859208/5494277
 def step_norm(value):
@@ -182,13 +187,20 @@ def store_frames(in_q):
             cv2.imwrite(str(frames_path / Path(f"{stream_name}.png")), item)
 
 
-ps = PairingSystem()
 store_p = Process(target=store_frames, args=(frame_q, ))
 store_p.start()
 
 # Pipeline defined, now the device is connected to
 try:
-    with dai.Device(pipeline) as device:
+    with dai.Device() as device:
+        cams = device.getConnectedCameras()
+        depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+        ps = None
+        if depth_enabled:
+            ps = PairingSystem()
+        else:
+            PairingSystem.seq_streams = []
+        device.startPipeline(create_pipeline(depth_enabled))
         qControl = device.getInputQueue('control')
 
         ctrl = dai.CameraControl()
@@ -207,17 +219,22 @@ try:
         while True:
             for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
                 packets = device.getOutputQueue(queueName).tryGetAll()
-                ps.add_packets(packets, queueName)
-                if queueName == "color" and not args.prod and len(packets) > 0:
+                if ps is not None:
+                    ps.add_packets(packets, queueName)
+                elif queueName == "color":
+                    for packet in packets:
+                        frame_q.put({"color": extract_frame[queueName](packet)})
+                if queueName == "color" and len(packets) > 0 and not args.prod:
                     cv2.imshow("preview", packets[-1].getCvFrame())
 
-            pairs = ps.get_pairs()
-            for pair in pairs:
-                extracted_pair = {stream_name: extract_frame[stream_name](item) for stream_name, item in pair.items()}
-                if not args.prod:
-                    for stream_name, item in extracted_pair.items():
-                        cv2.imshow(stream_name, item)
-                frame_q.put(extracted_pair)
+            if ps is not None:
+                pairs = ps.get_pairs()
+                for pair in pairs:
+                    extracted_pair = {stream_name: extract_frame[stream_name](item) for stream_name, item in pair.items()}
+                    if not args.prod:
+                        for stream_name, item in extracted_pair.items():
+                            cv2.imshow(stream_name, item)
+                    frame_q.put(extracted_pair)
 
             if not args.prod and cv2.waitKey(1) == ord('q'):
                 break
