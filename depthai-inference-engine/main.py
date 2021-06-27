@@ -17,7 +17,7 @@ shape = (256, 256)
 ie = IECore()
 print("Available devices:", ie.available_devices)
 net = ie.read_network(model=model_xml, weights=model_bin)
-input_blob = next(iter(net.inputs))
+input_blob = next(iter(net.input_info))
 # You can select device_name="CPU" to run on CPU
 exec_net = ie.load_network(network=net, device_name='MYRIAD')
 
