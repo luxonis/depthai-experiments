@@ -2,7 +2,7 @@ import argparse
 import threading
 import time
 from pathlib import Path
-
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
@@ -21,6 +21,7 @@ if not args.camera and not args.video:
     )
 
 debug = not args.no_debug
+openvino_version = "2020.3"
 
 
 def cos_dist(a, b):
@@ -45,7 +46,7 @@ def to_planar(arr: np.ndarray, shape: tuple) -> list:
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
-    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2020_1)
+    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2020_3)
 
     if args.camera:
         print("Creating Color Camera...")
@@ -62,7 +63,7 @@ def create_pipeline():
     print("Creating License Plates Detection Neural Network...")
     det_nn = pipeline.createMobileNetDetectionNetwork()
     det_nn.setConfidenceThreshold(0.5)
-    det_nn.setBlobPath(str(Path("models/vehicle-license-plate-detection-barrier-0106.blob").resolve().absolute()))
+    det_nn.setBlobPath(str(blobconverter.from_zoo(name="vehicle-license-plate-detection-barrier-0106", shaves=4, version=openvino_version)))
     det_nn.input.setQueueSize(1)
     det_nn.input.setBlocking(False)
     det_nn_xout = pipeline.createXLinkOut()
@@ -87,7 +88,7 @@ def create_pipeline():
     print("Creating Vehicle Detection Neural Network...")
     veh_nn = pipeline.createMobileNetDetectionNetwork()
     veh_nn.setConfidenceThreshold(0.5)
-    veh_nn.setBlobPath(str(Path("models/vehicle-detection-adas-0002.blob").resolve().absolute()))
+    veh_nn.setBlobPath(str(blobconverter.from_zoo(name="vehicle-detection-adas-0002", shaves=4, version=openvino_version)))
     veh_nn.input.setQueueSize(1)
     veh_nn.input.setBlocking(False)
     veh_nn_xout = pipeline.createXLinkOut()
@@ -105,9 +106,8 @@ def create_pipeline():
         veh_xin.out.link(veh_nn.input)
 
     rec_nn = pipeline.createNeuralNetwork()
-    rec_nn.setBlobPath(str((Path(__file__).parent / Path('models/license-plate-recognition-barrier-0007.blob')).resolve().absolute()))
+    rec_nn.setBlobPath(str(blobconverter.from_zoo(name="license-plate-recognition-barrier-0007", shaves=4, version=openvino_version)))
     rec_nn.input.setBlocking(False)
-    rec_nn.setNumInferenceThreads(2)
     rec_nn.input.setQueueSize(1)
     rec_xout = pipeline.createXLinkOut()
     rec_xout.setStreamName("rec_nn")
@@ -120,9 +120,8 @@ def create_pipeline():
     rec_xin.out.link(rec_nn.input)
 
     attr_nn = pipeline.createNeuralNetwork()
-    attr_nn.setBlobPath(str((Path(__file__).parent / Path('models/vehicle-attributes-recognition-barrier-0039.blob')).resolve().absolute()))
+    attr_nn.setBlobPath(str(blobconverter.from_zoo(name="vehicle-attributes-recognition-barrier-0039", shaves=4, version=openvino_version)))
     attr_nn.input.setBlocking(False)
-    attr_nn.setNumInferenceThreads(2)
     attr_nn.input.setQueueSize(1)
     attr_xout = pipeline.createXLinkOut()
     attr_xout.setStreamName("attr_nn")
@@ -308,9 +307,8 @@ def attr_thread(q_attr, q_pass):
         fps.tick_fps('attr')
 
 
+print("Starting pipeline...")
 with dai.Device(create_pipeline()) as device:
-    print("Starting pipeline...")
-    device.startPipeline()
     if args.camera:
         cam_out = device.getOutputQueue("cam_out", 1, True)
     else:
