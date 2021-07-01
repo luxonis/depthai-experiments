@@ -12,6 +12,10 @@ Y = np.random.rand(100, 3)*5
 
 sbox = None
 ebox = None
+localSbox = None
+localEbox = None
+isBoxCompleted = False
+
 color = (255, 0, 0)
 parser = argparse.ArgumentParser()
 parser.add_argument("-gt", "--groundTruth", type=float,required=True,
@@ -72,18 +76,16 @@ def search_depth_neg(x, y, depth):
 
 
 def on_mouse(event, x, y, flags, params):
-    global sbox, ebox 
+    global localSbox, localEbox, isBoxCompleted 
     if event == cv2.EVENT_LBUTTONDOWN:
         print('Start Mouse Position: '+str(x)+', '+str(y))
-        sbox = (x, y)
+        localSbox = (x, y)
+        isBoxCompleted = False
         # boxes.append(sbox)
     elif event == cv2.EVENT_LBUTTONUP:
         print('End Mouse Position: '+str(x)+', '+str(y))
-        ebox = (x, y)
-        temp_start = (min(sbox[0], ebox[0]), min(sbox[1], ebox[1]))
-        ebox = (max(sbox[0], ebox[0]), max(sbox[1], ebox[1]))
-        sbox = temp_start
-        # boxes.append(ebox)
+        localEbox = (x, y)
+        isBoxCompleted = True
 
 def fitPlaneLTSQ(XYZ):
     (rows, cols) = XYZ.shape
@@ -106,7 +108,10 @@ sc = ax.scatter(x, y, z)
 ax.set_xlabel('x')
 ax.set_ylabel('y')
 ax.set_zlabel('z')
-ax.set_zlim(10,400)
+ax.set_zlim(-1,5)
+ax.set_xlim(-0.3,0.3)
+ax.set_ylim(-0.3,0.3)
+
 plotFitPlane = None
 
 # stereo mode configs
@@ -158,15 +163,16 @@ with dai.Device(pipeline) as device:
     R2 = np.array(calibObj.getStereoRightRectificationRotation())
     H_right_inv = np.linalg.inv(np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right)))
     inter_conv = np.matmul(np.linalg.inv(M_right), H_right_inv)
+    cv2.setMouseCallback('depth', on_mouse)
 
     while True:
         depth = depthQueue.get()
         depth_img = depth.getCvFrame()
         frame = depth_img.copy()
 
-        cv2.setMouseCallback('depth', on_mouse)
-        if sbox is not None and ebox is not None:
-            cv2.rectangle(frame, sbox, ebox, color, 2)
+        cv2.rectangle(frame, sbox, ebox, color, 2)
+        # if sbox is not None and ebox is not None:
+        #     cv2.rectangle(frame, sbox, ebox, color, 2)
         # cv2.imshow("depth", frame.astype(np.uint16))
         depthFrameColor = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         depthFrameColor = cv2.equalizeHist(depthFrameColor)
@@ -176,10 +182,19 @@ with dai.Device(pipeline) as device:
         key = cv2.waitKey(1)
         if key == ord('q'):
             break
+        
+        if isBoxCompleted:
+            sbox = (min(localSbox[0], localEbox[0]), min(localSbox[1], localEbox[1]))
+            ebox = (max(localSbox[0], localEbox[0]), max(localSbox[1], localEbox[1]))
+        else:
+            continue
+
+        if (ebox[0] - sbox[0]) < 50  and (ebox[1] - sbox[1]) < 50:
+            print("Requires the ROI to be of shapa greater than 50x50")
 
         if sbox is not None and ebox is not None:
             print("Start - {} and end - {}".format(sbox, ebox))
-
+            
             coord = pixel_coord_np(*sbox, *ebox)
             roi = depth_img.copy()
             roi = roi[sbox[1] : ebox[1], sbox[0] : ebox[0]]
