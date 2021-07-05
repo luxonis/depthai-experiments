@@ -5,7 +5,6 @@ import cv2
 import depthai as dai
 import numpy as np
 from palm_detection import PalmDetection
-from host_sync import HostSync
 
 DEPTH_THRESH_HIGH = 3000
 DEPTH_THRESH_LOW = 500
@@ -288,7 +287,6 @@ with dai.Device(pipeline) as device:
     palmQ = device.getOutputQueue(name="palm_nn", maxSize=4, blocking=False)
 
     humanMachineSafety = HumanMachineSafety()
-    sync = HostSync()
 
     detections = []
     depthFrame = None
@@ -299,13 +297,11 @@ with dai.Device(pipeline) as device:
         in_rgb = vidQ.tryGet()
         if in_rgb is not None:
             frame = crop_to_rect(in_rgb.getCvFrame())
-            # sync.add_msg("color", in_rgb)
 
         # Check for mobilenet detections
         in_det = detQ.tryGet()
         if in_det is not None:
             detections = in_det.detections
-            # sync.add_msg("det", in_det)
 
         in_depth = depthQ.tryGet()
         if in_depth is not None:
