@@ -2,7 +2,6 @@
 import argparse
 from pathlib import Path
 from time import monotonic
-import numpy as np
 from multiprocessing import Process, Queue
 import cv2
 import depthai as dai
@@ -26,21 +25,12 @@ parser.add_argument('-t', '--threshold', default=0.3, type=float, help="Maximum 
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
 # parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
-parser.add_argument('-m', '--time', type=float, default=float("inf"), help="Finish execution after X seconds")
-parser.add_argument('-af', '--autofocus', type=str, default=None, help="Set AutoFocus mode of the RGB camera", choices=list(filter(lambda name: name[0].isupper(), vars(dai.CameraControl.AutoFocusMode))))
-parser.add_argument('-mf', '--manualfocus', type=check_range(0, 255), help="Set manual focus of the RGB camera [0..255]")
-parser.add_argument('-et', '--exposure-time', type=check_range(1, 33000), help="Set manual exposure time of the RGB camera [1..33000]")
-parser.add_argument('-ei', '--exposure-iso', type=check_range(100, 1600), help="Set manual exposure ISO of the RGB camera [100..1600]")
 
 parser.add_argument('-nd', '--no-depth', action='store_true', default=False, help="Do not save depth map. If set, mono frames will be saved")
 parser.add_argument('-mono', '--mono', action='store_true', default=False, help="Save mono frames")
 parser.add_argument('-e', '--encode', action='store_true', default=False, help="Encode mono frames into jpeg. If set, it will enable -mono as well")
 
 args = parser.parse_args()
-
-exposure = [args.exposure_time, args.exposure_iso]
-if any(exposure) and not all(exposure):
-    raise RuntimeError("Both --exposure-time and --exposure-iso needs to be provided")
 
 SAVE_MONO = args.encode or args.mono or args.no_depth
 
@@ -65,7 +55,7 @@ rgbOut.setStreamName("color")
 
 rgb_encoder = pipeline.createVideoEncoder()
 rgb_encoder.setDefaultProfilePreset(rgb.getVideoSize(), rgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-rgb_encoder.setLossless(True)
+# rgb_encoder.setLossless(True)
 rgb.video.link(rgb_encoder.input)
 rgb_encoder.bitstream.link(rgbOut.input)
 
@@ -94,10 +84,6 @@ if not args.no_depth:
     depthOut.setStreamName("depth")
     stereo.depth.link(depthOut.input)
 
-controlIn = pipeline.createXLinkIn()
-controlIn.setStreamName('control')
-controlIn.out.link(rgb.inputControl)
-
 # Create output
 if SAVE_MONO:
     leftOut = pipeline.createXLinkOut()
@@ -107,13 +93,13 @@ if SAVE_MONO:
     if args.encode:
         left_encoder = pipeline.createVideoEncoder()
         left_encoder.setDefaultProfilePreset(left.getResolutionSize(), left.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-        left_encoder.setLossless(True)
+        # left_encoder.setLossless(True)
         stereo.rectifiedLeft.link(left_encoder.input)
         left_encoder.bitstream.link(leftOut.input)
 
         right_encoder = pipeline.createVideoEncoder()
         right_encoder.setDefaultProfilePreset(right.getResolutionSize(), right.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-        right_encoder.setLossless(True)
+        # right_encoder.setLossless(True)
         stereo.rectifiedRight.link(right_encoder.input)
         right_encoder.bitstream.link(rightOut.input)
     else:
@@ -124,14 +110,11 @@ if SAVE_MONO:
 def step_norm(value):
     return round(value / args.threshold) * args.threshold
 
-
 def seq(packet):
     return packet.getSequenceNum()
 
-
 def tst(packet):
     return packet.getTimestamp().total_seconds()
-
 
 # https://stackoverflow.com/a/10995203/5494277
 def has_keys(obj, keys):
@@ -197,18 +180,19 @@ class PairingSystem:
             if key <= self.last_paired_ts:
                 del self.ts_packets[key]
 
-frame_q = Queue()
+# We have to limit the number of frame pairs, otherwise we might ran out of ram
+frame_q = Queue(50)
 
 folder_num = 0
 def store_frames(in_q):
     global folder_num
     def save_png(frames_path, name, item):
-        cv2.imwrite(str(frames_path / Path(f"{stream_name}.png")), item)
+        cv2.imwrite(str(frames_path / Path(f"{name}.png")), item)
     def save_jpeg(frames_path, name, item):
-        with open(str(frames_path / Path(f"{stream_name}.jpeg")), "wb") as f:
+        with open(str(frames_path / Path(f"{name}.jpeg")), "wb") as f:
             f.write(bytearray(item))
     def save_depth(frames_path, name, item):
-        with open(str(frames_path / Path(f"{stream_name}")), "wb") as f:
+        with open(str(frames_path / Path(f"{name}")), "wb") as f:
             f.write(bytearray(item))
     while True:
         frames_dict = in_q.get()
@@ -233,21 +217,6 @@ with dai.Device(pipeline) as device:
     # Start pipeline
     device.startPipeline()
 
-    qControl = device.getInputQueue('control')
-
-    ctrl = dai.CameraControl()
-    if args.autofocus:
-        ctrl.setAutoFocusMode(getattr(dai.CameraControl.AutoFocusMode, args.autofocus))
-    if args.manualfocus:
-        ctrl.setManualFocus(args.manualfocus)
-    if all(exposure):
-        ctrl.setManualExposure(*exposure)
-
-    qControl.send(ctrl)
-
-    cfg = dai.ImageManipConfig()
-
-    start_ts = monotonic()
     while True:
         for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
             ps.add_packets(device.getOutputQueue(queueName).tryGetAll(), queueName)
@@ -273,9 +242,6 @@ with dai.Device(pipeline) as device:
             # frame_q.put(extracted_pair)
 
         if cv2.waitKey(1) == ord('q'):
-            break
-
-        if monotonic() - start_ts > args.time:
             break
 
 frame_q.put(None)
