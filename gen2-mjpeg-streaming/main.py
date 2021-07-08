@@ -12,6 +12,7 @@ import depthai as dai
 import numpy as np
 import cv2
 from PIL import Image
+import blobconverter
 
 HTTP_SERVER_PORT = 8090
 
@@ -74,15 +75,6 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 
 syncNN = True
 
-# Get argument first
-nnBlobPath = str((Path(__file__).parent / Path('mobilenet-ssd/mobilenet-ssd_openvino_2021.2_6shave.blob')).resolve().absolute())
-if len(sys.argv) > 1:
-    nnBlobPath = sys.argv[1]
-
-if not Path(nnBlobPath).exists():
-    import sys
-    raise FileNotFoundError(f'Required file/s not found, please run "{sys.executable} install_requirements.py"')
-
 def create_pipeline(depth):
     # Start defining a pipeline
     pipeline = dai.Pipeline()
@@ -102,7 +94,7 @@ def create_pipeline(depth):
     colorCam.setInterleaved(False)
     colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-    mobilenet.setBlobPath(nnBlobPath)
+    mobilenet.setBlobPath(str(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.2")))
     mobilenet.setConfidenceThreshold(0.5)
     mobilenet.input.setBlocking(False)
 
