@@ -118,6 +118,24 @@ class DepthAIDepthVideoTransformTrack(VideoTransformTrack):
         self.frame = np.zeros((self.options.height, self.options.width, 3), np.uint8)
         self.frame[:] = (0, 0, 0)
         self.detections = []
+
+
+        self.device = dai.Device(dai.OpenVINO.Version.VERSION_2021_2)
+
+        # Check if we have stereo cameras on the device
+        cams = self.device.getConnectedCameras()
+        depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+        if not depth_enabled:
+            print("You are using camera that doesn't support stereo depth!")
+            super().stop()
+            del self.device
+            return
+
+        self.qDepth = self.device.getOutputQueue(name="disparity", maxSize=4, blocking=False)
+
+        self.device.startPipeline(self.create_pipeline(options))
+
+    def create_pipeline(self, options):
         self.pipeline = dai.Pipeline()
 
         self.monoLeft = self.pipeline.createMonoCamera()
@@ -160,11 +178,6 @@ class DepthAIDepthVideoTransformTrack(VideoTransformTrack):
         self.monoLeft.out.link(self.depth.left)
         self.monoRight.out.link(self.depth.right)
         self.depth.disparity.link(self.xoutDepth.input)
-
-        self.device = dai.Device(self.pipeline)
-        self.qDepth = self.device.getOutputQueue(name="disparity", maxSize=4, blocking=False)
-
-        self.device.startPipeline()
 
     async def get_frame(self):
         inDepth = self.qDepth.tryGet()
