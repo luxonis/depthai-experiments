@@ -311,7 +311,7 @@ with dai.Device(pipeline) as device:
             depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
 
         palm_in = palmQ.tryGet()
-        if palm_in is not None:
+        if palm_in is not None and frame is not None and depthFrame is not None:
             try:
                 humanMachineSafety.parse(
                     palm_in,
