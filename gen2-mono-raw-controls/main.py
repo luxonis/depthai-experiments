@@ -36,6 +36,7 @@ streams = []
 # Enable one or both streams
 streams.append('isp')
 streams.append('raw')
+cam_list = ['left', 'right']
 
 ''' Packing scheme for RAW10 - MIPI CSI-2
 - 4 pixels: p0[9:0], p1[9:0], p2[9:0], p3[9:0]
@@ -61,37 +62,48 @@ def unpack_raw10(input, out, expand16bit):
 print("depthai:", dai.__version__, dai.__commit_datetime__)
 pipeline = dai.Pipeline()
 
-cam = pipeline.createMonoCamera()
-cam.setBoardSocket(dai.CameraBoardSocket.LEFT)  # or RIGHT
-cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-# Uncomment to be able to set a larger manual exposure, e.g: 10fps / 100ms
-# cam.setFps(10)
-
 # Camera control input
 control = pipeline.createXLinkIn()
 control.setStreamName('control')
-control.out.link(cam.inputControl)
 
-if 'isp' in streams:
-    xout_isp = pipeline.createXLinkOut()
-    xout_isp.setStreamName('isp')
-    cam.out.link(xout_isp.input)
+cam = {}
+xout_isp = {}
+xout_raw = {}
+for c in cam_list:
+    cam[c] = pipeline.createMonoCamera()
+    if c == 'left':
+        cam[c].setBoardSocket(dai.CameraBoardSocket.LEFT)
+    else:
+        cam[c].setBoardSocket(dai.CameraBoardSocket.RIGHT)
+    cam[c].setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+    # Uncomment to be able to set a larger manual exposure, e.g: 10fps / 100ms
+    # cam.setFps(10)
 
-if 'raw' in streams:
-    xout_raw = pipeline.createXLinkOut()
-    xout_raw.setStreamName('raw')
-    cam.raw.link(xout_raw.input)
+    if 'isp' in streams:
+        xout_isp[c] = pipeline.createXLinkOut()
+        xout_isp[c].setStreamName('isp-' + c)
+        cam[c].out.link(xout_isp[c].input)
+
+    if 'raw' in streams:
+        xout_raw[c] = pipeline.createXLinkOut()
+        xout_raw[c].setStreamName('raw-' + c)
+        cam[c].raw.link(xout_raw[c].input)
+
+    control.out.link(cam[c].inputControl)
 
 device = dai.Device(pipeline)
 device.startPipeline()
 
 q_list = []
-for s in streams:
-    q = device.getOutputQueue(name=s, maxSize=3, blocking=False)
-    q_list.append(q)
-    # Make window resizable, and configure initial size
-    cv2.namedWindow(s, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(s, (1280, 800))
+for c in cam_list:
+    for s in streams:
+        sname = s + '-' + c
+        q = device.getOutputQueue(name=sname, maxSize=4, blocking=False)
+        q_list.append(q)
+        if 0:  # Not enabling for now, as the OpenCV resize could cause artifacts
+            # Make window resizable, and configure initial size
+            cv2.namedWindow(sname, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(sname, (640, 480))
 
 controlQueue = device.getInputQueue('control')
 
@@ -168,14 +180,14 @@ while True:
                                  + '_' + str(width) + 'x' + str(height)
                                  + '_' + str(data.getSequenceNum())
                                 )
-        if name == 'isp':
+        if 'isp' in name:
             if capture_flag:
                 filename = capture_file_info_str + '_P400.yuv'
                 print("Saving to file:", filename)
                 payload.tofile(filename)
             shape = (height, width)
             bgr = payload.reshape(shape).astype(np.uint8)
-        if name == 'raw':
+        if 'raw' in name:
             # Preallocate the output buffer
             unpacked = np.empty(payload.size * 4 // 5, dtype=np.uint16)
             if capture_flag:
