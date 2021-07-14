@@ -9,12 +9,13 @@ import depthai as dai
 import numpy as np
 
 # Get argument first
-mobilenet_path = str((Path(__file__).parent / Path('models/mobilenet.blob')).resolve().absolute())
+mobilenet_path = str((Path(__file__).parent / Path('models/mobilenet-ssd_openvino_2021.2_13shave.blob')).resolve().absolute())
 if len(sys.argv) > 1:
     mobilenet_path = sys.argv[1]
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
+
 
 # Define a source - color camera
 cam_rgb = pipeline.createColorCamera()
@@ -136,6 +137,9 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
 
         if cv2.waitKey(1) == ord('q'):
             break
+
+    if KeyboardInterrupt:
+        pass                
 
     if thread is not None:
         thread.join()

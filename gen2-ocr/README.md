@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 ## [Gen2] Text Detection + Optical Character Recognition (OCR) Pipeline
 
 This pipeline implements text detection (EAST) followed by optical character recognition of the detected text.  It implements issue [#124](https://github.com/luxonis/depthai/issues/124).

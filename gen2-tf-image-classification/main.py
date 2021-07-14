@@ -29,7 +29,7 @@ detection_nn.setBlobPath(str(Path("flower.blob").resolve().absolute()))
 if camera:
     print("Creating Color Camera...")
     cam_rgb = pipeline.createColorCamera()
-    cam_rgb.setPreviewSize(180, 180)
+    cam_rgb.setPreviewSize(480, 480)
     cam_rgb.setInterleaved(False)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
@@ -38,7 +38,13 @@ if camera:
     cam_xout = pipeline.createXLinkOut()
     cam_xout.setStreamName("rgb")
     cam_rgb.preview.link(cam_xout.input)
-    cam_rgb.preview.link(detection_nn.input)
+
+    print("Creating ImageManip node...")
+    manip = pipeline.createImageManip()
+    manip.initialConfig.setResize(180, 180)
+    cam_rgb.preview.link(manip.inputImage)
+    manip.out.link(detection_nn.input)
+
 else:
     face_in = pipeline.createXLinkIn()
     face_in.setStreamName("in_nn")
@@ -135,7 +141,7 @@ with dai.Device(pipeline) as device:
         if debug:
             # if the frame is available, draw bounding boxes on it and show the frame
             if result is not None:
-                cv2.putText(frame, "{} ({}%)".format(result["name"], result["conf"]), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                cv2.putText(frame, "{} ({}%)".format(result["name"], result["conf"]), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
 
             cv2.imshow("rgb", frame)
 

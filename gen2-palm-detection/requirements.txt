@@ -1,0 +1,7 @@
+depthai==2.1.0.0
+opencv-python
+numpy
+scipy
+imutils
+pynput
+python-xlib

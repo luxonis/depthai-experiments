@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # People counting
 
 One of the basic examples of DepthAI usage - counting people in front of the camera and save the

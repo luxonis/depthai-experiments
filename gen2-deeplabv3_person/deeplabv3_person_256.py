@@ -31,7 +31,7 @@ cam_options = ['rgb', 'left', 'right']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-cam", "--cam_input", help="select camera input source for inference", default='rgb', choices=cam_options)
-parser.add_argument("-nn", "--nn_model", help="select camera input source for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_6_shaves.blob', type=str)
+parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
 
 args = parser.parse_args()
 
@@ -58,7 +58,7 @@ def show_deeplabv3p(output_colors, frame):
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
-# pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_2)
+pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_2)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
@@ -116,6 +116,7 @@ q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 start_time = time.time()
 counter = 0
 fps = 0
+layer_info_printed = False
 while True:
     # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
     in_nn_input = q_nn_input.get()
@@ -129,13 +130,23 @@ while True:
 
     if in_nn is not None:
         # print("NN received")
-        output_layers = in_nn.getAllLayerNames()
-        # print(output_layers)
+        layers = in_nn.getAllLayers()
 
-        layer1 = in_nn.getLayerInt32(output_layers[0])
+        if not layer_info_printed:
+            for layer_nr, layer in enumerate(layers):
+                print(f"Layer {layer_nr}")
+                print(f"Name: {layer.name}")
+                print(f"Order: {layer.order}")
+                print(f"dataType: {layer.dataType}")
+                dims = layer.dims[::-1] # reverse dimensions
+                print(f"dims: {dims}")
+            layer_info_printed = True
 
-        lay1 = np.asarray(layer1, dtype=np.int32).reshape((1,nn_shape,nn_shape))
-        # print(lay1.shape)
+        # get layer1 data
+        layer1 = in_nn.getLayerInt32(layers[0].name)
+        # reshape to numpy array
+        dims = layer.dims[::-1]
+        lay1 = np.asarray(layer1, dtype=np.int32).reshape(dims)
 
         output_colors = decode_deeplabv3p(lay1)
 

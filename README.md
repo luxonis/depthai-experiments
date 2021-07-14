@@ -1,3 +1,5 @@
+[depthai_experiments中文文档](README.zh-CN.md)
+
 # depthai-experiments
 Experimental projects we've done with DepthAI.  
 
@@ -5,7 +7,7 @@ Experimental projects we've done with DepthAI.
 
 The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list):
 
-## [Gen2] Gaze estimation ([here](https://github.com/luxonis/depthai-experiments/blob/master/gaze-estimation))
+## [Gen2] Gaze estimation ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-gaze-estimation))
 
 This example demonstrates how to run 3 stage (3-series, 2 parallel) inference on DepthAI using [Gen2 Pipeline Builder](https://github.com/luxonis/depthai/issues/136).
 
@@ -51,23 +53,23 @@ Since DepthAI gives the full 3D position of objects in physical space, it's a co
 
 [![COVID-19 Social Distancing with DepthAI](https://user-images.githubusercontent.com/5244214/90741333-73f89500-e2cf-11ea-919b-b1f47dc55c4a.gif)](https://www.youtube.com/watch?v=-Ut9TemGZ8I "DepthAI Social Distancing Proof of Concept")
 
-## Demo-UI ([here](https://github.com/luxonis/depthai-experiments/tree/master/demo-ui))
+## Demo-UI ([here](https://github.com/luxonis/depthai-python/tree/gen2_develop/examples))
 Application used to demonstrate various capabilities of the DepthAI platform. Contains examples with descriptions,
 console outputs and preview windows.
 
 ![DemoUI](./demo-ui/preview.png)
 
-## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
+## MJPEG and JSON streaming ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-mjpeg-streaming))
 
 [![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
 
 This lay the groundwork to make DepthAI [OpenDataCam](https://github.com/opendatacam/opendatacam) compatible.
 
-## Stereo Neural Inference Results Visualizer ([here](https://github.com/luxonis/depthai-experiments/tree/master/triangulation-3D-visualizer))
+## Stereo Neural Inference Results Visualizer ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-triangulation))
 
-So because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host.  If there is interest to do this on DepthAI directly instead, please let us know!
+Because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
 
-[![Spatial AI](https://user-images.githubusercontent.com/5244214/90748450-7c9e9a80-e2d2-11ea-9e9e-da65b5d9e6f0.gif)](https://www.youtube.com/watch?v=Cs8xo3mPBMg "3D Facial Landmark visualization")
+[![Spatial AI](https://user-images.githubusercontent.com/18037362/116149182-bc2b4b00-a6d9-11eb-91a5-ad5359ca85ad.gif)](https://www.youtube.com/watch?v=YalHMcsZODs&feature=youtu.be "3D Facial Landmark visualization")
 
 ## People Counting ([here](https://github.com/luxonis/depthai-experiments/blob/master/people-counter))
 
@@ -77,13 +79,13 @@ So you could use this to make plots over a day of room occupancy.  One could mod
 
 [![Watch the demo](https://user-images.githubusercontent.com/5244214/90751105-fc7a3400-e2d5-11ea-82fe-3c7797e99e3e.gif)](https://youtu.be/M0xQI1kXju4)
 
-## People Tracker ([here](https://github.com/luxonis/depthai-experiments/tree/master/people-tracker))
+## People Tracker ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker))
 
 This application counts how many people went upwards / downwards / leftwards / rightwards in the video stream, allowing you to receive an information about how many people went into a room or went through a corridor.
 
-The model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) from the OpenVIN Model Zoo.  Credits: Adrian Rosebrock, OpenCV People Counter, PyImageSearch, [https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/), accessed on 6 August 2020.
+The model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) from the OpenVIN Model Zoo.
 
-[![Watch the demo](https://user-images.githubusercontent.com/5244214/90752628-ee2d1780-e2d7-11ea-8e48-ca94b02a7674.gif)](https://youtu.be/8RiHkkGKdj0)
+[![Watch the demo](https://user-images.githubusercontent.com/18037362/116413235-56e96e00-a82f-11eb-8007-bfcdb27d015c.gif)](https://www.youtube.com/watch?v=MHmzp--pqUA)
 
 
 ## Point Cloud Projection ([here](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection))
@@ -93,7 +95,7 @@ This is a simple application which creates rgbd image from `right` and `depth_ra
 ![point cloud visualization](https://media.giphy.com/media/W2Es1aC7N0XZIlyRmf/giphy.gif)
 
 
-## RGB-D and PCL([here](https://github.com/luxonis/depthai-experiments/tree/master/pcl-projection-rgb))
+## RGB-D and PCL ([here](https://github.com/luxonis/depthai-experiments/tree/master/pcl-projection-rgb))
 
 This is a simple application which creates rgbd image from `rgb` and `depth` stream and projects it into rgb with depth overlay and point clouds. There is also a interactive point cloud visualizer.
 
@@ -101,9 +103,15 @@ This is a simple application which creates rgbd image from `rgb` and `depth` str
 ![rgbd-pcl](https://media.giphy.com/media/UeAlkPpeHaxItO0NJ6/giphy.gif)
 
 
-## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/wls-filter))
+## Host-Side WLS Filter ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-wls-filter))
 
-This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI.  
+This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI.
 
 Example running on [BW1092](https://shop.luxonis.com/collections/all/products/bw1092-pre-order) shown below:
 ![image](https://user-images.githubusercontent.com/32992551/94463964-fc920d00-017a-11eb-9e99-8a023cdc8a72.png)
+
+## Multiple devices per host ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices))
+
+This demo shows how you can use multiple devices per host. The demo will find all devices connected to the host and display an RGB preview from each of them.
+
+[![Multiple devices per host](https://user-images.githubusercontent.com/18037362/113307040-01d83c00-9305-11eb-9a42-c69c72a5dba5.gif)](https://www.youtube.com/watch?v=N1IY2CfhmEc "Multiple devices per host")

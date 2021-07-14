@@ -1,3 +1,5 @@
+[中文文档](README.zh-CN.md)
+
 # Gen2 Frames Sync
 
 This example demonstrates how to synchronize incoming frames using their sequence numbers. 
