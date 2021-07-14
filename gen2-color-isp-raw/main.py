@@ -37,7 +37,7 @@ For the 'Select control: ...' options, use these keys to modify the value:
 '''
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k', '12mp'},
+parser.add_argument('-res', '--resolution', default='12mp', choices={'1080', '4k', '12mp'},
                     help="Select RGB resolution. Default: %(default)s")
 parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
@@ -218,7 +218,7 @@ while True:
             bayer = unpacked.reshape(shape).astype(np.uint16)
             # See this for the ordering, at the end of page:
             # https://docs.opencv.org/4.5.1/de/d25/imgproc_color_conversions.html
-            bgr = cv2.cvtColor(bayer, cv2.COLOR_BayerBG2BGR)
+            bgr = cv2.cvtColor(bayer, cv2.COLOR_BayerRG2BGR)
         if capture_flag:  # Save to disk if `c` was pressed
             filename = capture_file_info_str + '.png'
             print("Saving to file:", filename)
