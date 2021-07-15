@@ -1,3 +1,6 @@
 opencv-python==4.5.1.48
-depthai==2.0.0.1
+argparse
 
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai==2.7.0.0.dev+0850e983db9733939794d7daa2243705c6115e56
+#depthai==2.0.0.1
