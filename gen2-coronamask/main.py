@@ -105,10 +105,7 @@ else:
     fps = FPSHandler(cap)
 
 # Pipeline defined, now the device is connected to
-with dai.Device() as device:
-    # Start pipeline
-    device.startPipeline(create_pipeline())
-
+with dai.Device(create_pipeline()) as device:
     if args.camera:
         qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     else:

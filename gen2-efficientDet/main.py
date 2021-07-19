@@ -46,7 +46,6 @@ nn.passthrough.link(rgb_xout.input)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(p) as device:
-    device.startPipeline()
     qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     qNn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
     fps = FPSHandler()

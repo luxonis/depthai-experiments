@@ -152,7 +152,6 @@ class Main:
     def start_pipeline(self):
         self.device = depthai.Device(self.pipeline)
         print("Starting pipeline...")
-        self.device.startPipeline()
         if self.camera:
             self.cam_out = self.device.getOutputQueue("cam_out", 4, False)
         else:
