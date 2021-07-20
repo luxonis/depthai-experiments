@@ -115,9 +115,9 @@ ax.set_ylim(-0.3,0.3)
 plotFitPlane = None
 
 # stereo mode configs
-lrcheck = True
+lrcheck = False
 extended = False
-subpixel = True
+subpixel = False
 
 # Create pipeline
 pipeline = dai.Pipeline()
@@ -133,15 +133,15 @@ xoutDepth = pipeline.createXLinkOut()
 xoutDepth.setStreamName("depth")
 
 # Properties
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
 monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
 monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 stereo.setConfidenceThreshold(200)
 stereo.setRectifyEdgeFillColor(0)  # black, to better see the cutout
 # stereo.setInputResolution(1280, 720)
-stereo.setMedianFilter(dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF)
+stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF)
 stereo.setLeftRightCheck(lrcheck)
 stereo.setExtendedDisparity(extended)
 stereo.setSubpixel(subpixel)
