@@ -1,1 +1,0 @@
-print("Please visit https://docs.luxonis.com/projects/api/en/gen2_develop/samples/10_mono_depth_mobilenetssd/")

@@ -3,4 +3,4 @@ opencv-python
 numpy
 scipy
 imutils
-blobconverter==0.0.10
+blobconverter==0.0.12

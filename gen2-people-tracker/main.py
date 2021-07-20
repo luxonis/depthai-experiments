@@ -2,6 +2,8 @@
 
 import sys
 from pathlib import Path
+
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
@@ -24,11 +26,8 @@ args = parser.parse_args()
 
 parentDir = Path(__file__).parent
 
-videoPath = parentDir / Path('demo/example_01.mp4')
-if args.video: videoPath = args.video
-
-nnPath = parentDir / Path('model/person-detection-retail-0013_2021.3_7shaves.blob')
-if args.nn: nnPath = args.nn
+videoPath = args.video or parentDir / Path('demo/example_01.mp4')
+nnPath = args.nn or blobconverter.from_zoo(name="person-detection-retail-0013", shaves=7)
 
 # Whether we want to use video from host or rgb camera
 VIDEO = not args.camera
@@ -186,11 +185,9 @@ class PeopleTracker:
             cv2.putText(self.frame, f"Counter X: {self.people_counter[1]}, Counter Y: {self.people_counter[0]}", (3, 20), cv2.FONT_HERSHEY_TRIPLEX, 0.7, (255,255,0))
             cv2.imshow("tracker", self.frame)
 
+
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
-    # Start the pipeline
-    device.startPipeline()
-
     preview = device.getOutputQueue("preview", maxSize=4, blocking=False)
     tracklets = device.getOutputQueue("tracklets", maxSize=4, blocking=False)
 

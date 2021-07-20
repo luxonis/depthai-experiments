@@ -178,9 +178,8 @@ def pose_thread(in_queue):
         detected_keypoints, keypoints_list, personwiseKeypoints = (new_keypoints, new_keypoints_list, newPersonwiseKeypoints)
 
 
+print("Starting pipeline...")
 with dai.Device(create_pipeline()) as device:
-    print("Starting pipeline...")
-    device.startPipeline()
     if args.camera:
         cam_out = device.getOutputQueue("cam_out", 1, True)
         controlQueue = device.getInputQueue('control')

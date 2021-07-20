@@ -119,8 +119,7 @@ class DepthAIDepthVideoTransformTrack(VideoTransformTrack):
         self.frame[:] = (0, 0, 0)
         self.detections = []
 
-
-        self.device = dai.Device(dai.OpenVINO.Version.VERSION_2021_2)
+        self.device = dai.Device()
 
         # Check if we have stereo cameras on the device
         cams = self.device.getConnectedCameras()
@@ -131,9 +130,8 @@ class DepthAIDepthVideoTransformTrack(VideoTransformTrack):
             del self.device
             return
 
-        self.qDepth = self.device.getOutputQueue(name="disparity", maxSize=4, blocking=False)
-
         self.device.startPipeline(self.create_pipeline(options))
+        self.qDepth = self.device.getOutputQueue(name="disparity", maxSize=4, blocking=False)
 
     def create_pipeline(self, options):
         self.pipeline = dai.Pipeline()
@@ -178,6 +176,8 @@ class DepthAIDepthVideoTransformTrack(VideoTransformTrack):
         self.monoLeft.out.link(self.depth.left)
         self.monoRight.out.link(self.depth.right)
         self.depth.disparity.link(self.xoutDepth.input)
+
+        return self.pipeline
 
     async def get_frame(self):
         inDepth = self.qDepth.tryGet()

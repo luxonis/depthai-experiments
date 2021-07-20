@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
+
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
@@ -12,7 +14,7 @@ parentDir = Path(__file__).parent
 #=====================================================================================
 # To use a different NN, change `size` and `nnPath` here:
 size = (544, 320)
-nnPath = parentDir / Path(f"models/person-detection-retail-0013_2021.3_7shaves.blob")
+nnPath = blobconverter.from_zoo("person-detection-retail-0013", shaves=8)
 #=====================================================================================
 
 # Labels
@@ -98,8 +100,6 @@ detectionNetwork.out.link(detOut.input)
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
-    # Start the pipeline
-    device.startPipeline()
     detectionQ = device.getOutputQueue("detections", maxSize=4, blocking=False)
 
     if IMAGE:

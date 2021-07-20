@@ -339,23 +339,21 @@ class Main:
         pipeline = create_pipeline()
 
         # Connect to the device
+        print("Starting pipeline...")
         with dai.Device(pipeline) as device:
             self.device = device
 
-            print("Starting pipeline...")
-            device.startPipeline()            
-
             threads = [
                 threading.Thread(target=self.input_task),
-                threading.Thread(target=self.inference_task), 
+                threading.Thread(target=self.inference_task),
             ]
             for t in threads:
                 t.start()
 
             # Visualization task should run in 'main' thread
-            self.visualization_task()            
+            self.visualization_task()
 
-        # cleanup
+            # cleanup
         self.running = False
         if not camera:
             self.cap.release()
