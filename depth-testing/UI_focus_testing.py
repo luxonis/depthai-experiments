@@ -22,7 +22,7 @@ black  = [0, 0, 0]
 #                             help="Path of the image file on which blur is calculated")
 # args = parser.parse_args()
 
-test_type = "OAK_1 Focus Test"
+test_type = "Focus Test"
 screen = pygame.display.set_mode((900, 700))
 
 screen.fill(white)
@@ -103,8 +103,10 @@ pygame.display.update()
 is_saved = False
 focusThreshold = 20
 
-enabledLR = False
+enabledLR = True
 enabledRGB = True
+
+# TODO(sachin): Add detection and acceptance of board in LR before continuing  focal check 
 
 device = dai.Device() 
 pipeline = create_pipeline(enabledLR, enabledRGB)
@@ -119,12 +121,16 @@ if enabledRGB:
 max_count = 90
 
 is_focused = False
+is_finished = False
+
 rgb_count   = 0
 left_count  = 0
 right_count = 0
 lens_position = 0
 
 while not is_focused:
+    pygame.display.update()
+
     if enabledLR:
         left_frame = left_camera_queue.getAll()[-1]
         right_frame = right_camera_queue.getAll()[-1]
@@ -136,20 +142,22 @@ while not is_focused:
         dst_right = cv2.Laplacian(right_frame.getCvFrame(), cv2.CV_64F)
         abs_dst_right = cv2.convertScaleAbs(dst_right)
         mu, sigma_right = cv2.meanStdDev(dst_right)
-
+        print("SdtDev of Left: {} and right: {}".format(sigma_left, sigma_right))
         if sigma_right > focusThreshold:
             auto_checkbox_dict["RIGHT Focus"].check()
+            right_count += 1
         else:
             if left_count > max_count:
                 auto_checkbox_dict["RIGHT Focus"].uncheck()
-            left_count += 1
+            right_count += 1
 
         if sigma_left > focusThreshold:
             auto_checkbox_dict["LEFT Focus"].check()
+            left_count += 1
         else:
             if right_count > max_count:
                 auto_checkbox_dict["LEFT Focus"].uncheck()
-            right_count += 1
+            left_count += 1
 
         
     if enabledRGB:
@@ -159,16 +167,24 @@ while not is_focused:
         dst_rgb = cv2.Laplacian(recent_color, cv2.CV_64F)
         abs_dst_rgb = cv2.convertScaleAbs(dst_rgb)
         mu, sigma_rgb = cv2.meanStdDev(dst_rgb)
+        print("SdtDev of RGB: {} with lens position of {}".format(sigma_rgb, rgb_frame.getLensPosition()))
+        # cv2.imshow(" Blurred Image", recent_color)
+        # cv2.waitKey(1)
 
         if sigma_rgb > focusThreshold:
             lens_position = rgb_frame.getLensPosition()
             auto_checkbox_dict["RGB Focus"].check()
+            rgb_count += 1
         else:
             if rgb_count > max_count:
                 auto_checkbox_dict["RGB Focus"].uncheck()
             rgb_count += 1
 
+    for checks in auto_checkbox_dict.values():
+        checks.render_checkbox()
+
     if enabledLR and enabledRGB:
+        print("right count: {}, left count: {} and rgb count: {}".format(right_count, left_count, rgb_count))
         if right_count > max_count and left_count > max_count and rgb_count > max_count:
             all_checked = True
             for checks in auto_checkbox_dict.values():
@@ -184,7 +200,12 @@ while not is_focused:
         raise RuntimeError("Invalid Option")
 
 
+all_checked = True
+for checks in auto_checkbox_dict.values():
+    all_checked = all_checked and checks.is_checked()
+
 print("Current Lens Position is {}".format(lens_position))
+cv2.waitKey(0)
 
 """ src_gray = cv2.imread(args.imgPath, cv2.IMREAD_GRAYSCALE)
 
