@@ -2,13 +2,7 @@ import cv2
 import argparse
 import numpy as np
 import depthai as dai
-import pygame
-from pygame.locals import *
-from pygame_checkbox import Checkbox, pygame_render_text
 import os
-
-os.environ['SDL_VIDEO_WINDOW_POS'] = '1000,10'
-pygame.init()
 
 # color codings
 white  = [255, 255, 255]
@@ -22,6 +16,20 @@ parser.add_argument("-tm", "--testMode", type=str ,required=True,
                             help="Define the type of test. ex: oak_d")
 args = parser.parse_args()
 test_type = args.testMode
+
+font = cv2.FONT_HERSHEY_SIMPLEX
+
+def create_blank(width, height, rgb_color=(0, 0, 0)):
+    """Create new image(numpy array) filled with certain color in RGB"""
+    # Create black blank image
+    image = np.zeros((height, width, 3), np.uint8)
+
+    # Since OpenCV uses BGR, convert the color first
+    color = tuple(reversed(rgb_color))
+    # Fill image with color
+    image[:] = color
+
+    return image
 
 def create_pipeline(enableLR, enableRgb):
     pipeline = dai.Pipeline()
@@ -100,7 +108,6 @@ is_right_focused = False
 is_rgb_focused = False
 
 while True:
-    # pygame.display.update()
 
     if enabledLR:
         left_frame = left_camera_queue.getAll()[-1]
@@ -123,7 +130,6 @@ while True:
             is_left_focused = True
         left_count += 1
 
-        
     if enabledRGB:
         rgb_frame = rgb_camera_queue.getAll()[-1]
         recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
@@ -139,7 +145,6 @@ while True:
             lens_position = rgb_frame.getLensPosition()
             is_rgb_focused = True
         rgb_count += 1
-        
 
     if enabledLR and enabledRGB:
         print("right count: {}, left count: {} and rgb count: {}".format(right_count, left_count, rgb_count))
@@ -158,14 +163,37 @@ if is_rgb_focused:
     device.flashCalibration(calibration_handler)
     print("Calibration Flashed")
 
+image = create_blank(512, 512, rgb_color=red)
 if enabledLR and enabledRGB:
     if is_rgb_focused and is_left_focused and is_right_focused:
-        pass
+        image = create_blank(512, 512, rgb_color=green)
+        cv2.putText(image,'Focus TEST',(10,250), font, 2,(0,0,0),2)
+        cv2.putText(image,'PASSED',(10,300), font, 2,(0,0,0),2)
+    elif not is_rgb_focused:
+        image = create_blank(512, 512, rgb_color=red)
+        cv2.putText(image,'RGB Focus TEST ',(10,250), font, 2,(0,0,0),2)
+        cv2.putText(image,'FAILED',(10,300), font, 2,(0,0,0),2)
+    elif not is_right_focused:
+        image = create_blank(512, 512, rgb_color=red)
+        cv2.putText(image,'Right Focus TEST ',(10,250), font, 2,(0,0,0),2)
+        cv2.putText(image,'FAILED',(10,300), font, 2,(0,0,0),2)
+    elif not is_left_focused:
+        image = create_blank(512, 512, rgb_color=red)
+        cv2.putText(image,'Left Focus TEST ',(10,250), font, 2,(0,0,0),2)
+        cv2.putText(image,'FAILED',(10,300), font, 2,(0,0,0),2)
+
 elif enabledRGB:
     if is_rgb_focused:
-        pass
+        image = create_blank(512, 512, rgb_color=green)
+        cv2.putText(image,'Focus TEST',(10,250), font, 2,(0,0,0),2)
+        cv2.putText(image,'PASSED',(10,300), font, 2,(0,0,0),2)
+    else:
+        image = create_blank(512, 512, rgb_color=red)
+        cv2.putText(image,'RGB Focus TEST ',(10,250), font, 2,(0,0,0),2)
+        cv2.putText(image,'FAILED',(10,300), font, 2,(0,0,0),2)
 
 print("Current Lens Position is {}".format(lens_position))
+cv2.imshow("Result Image", image)
 cv2.waitKey(0)
 
 """ src_gray = cv2.imread(args.imgPath, cv2.IMREAD_GRAYSCALE)
