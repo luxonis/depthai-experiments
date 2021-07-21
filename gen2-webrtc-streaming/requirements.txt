@@ -1,5 +1,5 @@
 aiortc==1.2.0
 aiohttp==3.7.4.post0
 aiohttp-cors==0.7.0
-depthai>=2.7.0.0
-blobconverter==0.0.10
+depthai==2.7.2.0
+blobconverter==0.0.12

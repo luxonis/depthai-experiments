@@ -86,8 +86,6 @@ def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
 
 # Pipeline defined, now the device is assigned and pipeline is started
 with dai.Device(pipeline) as device:
-    device.startPipeline()
-
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     if camera:
         q_rgb = device.getOutputQueue(name="rgb", maxSize=1, blocking=False)

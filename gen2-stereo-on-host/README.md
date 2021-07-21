@@ -11,7 +11,15 @@ python3 -m pip install -r requirements.txt
 
 ## Calibrate camera (if needed)
 
-To run this application, your device needs to have calibration stored.
+Your device needs to have calibration stored to work with this example
+
+## Run
+
+To run this application, please type the following command.
+
+```
+python3 main.py
+```
 
 
 

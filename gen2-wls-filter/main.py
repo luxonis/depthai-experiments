@@ -24,9 +24,7 @@ right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
 stereo = pipeline.createStereoDepth()
-stereo.setOutputRectified(True) # The rectified streams are horizontally mirrored by default
-stereo.setOutputDepth(False)
-stereo.setConfidenceThreshold(255)
+stereo.initialConfig.setConfidenceThreshold(255)
 stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout from rectification (black stripe on the edges)
 stereo.setLeftRightCheck(lrcheck)
 
@@ -92,8 +90,6 @@ fov = 71.86
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
-    # Start pipeline
-    device.startPipeline()
 
     # Output queues will be used to get the grayscale / depth frames and nn data from the outputs defined above
     qRight = device.getOutputQueue("rectifiedRight", maxSize=4, blocking=False)

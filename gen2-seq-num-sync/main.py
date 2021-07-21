@@ -67,8 +67,6 @@ class PairingSystem:
 
 # Pipeline defined, now the device is assigned and pipeline is started
 with dai.Device(pipeline) as device:
-    device.startPipeline()
-
     # Output queue will be used to get the rgb frames from the output defined above
     q_left = device.getOutputQueue(name="left", maxSize=4, blocking=False)
     q_right = device.getOutputQueue(name="right", maxSize=4, blocking=False)

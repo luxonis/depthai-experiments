@@ -251,8 +251,8 @@ right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create StereoDepth node that will produce the depth map
 stereo = pipeline.createStereoDepth()
-stereo.setConfidenceThreshold(245)
-stereo.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+stereo.initialConfig.setConfidenceThreshold(245)
+stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
 stereo.setLeftRightCheck(True)
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)

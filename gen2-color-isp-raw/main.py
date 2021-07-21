@@ -47,8 +47,8 @@ if 'raw' in streams:
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 
-device = dai.Device(pipeline)
-device.startPipeline()
+device = dai.Device()
+device.startPipeline(pipeline)
 
 q_list = []
 for s in streams:

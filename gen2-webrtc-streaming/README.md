@@ -24,7 +24,7 @@ This example demonstrates how to setup a WebRTC server to configure the device a
 ## Usage
 
 ```
-python3 server.py
+python3 main.py
 ```
 
 And open [`http://0.0.0.0:8080`](http://0.0.0.0:8080)

@@ -105,8 +105,7 @@ def create_pipeline(depth):
         monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         # Setting node configs
-        stereo.setOutputDepth(True)
-        stereo.setConfidenceThreshold(255)
+        stereo.initialConfig.setConfidenceThreshold(255)
         stereo.depth.link(mobilenet.inputDepth)
 
         mobilenet.setBoundingBoxScaleFactor(0.5)

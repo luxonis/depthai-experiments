@@ -146,9 +146,8 @@ class DepthAI:
         model_nn.out.link(model_nn_xout.input)
 
     def start_pipeline(self):
-        self.device = depthai.Device(self.pipeline)
         print("Starting pipeline...")
-        self.device.startPipeline()
+        self.device = depthai.Device(self.pipeline)
 
         self.start_nns()
 

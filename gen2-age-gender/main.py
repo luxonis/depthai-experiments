@@ -2,7 +2,7 @@ import argparse
 import queue
 import time
 from pathlib import Path
-
+import blobconverter
 import cv2
 import depthai
 import numpy as np
@@ -25,7 +25,9 @@ def cos_dist(a, b):
 
 
 def frame_norm(frame, bbox):
-    return (np.clip(np.array(bbox), 0, 1) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
+    normVals = np.full(len(bbox), frame.shape[0])
+    normVals[::2] = frame.shape[1]
+    return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
 
 def to_planar(arr: np.ndarray, shape: tuple) -> list:
@@ -50,11 +52,12 @@ def create_pipeline():
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    detection_nn = pipeline.createNeuralNetwork()
-    if args.camera:
-        detection_nn.setBlobPath(str(Path("models/face-detection-retail-0004_openvino_2021.2_6shave.blob").resolve().absolute()))
-    else:
-        detection_nn.setBlobPath(str(Path("models/face-detection-retail-0004_openvino_2021.2_8shave.blob").resolve().absolute()))
+    detection_nn = pipeline.createMobileNetDetectionNetwork()
+    detection_nn.setConfidenceThreshold(0.5)
+    detection_nn.setBlobPath(str(blobconverter.from_zoo(
+        name="face-detection-retail-0004",
+        shaves=6 if args.camera else 8
+    )))
     detection_nn_xout = pipeline.createXLinkOut()
     detection_nn_xout.setStreamName("detection_nn")
     detection_nn.out.link(detection_nn_xout.input)
@@ -71,11 +74,10 @@ def create_pipeline():
     age_gender_in = pipeline.createXLinkIn()
     age_gender_in.setStreamName("age_gender_in")
     age_gender_nn = pipeline.createNeuralNetwork()
-    if args.camera:
-        age_gender_nn.setBlobPath(str(Path("models/age-gender-recognition-retail-0013_openvino_2021.2_6shave.blob").resolve().absolute()))
-    else:
-        age_gender_nn.setBlobPath(str(Path("models/age-gender-recognition-retail-0013_openvino_2021.2_8shave.blob").resolve().absolute()))
-
+    age_gender_nn.setBlobPath(str(blobconverter.from_zoo(
+        name="age-gender-recognition-retail-0013",
+        shaves=6 if args.camera else 8
+    )))
     age_gender_nn_xout = pipeline.createXLinkOut()
     age_gender_nn_xout.setStreamName("age_gender_nn")
     age_gender_in.out.link(age_gender_nn.input)
@@ -85,9 +87,9 @@ def create_pipeline():
     return pipeline
 
 
-with depthai.Device(create_pipeline()) as device:
+with depthai.Device() as device:
     print("Starting pipeline...")
-    device.startPipeline()
+    device.startPipeline(create_pipeline())
     if args.camera:
         cam_out = device.getOutputQueue("cam_out", 1, True)
     else:
@@ -96,7 +98,7 @@ with depthai.Device(create_pipeline()) as device:
     age_gender_in = device.getInputQueue("age_gender_in")
     age_gender_nn = device.getOutputQueue("age_gender_nn")
 
-    bboxes = []
+    detections = []
     results = []
     face_bbox_q = queue.Queue()
     next_id = 0
@@ -136,12 +138,9 @@ with depthai.Device(create_pipeline()) as device:
                     detection_in.send(nn_data)
 
             while detection_nn.has():
-                bboxes = np.array(detection_nn.get().getFirstLayerFp16())
-                bboxes = bboxes.reshape((bboxes.size // 7, 7))
-                bboxes = bboxes[bboxes[:, 2] > 0.7][:, 3:7]
-
-                for raw_bbox in bboxes:
-                    bbox = frame_norm(frame, raw_bbox)
+                detections = detection_nn.get().detections
+                for detection in detections:
+                    bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
                     det_frame = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
 
                     nn_data = depthai.NNData()
@@ -156,7 +155,7 @@ with depthai.Device(create_pipeline()) as device:
                 gender_str = "female" if gender[0] > gender[1] else "male"
                 bbox = face_bbox_q.get()
 
-                while not len(results) < len(bboxes) and len(results) > 0:
+                while not len(results) < len(detections) and len(results) > 0:
                     results.pop(0)
                 results.append({
                     "bbox": bbox,

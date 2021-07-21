@@ -71,9 +71,9 @@ def create_pipeline(depth_enabled=True):
         right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         depth = pipeline.createStereoDepth()
-        depth.setConfidenceThreshold(255)
+        depth.initialConfig.setConfidenceThreshold(255)
         median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
-        depth.setMedianFilter(median)
+        depth.initialConfig.setMedianFilter(median)
         depth.setLeftRightCheck(False)
         depth.setExtendedDisparity(False)
         depth.setSubpixel(False)
