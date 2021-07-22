@@ -135,7 +135,7 @@ characters = '0123456789abcdefghijklmnopqrstuvwxyz#'
 codec = CTCCodec(characters)
 
 ctrl = dai.CameraControl()
-ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO)
 ctrl.setAutoFocusTrigger()
 controlQueue.send(ctrl)
 
