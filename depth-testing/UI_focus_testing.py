@@ -5,11 +5,8 @@ import depthai as dai
 import os
 
 # color codings
-white  = [255, 255, 255]
-orange = [143, 122, 4]
-red    = [230, 9, 9]
-green  = [4, 143, 7]
-black  = [0, 0, 0]
+red = (255, 0, 0)
+green = (0, 255, 0)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-tm", "--testMode", type=str ,required=True,
@@ -85,7 +82,6 @@ else:
     enabledRGB = True
 
 # TODO(sachin): Add detection and acceptance of board in LR before continuing  focal check 
-
 device = dai.Device() 
 pipeline = create_pipeline(enabledLR, enabledRGB)
 device.startPipeline(pipeline)

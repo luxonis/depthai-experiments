@@ -11,12 +11,8 @@ red    = [230, 9, 9]
 green  = [4, 143, 7]
 black  = [0, 0, 0]
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-tm", "--testMode", type=str ,required=True,
-                            help="Define the type of test. ex: oak_d")
-args = parser.parse_args()
-test_type = args.testMode
 
+test_type = 'oak_1'
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
@@ -109,6 +105,6 @@ is_rgb_focused = False
 
 
 calibration_handler = dai.CalibrationHandler()
-calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, 127)
+calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, 130)
 device.flashCalibration(calibration_handler)
 print("Calibration Flashed")
