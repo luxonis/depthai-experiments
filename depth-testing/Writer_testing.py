@@ -105,6 +105,6 @@ is_rgb_focused = False
 
 
 calibration_handler = dai.CalibrationHandler()
-calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, 130)
+calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, 135)
 device.flashCalibration(calibration_handler)
 print("Calibration Flashed")

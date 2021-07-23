@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 import depthai as dai
 import os
+import time
 
 # color codings
 red = (255, 0, 0)
@@ -114,6 +115,9 @@ ctrl = dai.CameraControl()
 ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
 ctrl.setAutoFocusTrigger()
 
+rgb_control_queue.send(ctrl)
+
+trig_count = 0
 while True:
     if enabledLR:
         left_frame = left_camera_queue.getAll()[-1]
@@ -143,7 +147,11 @@ while True:
         marker_corners, _, _ = cv2.aruco.detectMarkers(recent_color, aruco_dictionary)
         if len(marker_corners) < 20:
             print("Board not detected. Waiting...!!!")
-            rgb_control_queue.send(ctrl)
+            trig_count += 1
+            if trig_count > 31:
+                trig_count = 0
+                rgb_control_queue.send(ctrl)
+                time.sleep(1)
             continue
 
         dst_rgb = cv2.Laplacian(recent_color, cv2.CV_64F)
@@ -157,8 +165,12 @@ while True:
             lens_position = rgb_frame.getLensPosition()
             is_rgb_focused = True
         else:
-            rgb_control_queue.send(ctrl)
-
+            trig_count += 1
+            if trig_count > 31:
+                trig_count = 0
+                rgb_control_queue.send(ctrl)
+                time.sleep(1)
+            
         rgb_count += 1
 
     if enabledLR and enabledRGB:
