@@ -58,12 +58,18 @@ def create_pipeline(enableLR, enableRgb):
 
     if enableRgb:
         rgb_cam = pipeline.createColorCamera()
+        controlIn = pipeline.createXLinkIn()
+
         rgb_cam.setResolution(
             dai.ColorCameraProperties.SensorResolution.THE_4_K)
         rgb_cam.setInterleaved(False)
         rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
         rgb_cam.setFps(10)
         rgb_cam.setIspScale(1, 3)
+        rgb_cam.initialControl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+        
+        controlIn.setStreamName('control')
+        controlIn.out.link(rgb_cam.inputControl)
 
         xout_rgb_isp = pipeline.createXLinkOut()
         xout_rgb_isp.setStreamName("rgb")
@@ -92,8 +98,9 @@ if enabledLR:
     right_camera_queue = device.getOutputQueue("right", 5, False)
 if enabledRGB:
     rgb_camera_queue = device.getOutputQueue("rgb", 5, False)
+    rgb_control_queue = device.getInputQueue("control", 5, False)
 
-max_count = 90
+max_count   = 90
 rgb_count   = 0
 left_count  = 0
 right_count = 0
@@ -103,9 +110,11 @@ lens_position = 0
 is_left_focused = False
 is_right_focused = False
 is_rgb_focused = False
+ctrl = dai.CameraControl()
+ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+ctrl.setAutoFocusTrigger()
 
 while True:
-
     if enabledLR:
         left_frame = left_camera_queue.getAll()[-1]
         right_frame = right_camera_queue.getAll()[-1]
@@ -134,6 +143,7 @@ while True:
         marker_corners, _, _ = cv2.aruco.detectMarkers(recent_color, aruco_dictionary)
         if len(marker_corners) < 20:
             print("Board not detected. Waiting...!!!")
+            rgb_control_queue.send(ctrl)
             continue
 
         dst_rgb = cv2.Laplacian(recent_color, cv2.CV_64F)
@@ -146,6 +156,9 @@ while True:
         if sigma_rgb > focusThreshold:
             lens_position = rgb_frame.getLensPosition()
             is_rgb_focused = True
+        else:
+            rgb_control_queue.send(ctrl)
+
         rgb_count += 1
 
     if enabledLR and enabledRGB:
