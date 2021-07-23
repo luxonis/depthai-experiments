@@ -15,6 +15,7 @@ args = parser.parse_args()
 test_type = args.testMode
 
 font = cv2.FONT_HERSHEY_SIMPLEX
+aruco_dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_1000)
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
@@ -129,6 +130,11 @@ while True:
     if enabledRGB:
         rgb_frame = rgb_camera_queue.getAll()[-1]
         recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
+
+        marker_corners, _, _ = cv2.aruco.detectMarkers(recent_color, aruco_dictionary)
+        if len(marker_corners) < 20:
+            print("Board not detected. Waiting...!!!")
+            continue
 
         dst_rgb = cv2.Laplacian(recent_color, cv2.CV_64F)
         # abs_dst_rgb = cv2.convertScaleAbs(dst_rgb)
