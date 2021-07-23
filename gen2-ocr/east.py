@@ -10,7 +10,7 @@ def get_cv_rotated_rect(bbox, angle):
     height = abs(y0 - y1)
     x = x0 + width * 0.5
     y = y0 + height * 0.5
-    return ((x, y), (width, height), np.rad2deg(angle))
+    return ((x.tolist(), y.tolist()), (width.tolist(), height.tolist()), np.rad2deg(angle))
 
 def rotated_Rectangle(bbox, angle):
     X0, Y0, X1, Y1 = bbox
