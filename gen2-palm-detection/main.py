@@ -183,16 +183,11 @@ class DepthAI:
         )
 
     def parse(self):
-        if debug:
-            self.debug_frame = self.frame.copy()
-
+        self.debug_frame = self.frame.copy()
         self.parse_fun()
+        cv2.imshow("camera", self.debug_frame)
 
         if debug:
-            cv2.imshow(
-                "Camera_view",
-                self.debug_frame,
-            )
             self.fps_cam.update()
             if cv2.waitKey(1) == ord("q"):
                 cv2.destroyAllWindows()
@@ -224,11 +219,7 @@ class DepthAI:
         while True:
             in_rgb = self.preview.tryGet()
             if in_rgb is not None:
-                shape = (3, in_rgb.getHeight(), in_rgb.getWidth())
-                self.frame = (
-                    in_rgb.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
-                )
-                self.frame = np.ascontiguousarray(self.frame)
+                self.frame = in_rgb.getCvFrame()
                 try:
                     self.parse()
                 except StopIteration:
@@ -418,6 +409,8 @@ class Main(DepthAI):
 
         if nn_data is None:
             return
+
+        self.fps_nn.update()
 
         # Run the neural network
         results = to_tensor_result(nn_data)
