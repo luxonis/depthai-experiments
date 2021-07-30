@@ -142,7 +142,6 @@ with dai.Device() as device:
 
     detections = []
     results = []
-    face_bbox_q = queue.Queue()
 
     if args.video:
         cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
@@ -157,7 +156,7 @@ with dai.Device() as device:
         if args.video:
             return cap.read()
         else:
-            return True, frame = cam_out.get().getCvFrame()
+            return True, cam_out.get().getCvFrame()
 
     try:
         while should_run():
@@ -175,26 +174,22 @@ with dai.Device() as device:
                     nn_data.setLayer("input", to_planar(crop_to_square(frame)))
                     detection_in.send(nn_data)
 
+            face_cropped_in = face_cropped_q.tryGet()
+            if debug and face_cropped_in is not None:
+                cv2.imshow("cropped", face_cropped_in.getCvFrame())
+
             det_in = face_q.tryGet()
             if det_in is not None:
                 detections = det_in.detections
                 for detection in detections:
                     bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-                    # Bounding box will be saved for later - when displaying age/gender
-                    face_bbox_q.put(bbox)
 
-            face_cropped_in = face_cropped_q.tryGet()
-            if face_cropped_in is not None:
-                print("new cropped frame")
-                cv2.imshow("cropped", face_cropped_in.getCvFrame())
-
-            det = age_gender_q.tryGet()
-            if det is not None:
-                age = int(float(np.squeeze(np.array(det.getLayerFp16('age_conv3')))) * 100)
-                gender = np.squeeze(np.array(det.getLayerFp16('prob')))
-                gender_str = "female" if gender[0] > gender[1] else "male"
-                if not face_bbox_q.empty():
-                    bbox = face_bbox_q.get()
+                    # If there is a face detected, there will also be an age/gender
+                    # inference result available soon, so we can wait for it
+                    det = age_gender_q.get()
+                    age = int(float(np.squeeze(np.array(det.getLayerFp16('age_conv3')))) * 100)
+                    gender = np.squeeze(np.array(det.getLayerFp16('prob')))
+                    gender_str = "female" if gender[0] > gender[1] else "male"
 
                     while not len(results) < len(detections) and len(results) > 0:
                         results.pop(0)
@@ -217,7 +212,6 @@ with dai.Device() as device:
                     cv2.putText(debug_frame, result["gender"], (bbox[0], y + 20), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
 
                 aspect_ratio = frame.shape[1] / frame.shape[0]
-                # cv2.imshow("Camera_view", cv2.resize(debug_frame, (int(900),  int(900 / aspect_ratio))))
                 cv2.imshow("Camera_view", debug_frame)
                 if cv2.waitKey(1) == ord('q'):
                     cv2.destroyAllWindows()
