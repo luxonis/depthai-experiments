@@ -6,6 +6,7 @@ import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
+from string import Template
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
@@ -14,6 +15,9 @@ parser.add_argument('-cam', '--camera', action="store_true",
 parser.add_argument('-vid', '--video', type=str,
                     help="Path to video file to be used for inference (conflicts with -cam)")
 args = parser.parse_args()
+
+# For script node debug
+SCRIPT_DEBUG = False
 
 if not args.camera and not args.video:
     raise RuntimeError(
@@ -24,24 +28,18 @@ debug = not args.no_debug
 openvino_version = "2020.3"
 
 
-def cos_dist(a, b):
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-
-def to_tensor_result(packet):
-    return {
-        tensor.name: np.array(packet.getLayerFp16(tensor.name)).reshape(tensor.dims)
-        for tensor in packet.getRaw().tensors
-    }
-
-
 def frame_norm(frame, bbox):
     return (np.clip(np.array(bbox), 0, 1) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
 
+def to_planar(frame, shape = None) -> np.ndarray:
+    if shape is not None: frame = cv2.resize(frame, shape)
+    return frame.transpose(2, 0, 1).flatten()
 
-def to_planar(arr: np.ndarray, shape: tuple) -> list:
-    return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
-
+def crop_to_square(frame):
+    height = frame.shape[0]
+    width  = frame.shape[1]
+    delta = int((width-height) / 2)
+    return frame[0:height, delta:width-delta]
 
 def create_pipeline():
     print("Creating pipeline...")
@@ -50,88 +48,137 @@ def create_pipeline():
 
     if args.camera:
         print("Creating Color Camera...")
-        cam = pipeline.createColorCamera()
-        cam.setPreviewSize(672, 384)
+        cam = pipeline.create(dai.node.ColorCamera)
+        cam.setPreviewSize(1080, 1080)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
         cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-        cam_xout = pipeline.createXLinkOut()
+
+        cam_xout = pipeline.create(dai.node.XLinkOut)
         cam_xout.setStreamName("cam_out")
         cam.preview.link(cam_xout.input)
 
+    # -----------------------------
+    # Licence plate detection NN
+    # -----------------------------
+    # ImageManip that will crop the frame before sending it to the Licence plate detection NN
+    lienseplate_det_manip = pipeline.create(dai.node.ImageManip)
+    lienseplate_det_manip.initialConfig.setResize(300, 300)
+
     # NeuralNetwork
     print("Creating License Plates Detection Neural Network...")
-    det_nn = pipeline.createMobileNetDetectionNetwork()
-    det_nn.setConfidenceThreshold(0.5)
-    det_nn.setBlobPath(str(blobconverter.from_zoo(name="vehicle-license-plate-detection-barrier-0106", shaves=4, version=openvino_version)))
-    det_nn.input.setQueueSize(1)
-    det_nn.input.setBlocking(False)
-    det_nn_xout = pipeline.createXLinkOut()
-    det_nn_xout.setStreamName("det_nn")
-    det_nn.out.link(det_nn_xout.input)
-    det_pass = pipeline.createXLinkOut()
-    det_pass.setStreamName("det_pass")
-    det_nn.passthrough.link(det_pass.input)
+    lic_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    lic_nn.setConfidenceThreshold(0.5)
+    lic_nn.setBlobPath(str(blobconverter.from_zoo(name="vehicle-license-plate-detection-barrier-0106", shaves=4, version=openvino_version)))
+    lic_nn.input.setQueueSize(1)
+    lic_nn.input.setBlocking(False)
+    lienseplate_det_manip.out.link(lic_nn.input)
 
-    if args.camera:
-        manip = pipeline.createImageManip()
-        manip.initialConfig.setResize(300, 300)
-        manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
-        cam.preview.link(manip.inputImage)
-        manip.out.link(det_nn.input)
-    else:
-        det_xin = pipeline.createXLinkIn()
-        det_xin.setStreamName("det_in")
-        det_xin.out.link(det_nn.input)
+    lic_nn_xout = pipeline.create(dai.node.XLinkOut)
+    lic_nn_xout.setStreamName("lic_nn_out")
+    lic_nn.out.link(lic_nn_xout.input)
+
+    # -----------------------------------
+    # Vehicle detection NN
+    # -----------------------------------
+    # ImageManip that will crop the frame before sending it to the Vehicle detection NN
+    vehicle_det_manip = pipeline.create(dai.node.ImageManip)
+    vehicle_det_manip.initialConfig.setResize(672, 384)
 
     # NeuralNetwork
     print("Creating Vehicle Detection Neural Network...")
-    veh_nn = pipeline.createMobileNetDetectionNetwork()
+    veh_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     veh_nn.setConfidenceThreshold(0.5)
     veh_nn.setBlobPath(str(blobconverter.from_zoo(name="vehicle-detection-adas-0002", shaves=4, version=openvino_version)))
     veh_nn.input.setQueueSize(1)
     veh_nn.input.setBlocking(False)
-    veh_nn_xout = pipeline.createXLinkOut()
-    veh_nn_xout.setStreamName("veh_nn")
+    vehicle_det_manip.out.link(veh_nn.input)
+
+    # Send vehicle detections to the host (for BBs)
+    veh_nn_xout = pipeline.create(dai.node.XLinkOut)
+    veh_nn_xout.setStreamName("veh_nn_out")
     veh_nn.out.link(veh_nn_xout.input)
-    veh_pass = pipeline.createXLinkOut()
-    veh_pass.setStreamName("veh_pass")
-    veh_nn.passthrough.link(veh_pass.input)
 
-    if args.camera:
-        cam.preview.link(veh_nn.input)
-    else:
-        veh_xin = pipeline.createXLinkIn()
-        veh_xin.setStreamName("veh_in")
-        veh_xin.out.link(veh_nn.input)
+    # -----------------------------------
+    # Script nodes
+    # -----------------------------------
+    with open('script.py', 'r') as file:
+        script_template = Template(file.read())
+    
+    script_lic = pipeline.create(dai.node.Script)
+    script_lic.setScript(script_template.substitute(
+        debug = 'node.warn("LIC] " + ' if SCRIPT_DEBUG else '#',
+        img_w = '94',
+        img_h = '24'
+    ))
+    lic_nn.out.link(script_lic.inputs['det_in'])
+    lic_nn.passthrough.link(script_lic.inputs['passthrough'])
 
-    rec_nn = pipeline.createNeuralNetwork()
+    script_veh = pipeline.create(dai.node.Script)
+    script_veh.setScript(script_template.substitute(
+        debug = 'node.warn("VEH] " + ' if SCRIPT_DEBUG else '#',
+        img_w = '72',
+        img_h = '72'
+    ))
+    veh_nn.out.link(script_veh.inputs['det_in'])
+    veh_nn.passthrough.link(script_veh.inputs['passthrough'])
+    # -----------------------------------
+    # Licence plate recognition NN
+    # -----------------------------------
+    lic_rec_manip = pipeline.create(dai.node.ImageManip)
+    lic_rec_manip.initialConfig.setResize(94, 24)
+    lic_rec_manip.setWaitForConfigInput(False)
+    script_lic.outputs['manip_cfg'].link(lic_rec_manip.inputConfig)
+    script_lic.outputs['manip_frame'].link(lic_rec_manip.inputImage)
+
+    rec_nn = pipeline.create(dai.node.NeuralNetwork)
     rec_nn.setBlobPath(str(blobconverter.from_zoo(name="license-plate-recognition-barrier-0007", shaves=4, version=openvino_version)))
-    rec_nn.input.setBlocking(False)
-    rec_nn.input.setQueueSize(1)
-    rec_xout = pipeline.createXLinkOut()
+    lic_rec_manip.out.link(rec_nn.input)
+
+    rec_xout = pipeline.create(dai.node.XLinkOut)
     rec_xout.setStreamName("rec_nn")
     rec_nn.out.link(rec_xout.input)
-    rec_pass = pipeline.createXLinkOut()
+
+    rec_pass = pipeline.create(dai.node.XLinkOut)
     rec_pass.setStreamName("rec_pass")
     rec_nn.passthrough.link(rec_pass.input)
-    rec_xin = pipeline.createXLinkIn()
-    rec_xin.setStreamName("rec_in")
-    rec_xin.out.link(rec_nn.input)
 
-    attr_nn = pipeline.createNeuralNetwork()
+    # -----------------------------------
+    # Vehicle attributes recognition NN
+    # -----------------------------------
+
+    veh_rec_manip = pipeline.create(dai.node.ImageManip)
+    veh_rec_manip.initialConfig.setResize(72, 72)
+    veh_rec_manip.setWaitForConfigInput(False)
+    script_veh.outputs['manip_cfg'].link(veh_rec_manip.inputConfig)
+    script_veh.outputs['manip_frame'].link(veh_rec_manip.inputImage)
+
+    attr_nn = pipeline.create(dai.node.NeuralNetwork)
     attr_nn.setBlobPath(str(blobconverter.from_zoo(name="vehicle-attributes-recognition-barrier-0039", shaves=4, version=openvino_version)))
-    attr_nn.input.setBlocking(False)
-    attr_nn.input.setQueueSize(1)
-    attr_xout = pipeline.createXLinkOut()
+    veh_rec_manip.out.link(attr_nn.input)
+
+    attr_xout = pipeline.create(dai.node.XLinkOut)
     attr_xout.setStreamName("attr_nn")
     attr_nn.out.link(attr_xout.input)
-    attr_pass = pipeline.createXLinkOut()
+
+    attr_pass = pipeline.create(dai.node.XLinkOut)
     attr_pass.setStreamName("attr_pass")
     attr_nn.passthrough.link(attr_pass.input)
-    attr_xin = pipeline.createXLinkIn()
-    attr_xin.setStreamName("attr_in")
-    attr_xin.out.link(attr_nn.input)
+
+    if args.camera:
+        cam.preview.link(lienseplate_det_manip.inputImage)
+        cam.preview.link(vehicle_det_manip.inputImage)
+        cam.preview.link(script_lic.inputs['frame_in'])
+        # cam.preview.link(script_veh.inputs['frame_in'])
+        vehicle_det_manip.out.link(script_veh.inputs['frame_in'])
+    else:
+        frame_xin = pipeline.create(dai.node.XLinkIn)
+        frame_xin.setStreamName("video_in")
+
+        frame_xin.out.link(lienseplate_det_manip.inputImage)
+        frame_xin.out.link(vehicle_det_manip.inputImage)
+        frame_xin.out.link(script_lic.inputs['frame_in'])
+        frame_xin.out.link(script_veh.inputs['frame_in'])
 
     print("Pipeline created.")
     return pipeline
@@ -178,10 +225,7 @@ license_detections = []
 vehicle_detections = []
 rec_results = []
 attr_results = []
-frame_det_seq = 0
-frame_seq_map = {}
-veh_last_seq = 0
-lic_last_seq = 0
+frame_det_seq = 0 # For video input
 
 if args.camera:
     fps = FPSHandler()
@@ -189,80 +233,14 @@ else:
     cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
     fps = FPSHandler(cap)
 
-
-def lic_thread(det_queue, det_pass, rec_queue):
-    global license_detections, lic_last_seq
-
-    while running:
-        try:
-            in_det = det_queue.get().detections
-            in_pass = det_pass.get()
-
-            orig_frame = frame_seq_map.get(in_pass.getSequenceNum(), None)
-            if orig_frame is None:
-                continue
-
-            license_detections = [detection for detection in in_det if detection.label == 2]
-
-            for detection in license_detections:
-                bbox = frame_norm(orig_frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-                cropped_frame = orig_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-
-                tstamp = time.monotonic()
-                img = dai.ImgFrame()
-                img.setTimestamp(tstamp)
-                img.setType(dai.RawImgFrame.Type.BGR888p)
-                img.setData(to_planar(cropped_frame, (94, 24)))
-                img.setWidth(94)
-                img.setHeight(24)
-                rec_queue.send(img)
-
-            fps.tick('lic')
-        except RuntimeError:
-            continue
-
-
-def veh_thread(det_queue, det_pass, attr_queue):
-    global vehicle_detections, veh_last_seq
-
-    while running:
-        try:
-            vehicle_detections = det_queue.get().detections
-            in_pass = det_pass.get()
-
-            orig_frame = frame_seq_map.get(in_pass.getSequenceNum(), None)
-            if orig_frame is None:
-                continue
-                
-            veh_last_seq = in_pass.getSequenceNum()
-
-            for detection in vehicle_detections:
-                bbox = frame_norm(orig_frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-                cropped_frame = orig_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-
-                tstamp = time.monotonic()
-                img = dai.ImgFrame()
-                img.setTimestamp(tstamp)
-                img.setType(dai.RawImgFrame.Type.BGR888p)
-                img.setData(to_planar(cropped_frame, (72, 72)))
-                img.setWidth(72)
-                img.setHeight(72)
-                attr_queue.send(img)
-
-            fps.tick('veh')
-        except RuntimeError:
-            continue
-
-
-items = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "<Anhui>", "<Beijing>", "<Chongqing>", "<Fujian>", "<Gansu>",
-         "<Guangdong>", "<Guangxi>", "<Guizhou>", "<Hainan>", "<Hebei>", "<Heilongjiang>", "<Henan>", "<HongKong>",
-         "<Hubei>", "<Hunan>", "<InnerMongolia>", "<Jiangsu>", "<Jiangxi>", "<Jilin>", "<Liaoning>", "<Macau>",
-         "<Ningxia>", "<Qinghai>", "<Shaanxi>", "<Shandong>", "<Shanghai>", "<Shanxi>", "<Sichuan>", "<Tianjin>",
-         "<Tibet>", "<Xinjiang>", "<Yunnan>", "<Zhejiang>", "<police>", "A", "B", "C", "D", "E", "F", "G", "H", "I",
-         "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
-
-
 def rec_thread(q_rec, q_pass):
+    items = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "<Anhui>", "<Beijing>", "<Chongqing>", "<Fujian>", "<Gansu>",
+            "<Guangdong>", "<Guangxi>", "<Guizhou>", "<Hainan>", "<Hebei>", "<Heilongjiang>", "<Henan>", "<HongKong>",
+            "<Hubei>", "<Hunan>", "<InnerMongolia>", "<Jiangsu>", "<Jiangxi>", "<Jilin>", "<Liaoning>", "<Macau>",
+            "<Ningxia>", "<Qinghai>", "<Shaanxi>", "<Shandong>", "<Shanghai>", "<Shanxi>", "<Sichuan>", "<Tianjin>",
+            "<Tibet>", "<Xinjiang>", "<Yunnan>", "<Zhejiang>", "<police>", "A", "B", "C", "D", "E", "F", "G", "H", "I",
+            "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+
     global rec_results
 
     while running:
@@ -279,7 +257,6 @@ def rec_thread(q_rec, q_pass):
             decoded_text += items[int(idx)]
         rec_results = [(cv2.resize(rec_frame, (200, 64)), decoded_text)] + rec_results[:9]
         fps.tick_fps('rec')
-
 
 def attr_thread(q_attr, q_pass):
     global attr_results
@@ -306,29 +283,24 @@ def attr_thread(q_attr, q_pass):
 
         fps.tick_fps('attr')
 
-
 print("Starting pipeline...")
 with dai.Device(create_pipeline()) as device:
+    device.setLogLevel(dai.LogLevel.WARN)
+    device.setLogOutputLevel(dai.LogLevel.WARN)
+
     if args.camera:
         cam_out = device.getOutputQueue("cam_out", 1, True)
     else:
-        det_in = device.getInputQueue("det_in")
-        veh_in = device.getInputQueue("veh_in")
-    rec_in = device.getInputQueue("rec_in")
-    attr_in = device.getInputQueue("attr_in")
-    det_nn = device.getOutputQueue("det_nn", 1, False)
-    det_pass = device.getOutputQueue("det_pass", 1, False)
-    veh_nn = device.getOutputQueue("veh_nn", 1, False)
-    veh_pass = device.getOutputQueue("veh_pass", 1, False)
+        video_in = device.getInputQueue("video_in")
+
+    lic_nn_q = device.getOutputQueue("lic_nn_out", 1, False)
+    veh_nn_q = device.getOutputQueue("veh_nn_out", 1, False)
+
     rec_nn = device.getOutputQueue("rec_nn", 1, False)
     rec_pass = device.getOutputQueue("rec_pass", 1, False)
     attr_nn = device.getOutputQueue("attr_nn", 1, False)
     attr_pass = device.getOutputQueue("attr_pass", 1, False)
 
-    det_t = threading.Thread(target=lic_thread, args=(det_nn, det_pass, rec_in))
-    det_t.start()
-    veh_t = threading.Thread(target=veh_thread, args=(veh_nn, veh_pass, attr_in))
-    veh_t.start()
     rec_t = threading.Thread(target=rec_thread, args=(rec_nn, rec_pass))
     rec_t.start()
     attr_t = threading.Thread(target=attr_thread, args=(attr_nn, attr_pass))
@@ -338,23 +310,16 @@ with dai.Device(create_pipeline()) as device:
     def should_run():
         return cap.isOpened() if args.video else True
 
-
     def get_frame():
-        global frame_det_seq
-
         if args.video:
-            read_correctly, frame = cap.read()
-            if read_correctly:
-                frame_seq_map[frame_det_seq] = frame
-                frame_det_seq += 1
-            return read_correctly, frame
+            return cap.read()
         else:
-            in_rgb = cam_out.get()
-            frame = in_rgb.getCvFrame()
-            frame_seq_map[in_rgb.getSequenceNum()] = frame
+            return True, cam_out.get().getCvFrame()
 
-            return True, frame
-
+    def draw_rect(frame, detections, color):
+        for detection in detections:
+            bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+            frame = cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
 
     try:
         while should_run():
@@ -362,36 +327,35 @@ with dai.Device(create_pipeline()) as device:
 
             if not read_correctly:
                 break
-                
-            for map_key in list(filter(lambda item: item <= min(lic_last_seq, veh_last_seq), frame_seq_map.keys())):
-                del frame_seq_map[map_key]
 
             fps.next_iter()
 
             if not args.camera:
-                tstamp = time.monotonic()
-                lic_frame = dai.ImgFrame()
-                lic_frame.setData(to_planar(frame, (300, 300)))
-                lic_frame.setTimestamp(tstamp)
-                lic_frame.setSequenceNum(frame_det_seq)
-                lic_frame.setType(dai.RawImgFrame.Type.BGR888p)
-                lic_frame.setWidth(300)
-                lic_frame.setHeight(300)
-                det_in.send(lic_frame)
-                veh_frame = dai.ImgFrame()
-                veh_frame.setData(to_planar(frame, (300, 300)))
-                veh_frame.setTimestamp(tstamp)
-                veh_frame.setSequenceNum(frame_det_seq)
-                veh_frame.setType(dai.RawImgFrame.Type.BGR888p)
-                veh_frame.setWidth(300)
-                veh_frame.setHeight(300)
-                veh_frame.setData(to_planar(frame, (672, 384)))
-                veh_frame.setWidth(672)
-                veh_frame.setHeight(384)
-                veh_in.send(veh_frame)
+                frame = crop_to_square(frame)
+                imgFrame = dai.ImgFrame()
+                imgFrame.setData(to_planar(frame))
+                imgFrame.setSequenceNum(frame_det_seq)
+                imgFrame.setType(dai.RawImgFrame.Type.BGR888p)
+                h, w, c = frame.shape
+                imgFrame.setWidth(w)
+                imgFrame.setHeight(h)
+                video_in.send(imgFrame)
+                frame_det_seq += 1
 
+            lic_in = lic_nn_q.tryGet()
+            veh_in = veh_nn_q.tryGet()
+            
             if debug:
                 debug_frame = frame.copy()
+
+                if veh_in is not None:
+                    fps.tick_fps('veh')
+                    draw_rect(debug_frame, veh_in.detections, (200,20,20))
+
+                if lic_in is not None:
+                    fps.tick_fps('lic')
+                    draw_rect(debug_frame, lic_in.detections, (10,200,200))
+
                 for detection in license_detections + vehicle_detections:
                     bbox = frame_norm(debug_frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
                     cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
@@ -440,8 +404,7 @@ with dai.Device(create_pipeline()) as device:
                 if attr_stacked is not None:
                     cv2.imshow("Attributes", attr_stacked)
 
-            key = cv2.waitKey(1)
-            if key == ord('q'):
+            if cv2.waitKey(1) == ord('q'):
                 break
 
     except KeyboardInterrupt:
@@ -449,10 +412,8 @@ with dai.Device(create_pipeline()) as device:
 
     running = False
 
-det_t.join()
 rec_t.join()
 attr_t.join()
-veh_t.join()
 print("FPS: {:.2f}".format(fps.fps()))
 if not args.camera:
     cap.release()
