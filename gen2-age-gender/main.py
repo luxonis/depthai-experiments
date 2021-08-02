@@ -24,7 +24,7 @@ def frame_norm(frame, bbox):
     normVals[::2] = frame.shape[1]
     return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
-def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
+def to_planar(arr, shape = None):
     if shape is not None: arr = cv2.resize(arr, shape)
     return arr.transpose(2, 0, 1).flatten()
 
