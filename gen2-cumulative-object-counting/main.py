@@ -1,3 +1,4 @@
+import blobconverter
 import cv2
 import argparse
 import numpy as np
@@ -7,8 +8,7 @@ import depthai as dai
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-m', '--model', type=str,
-                    default='models/mobilenet-ssd.blob', help='File path of .blob file.')
+parser.add_argument('-m', '--model', type=str, help='File path of .blob file.')
 parser.add_argument('-v', '--video_path', type=str, default='',
                     help='Path to video. If empty OAK-RGB camera is used. (default=\'\')')
 parser.add_argument('-roi', '--roi_position', type=float,
@@ -22,6 +22,9 @@ parser.add_argument('-sp', '--save_path', type=str, default='',
 parser.add_argument('-s', '--sync', action="store_true",
                     help="Sync RGB output with NN output", default=False)
 args = parser.parse_args()
+
+if args.model is None:
+    args.model = str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=7))
 
 # Create pipeline
 pipeline = dai.Pipeline()
@@ -196,7 +199,7 @@ with dai.Device(pipeline) as device:
                     # If new tracklet, save its centroid
                     if t.status == dai.Tracklet.TrackingStatus.NEW:
                         to = TrackableObject(t.id, centroid)
-                    else:
+                    elif to is not None:
                         if args.axis and not to.counted:
                             x = [c[0] for c in to.centroids]
                             direction = centroid[0] - np.mean(x)

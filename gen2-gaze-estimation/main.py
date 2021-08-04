@@ -93,6 +93,7 @@ def padded_point(point, padding, frame_shape=None):
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = depthai.Pipeline()
+    pipeline.setOpenVINOVersion(depthai.OpenVINO.VERSION_2020_1)
 
     if camera:
         print("Creating Color Camera...")
@@ -110,7 +111,7 @@ def create_pipeline():
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
     face_nn = pipeline.createNeuralNetwork()
-    face_nn.setBlobPath(str(Path("models/face-detection-retail-0004/face-detection-retail-0004_openvino_2021.2_4shave.blob").resolve().absolute()))
+    face_nn.setBlobPath(str(Path("models/face-detection-retail-0004/face-detection-retail-0004_openvino_2020.1_4shave.blob").resolve().absolute()))
 
     if camera:
         cam.preview.link(face_nn.input)
@@ -127,7 +128,7 @@ def create_pipeline():
     print("Creating Landmarks Detection Neural Network...")
     land_nn = pipeline.createNeuralNetwork()
     land_nn.setBlobPath(
-        str(Path("models/landmarks-regression-retail-0009/landmarks-regression-retail-0009_openvino_2021.2_4shave.blob").resolve().absolute())
+        str(Path("models/landmarks-regression-retail-0009/landmarks-regression-retail-0009_openvino_2020.1_4shave.blob").resolve().absolute())
     )
     land_nn_xin = pipeline.createXLinkIn()
     land_nn_xin.setStreamName("landmark_in")
@@ -140,7 +141,7 @@ def create_pipeline():
     print("Creating Head Pose Neural Network...")
     pose_nn = pipeline.createNeuralNetwork()
     pose_nn.setBlobPath(
-        str(Path("models/head-pose-estimation-adas-0001/head-pose-estimation-adas-0001_openvino_2021.2_4shave.blob").resolve().absolute())
+        str(Path("models/head-pose-estimation-adas-0001/head-pose-estimation-adas-0001_openvino_2020.1_4shave.blob").resolve().absolute())
     )
     pose_nn_xin = pipeline.createXLinkIn()
     pose_nn_xin.setStreamName("pose_in")
@@ -153,7 +154,7 @@ def create_pipeline():
     print("Creating Gaze Estimation Neural Network...")
     gaze_nn = pipeline.createNeuralNetwork()
     gaze_nn.setBlobPath(
-        str(Path("models/gaze-estimation-adas-0002/gaze-estimation-adas-0002_openvino_2021.2_4shave.blob").resolve().absolute())
+        str(Path("models/gaze-estimation-adas-0002/gaze-estimation-adas-0002_openvino_2020.1_4shave.blob").resolve().absolute())
     )
     gaze_nn_xin = pipeline.createXLinkIn()
     gaze_nn_xin.setStreamName("gaze_in")

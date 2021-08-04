@@ -92,8 +92,7 @@ class PairingSystem:
 
 
 # Pipeline defined, now the device is assigned and pipeline is started
-with dai.Device() as device:
-    device.startPipeline(pipeline)
+with dai.Device(pipeline) as device:
     tstart = time.monotonic()  # applied as an offset
 
     saveidx = 0

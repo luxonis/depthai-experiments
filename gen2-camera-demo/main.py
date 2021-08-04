@@ -33,7 +33,7 @@ out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
 lrcheck  = True   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled
-subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
+subpixel = False   # Better accuracy for longer distance, fractional disparity 32-levels
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7
 median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 
@@ -141,11 +141,9 @@ def create_stereo_depth_pipeline(from_camera=True):
         cam_left .setStreamName('in_left')
         cam_right.setStreamName('in_right')
 
-    stereo.setOutputDepth(out_depth)
-    stereo.setOutputRectified(out_rectified)
-    stereo.setConfidenceThreshold(200)
+    stereo.initialConfig.setConfidenceThreshold(200)
     stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
-    stereo.setMedianFilter(median) # KERNEL_7x7 default
+    stereo.initialConfig.setMedianFilter(median) # KERNEL_7x7 default
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)
@@ -242,9 +240,9 @@ def test_pipeline():
     pipeline, streams = create_stereo_depth_pipeline(source_camera)
 
     print("Creating DepthAI device")
-    with dai.Device(pipeline) as device:
+    with dai.Device() as device:
         print("Starting pipeline")
-        device.startPipeline()
+        device.startPipeline(pipeline)
 
         in_streams = []
         if not source_camera:

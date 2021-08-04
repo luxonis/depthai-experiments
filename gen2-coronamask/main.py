@@ -106,9 +106,6 @@ else:
 
 # Pipeline defined, now the device is connected to
 with dai.Device(create_pipeline()) as device:
-    # Start pipeline
-    device.startPipeline()
-
     if args.camera:
         qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     else:

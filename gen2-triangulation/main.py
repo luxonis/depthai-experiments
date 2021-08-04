@@ -1,5 +1,7 @@
 # import math
 from pathlib import Path
+
+import blobconverter
 import numpy as np
 import math
 from visualizer import initialize_OpenGL, get_vector_direction, get_vector_intersection, start_OpenGL
@@ -27,7 +29,7 @@ def populatePipeline(p, name):
 
     # NN that detects faces in the image
     face_nn = p.create(dai.node.NeuralNetwork)
-    face_nn.setBlobPath(str(Path("models/face-detection-retail-0004_2021.3_6shaves.blob").resolve().absolute()))
+    face_nn.setBlobPath(str(blobconverter.from_zoo("face-detection-retail-0004", shaves=6)))
     face_manip.out.link(face_nn.input)
 
     # Send mono frames to the host via XLink
@@ -79,7 +81,7 @@ while True:
 
     # Second NN that detcts landmarks from the cropped 48x48 face
     landmarks_nn = p.createNeuralNetwork()
-    landmarks_nn.setBlobPath(str(Path("models/landmarks-regression-retail-0009_2021.3_6shaves.blob").resolve().absolute()))
+    landmarks_nn.setBlobPath(str(blobconverter.from_zoo("landmarks-regression-retail-0009", shaves=6)))
     manip_crop.out.link(landmarks_nn.input)
 
     landmarks_nn_xout = p.createXLinkOut()

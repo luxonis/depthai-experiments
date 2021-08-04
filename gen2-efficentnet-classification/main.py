@@ -2,6 +2,8 @@
 import argparse
 from pathlib import Path
 import sys
+
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
@@ -35,7 +37,7 @@ pipeline = dai.Pipeline()
 # NeuralNetwork
 print("Creating Neural Network...")
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str(Path("efficientnet-b0_openvino_2021.3_6shave.blob").resolve().absolute()))
+detection_nn.setBlobPath(str(blobconverter.from_zoo(name="efficientnet-b0")))
 
 if camera:
     print("Creating Color Camera...")
