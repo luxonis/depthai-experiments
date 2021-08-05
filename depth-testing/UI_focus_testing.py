@@ -148,10 +148,13 @@ while True:
         if len(marker_corners) < 20:
             print("Board not detected. Waiting...!!!")
             trig_count += 1
+            rgb_count += 1
             if trig_count > 31:
                 trig_count = 0
                 rgb_control_queue.send(ctrl)
                 time.sleep(1)
+            if rgb_count > max_count:
+                break
             continue
 
         dst_rgb = cv2.Laplacian(recent_color, cv2.CV_64F)
