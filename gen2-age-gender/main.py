@@ -86,6 +86,8 @@ l = [] # List of images
 # For this experiment this function is redundant, since everything
 # runs in blocking mode, so no frames will get lost
 def remove_prev_frame(seq):
+    if len(l) == 0:
+        return
     for rm, frame in enumerate(l):
         if frame.getSequenceNum() == seq:
             # node.warn(f"List len {len(l)} Frame with same seq num: {rm},seq {seq}")
