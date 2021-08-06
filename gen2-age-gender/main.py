@@ -86,8 +86,6 @@ l = [] # List of images
 # For this experiment this function is redundant, since everything
 # runs in blocking mode, so no frames will get lost
 def remove_prev_frame(seq):
-    if len(l) == 0:
-        return
     for rm, frame in enumerate(l):
         if frame.getSequenceNum() == seq:
             # node.warn(f"List len {len(l)} Frame with same seq num: {rm},seq {seq}")
@@ -107,6 +105,8 @@ while True:
         passthrough = node.io['passthrough'].get()
         seq = passthrough.getSequenceNum()
         # node.warn(f"New detection {seq}")
+        if len(l) == 0:
+            continue
         remove_prev_frame(seq)
         img = l[0] # Matching frame is the first in the list
         l.pop(0) # Remove matching frame from the list
