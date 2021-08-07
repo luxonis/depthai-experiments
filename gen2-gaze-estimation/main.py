@@ -28,27 +28,34 @@ elif args.camera is False and args.video is None:
 
 
 def draw_3d_axis(image, head_pose, origin, size=50):
-    roll = head_pose[0] * np.pi / 180
-    pitch = head_pose[1] * np.pi / 180
-    yaw = -(head_pose[2] * np.pi / 180)
+    # From https://github.com/openvinotoolkit/open_model_zoo/blob/b1ff98b64a6222cf6b5f3838dc0271422250de95/demos/gaze_estimation_demo/cpp/src/results_marker.cpp#L50
+    
+    origin_x,origin_y = origin
+    yaw,pitch, roll = np.array(head_pose)*np.pi / 180
 
+    sinY = sin(yaw )
+    sinP = sin(pitch )
+    sinR = sin(roll )
+
+    cosY = cos(yaw )
+    cosP = cos(pitch )
+    cosR = cos(roll )
     # X axis (red)
-    x1 = size * (cos(yaw) * cos(roll)) + origin[0]
-    y1 = size * (cos(pitch) * sin(roll) + cos(roll) * sin(pitch) * sin(yaw)) + origin[1]
-    cv2.line(image, (origin[0], origin[1]), (int(x1), int(y1)), (0, 0, 255), 3)
+    x1 = origin_x + size * (cosR * cosY + sinY * sinP * sinR)
+    y1 = origin_y + size * cosP * sinR
+    cv2.line(image, (origin_x, origin_y), (int(x1), int(y1)), (0, 0, 255), 3)
 
     # Y axis (green)
-    x2 = size * (-cos(yaw) * sin(roll)) + origin[0]
-    y2 = size * (-cos(pitch) * cos(roll) - sin(pitch) * sin(yaw) * sin(roll)) + origin[1]
-    cv2.line(image, (origin[0], origin[1]), (int(x2), int(y2)), (0, 255, 0), 3)
+    x2 = origin_x + size * (cosR * sinY * sinP + cosY * sinR)
+    y2 = origin_y - size * cosP * cosR
+    cv2.line(image, (origin_x, origin_y), (int(x2), int(y2)), (0, 255, 0), 3)
 
     # Z axis (blue)
-    x3 = size * (-sin(yaw)) + origin[0]
-    y3 = size * (cos(yaw) * sin(pitch)) + origin[1]
-    cv2.line(image, (origin[0], origin[1]), (int(x3), int(y3)), (255, 0, 0), 2)
+    x3 = origin_x + size * (sinY * cosP)
+    y3 = origin_y + size * sinP
+    cv2.line(image, (origin_x, origin_y), (int(x3), int(y3)), (255, 0, 0), 2)
 
     return image
-
 
 def frame_norm(frame, bbox):
     norm_vals = np.full(len(bbox), frame.shape[0])
@@ -259,7 +266,16 @@ class Main:
             right_img = self.frame[self.right_bbox[1]:self.right_bbox[3], self.right_bbox[0]:self.right_bbox[2]]
 
             try:
-                self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
+                # The output of  pose_nn is in YPR  format, which is the required sequence input for pose in  gaze
+                # https://docs.openvinotoolkit.org/2020.1/_models_intel_head_pose_estimation_adas_0001_description_head_pose_estimation_adas_0001.html
+                # https://docs.openvinotoolkit.org/latest/omz_models_model_gaze_estimation_adas_0002.html
+                # ... three head pose angles – (yaw, pitch, and roll) ...
+                values = to_tensor_result(pose_nn.get())
+                self.pose = [
+                        values['angle_y_fc'][0][0],
+                        values['angle_p_fc'][0][0],
+                        values['angle_r_fc'][0][0]
+                        ]
             except RuntimeError as ex:
                 continue
 
