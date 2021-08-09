@@ -24,7 +24,7 @@ def frame_norm(frame, bbox):
     normVals[::2] = frame.shape[1]
     return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
-def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
+def to_planar(arr, shape = None):
     if shape is not None: arr = cv2.resize(arr, shape)
     return arr.transpose(2, 0, 1).flatten()
 
@@ -74,36 +74,68 @@ def create_pipeline():
     # Script node will take the output from the face detection NN as an input and set ImageManipConfig
     # to the 'age_gender_manip' to crop the initial frame
     image_manip_script = pipeline.create(dai.node.Script)
-    image_manip_script.inputs['face_det_in'].setBlocking(False)
-    image_manip_script.inputs['face_det_in'].setQueueSize(4)
     face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
+
+    # Only send metadata, we are only interested in timestamp, so we can sync
+    # depth frames with NN output
+    face_det_nn.passthrough.link(image_manip_script.inputs['passthrough'])
+
     image_manip_script.setScript("""
+l = [] # List of images
+# So the correct frame will be the first in the list
+# For this experiment this function is redundant, since everything
+# runs in blocking mode, so no frames will get lost
+def remove_prev_frame(seq):
+    for rm, frame in enumerate(l):
+        if frame.getSequenceNum() == seq:
+            # node.warn(f"List len {len(l)} Frame with same seq num: {rm},seq {seq}")
+            break
+    for i in range(rm):
+        l.pop(0)
+
 while True:
-    face_dets = node.io['face_det_in'].get().detections
+    preview = node.io['preview'].tryGet()
+    if preview is not None:
+        # node.warn(f"New frame {preview.getSequenceNum()}")
+        l.append(preview)
+
+    face_dets = node.io['face_det_in'].tryGet()
     # node.warn(f"Faces detected: {len(face_dets)}")
-    for det in face_dets:
-        cfg = ImageManipConfig()
-        cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
-        cfg.setResize(62, 62)
-        cfg.setKeepAspectRatio(False)
-        node.io['to_manip'].send(cfg)
+    if face_dets is not None:
+        passthrough = node.io['passthrough'].get()
+        seq = passthrough.getSequenceNum()
+        # node.warn(f"New detection {seq}")
+        if len(l) == 0:
+            continue
+        remove_prev_frame(seq)
+        img = l[0] # Matching frame is the first in the list
+        l.pop(0) # Remove matching frame from the list
+
+        for det in face_dets.detections:
+            cfg = ImageManipConfig()
+            cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
+            cfg.setResize(62, 62)
+            cfg.setKeepAspectRatio(False)
+            node.io['manip_img'].send(img)
+            node.io['manip_cfg'].send(cfg)
 """)
 
     age_gender_manip = pipeline.create(dai.node.ImageManip)
     age_gender_manip.initialConfig.setResize(62, 62)
     age_gender_manip.setWaitForConfigInput(False)
-    image_manip_script.outputs['to_manip'].link(age_gender_manip.inputConfig)
+    image_manip_script.outputs['manip_cfg'].link(age_gender_manip.inputConfig)
+    image_manip_script.outputs['manip_img'].link(age_gender_manip.inputImage)
 
     if args.camera:
         # Use 1080x1080 full image for both NNs
         cam.preview.link(face_det_manip.inputImage)
-        cam.preview.link(age_gender_manip.inputImage)
+        cam.preview.link(image_manip_script.inputs['preview'])
     else:
         detection_in = pipeline.create(dai.node.XLinkIn)
         detection_in.setStreamName("detection_in")
 
         detection_in.out.link(face_det_manip.inputImage)
-        detection_in.out.link(age_gender_manip.inputImage)
+        detection_in.out.link(image_manip_script.inputs['preview'])
 
     face_cropped_xout = pipeline.create(dai.node.XLinkOut)
     face_cropped_xout.setStreamName("face_cropped")
