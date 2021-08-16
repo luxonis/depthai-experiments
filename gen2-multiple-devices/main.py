@@ -23,7 +23,13 @@ q_rgb_list = []
 
 # https://docs.python.org/3/library/contextlib.html#contextlib.ExitStack
 with contextlib.ExitStack() as stack:
-    for device_info in dai.Device.getAllAvailableDevices():
+    device_infos = dai.Device.getAllAvailableDevices()
+    if len(device_infos) == 0:
+        raise RuntimeError("No devices found!")
+    else:
+        print("Found", len(device_infos), "devices")
+
+    for device_info in device_infos:
         device = stack.enter_context(dai.Device(pipeline, device_info))
         print("Conected to " + device_info.getMxId())
         # Output queue will be used to get the rgb frames from the output defined above
