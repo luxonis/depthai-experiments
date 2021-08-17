@@ -1,6 +1,6 @@
 [英文文档](README.md)
 
-# RSTP 流
+# Gen2 RSTP 流
 
 此示例使您可以通过RTSP流式传输帧
 

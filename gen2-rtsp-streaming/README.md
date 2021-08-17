@@ -1,6 +1,6 @@
 [中文文档](README.zh-CN.md)
 
-# RTSP Streaming
+# Gen2 RTSP Streaming
 
 This example allows you to stream frames via RTSP
 
