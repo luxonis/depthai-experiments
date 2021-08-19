@@ -132,11 +132,10 @@ with dai.Device(pipeline) as device:
         found_classes = np.unique(lay1)
         output_colors = decode_deeplabv3p(lay1)
 
-        if frame is not None:
-            frame = show_deeplabv3p(output_colors, frame)
-            cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
-            cv2.putText(frame, "Found classes {}".format(found_classes), (2, 10), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
-            cv2.imshow("nn_input", frame)
+        frame = show_deeplabv3p(output_colors, frame)
+        cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
+        cv2.putText(frame, "Found classes {}".format(found_classes), (2, 10), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
+        cv2.imshow("nn_input", frame)
 
         counter+=1
         if (time.time() - start_time) > 1 :
