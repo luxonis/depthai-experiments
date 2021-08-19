@@ -37,8 +37,6 @@ cam_source = args.cam_input
 nn_path = args.nn_model 
 
 nn_shape = 256
-if '513' in nn_path:
-    nn_shape = 513
 
 def decode_deeplabv3p(output_tensor):
     output = output_tensor.reshape(nn_shape,nn_shape)
@@ -125,10 +123,8 @@ with dai.Device(pipeline) as device:
         in_nn = q_nn.get()
 
         if in_nn_input is not None:
-            # if the data from the rgb camera is available, transform the 1D data into a HxWxC frame
-            shape = (3, in_nn_input.getHeight(), in_nn_input.getWidth())
-            frame = in_nn_input.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
-            frame = np.ascontiguousarray(frame)
+            frame = in_nn_input.getCvFrame()
+
 
         if in_nn is not None:
             # print("NN received")
