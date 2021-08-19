@@ -1,8 +1,8 @@
-## [Gen2] Deeplabv3 on DepthAI - depth cropping
+## [Gen2] Road Segmentation on DepthAI
 
-This example shows how to run Deeplabv3+ on DepthAI in the Gen2 API and crop the depth image based on the models output.
+This example shows how to run `road-segmentation-adas-0001` on DepthAI in the Gen2 API.
 
-[![Semantic Segmentation on DepthAI](https://user-images.githubusercontent.com/18037362/120244995-bdfda680-c263-11eb-9832-3f70219060a9.gif)](https://www.youtube.com/watch?v=M1LTqGy-De4 "Deeplabv3")
+![Road Segmentation on DepthAI](https://user-images.githubusercontent.com/5244214/130064359-b9534b08-0783-4c86-979b-08cbcaff9341.gif)
 
 ## Pre-requisites
 
@@ -14,7 +14,8 @@ python3 -m pip install -r requirements.txt
 ## Usage
 
 ```
-python3 main.py [-nn {path}]
+python3 main.py
 ```
 
-You can use a different model from the `gen2-deeplabv3_person` folder (`mvn3` or `513x513` input)
+This will download the road segmentation model from OpenVINO Model Zoo and perform the inference on RGB camera, together
+with depth output
