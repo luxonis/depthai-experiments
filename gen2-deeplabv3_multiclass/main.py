@@ -122,25 +122,21 @@ with dai.Device(pipeline) as device:
         in_nn_input = q_nn_input.get()
         in_nn = q_nn.get()
 
-        if in_nn_input is not None:
-            frame = in_nn_input.getCvFrame()
+        frame = in_nn_input.getCvFrame()
 
+        layers = in_nn.getAllLayers()
 
-        if in_nn is not None:
-            # print("NN received")
-            layers = in_nn.getAllLayers()
+        # get layer1 data
+        lay1 = np.array(in_nn.getFirstLayerInt32()).reshape(nn_shape,nn_shape)
 
-            # get layer1 data
-            lay1 = np.array(in_nn.getFirstLayerInt32()).reshape(nn_shape,nn_shape)
+        found_classes = np.unique(lay1)
+        output_colors = decode_deeplabv3p(lay1)
 
-            found_classes = np.unique(lay1)
-            output_colors = decode_deeplabv3p(lay1)
-
-            if frame is not None:
-                frame = show_deeplabv3p(output_colors, frame)
-                cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
-                cv2.putText(frame, "Found classes {}".format(found_classes), (2, 10), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
-                cv2.imshow("nn_input", frame)
+        if frame is not None:
+            frame = show_deeplabv3p(output_colors, frame)
+            cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
+            cv2.putText(frame, "Found classes {}".format(found_classes), (2, 10), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
+            cv2.imshow("nn_input", frame)
 
         counter+=1
         if (time.time() - start_time) > 1 :
