@@ -23,6 +23,8 @@ See the example in action detecting monitor and a person:
    python3 -m pip install -r requirements.txt
    ```
 
+This repository also contains a *.blob* that was created with OpenVINO 2020.2. If you wish to run the older version, you have to install ```depthai==2.7.0.0``` instead of the ```2.9.0.0``` version in *requirements.txt*. By default, the *.blob* created with OpenVINO 2021.4 will be run.
+
 ## Usage
 
 ```
@@ -32,4 +34,4 @@ python3 main.py [options]
 Options:
 
 * -cam, --cam_input: Select camera input source for inference. Available options: left, right, rgb (default).
-* -nn, --nn_model: Select model path for inference. Default: *models/deeplab_v3_plus_mnv2_decoder_256_openvino_2020.2.blob*
+* -nn, --nn_model: Select model path for inference. Default: *models/deeplab_v3_plus_mnv2_decoder_256_openvino_2021.4.blob*

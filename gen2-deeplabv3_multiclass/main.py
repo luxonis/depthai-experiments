@@ -21,7 +21,6 @@ https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks
 
 You can clone the DeepLabV3plus_MNV2.ipynb notebook and try training the model yourself.
 
-DepthAI 2.7.0.0 is required, as the used OpenVINO version is 2020.2, which is deprecated in later releases.
 '''
 
 num_of_classes = 21 # define the number of classes in the dataset
@@ -29,7 +28,7 @@ cam_options = ['rgb', 'left', 'right']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-cam", "--cam_input", help="select camera input source for inference", default='rgb', choices=cam_options)
-parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/deeplab_v3_plus_mnv2_decoder_256_openvino_2020.2.blob', type=str)
+parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/deeplab_v3_plus_mnv2_decoder_256_openvino_2021.4.blob', type=str)
 
 args = parser.parse_args()
 
@@ -59,7 +58,7 @@ def show_deeplabv3p(output_colors, frame):
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
-pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_2)
+pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_3)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
