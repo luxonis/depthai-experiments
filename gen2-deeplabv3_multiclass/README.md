@@ -23,8 +23,6 @@ See the example in action detecting monitor and a person:
    python3 -m pip install -r requirements.txt
    ```
 
-This repository also contains a *.blob* that was created with OpenVINO 2020.2. If you wish to run the older version, you have to install ```depthai==2.7.0.0``` instead of the ```2.9.0.0``` version in *requirements.txt*. By default, the *.blob* created with OpenVINO 2021.4 will be run.
-
 ## Usage
 
 ```
