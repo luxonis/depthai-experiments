@@ -22,14 +22,6 @@ def draw(data, frame):
     cv2.addWeighted(frame, 1, cv2.resize(data, frame.shape[:2][::-1]), 0.2, 0, frame)
 
 
-def dispay_colored_depth(frame, name):
-    frame_colored = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-    frame_colored = cv2.equalizeHist(frame_colored)
-    frame_colored = cv2.applyColorMap(frame_colored, cv2.COLORMAP_HOT)
-    cv2.imshow(name, frame_colored)
-    return frame_colored
-
-
 class FPSHandler:
     def __init__(self):
         self.timestamp = time.time()
@@ -72,7 +64,7 @@ cam.setInterleaved(False)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str(blobconverter.from_zoo(name='road-segmentation-adas-0001')))
+detection_nn.setBlobPath(str(blobconverter.from_zoo(name='road-segmentation-adas-0001', shaves=6)))
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 cam.preview.link(detection_nn.input)
@@ -86,34 +78,10 @@ cam_xout = pipeline.createXLinkOut()
 cam_xout.setStreamName("cam")
 detection_nn.passthrough.link(cam_xout.input)
 
-# Left mono camera
-left = pipeline.createMonoCamera()
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-# Right mono camera
-right = pipeline.createMonoCamera()
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-
-# Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
-stereo = pipeline.createStereoDepth()
-stereo.initialConfig.setConfidenceThreshold(245)
-stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-stereo.setLeftRightCheck(True)
-stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-left.out.link(stereo.left)
-right.out.link(stereo.right)
-
-# Create depth output
-xout_depth = pipeline.createXLinkOut()
-xout_depth.setStreamName("depth")
-stereo.depth.link(xout_depth.input)
-
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pipeline) as device:
     # Output queues will be used to get the outputs from the device
     q_color = device.getOutputQueue(name="cam", maxSize=4, blocking=False)
-    q_depth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
     fps = FPSHandler()
@@ -123,15 +91,11 @@ with dai.Device(pipeline) as device:
 
     while True:
         in_color = q_color.tryGet()
-        in_depth = q_depth.tryGet()
 
         if in_color is not None:
             fps.next_iter()
             frame = in_color.getCvFrame()
             road_decoded = decode(q_nn.get())
-
-        if in_depth is not None:
-            depth_frame = in_depth.getFrame()
 
         if frame is not None:
             show_frame = frame.copy()
@@ -141,10 +105,6 @@ with dai.Device(pipeline) as device:
             cv2.putText(show_frame, "Fps: {:.2f}".format(fps.fps()), (2, show_frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX,
                         0.4, color=(255, 255, 255))
             cv2.imshow("weighted", show_frame)
-
-        if depth_frame is not None:
-            colored_depth_frame = dispay_colored_depth(depth_frame, "depth")
-            cv2.imshow("depth", colored_depth_frame)
 
         if cv2.waitKey(1) == ord('q'):
             break
