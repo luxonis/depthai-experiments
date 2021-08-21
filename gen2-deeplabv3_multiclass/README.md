@@ -32,4 +32,4 @@ python3 main.py [options]
 Options:
 
 * -cam, --cam_input: Select camera input source for inference. Available options: left, right, rgb (default).
-* -nn, --nn_model: Select model path for inference. Default: *models/deeplab_v3_plus_mnv2_decoder_256_openvino_2020.2.blob*
+* -nn, --nn_model: Select model path for inference. Default: *models/deeplab_v3_plus_mnv2_decoder_256_openvino_2021.4.blob*
