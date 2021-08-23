@@ -173,7 +173,7 @@ extract_frame = {
     "disparity": lambda item: cv2.applyColorMap(item.getFrame(), cv2.COLORMAP_JET),
 }
 
-frame_q = Queue()
+frame_q = Queue(50)
 
 
 def store_frames(in_q):
