@@ -89,8 +89,11 @@ disp_levels = 96
 fov = 71.86
 
 # Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device:
-
+with dai.Device() as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+    if not depth_enabled:
+        raise RuntimeError("Unable to run this experiment on device without depth capabilities! (Available cameras: {})".format(cams))
     # Output queues will be used to get the grayscale / depth frames and nn data from the outputs defined above
     qRight = device.getOutputQueue("rectifiedRight", maxSize=4, blocking=False)
     qDisparity = device.getOutputQueue("depth", maxSize=4, blocking=False)

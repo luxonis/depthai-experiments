@@ -279,7 +279,12 @@ sdn.passthroughDepth.link(depth_out.input)
 
 print("Pipeline created.")
 
-with dai.Device(pipeline) as device:
+with dai.Device() as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+    if not depth_enabled:
+        raise RuntimeError("Unable to run this experiment on device without depth capabilities! (Available cameras: {})".format(cams))
+    device.startPipeline(pipeline)
     # Create output queues
     vidQ = device.getOutputQueue(name="cam", maxSize=4, blocking=False)
     detQ = device.getOutputQueue(name="det", maxSize=4, blocking=False)
