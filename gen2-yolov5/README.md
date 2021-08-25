@@ -10,7 +10,7 @@ The following *.blob*s are available:
 
 For differences between YoloV5s and YoloV5m please refer to the [ultralytics/yolov5](https://github.com/ultralytics/yolov5).
 
-You can find the tutorial for training the model and generation of *.blob* file [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks) - **DeepLabV3plus_MNV2.ipynb** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/master/colab-notebooks/YoloV5_training.ipynb). You can create a copy of the Colab Notebook and try training the model on your own!
+You can find the tutorial for training the model and generation of *.blob* file [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks) - **YoloV5_training.ipynb** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/master/colab-notebooks/YoloV5_training.ipynb). You can create a copy of the Colab Notebook and try training the model on your own!
 
 See the example of a model pretrained on SKU-110K dataset in action:
 
