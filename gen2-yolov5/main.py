@@ -68,7 +68,7 @@ def draw_boxes(frame, boxes, total_classes):
             x1, y1, x2, y2 = int(boxes[i,0]), int(boxes[i,1]), int(boxes[i,2]), int(boxes[i,3])
             conf, cls = boxes[i, 4], int(boxes[i, 5])
 
-            label = label = f"{labelMap[cls]}: {conf:.2f}" if "default" in nn_path else f"Class {cls}: {conf:.2f}"
+            label = f"{labelMap[cls]}: {conf:.2f}" if "default" in nn_path else f"Class {cls}: {conf:.2f}"
             color = colors[i, 0, :].tolist()
 
             frame = cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
