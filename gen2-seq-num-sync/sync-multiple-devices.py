@@ -58,7 +58,7 @@ with contextlib.ExitStack() as stack:
         # Note: the pipeline isn't set here, as we don't know yet what device it is.
         # The extra arguments passed are required by the existing overload variants
         openvino_version = dai.OpenVINO.Version.VERSION_2021_4
-        usb2_mode = True
+        usb2_mode = False
         device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
         stereo = 1 < len(device.getConnectedCameras())
