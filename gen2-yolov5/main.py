@@ -21,7 +21,20 @@ https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks
 You can clone the YoloV5_training.ipynb notebook and try training the model yourself.
 
 '''
-
+labelMap = [
+    "person",         "bicycle",    "car",           "motorbike",     "aeroplane",   "bus",           "train",
+    "truck",          "boat",       "traffic light", "fire hydrant",  "stop sign",   "parking meter", "bench",
+    "bird",           "cat",        "dog",           "horse",         "sheep",       "cow",           "elephant",
+    "bear",           "zebra",      "giraffe",       "backpack",      "umbrella",    "handbag",       "tie",
+    "suitcase",       "frisbee",    "skis",          "snowboard",     "sports ball", "kite",          "baseball bat",
+    "baseball glove", "skateboard", "surfboard",     "tennis racket", "bottle",      "wine glass",    "cup",
+    "fork",           "knife",      "spoon",         "bowl",          "banana",      "apple",         "sandwich",
+    "orange",         "broccoli",   "carrot",        "hot dog",       "pizza",       "donut",         "cake",
+    "chair",          "sofa",       "pottedplant",   "bed",           "diningtable", "toilet",        "tvmonitor",
+    "laptop",         "mouse",      "remote",        "keyboard",      "cell phone",  "microwave",     "oven",
+    "toaster",        "sink",       "refrigerator",  "book",          "clock",       "vase",          "scissors",
+    "teddy bear",     "hair drier", "toothbrush"
+]
 cam_options = ['rgb', 'left', 'right']
 
 parser = argparse.ArgumentParser()
@@ -33,7 +46,7 @@ parser.add_argument("-iou", "--iou_thresh", help="set the NMS IoU threshold", de
 
 args = parser.parse_args()
 
-cam_source = args.cam_input 
+cam_source = args.cam_input
 nn_path = args.nn_model
 conf_thresh = args.confidence_thresh
 iou_thresh = args.iou_thresh
@@ -54,7 +67,8 @@ def draw_boxes(frame, boxes, total_classes):
         for i in range(boxes.shape[0]):
             x1, y1, x2, y2 = int(boxes[i,0]), int(boxes[i,1]), int(boxes[i,2]), int(boxes[i,3])
             conf, cls = boxes[i, 4], int(boxes[i, 5])
-            label = f"Class {cls}: {conf:.2f}"
+
+            label = f"{labelMap[cls]}: {conf:.2f}" if "default" in nn_path else f"Class {cls}: {conf:.2f}"
             color = colors[i, 0, :].tolist()
 
             frame = cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
