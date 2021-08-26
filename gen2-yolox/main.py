@@ -111,6 +111,7 @@ def demo_postprocess(outputs, img_size, p6=False):
 
     return outputs
 
+syncNN = False
 
 SHAPE = 416
 labelMap = [
@@ -145,26 +146,26 @@ class FPSHandler:
     def fps(self):
         return self.frame_cnt / (self.timestamp - self.start)
 
-camRgb = p.createColorCamera()
-camRgb.setPreviewSize(SHAPE, SHAPE)
-camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-camRgb.setInterleaved(False)
-camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+camera = p.createColorCamera()
+camera.setPreviewSize(SHAPE, SHAPE)
+camera.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+camera.setInterleaved(False)
+camera.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
 nn = p.createNeuralNetwork()
 nn.setBlobPath(str(Path("yolox_tiny.blob").resolve().absolute()))
 nn.setNumInferenceThreads(2)
 nn.input.setBlocking(True)
 
-# Send rgb frames to the host
-rgb_xout = p.createXLinkOut()
-rgb_xout.setStreamName("rgb")
-camRgb.preview.link(rgb_xout.input)
+# Send camera frames to the host
+camera_xout = p.createXLinkOut()
+camera_xout.setStreamName("camera")
+camera.preview.link(camera_xout.input)
 
 # Send converted frames from the host to the NN
-xinFrame = p.createXLinkIn()
-xinFrame.setStreamName("inFrame")
-xinFrame.out.link(nn.input)
+nn_xin = p.createXLinkIn()
+nn_xin.setStreamName("nnInput")
+nn_xin.out.link(nn.input)
 
 # Send bounding boxes from the NN to the host via XLink
 nn_xout = p.createXLinkOut()
@@ -174,14 +175,15 @@ nn.out.link(nn_xout.input)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(p) as device:
-    qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=True)
-    qIn = device.getInputQueue("inFrame", maxSize=4, blocking=True)
+    qCamera = device.getOutputQueue(name="camera", maxSize=4, blocking=False)
+    qNnInput = device.getInputQueue("nnInput", maxSize=4, blocking=False)
     qNn = device.getOutputQueue(name="nn", maxSize=4, blocking=True)
     fps = FPSHandler()
 
     while True:
-        inRgb = qRgb.get()
+        inRgb = qCamera.get()
         frame = inRgb.getCvFrame()
+        # Set these according to your dataset
         mean = (0.485, 0.456, 0.406)
         std = (0.229, 0.224, 0.225)
 
@@ -194,9 +196,12 @@ with dai.Device(p) as device:
         dai_frame.setHeight(SHAPE)
         dai_frame.setWidth(SHAPE)
         dai_frame.setData(image)
-        qIn.send(dai_frame)
+        qNnInput.send(dai_frame)
 
-        in_nn = qNn.tryGet()
+        if syncNN:
+            in_nn = qNn.get()
+        else:
+            in_nn = qNn.tryGet()
         if in_nn is not None:
             fps.next_iter()
             cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, SHAPE - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
@@ -225,7 +230,7 @@ with dai.Device(p) as device:
 
                     if score >= 0.1:
                         # Limit the bounding box to 0..SHAPE
-                        bbox[bbox > SHAPE] = 1
+                        bbox[bbox > SHAPE - 1] = SHAPE - 1
                         bbox[bbox < 0] = 0
                         xy_min = (int(bbox[0]), int(bbox[1]))
                         xy_max = (int(bbox[2]), int(bbox[3]))
