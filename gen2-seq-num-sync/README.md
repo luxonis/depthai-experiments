@@ -12,6 +12,17 @@ Image captured running with `python3 main.py -d`
 
 ![demo](https://user-images.githubusercontent.com/60824841/125710596-f490d5f5-49c5-41b9-a318-d62046450665.png)
 
+
+## Sync multiple devices
+
+If you would like to sync multiple streams (color/left/right) across multiple devices, you should use `sync-multiple-devices.py` script.
+Since timestamp is synced with the host, all devices get the same timestamp thus timestamps are in the script to sync across multiple devices.
+
+![demo](https://user-images.githubusercontent.com/18037362/130965049-0d315888-1ff4-4455-b5ec-668d33e6f051.png)
+
+As you can see, bottom color image is 16ms behind other frames. Since we were using 30FPS, time difference below 16.6 are considered in sync
+(`1/FPS => 33.3ms/2 => 16.6`).
+
 ## Pre-requisites
 
 1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
