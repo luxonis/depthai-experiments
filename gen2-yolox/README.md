@@ -6,8 +6,16 @@ For more information about implementing YOLOX in DepthAi, including the drawback
 
 ## Building a blob for a custom YOLOX model
 
-1. Convert your model to OpenVINO by following these instructions: https://github.com/Megvii-BaseDetection/YOLOX/tree/main/demo/OpenVINO/python
-2. Compile the model to a blob for a myraid using the OpenVino model compiler, e.g.:
-```shell
-/opt/intel/openvino_2021/deployment_tools/tools/compile_tool/compile_tool -m yolox_tiny.xml -ip FP16 -d MYRIAD -VPU_NUMBER_OF_SHAVES 6 -VPU_NUMBER_OF_CMX_SLICES 6
-```
+1. Download YoloX model in OpenVINO IR format - https://github.com/Megvii-BaseDetection/YOLOX/tree/main/demo/OpenVINO/python#download-openvino-models
+2. Compile the model to a MyriadX Blob using
+
+   1. OpenVino model compiler
+     ```shell
+     /opt/intel/openvino_2021/deployment_tools/tools/compile_tool/compile_tool -m yolox_tiny.xml -ip FP16 -d MYRIAD -VPU_NUMBER_OF_SHAVES 6 -VPU_NUMBER_OF_CMX_SLICES 6
+     ```
+   2. BlobConverter
+     ```shell
+     python3 -m pip install blobconverter
+     python3 -m blobconverter --openvino-xml yolo_tiny.xml --openvino-bin yolo_tiny.bin --shaves 6 --compile-params 
+     ```
+   

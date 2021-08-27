@@ -5,29 +5,18 @@ import depthai as dai
 import time
 
 
-def preproc(image, input_size, mean, std, swap=(2, 0, 1)):
-    if len(image.shape) == 3:
-        padded_img = np.ones((input_size[0], input_size[1], 3)) * 114.0
-    else:
-        padded_img = np.ones(input_size) * 114.0
-    img = np.array(image)
-    r = min(input_size[0] / img.shape[0], input_size[1] / img.shape[1])
-    resized_img = cv2.resize(
-        img,
-        (int(img.shape[1] * r), int(img.shape[0] * r)),
-        interpolation=cv2.INTER_LINEAR,
-    ).astype(np.float32)
-    padded_img[: int(img.shape[0] * r), : int(img.shape[1] * r)] = resized_img
-
-    padded_img = padded_img[:, :, ::-1]
-    padded_img /= 255.0
-    if mean is not None:
-        padded_img -= mean
-    if std is not None:
-        padded_img /= std
-    padded_img = padded_img.transpose(swap)
-    padded_img = np.ascontiguousarray(padded_img, dtype=np.float16)
-    return padded_img, r
+def to_tensor_result(packet):
+    data = {}
+    for tensor in packet.getRaw().tensors:
+        if tensor.dataType == dai.TensorInfo.DataType.INT:
+            data[tensor.name] = np.array(packet.getLayerInt32(tensor.name)).reshape(tensor.dims)
+        elif tensor.dataType == dai.TensorInfo.DataType.FP16:
+            data[tensor.name] = np.array(packet.getLayerFp16(tensor.name)).reshape(tensor.dims)
+        elif tensor.dataType == dai.TensorInfo.DataType.I8:
+            data[tensor.name] = np.array(packet.getLayerUInt8(tensor.name)).reshape(tensor.dims)
+        else:
+            print("Unsupported tensor layer type: {}".format(tensor.dataType))
+    return data
 
 
 def nms(boxes, scores, nms_thr):
@@ -85,7 +74,6 @@ def multiclass_nms(boxes, scores, nms_thr, score_thr):
 
 
 def demo_postprocess(outputs, img_size, p6=False):
-
     grids = []
     expanded_strides = []
 
@@ -113,7 +101,7 @@ def demo_postprocess(outputs, img_size, p6=False):
 
 syncNN = False
 
-SHAPE = 416
+SHAPE = 640
 labelMap = [
     "person",         "bicycle",    "car",           "motorbike",     "aeroplane",   "bus",           "train",
     "truck",          "boat",       "traffic light", "fire hydrant",  "stop sign",   "parking meter", "bench",
@@ -130,7 +118,7 @@ labelMap = [
 ]
 
 p = dai.Pipeline()
-p.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_3)
+p.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
 
 class FPSHandler:
@@ -153,19 +141,15 @@ camera.setInterleaved(False)
 camera.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
 nn = p.createNeuralNetwork()
-nn.setBlobPath(str(Path("yolox_tiny.blob").resolve().absolute()))
+nn.setBlobPath(str(Path("yolox_tiny_openvino_2021.4_6shavefp32.blob").resolve().absolute()))
 nn.setNumInferenceThreads(2)
 nn.input.setBlocking(True)
+camera.preview.link(nn.input)
 
 # Send camera frames to the host
 camera_xout = p.createXLinkOut()
 camera_xout.setStreamName("camera")
 camera.preview.link(camera_xout.input)
-
-# Send converted frames from the host to the NN
-nn_xin = p.createXLinkIn()
-nn_xin.setStreamName("nnInput")
-nn_xin.out.link(nn.input)
 
 # Send bounding boxes from the NN to the host via XLink
 nn_xout = p.createXLinkOut()
@@ -176,27 +160,12 @@ nn.out.link(nn_xout.input)
 # Pipeline is defined, now we can connect to the device
 with dai.Device(p) as device:
     qCamera = device.getOutputQueue(name="camera", maxSize=4, blocking=False)
-    qNnInput = device.getInputQueue("nnInput", maxSize=4, blocking=False)
     qNn = device.getOutputQueue(name="nn", maxSize=4, blocking=True)
     fps = FPSHandler()
 
     while True:
         inRgb = qCamera.get()
         frame = inRgb.getCvFrame()
-        # Set these according to your dataset
-        mean = (0.485, 0.456, 0.406)
-        std = (0.229, 0.224, 0.225)
-
-        image, ratio = preproc(frame, (SHAPE, SHAPE), mean, std)
-        # NOTE: The model expects an FP16 input image, but ImgFrame accepts a list of ints only. I work around this by
-        # spreading the FP16 across two ints
-        image = list(image.tobytes())
-
-        dai_frame = dai.ImgFrame()
-        dai_frame.setHeight(SHAPE)
-        dai_frame.setWidth(SHAPE)
-        dai_frame.setData(image)
-        qNnInput.send(dai_frame)
 
         if syncNN:
             in_nn = qNn.get()
@@ -206,7 +175,7 @@ with dai.Device(p) as device:
             fps.next_iter()
             cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, SHAPE - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
 
-            data = np.array(in_nn.getLayerFp16('output')).reshape(1, 3549, 85)
+            data = to_tensor_result(in_nn)["output"]
             predictions = demo_postprocess(data, (SHAPE, SHAPE), p6=False)[0]
 
             boxes = predictions[:, :4]
@@ -217,7 +186,7 @@ with dai.Device(p) as device:
             boxes_xyxy[:, 1] = boxes[:, 1] - boxes[:, 3] / 2.
             boxes_xyxy[:, 2] = boxes[:, 0] + boxes[:, 2] / 2.
             boxes_xyxy[:, 3] = boxes[:, 1] + boxes[:, 3] / 2.
-            dets = multiclass_nms(boxes_xyxy, scores, nms_thr=0.45, score_thr=0.3)
+            dets = multiclass_nms(boxes_xyxy, scores, nms_thr=0.45, score_thr=0.1)
 
             if dets is not None:
                 final_boxes = dets[:, :4]
