@@ -113,7 +113,12 @@ def get_landmark_3d(landmark):
 initialize_OpenGL()
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(p) as device:
+with dai.Device() as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+    if not depth_enabled:
+        raise RuntimeError("Unable to run this experiment on device without depth capabilities! (Available cameras: {})".format(cams))
+    device.startPipeline(p)
     # Set device log level - to see logs from the Script node
     device.setLogLevel(dai.LogLevel.WARN)
     device.setLogOutputLevel(dai.LogLevel.WARN)

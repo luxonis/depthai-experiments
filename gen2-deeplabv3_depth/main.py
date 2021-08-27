@@ -157,7 +157,12 @@ xout_depth.setStreamName("depth")
 stereo.depth.link(xout_depth.input)
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pipeline) as device:
+with dai.Device() as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+    if not depth_enabled:
+        raise RuntimeError("Unable to run this experiment on device without depth capabilities! (Available cameras: {})".format(cams))
+    device.startPipeline(pipeline)
     # Output queues will be used to get the outputs from the device
     q_color = device.getOutputQueue(name="cam", maxSize=4, blocking=False)
     q_depth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
