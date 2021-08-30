@@ -3,8 +3,7 @@ import threading
 from pathlib import Path
 
 from depthai_sdk.managers import PipelineManager, NNetManager, BlobManager, PreviewManager
-from depthai_sdk import FPSHandler, Previews
-from depthai_sdk import to_planar
+from depthai_sdk import FPSHandler, Previews, getDeviceInfo, downloadYTVideo
 
 from pose import getKeypoints, getValidPairs, getPersonwiseKeypoints
 import cv2
@@ -21,11 +20,17 @@ if not args.camera and not args.video:
     raise RuntimeError("No source selected. Please use either \"-cam\" to use RGB camera as a source or \"-vid <path>\" to run on video")
 
 debug = not args.no_debug
+device_info = getDeviceInfo()
 
 if args.camera:
     blob_path = "models/human-pose-estimation-0001_openvino_2021.2_6shave.blob"
 else:
     blob_path = "models/human-pose-estimation-0001_openvino_2021.2_8shave.blob"
+    if str(args.video).startswith('https'):
+        args.video = downloadYTVideo(args.video)
+        print("Youtube video downloaded.")
+    if not Path(args.video).exists():
+        raise ValueError("Path {} does not exists!".format(args.video))
 
 
 colors = [[0, 100, 255], [0, 100, 255], [0, 255, 255], [0, 100, 255], [0, 255, 255], [0, 100, 255], [0, 255, 0],
@@ -117,16 +122,14 @@ def show(frame):
 
 
 print("Starting pipeline...")
-with dai.Device(pm.p) as device:
-    pv = PreviewManager(display=[Previews.color.name], nn_source=Previews.color.name, scale={"color": 0.37}, fps_handler=fps) if args.camera else None
-    nn_in = device.getInputQueue("nn_in", maxSize=1, blocking=False) if not args.camera else None
-    nn_out = device.getOutputQueue("nn_out", maxSize=1, blocking=False)
+with dai.Device(pm.p, device_info) as device:
+    if args.camera:
+        pv = PreviewManager(display=[Previews.color.name], nn_source=Previews.color.name, scale={"color": 0.37}, fps_handler=fps)
+        pv.create_queues(device)
+    nm.createQueues(device)
     seq_num = 1
 
-    if pv is not None:
-        pv.create_queues(device)
-
-    t = threading.Thread(target=decode_thread, args=(nn_out, ))
+    t = threading.Thread(target=decode_thread, args=(nm.output_queue, ))
     t.start()
 
     def should_run():
@@ -150,15 +153,7 @@ with dai.Device(pm.p) as device:
                 if not read_correctly:
                     break
 
-                scaled_frame = cv2.resize(frame, nm.input_size)
-                frame_nn = dai.ImgFrame()
-                frame_nn.setType(dai.ImgFrame.Type.BGR888p)
-                frame_nn.setSequenceNum(seq_num)
-                frame_nn.setWidth(nm.input_size[0])
-                frame_nn.setHeight(nm.input_size[1])
-                frame_nn.setData(to_planar(scaled_frame))
-                nn_in.send(frame_nn)
-                seq_num += 1
+                nm.sendInputFrame(frame)
                 fps.tick('host')
 
                 if debug:
