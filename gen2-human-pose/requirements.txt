@@ -1,5 +1,5 @@
 opencv-python
 imutils
 depthai==2.7.2.0
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/ https://test.pypi.org/simple/
+--extra-index-url https://test.pypi.org/simple/
 depthai-sdk
