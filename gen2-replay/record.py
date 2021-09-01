@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import argparse
 from pathlib import Path
-from time import monotonic
 from multiprocessing import Process, Queue
 import cv2
 import depthai as dai
-from datetime import datetime
-
+from datetime import timedelta
+import contextlib
+import math
+import time
 
 def check_range(min_val, max_val):
     def check_fn(value):
@@ -19,230 +20,251 @@ def check_range(min_val, max_val):
             )
     return check_fn
 
+def convert_to_mp4(path, fps, deleteMjpeg = False):
+    try:
+        import ffmpy3
+        path_output = path.parent / (path.stem + '.mp4')
+        print(path_output)
+        print(path)
+        try:
+            ff = ffmpy3.FFmpeg(
+                inputs={str(path): "-y"},
+                outputs={str(path_output): "-c copy -framerate {}".format(fps)}
+            )
+            print("Running conversion command... [{}]".format(ff.cmd))
+            ff.run()
+        except ffmpy3.FFExecutableNotFoundError:
+            print("FFMPEG executable not found!")
+        except ffmpy3.FFRuntimeError:
+            print("FFMPEG runtime error!")
+        print("Video conversion complete!")
+    except ImportError:
+        print("Module ffmpy3 not fouund!")
+    except:
+        print("Unknown error in convert_to_mp4!")
+
+class FPSHandler:
+    def __init__(self):
+        self.timestamp = time.time()
+        self.start = time.time()
+        self.frame_cnt = 0
+    def next_iter(self):
+        self.timestamp = time.time()
+        self.frame_cnt += 1
+    def fps(self):
+        return self.frame_cnt / (self.timestamp - self.start)
+
+_save_choices = ("color", "mono", "depth") # TODO: IMU/ToF
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--threshold', default=0.3, type=float, help="Maximum difference between packet timestamps to be considered as synced")
-parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
-parser.add_argument('-d', '--dirty', action='store_true', default=False, help="Allow the destination path not to be empty")
-# parser.add_argument('-nd', '--no-debug', dest="prod", action='store_true', default=False, help="Do not display debug output")
-
-parser.add_argument('-nd', '--no-depth', action='store_true', default=False, help="Do not save depth map. If set, mono frames will be saved")
-parser.add_argument('-mono', '--mono', action='store_true', default=False, help="Save mono frames")
-parser.add_argument('-e', '--encode', action='store_true', default=False, help="Encode mono frames into jpeg. If set, it will enable -mono as well")
+parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
+parser.add_argument('-s', '--save', default=["color", "mono"], nargs="+", choices=_save_choices,
+                    help="Choose which streams to save. Default: %(default)s")
+parser.add_argument('-f', '--fps', type=float, default=30,
+                    help='Camera sensor FPS, applied to all cams')
+# TODO: make camera resolutions configrable
 
 args = parser.parse_args()
 
-SAVE_MONO = args.encode or args.mono or args.no_depth
-
-dest = Path(args.path).resolve().absolute()
-dest_count = len(list(dest.glob('*')))
-if dest.exists() and dest_count != 0 and not args.dirty:
-    raise ValueError(f"Path {dest} contains {dest_count} files. Either specify new path or use \"--dirty\" flag to use current one")
-dest.mkdir(parents=True, exist_ok=True)
-
-pipeline = dai.Pipeline()
-
-rgb = pipeline.createColorCamera()
-
-rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-rgb.setInterleaved(False)
-rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-
-# Create output for the rgb
-rgbOut = pipeline.createXLinkOut()
-rgbOut.setStreamName("color")
-
-rgb_encoder = pipeline.createVideoEncoder()
-rgb_encoder.setDefaultProfilePreset(rgb.getVideoSize(), rgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-# rgb_encoder.setLossless(True)
-rgb.video.link(rgb_encoder.input)
-rgb_encoder.bitstream.link(rgbOut.input)
-
-# Create mono cameras
-left = pipeline.createMonoCamera()
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-
-right = pipeline.createMonoCamera()
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-
-stereo = pipeline.createStereoDepth()
-stereo.setConfidenceThreshold(240)
-median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
-stereo.setMedianFilter(median)
-stereo.setLeftRightCheck(False)
-stereo.setExtendedDisparity(False)
-stereo.setSubpixel(False)
-
-left.out.link(stereo.left)
-right.out.link(stereo.right)
-
-if not args.no_depth:
-    depthOut = pipeline.createXLinkOut()
-    depthOut.setStreamName("depth")
-    stereo.depth.link(depthOut.input)
-
-# Create output
-if SAVE_MONO:
-    leftOut = pipeline.createXLinkOut()
-    leftOut.setStreamName("left")
-    rightOut = pipeline.createXLinkOut()
-    rightOut.setStreamName("right")
-    if args.encode:
-        left_encoder = pipeline.createVideoEncoder()
-        left_encoder.setDefaultProfilePreset(left.getResolutionSize(), left.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-        # left_encoder.setLossless(True)
-        stereo.rectifiedLeft.link(left_encoder.input)
-        left_encoder.bitstream.link(leftOut.input)
-
-        right_encoder = pipeline.createVideoEncoder()
-        right_encoder.setDefaultProfilePreset(right.getResolutionSize(), right.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-        # right_encoder.setLossless(True)
-        stereo.rectifiedRight.link(right_encoder.input)
-        right_encoder.bitstream.link(rightOut.input)
-    else:
-        stereo.rectifiedLeft.link(leftOut.input)
-        stereo.rectifiedRight.link(rightOut.input)
-
-# https://stackoverflow.com/a/7859208/5494277
-def step_norm(value):
-    return round(value / args.threshold) * args.threshold
-
-def seq(packet):
-    return packet.getSequenceNum()
-
-def tst(packet):
-    return packet.getTimestamp().total_seconds()
-
-# https://stackoverflow.com/a/10995203/5494277
-def has_keys(obj, keys):
-    return all(stream in obj for stream in keys)
-
-
-class PairingSystem:
-    seq_streams = []
-    if SAVE_MONO:
-        seq_streams.append("left")
-        seq_streams.append("right")
-    if not args.no_depth:
-        seq_streams.append("depth")
-    print(seq_streams)
-    ts_streams = ["color"]
-    seq_ts_mapping_stream = seq_streams[0]
-
-    def __init__(self):
-        self.ts_packets = {}
-        self.seq_packets = {}
-        self.last_paired_ts = None
-        self.last_paired_seq = None
-
-    def add_packets(self, packets, stream_name):
-        if packets is None:
-            return
-        if stream_name in self.seq_streams:
-            for packet in packets:
-                seq_key = seq(packet)
-                self.seq_packets[seq_key] = {
-                    **self.seq_packets.get(seq_key, {}),
-                    stream_name: packet
-                }
-        elif stream_name in self.ts_streams:
-            for packet in packets:
-                ts_key = step_norm(tst(packet))
-                self.ts_packets[ts_key] = {
-                    **self.ts_packets.get(ts_key, {}),
-                    stream_name: packet
-                }
-
-    def get_pairs(self):
-        results = []
-        for key in list(self.seq_packets.keys()):
-            if has_keys(self.seq_packets[key], self.seq_streams):
-                ts_key = step_norm(tst(self.seq_packets[key][self.seq_ts_mapping_stream]))
-                if ts_key in self.ts_packets and has_keys(self.ts_packets[ts_key], self.ts_streams):
-                    results.append({
-                        **self.seq_packets[key],
-                        **self.ts_packets[ts_key]
-                    })
-                    self.last_paired_seq = key
-                    self.last_paired_ts = ts_key
-        if len(results) > 0:
-            self.collect_garbage()
-        return results
-
-    def collect_garbage(self):
-        for key in list(self.seq_packets.keys()):
-            if key <= self.last_paired_seq:
-                del self.seq_packets[key]
-        for key in list(self.ts_packets.keys()):
-            if key <= self.last_paired_ts:
-                del self.ts_packets[key]
-
-# We have to limit the number of frame pairs, otherwise we might ran out of ram
-frame_q = Queue(50)
-
-folder_num = 0
-def store_frames(in_q):
-    global folder_num
-    def save_png(frames_path, name, item):
-        cv2.imwrite(str(frames_path / Path(f"{name}.png")), item)
-    def save_jpeg(frames_path, name, item):
-        with open(str(frames_path / Path(f"{name}.jpeg")), "wb") as f:
-            f.write(bytearray(item))
-    def save_depth(frames_path, name, item):
-        with open(str(frames_path / Path(f"{name}")), "wb") as f:
-            f.write(bytearray(item))
+def create_folder(path, mxid):
+    i = 0
     while True:
-        frames_dict = in_q.get()
-        if frames_dict is None:
-            return
-        frames_path = dest / Path(str(folder_num))
-        folder_num = folder_num + 1
-        frames_path.mkdir(parents=False, exist_ok=False)
+        i += 1
+        recordings_path = Path(path) / f"{i}-{str(mxid)}"
+        if not recordings_path.is_dir():
+            recordings_path.mkdir(parents=True, exist_ok=False)
+            return recordings_path
 
-        for stream_name, item in frames_dict.items():
-            if stream_name == "depth": save_depth(frames_path, stream_name, item)
-            elif stream_name == "color": save_jpeg(frames_path, stream_name, item)
-            elif args.encode: save_jpeg(frames_path, stream_name, item)
-            else: save_png(frames_path, stream_name, item)
+def create_pipeline(save, fps):
+    pipeline = dai.Pipeline()
 
-store_p = Process(target=store_frames, args=(frame_q, ))
-store_p.start()
-ps = PairingSystem()
+    if "color" in save:
+        rgb = pipeline.createColorCamera()
+        rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+        rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        rgb.setFps(fps)
+
+        rgb_encoder = pipeline.createVideoEncoder()
+        rgb_encoder.setDefaultProfilePreset(rgb.getVideoSize(), rgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+        # rgb_encoder.setLossless(True)
+        rgb.video.link(rgb_encoder.input)
+
+        # Create output for the rgb
+        rgbOut = pipeline.createXLinkOut()
+        rgbOut.setStreamName("color")
+        rgb_encoder.bitstream.link(rgbOut.input)
+
+    if "mono" or "depth" in save:
+        # Create mono cameras
+        left = pipeline.createMonoCamera()
+        left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        left.setFps(fps)
+
+        right = pipeline.createMonoCamera()
+        right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        right.setFps(fps)
+
+        stereo = pipeline.createStereoDepth()
+        stereo.initialConfig.setConfidenceThreshold(240)
+        stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+        stereo.setLeftRightCheck(False)
+        stereo.setExtendedDisparity(False)
+        stereo.setSubpixel(False)
+        # stereo.setRectification(False)
+        # stereo.setRectifyMirrorFrame(False)
+
+        left.out.link(stereo.left)
+        right.out.link(stereo.right)
+
+        if "depth" in save:
+            depthOut = pipeline.createXLinkOut()
+            depthOut.setStreamName("depth")
+            stereo.depth.link(depthOut.input)
+
+        # Create output
+        if "mono" in save:
+            left_encoder = pipeline.createVideoEncoder()
+            left_encoder.setDefaultProfilePreset(left.getResolutionSize(), left.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            # left_encoder.setLossless(True)
+            stereo.rectifiedLeft.link(left_encoder.input)
+            # Create XLink output for left MJPEG stream
+            leftOut = pipeline.createXLinkOut()
+            leftOut.setStreamName("left")
+            left_encoder.bitstream.link(leftOut.input)
+
+            right_encoder = pipeline.createVideoEncoder()
+            right_encoder.setDefaultProfilePreset(right.getResolutionSize(), right.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            # right_encoder.setLossless(True)
+            stereo.rectifiedRight.link(right_encoder.input)
+            # Create XLink output for right MJPEG stream
+            rightOut = pipeline.createXLinkOut()
+            rightOut.setStreamName("right")
+            right_encoder.bitstream.link(rightOut.input)
+
+    return pipeline
+
+def store_frames(in_q, save, path):
+    files = {}
+    for stream_name in save:
+        files[stream_name] = open(str(path / f"{stream_name}.mjpeg"), 'wb')
+
+    while True:
+        try:
+            frames = in_q.get()
+            if frames is None:
+                break
+            for name in frames:
+                frames[name].tofile(files[name])
+        except KeyboardInterrupt:
+            break
+    # Close all files
+    for name in files:
+        files[name].close()
+
+    if True:
+        print("Converting .mjpeg to .mp4")
+        for stream_name in save:
+            convert_to_mp4((path / f"{stream_name}.mjpeg"), args.fps)
+    print('Exiting store frame process')
 
 # Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device:
-    # Start pipeline
-    device.startPipeline()
+with contextlib.ExitStack() as stack:
+    device_infos = dai.Device.getAllAvailableDevices()
 
+    if len(device_infos) == 0:
+        raise RuntimeError("No devices found!")
+    else:
+        print("Found", len(device_infos), "devices")
+
+    devices = []
+
+    for device_info in device_infos:
+        openvino_version = dai.OpenVINO.Version.VERSION_2021_4
+        usb2_mode = True
+        device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
+        mxid = device.getMxId()
+        stereo = 1 < len(device.getConnectedCameras())
+
+
+        save = list(args.save)
+        if not stereo: # If device doesn't have stereo camera pair
+            if "mono" in save:
+                save.remove("mono")
+            if "depth" in save:
+                save.remove("depth")
+        device.startPipeline(create_pipeline(save, args.fps))
+
+        streams = []
+        if "color" in save: streams.append("color")
+        if "depth" in save: streams.append("depth")
+        if "mono" in save:
+            streams.append("left")
+            streams.append("right")
+
+        frame_q = Queue(20)
+        store_p = Process(target=store_frames, args=(frame_q, streams, create_folder(args.path, mxid)))
+        store_p.start()
+
+        queues = []
+        for stream in streams:
+            queues.append({
+                'q': device.getOutputQueue(name=stream, maxSize=10, blocking=False),
+                'msgs': [],
+                'name': stream
+            })
+
+        devices.append({
+            'queue': queues,
+            'mx': mxid,
+            'frame_q': frame_q, # Python Queue object
+            'process': store_p
+        })
+
+
+    def check_sync(queues, timestamp):
+        matching_frames = []
+        for q in queues:
+            for i, msg in enumerate(q['msgs']):
+                time_diff = abs(msg.getTimestamp() - timestamp)
+                # So below 17ms @ 30 FPS => frames are in sync
+                if time_diff <= timedelta(milliseconds=math.ceil(500 / args.fps)):
+                    matching_frames.append(i)
+                    break
+
+        if len(matching_frames) == len(queues):
+            # We have all frames synced. Remove the excess ones
+            for i, q in enumerate(queues):
+                q['msgs'] = q['msgs'][matching_frames[i]:]
+            return True
+        else:
+            return False
+
+    fps = FPSHandler()
+    queues = [q for device in devices for q in device['queue']]
     while True:
-        for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
-            ps.add_packets(device.getOutputQueue(queueName).tryGetAll(), queueName)
-
-        pairs = ps.get_pairs()
-        for pair in pairs:
-            obj = { "color": pair["color"].getData() }
-            if SAVE_MONO:
-                if args.encode:
-                    obj["left"] = pair["left"].getData()
-                    obj["right"] = pair["right"].getData()
-                else:
-                    obj["left"] = pair["left"].getCvFrame()
-                    obj["right"] = pair["right"].getCvFrame()
-            if not args.no_depth:
-                obj["depth"] = pair["depth"].getFrame()
-
-            frame_q.put(obj)
-            # extracted_pair = {stream_name: extract_frame[stream_name](item) for stream_name, item in pair.items()}
-            # if not args.prod:
-                # for stream_name, item in extracted_pair.items():
-                    # cv2.imshow(stream_name, item)
-            # frame_q.put(extracted_pair)
-
+        for q in queues:
+            new_msg = q['q'].tryGet()
+            if new_msg is not None:
+                q['msgs'].append(new_msg)
+                if check_sync(queues, new_msg.getTimestamp()):
+                    fps.next_iter()
+                    print("FPS:", fps.fps())
+                    # print('frames synced')
+                    for device in devices:
+                        frames = {}
+                        for stream in device['queue']:
+                            frames[stream['name']] = stream['msgs'].pop(0).getData()
+                            # cv2.imshow(f"{stream['name']} - {device['mx']}", cv2.imdecode(frames[stream['name']], cv2.IMREAD_UNCHANGED))
+                        # print('For mx', device['mx'], 'frames')
+                        # print('frames', frames)
+                        device['frame_q'].put(frames)
         if cv2.waitKey(1) == ord('q'):
             break
 
-frame_q.put(None)
-store_p.join()
+    for device in devices:
+        device['frame_q'].put(None)
+        time.sleep(0.01) # Wait 10ms for process to close all files
+        device['process'].join() # Terminate the process
+
