@@ -85,6 +85,8 @@ def crop_to_square(frame):
     # print(height, width, delta)
     return frame[0:height, delta:width-delta]
 
+colorBackground = cv2.resize(crop_to_square(cv2.imread('background.jpeg')), (400,400))
+
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
@@ -170,8 +172,10 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     disp_multiplier = 255 / stereo.getMaxDisparity()
 
     frame = None
+    frame_back = None
     depth = None
     depth_weighted = None
+    frames = {}
 
     while True:
         sync.add_msg("color", q_color.get())
@@ -200,8 +204,10 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
                 frame = msgs["color"].getCvFrame()
                 frame = crop_to_square(frame)
                 frame = cv2.resize(frame, TARGET_SHAPE)
+                frames['frame'] = frame
                 frame = cv2.addWeighted(frame, 1, output_colors,0.5,0)
                 cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
+                frames['colored_frame'] = frame
 
             if "depth" in msgs:
                 disp_frame = msgs["depth"].getFrame()
@@ -210,16 +216,28 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
                 disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
 
                 # Colorize the disparity
-                depth = cv2.applyColorMap(disp_frame, jet_custom)
+                frames['depth'] = cv2.applyColorMap(disp_frame, jet_custom)
 
                 multiplier = get_multiplier(lay1)
                 multiplier = cv2.resize(multiplier, TARGET_SHAPE)
                 depth_overlay = disp_frame * multiplier
-                depth_weighted = cv2.applyColorMap(depth_overlay, jet_custom)
+                frames['cutout'] = cv2.applyColorMap(depth_overlay, jet_custom)
+
+                if 'frame' in frames:
+                    # shape (400,400) multipliers -> shape (400,400,3)
+                    multiplier = np.repeat(multiplier[:, :, np.newaxis], 3, axis=2)
+                    rgb_cutout = frames['frame'] * multiplier
+                    multiplier[multiplier == 0] = 255
+                    multiplier[multiplier == 1] = 0
+                    multiplier[multiplier == 255] = 1
+                    frames['background'] = colorBackground * multiplier
+                    frames['background'] += rgb_cutout
                 # You can add custom code here, for example depth averaging
 
-        if frame is not None and depth is not None:
-            cv2.imshow("Combined frame", np.concatenate((frame, depth_weighted, depth), axis=1))
+        if len(frames) == 5:
+            row1 = np.concatenate((frames['colored_frame'], frames['background']), axis=1)
+            row2 = np.concatenate((frames['depth'], frames['cutout']), axis=1)
+            cv2.imshow("Combined frame", np.concatenate((row1,row2), axis=0))
 
         if cv2.waitKey(1) == ord('q'):
             break
