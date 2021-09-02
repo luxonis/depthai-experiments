@@ -1,4 +1,4 @@
-# Gen2 Triangulation 3D visualizer
+# Gen2 Triangulation - Stereo neural inference demo
 
 Because there are often application-specific host-side filtering to be done on the stereo
 neural inference results, and because these calculations are lightweight
