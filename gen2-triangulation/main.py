@@ -11,6 +11,16 @@ VISUALIZE = False
 if VISUALIZE:
     import open3d as o3d
 
+class TextHelper:
+    def __init__(self) -> None:
+        self.bg_color = (0, 0, 0)
+        self.color = (255, 255, 255)
+        self.text_type = cv2.FONT_HERSHEY_SIMPLEX
+        self.line_type = cv2.LINE_AA
+    def putText(self, frame, text, coords):
+        cv2.putText(frame, text, coords, self.text_type, 0.5, self.bg_color, 4, self.line_type)
+        cv2.putText(frame, text, coords, self.text_type, 0.5, self.color, 1, self.line_type)
+
 openvinoVersion = "2021.3"
 p = dai.Pipeline()
 p.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_3)
@@ -139,7 +149,7 @@ class StereoInference:
         return math.sqrt(x_delta ** 2 + y_delta ** 2)
 
     def calc_angle(self, offset):
-            return math.atan(math.tan(self.hfov / 2.0) * offset / (self.mono_width / 2.0))
+            return math.atan(math.tan(self.hfov / 2.0) * offset / (self.original_width / 2.0))
 
     def calc_spatials(self, coords, depth):
         x, y = coords
@@ -179,17 +189,25 @@ with dai.Device(p.getOpenVINOVersion()) as device:
         queues.append(device.getOutputQueue(name="crop_"+name, maxSize=4, blocking=False))
         queues.append(device.getOutputQueue(name="landmarks_"+name, maxSize=4, blocking=False))
         queues.append(device.getOutputQueue(name="config_"+name, maxSize=4, blocking=False))
+
+    disparity_frame = None
+    left = None
+    right = None
+    leftColor = (255,0,0)
+    rightColor = (0,255,0)
+    textHelper = TextHelper()
+
     while True:
         lr_landmarks = {}
-        disparity_frame = None
         for i in range(2):
             name = "left" if i == 1 else "right"
+            color =  leftColor if name == "left" else rightColor
+
             # 300x300 Mono image frame
             frame = queues[i*4].get().getCvFrame()
 
-            # Combine the two mono frames
-            if i == 0: disparity_frame = frame
-            else: disparity_frame = cv2.addWeighted(disparity_frame, 0.5, frame,0.5, 0)
+            if name == "left": left = frame
+            else: right = frame
 
             # Cropped+streched (48x48) mono image frame
             cropped_frame = queues[i*4 + 1].get().getCvFrame()
@@ -200,7 +218,7 @@ with dai.Device(p.getOpenVINOVersion()) as device:
                 ymin = int(300 * inConfig.getCropYMin())
                 xmax = int(300 * inConfig.getCropXMax())
                 ymax = int(300 * inConfig.getCropYMax())
-                cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+                cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2)
 
                 width = inConfig.getCropXMax()-inConfig.getCropXMin()
                 height = inConfig.getCropYMax()-inConfig.getCropYMin()
@@ -211,16 +229,18 @@ with dai.Device(p.getOpenVINOVersion()) as device:
 
                 landmarks_xy = []
                 for landmark in landmarks:
-                    cv2.circle(cropped_frame, (int(48*landmark[0]), int(48*landmark[1])), 3, (0, 255, 0))
+                    cv2.circle(cropped_frame, (int(48*landmark[0]), int(48*landmark[1])), 3, color)
                     x = int((landmark[0] * width + inConfig.getCropXMin()) * 300)
                     y = int((landmark[1] * height + inConfig.getCropYMin()) * 300)
                     landmarks_xy.append((x,y))
-                    cv2.circle(frame, (x, y), 3, (0,255,0))
 
                 lr_landmarks[name] = landmarks_xy
             # Display both mono/cropped frames
-            cv2.imshow("mono_"+name, frame)
-            cv2.imshow("crop_"+name, cropped_frame)
+            # cv2.imshow("mono_"+name, frame)
+            # cv2.imshow("crop_"+name, cropped_frame)
+
+        # Combine the two mono frames
+        combined = cv2.addWeighted(left, 0.5, right, 0.5, 0)
 
         # 3D visualization
         if len(lr_landmarks) == 2:
@@ -229,16 +249,32 @@ with dai.Device(p.getOpenVINOVersion()) as device:
                 coords1 = lr_landmarks['right'][i]
                 coords2 = lr_landmarks['left'][i]
 
+                cv2.circle(left, coords2, 3, leftColor)
+                cv2.circle(right, coords1, 3, rightColor)
+                cv2.circle(combined, coords2, 3, leftColor)
+                cv2.circle(combined, coords1, 3, rightColor)
+
                 # Visualize disparity line frame
-                cv2.circle(disparity_frame, coords1, 3, (0,255,0))
-                cv2.circle(disparity_frame, coords2, 3, (255,0,0))
-                cv2.line(disparity_frame, coords1, coords2, (0,0,255), 1)
-                cv2.imshow("Disparity frame", disparity_frame)
+                cv2.line(combined, coords1, coords2, (0,0,255), 1)
 
                 disparity = stereoInference.calculate_distance(coords1, coords2)
                 depth = stereoInference.calculate_depth(disparity)
                 # print(f"Disp {disparity}, depth {depth}")
-                spatials.append(stereoInference.calc_spatials(coords1, depth))
+                spatial = stereoInference.calc_spatials(coords1, depth)
+                spatials.append(spatial)
+
+                if i == 0:
+                    y = 0
+                    y_delta = 18
+                    strings = [
+                        "Disparity: {:.0f} pixels".format(disparity),
+                        "X: {:.2f} m".format(spatial[0]/1000),
+                        "Y: {:.2f} m".format(spatial[1]/1000),
+                        "Z: {:.2f} m".format(spatial[2]/1000),
+                    ]
+                    for s in strings:
+                        y += y_delta
+                        textHelper.putText(combined, s, (10, y))
 
             if VISUALIZE:
                 # For 3d point projection.
@@ -249,7 +285,9 @@ with dai.Device(p.getOpenVINOVersion()) as device:
             else:
                 for i, s in enumerate(spatials):
                     print(f"[Landmark {i}] X: {s[0]}, Y: {s[1]}, Z: {s[2]}")
-            lr_landmarks = {}
+
+
+        cv2.imshow("Combined frame", np.concatenate((left, combined ,right), axis=1))
 
         if VISUALIZE:
             vis.poll_events()
