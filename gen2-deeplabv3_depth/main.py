@@ -23,6 +23,10 @@ parser.add_argument("-shape", "--nn_shape", help="select NN model shape", defaul
 parser.add_argument("-nn", "--nn_path", help="select model path for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
 args = parser.parse_args()
 
+# Custom JET colormap with 0 mapped to `black` - better disparity visualization
+jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
+jet_custom[0] = [0, 0, 0]
+
 nn_shape = args.nn_shape
 nn_path = args.nn_path
 TARGET_SHAPE = (400,400)
@@ -41,16 +45,6 @@ def get_multiplier(output_tensor):
     output = output_tensor.reshape(nn_shape,nn_shape)
     output_colors = np.take(class_binary, output, axis=0)
     return output_colors
-
-def show_deeplabv3p(output_colors, frame):
-    return cv2.addWeighted(frame,1, output_colors,0.5,0)
-
-def dispay_colored_depth(frame, name):
-    frame_colored = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-    frame_colored = cv2.equalizeHist(frame_colored)
-    frame_colored = cv2.applyColorMap(frame_colored, cv2.COLORMAP_HOT)
-    cv2.imshow(name, frame_colored)
-    return frame_colored
 
 class FPSHandler:
     def __init__(self, cap=None):
@@ -146,18 +140,19 @@ right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 stereo = pipeline.createStereoDepth()
 stereo.initialConfig.setConfidenceThreshold(245)
 stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+# stereo.initialConfig.setBilateralFilterSigma(64000)
 stereo.setLeftRightCheck(True)
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
 # Create depth output
-xout_depth = pipeline.createXLinkOut()
-xout_depth.setStreamName("depth")
-stereo.depth.link(xout_depth.input)
+xout_disp = pipeline.createXLinkOut()
+xout_disp.setStreamName("disparity")
+stereo.disparity.link(xout_disp.input)
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device() as device:
+with dai.Device(pipeline.getOpenVINOVersion()) as device:
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
     if not depth_enabled:
@@ -165,18 +160,23 @@ with dai.Device() as device:
     device.startPipeline(pipeline)
     # Output queues will be used to get the outputs from the device
     q_color = device.getOutputQueue(name="cam", maxSize=4, blocking=False)
-    q_depth = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+    q_disp = device.getOutputQueue(name="disparity", maxSize=4, blocking=False)
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
     q_pass = device.getOutputQueue(name="pass", maxSize=4, blocking=False)
 
     fps = FPSHandler()
     sync = HostSync()
-    depth_frame = None
+    disp_frame = None
+    disp_multiplier = 255 / stereo.getMaxDisparity()
+
+    frame = None
+    depth = None
+    depth_weighted = None
 
     while True:
         sync.add_msg("color", q_color.get())
 
-        in_depth = q_depth.tryGet()
+        in_depth = q_disp.tryGet()
         if in_depth is not None:
             sync.add_msg("depth", in_depth)
 
@@ -200,26 +200,26 @@ with dai.Device() as device:
                 frame = msgs["color"].getCvFrame()
                 frame = crop_to_square(frame)
                 frame = cv2.resize(frame, TARGET_SHAPE)
-
-                frame = show_deeplabv3p(output_colors, frame)
+                frame = cv2.addWeighted(frame, 1, output_colors,0.5,0)
                 cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
-                cv2.imshow("weighted", frame)
 
             if "depth" in msgs:
-                depth_frame = msgs["depth"].getFrame()
-                depth_frame = crop_to_square(depth_frame)
-                depth_frame = cv2.resize(depth_frame, TARGET_SHAPE)
+                disp_frame = msgs["depth"].getFrame()
+                disp_frame = (disp_frame * disp_multiplier).astype(np.uint8)
+                disp_frame = crop_to_square(disp_frame)
+                disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
 
-                # Optionally display depth frame with deeplab detection
-                colored_depth_frame = dispay_colored_depth(depth_frame, "depth")
-                colored_depth_frame = show_deeplabv3p(output_colors, colored_depth_frame)
-                cv2.imshow("weighted depth", colored_depth_frame)
+                # Colorize the disparity
+                depth = cv2.applyColorMap(disp_frame, jet_custom)
 
                 multiplier = get_multiplier(lay1)
                 multiplier = cv2.resize(multiplier, TARGET_SHAPE)
-                depth_overlay = depth_frame * multiplier
-                dispay_colored_depth(depth_overlay, "depth_overlay")
+                depth_overlay = disp_frame * multiplier
+                depth_weighted = cv2.applyColorMap(depth_overlay, jet_custom)
                 # You can add custom code here, for example depth averaging
+
+        if frame is not None and depth is not None:
+            cv2.imshow("Combined frame", np.concatenate((frame, depth_weighted, depth), axis=1))
 
         if cv2.waitKey(1) == ord('q'):
             break
