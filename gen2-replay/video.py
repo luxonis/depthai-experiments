@@ -1,7 +1,7 @@
 import cv2
 import glob
 
-IMG_SAVE_PATH = "/home/erik/imgs_folder"
+IMG_SAVE_PATH = "/frames"
 
 streams = ["depth", "right", "rgb", "left", "birdsview"]
 for name in streams:
