@@ -1,528 +1,233 @@
 # coding=utf-8
 import os
 from pathlib import Path
-from queue import Queue
 import argparse
-from time import monotonic
-
+import blobconverter
 import cv2
-import depthai
+import depthai as dai
 import numpy as np
-from imutils.video import FPS
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-nd", "--no-debug", action="store_true", help="prevent debug output"
-)
-parser.add_argument(
-    "-cam",
-    "--camera",
-    action="store_true",
-    help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)",
-)
-
-parser.add_argument(
-    "-vid",
-    "--video",
-    type=str,
-    help="The path of the video file used for inference (conflicts with -cam)",
-)
-
-parser.add_argument(
-    "-db",
-    "--databases",
-    action="store_true",
-    help="Save data (only used when running recognition network)",
-)
-
-parser.add_argument(
-    "-n",
-    "--name",
-    type=str,
-    default="",
-    help="Data name (used with -db) [Optional]",
-)
+parser.add_argument("-name", "--name", type=str, help="Name of the person for database saving")
 
 args = parser.parse_args()
 
-debug = not args.no_debug
-
-is_db = args.databases
-
-if args.camera and args.video:
-    raise ValueError(
-        'Command line parameter error! "-Cam" cannot be used together with "-vid"!'
-    )
-elif args.camera is False and args.video is None:
-    raise ValueError(
-        'Missing inference source! Use "-cam" to run on DepthAI cameras, or use "-vid <path>" to run on video files'
-    )
-
-
-def to_planar(arr: np.ndarray, shape: tuple):
-    return cv2.resize(arr, shape).transpose((2, 0, 1)).flatten()
-
-
-def to_nn_result(nn_data):
-    return np.array(nn_data.getFirstLayerFp16())
-
-
-def run_nn(x_in, x_out, in_dict):
-    nn_data = depthai.NNData()
-    for key in in_dict:
-        nn_data.setLayer(key, in_dict[key])
-    x_in.send(nn_data)
-    return x_out.tryGet()
-
-
-def frame_norm(frame, *xy_vals):
-    return (
-        np.clip(np.array(xy_vals), 0, 1) * np.array(frame * (len(xy_vals) // 2))[::-1]
-    ).astype(int)
-
-
-def correction(frame, angle=None, invert=False):
-    h, w = frame.shape[:2]
-    center = (w // 2, h // 2)
-    mat = cv2.getRotationMatrix2D(center, angle, 1)
-    affine = cv2.invertAffineTransform(mat).astype("float32")
-    corr = cv2.warpAffine(
-        frame,
-        mat,
-        (w, h),
-        flags=cv2.INTER_CUBIC,
-        borderMode=cv2.BORDER_CONSTANT,
-    )
-    if invert:
-        return corr, affine
-    return corr
-
-
-def cosine_distance(a, b):
-    if a.shape != b.shape:
-        raise RuntimeError("array {} shape not match {}".format(a.shape, b.shape))
-    a_norm = np.linalg.norm(a)
-    b_norm = np.linalg.norm(b)
-    similarity = np.dot(a, b.T) / (a_norm * b_norm)
-
-    return similarity
-
-
 databases = "databases"
-
 if not os.path.exists(databases):
     os.mkdir(databases)
 
 
-def create_db(face_fame, results):
-    name = args.name
-    font = cv2.FONT_HERSHEY_PLAIN
-    font_scale = 1
-    font_color = (0, 255, 0)
-    line_type = 1
-    if len(name) == 0:
-        while 1:
-            cc = face_fame.copy()
-            cv2.putText(
-                cc,
-                f"Who is he/she？\r\n{name}",
-                (0, 30),
-                font,
-                font_scale,
-                font_color,
-                line_type,
-            )
-            cv2.imshow("who?", cc)
+class FaceRecognition:
+    def __init__(self, db_path, name) -> None:
+        self.read_db(db_path)
+        self.name = name
+        self.bg_color = (0, 0, 0)
+        self.color = (255, 255, 255)
+        self.text_type = cv2.FONT_HERSHEY_SIMPLEX
+        self.line_type = cv2.LINE_AA
+        self.printed = True
 
-            k = cv2.waitKey(0)
-            if k == 27:  # Esc
-                # == ord("q"):
-                cv2.destroyAllWindows()
-                raise StopIteration()
-            # name = input("Who is he/she ? (length >2 )")
-            if k == 13:  # Enter
-                if len(name) > 0:
-                    save = True
-                    break
-                else:
-                    cv2.putText(
-                        cc,
-                        "Did not enter a name? Enter it again" f"{name}",
-                        (0, 30),
-                        font,
-                        font_scale,
-                        font_color,
-                        line_type,
-                    )
-                    cv2.imshow("who?", cc)
-                    k = cv2.waitKey(0)
-                    if k == 27:
-                        break
-                    continue
-            if k == 225:  # Shift
-                break
-            if k == 8:  # backspace
-                name = name[:-1]
-                continue
-            else:
-                name += chr(k)
-                continue
-    try:
-        with np.load(f"{databases}/{name}.npz") as db:
-            db_ = [db[j] for j in db.files][:]
-    except Exception as e:
-        db_ = []
-    db_.append(np.array(results))
-    np.savez_compressed(f"{databases}/{name}", *db_)
+    def cosine_distance(self, a, b):
+        if a.shape != b.shape:
+            raise RuntimeError("array {} shape not match {}".format(a.shape, b.shape))
+        a_norm = np.linalg.norm(a)
+        b_norm = np.linalg.norm(b)
+        return np.dot(a, b.T) / (a_norm * b_norm)
 
+    def new_recognition(self, frame, coords, results):
+        conf = []
+        max_ = 0
+        label_ = None
+        for label in list(self.labels):
+            for j in self.db_dic.get(label):
+                conf_ = self.cosine_distance(j, results)
+                if conf_ > max_:
+                    max_ = conf_
+                    label_ = label
 
-def read_db(labels):
-    for file in os.listdir(databases):
-        filename = os.path.splitext(file)
-        if filename[1] == ".npz":
-            label = filename[0]
-            labels.add(label)
-    db_dic = {}
-    for label in list(labels):
-        with np.load(f"{databases}/{label}.npz") as db:
-            db_dic[label] = [db[j] for j in db.files]
-    return db_dic
+        conf.append((max_, label_))
+        name = conf[0] if conf[0][0] >= 0.5 else (1 - conf[0][0], "UNKNOWN")
+        self.putText(frame, f"name:{name[1]}", (coords[0], coords[1] - 35))
+        self.putText(frame, f"conf:{name[0] * 100:.2f}%", (coords[0], coords[1] - 10))
 
+        if name[1] == "UNKNOWN":
+            self.create_db(results)
 
-class DepthAI:
-    def __init__(
-        self,
-        file=None,
-        camera=False,
-    ):
-        print("Loading pipeline...")
-        self.file = file
-        self.camera = camera
-        self.fps_cam = FPS()
-        self.fps_nn = FPS()
-        self.create_pipeline()
-        self.start_pipeline()
-        self.fontScale = 1 if self.camera else 2
-        self.lineType = 0 if self.camera else 3
+    def read_db(self, databases_path):
+        self.labels = []
+        for file in os.listdir(databases_path):
+            filename = os.path.splitext(file)
+            if filename[1] == ".npz":
+                self.labels.append(filename[0])
 
-    def create_pipeline(self):
-        print("Creating pipeline...")
-        self.pipeline = depthai.Pipeline()
+        self.db_dic = {}
+        for label in self.labels:
+            with np.load(f"{databases_path}/{label}.npz") as db:
+                self.db_dic[label] = [db[j] for j in db.files]
 
-        if self.camera:
-            # ColorCamera
-            print("Creating Color Camera...")
-            self.cam = self.pipeline.createColorCamera()
-            self.cam.setPreviewSize(self._cam_size[1], self._cam_size[0])
-            self.cam.setResolution(
-                depthai.ColorCameraProperties.SensorResolution.THE_4_K
-            )
-            self.cam.setInterleaved(False)
-            self.cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
-            self.cam.setColorOrder(depthai.ColorCameraProperties.ColorOrder.BGR)
+    def putText(self, frame, text, coords):
+        cv2.putText(frame, text, coords, self.text_type, 1, self.bg_color, 4, self.line_type)
+        cv2.putText(frame, text, coords, self.text_type, 1, self.color, 1, self.line_type)
 
-            self.cam_xout = self.pipeline.createXLinkOut()
-            self.cam_xout.setStreamName("preview")
-            self.cam.preview.link(self.cam_xout.input)
+    def create_db(self, results):
+        if self.name is None:
+            if not self.printed:
+                print("Wanted to create new DB for this face, but --name wasn't specified")
+                self.printed = True
+            return
+        print('Saving face...')
+        try:
+            with np.load(f"{databases}/{self.name}.npz") as db:
+                db_ = [db[j] for j in db.files][:]
+        except Exception as e:
+            db_ = []
+        db_.append(np.array(results))
+        np.savez_compressed(f"{databases}/{self.name}", *db_)
+        self.adding_new = False
 
-        self.create_nns()
+def create_pipeline():
+    print("Creating pipeline...")
+    pipeline = dai.Pipeline()
+    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
+    openvino_version = '2021.2'
 
-        print("Pipeline created.")
+    print("Creating Color Camera...")
+    cam = pipeline.create(dai.node.ColorCamera)
+    # For ImageManip rotate you need input frame of multiple of 16
+    cam.setPreviewSize(1072, 1072)
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam.setInterleaved(False)
+    cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 
-    def create_nns(self):
-        pass
+    # ImageManip that will crop the frame before sending it to the Face detection NN node
+    face_det_manip = pipeline.create(dai.node.ImageManip)
+    face_det_manip.initialConfig.setResize(300, 300)
+    face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
 
-    def create_nn(self, model_path: str, model_name: str, first: bool = False):
-        """
+    # NeuralNetwork
+    print("Creating Face Detection Neural Network...")
+    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    face_det_nn.setConfidenceThreshold(0.5)
+    face_det_nn.setBlobPath(str(blobconverter.from_zoo(
+        name="face-detection-retail-0004",
+        shaves=6,
+        version=openvino_version
+    )))
+    # Link Face ImageManip -> Face detection NN node
+    face_det_manip.out.link(face_det_nn.input)
 
-        :param model_path: model path
-        :param model_name: model abbreviation
-        :param first: Is it the first model
-        :return:
-        """
-        # NeuralNetwork
-        print(f"Creating {model_path} Neural Network...")
-        model_nn = self.pipeline.createNeuralNetwork()
-        model_nn.setBlobPath(str(Path(f"{model_path}").resolve().absolute()))
-        model_nn.input.setBlocking(False)
-        if first and self.camera:
-            print("linked cam.preview to model_nn.input")
-            self.cam.preview.link(model_nn.input)
-        else:
-            model_in = self.pipeline.createXLinkIn()
-            model_in.setStreamName(f"{model_name}_in")
-            model_in.out.link(model_nn.input)
+    # Script node will take the output from the face detection NN as an input and set ImageManipConfig
+    # to the 'age_gender_manip' to crop the initial frame
+    script = pipeline.create(dai.node.Script)
 
-        model_nn_xout = self.pipeline.createXLinkOut()
-        model_nn_xout.setStreamName(f"{model_name}_nn")
-        model_nn.out.link(model_nn_xout.input)
+    face_det_nn.out.link(script.inputs['face_det_in'])
+    # We are only interested in timestamp, so we can sync depth frames with NN output
+    face_det_nn.passthrough.link(script.inputs['face_pass'])
 
-    def create_mobilenet_nn(
-        self,
-        model_path: str,
-        model_name: str,
-        conf: float = 0.5,
-        first: bool = False,
-    ):
-        """
+    with open("script.py", "r") as f:
+        script.setScript(f.read())
 
-        :param model_path: model name
-        :param model_name: model abbreviation
-        :param conf: confidence threshold
-        :param first: Is it the first model
-        :return:
-        """
-        # NeuralNetwork
-        print(f"Creating {model_path} Neural Network...")
-        model_nn = self.pipeline.createMobileNetDetectionNetwork()
-        model_nn.setBlobPath(str(Path(f"{model_path}").resolve().absolute()))
-        model_nn.setConfidenceThreshold(conf)
-        model_nn.input.setBlocking(False)
+    # ImageManip as a workaround to have more frames in the pool.
+    # cam.preview can only have 4 frames in the pool before it will
+    # wait (freeze). Copying frames and setting ImageManip pool size to
+    # higher number will fix this issue.
+    copy_manip = pipeline.create(dai.node.ImageManip)
+    cam.preview.link(copy_manip.inputImage)
+    copy_manip.setNumFramesPool(16)
+    copy_manip.setMaxOutputFrameSize(1072*1072*3)
 
-        if first and self.camera:
-            self.cam.preview.link(model_nn.input)
-        else:
-            model_in = self.pipeline.createXLinkIn()
-            model_in.setStreamName(f"{model_name}_in")
-            model_in.out.link(model_nn.input)
+    copy_manip.out.link(face_det_manip.inputImage)
+    copy_manip.out.link(script.inputs['preview'])
 
-        model_nn_xout = self.pipeline.createXLinkOut()
-        model_nn_xout.setStreamName(f"{model_name}_nn")
-        model_nn.out.link(model_nn_xout.input)
+    # Send face synced detections (for bounding boxes) and color frames to the host
+    host_face_out = pipeline.create(dai.node.XLinkOut)
+    host_face_out.setStreamName('frame')
+    script.outputs['host_frame'].link(host_face_out.input)
 
-    def start_pipeline(self):
-        self.device = depthai.Device(self.pipeline)
-        print("Starting pipeline...")
+    print("Creating Head pose estimation NN")
+    headpose_manip = pipeline.create(dai.node.ImageManip)
+    headpose_manip.initialConfig.setResize(60, 60)
 
-        self.start_nns()
+    script.outputs['manip_cfg'].link(headpose_manip.inputConfig)
+    script.outputs['manip_img'].link(headpose_manip.inputImage)
 
-        if self.camera:
-            self.preview = self.device.getOutputQueue(
-                name="preview", maxSize=4, blocking=False
-            )
+    headpose_nn = pipeline.create(dai.node.NeuralNetwork)
+    headpose_nn.setBlobPath(str(blobconverter.from_zoo(
+        name="head-pose-estimation-adas-0001",
+        shaves=6,
+        version=openvino_version
+    )))
+    headpose_manip.out.link(headpose_nn.input)
 
-    def start_nns(self):
-        pass
+    headpose_nn.out.link(script.inputs['headpose_in'])
+    headpose_nn.passthrough.link(script.inputs['headpose_pass'])
 
-    def put_text(self, text, dot, color=(0, 0, 255), font_scale=None, line_type=None):
-        font_scale = font_scale if font_scale else self.fontScale
-        line_type = line_type if line_type else self.lineType
-        dot = tuple(dot[:2])
-        cv2.putText(
-            img=self.debug_frame,
-            text=text,
-            org=dot,
-            fontFace=cv2.FONT_HERSHEY_COMPLEX,
-            fontScale=font_scale,
-            color=color,
-            lineType=line_type,
-        )
+    print("Creating face recognition ImageManip/NN")
 
-    def draw_bbox(self, bbox, color):
-        cv2.rectangle(
-            img=self.debug_frame,
-            pt1=(bbox[0], bbox[1]),
-            pt2=(bbox[2], bbox[3]),
-            color=color,
-            thickness=2,
-        )
+    face_rec_manip = pipeline.create(dai.node.ImageManip)
+    face_rec_manip.initialConfig.setResize(112, 112)
 
-    def parse(self):
-        if debug:
-            self.debug_frame = self.frame.copy()
+    script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
+    script.outputs['manip2_img'].link(face_rec_manip.inputImage)
 
-        s = self.parse_fun()
-        # if s :
-        #     raise StopIteration()
-        if debug:
-            cv2.imshow(
-                "Camera_view",
-                self.debug_frame,
-            )
-            self.fps_cam.update()
-            if cv2.waitKey(1) == ord("q"):
-                cv2.destroyAllWindows()
-                self.fps_cam.stop()
-                self.fps_nn.stop()
-                print(
-                    f"FPS_CAMERA: {self.fps_cam.fps():.2f} , FPS_NN: {self.fps_nn.fps():.2f}"
-                )
-                raise StopIteration()
+    face_rec_cfg_out = pipeline.create(dai.node.XLinkOut)
+    face_rec_cfg_out.setStreamName('face_rec_cfg_out')
+    script.outputs['manip2_cfg'].link(face_rec_cfg_out.input)
 
-    def parse_fun(self):
-        pass
+    # rotate_out = pipeline.create(dai.node.XLinkOut)
+    # rotate_out.setStreamName('rotated_frame')
+    # face_rec_manip.out.link(rotate_out.input)
 
-    def run_video(self):
-        cap = cv2.VideoCapture(str(Path(self.file).resolve().absolute()))
-        while cap.isOpened():
-            read_correctly, self.frame = cap.read()
-            if not read_correctly:
-                break
+    face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
+    # Removed from OMZ, so we can't use blobconverter for downloading, see here:
+    # https://github.com/openvinotoolkit/open_model_zoo/issues/2448#issuecomment-851435301
+    face_rec_nn.setBlobPath("models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob")
+    face_rec_manip.out.link(face_rec_nn.input)
 
-            try:
-                self.parse()
-            except StopIteration:
-                break
+    arc_out = pipeline.create(dai.node.XLinkOut)
+    arc_out.setStreamName('arc_out')
+    face_rec_nn.out.link(arc_out.input)
 
-        cap.release()
-
-    def run_camera(self):
-        while True:
-            in_rgb = self.preview.tryGet()
-            if in_rgb is not None:
-                shape = (3, in_rgb.getHeight(), in_rgb.getWidth())
-                self.frame = (
-                    in_rgb.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
-                )
-                self.frame = np.ascontiguousarray(self.frame)
-                try:
-                    self.parse()
-                except StopIteration:
-                    break
-
-    @property
-    def cam_size(self):
-        return self._cam_size
-
-    @cam_size.setter
-    def cam_size(self, v):
-        self._cam_size = v
-
-    def run(self):
-        self.fps_cam.start()
-        self.fps_nn.start()
-        if self.file is not None:
-            self.run_video()
-        else:
-            self.run_camera()
-        del self.device
+    return pipeline
 
 
-class Main(DepthAI):
-    def __init__(self, file=None, camera=False):
-        self.cam_size = (300, 300)
-        super(Main, self).__init__(file, camera)
-        self.face_frame_corr = Queue()
-        self.face_frame = Queue()
-        self.face_coords = Queue()
-        self.labels = set()
-        if not is_db:
-            self.db_dic = read_db(self.labels)
+with dai.Device(create_pipeline()) as device:
+    frameQ = device.getOutputQueue("frame", 4, False)
+    # rotateQ = device.getOutputQueue("rotated_frame", 4, False)
+    recCfgQ = device.getOutputQueue("face_rec_cfg_out", 4, False)
+    arcQ = device.getOutputQueue("arc_out", 4, False)
 
-    def create_nns(self):
-        self.create_mobilenet_nn(
-            "models/face-detection-retail-0004_openvino_2021.2_4shave.blob",
-            "mfd",
-            first=self.camera,
-        )
+    facerec = FaceRecognition(databases, args.name)
+    frame = None
 
-        self.create_nn(
-            "models/head-pose-estimation-adas-0001_openvino_2021.2_4shave.blob",
-            "head_pose",
-        )
-        self.create_nn(
-            "models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob",
-            "arcface",
-        )
+    while True:
+        frameIn = frameQ.tryGet()
+        if frameIn is not None:
+            frame = frameIn.getCvFrame()
 
-    def start_nns(self):
-        if not self.camera:
-            self.mfd_in = self.device.getInputQueue("mfd_in")
-        self.mfd_nn = self.device.getOutputQueue("mfd_nn", 4, False)
-        self.head_pose_in = self.device.getInputQueue("head_pose_in", 4, False)
-        self.head_pose_nn = self.device.getOutputQueue("head_pose_nn", 4, False)
-        self.arcface_in = self.device.getInputQueue("arcface_in", 4, False)
-        self.arcface_nn = self.device.getOutputQueue("arcface_nn", 4, False)
-
-    def run_face_mn(self):
-        if not self.camera:
-            nn_data = run_nn(
-                self.mfd_in, self.mfd_nn, {"data": to_planar(self.frame, (300, 300))}
-            )
-        else:
-            nn_data = self.mfd_nn.tryGet()
-        if nn_data is None:
-            return False
-
-        bboxes = nn_data.detections
-        for bbox in bboxes:
-            face_coord = frame_norm(
-                self.frame.shape[:2], *[bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax]
-            )
-            self.face_frame.put(
-                self.frame[face_coord[1] : face_coord[3], face_coord[0] : face_coord[2]]
-            )
-            self.face_coords.put(face_coord)
-            self.draw_bbox(face_coord, (10, 245, 10))
-        return True
-
-    def run_head_pose(self):
-        while self.face_frame.qsize():
-            face_frame = self.face_frame.get()
-            nn_data = run_nn(
-                self.head_pose_in,
-                self.head_pose_nn,
-                {"data": to_planar(face_frame, (60, 60))},
-            )
-            if nn_data is None:
-                return False
-
-            out = np.array(nn_data.getLayerFp16("angle_r_fc"))
-            self.face_frame_corr.put(correction(face_frame, -out[0]))
-
-        return True
-
-    def run_arcface(self):
-        while self.face_frame_corr.qsize():
-            face_coords = self.face_coords.get()
-            face_fame = self.face_frame_corr.get()
-
-            nn_data = run_nn(
-                self.arcface_in,
-                self.arcface_nn,
-                {"data": to_planar(face_fame, (112, 112))},
-            )
-
-            if nn_data is None:
-                return False
-            self.fps_nn.update()
-            results = to_nn_result(nn_data)
-
-            if is_db:
-                create_db(face_fame, results)
-            else:
-                conf = []
-                max_ = 0
-                label_ = None
-                for label in list(self.labels):
-                    for j in self.db_dic.get(label):
-                        conf_ = cosine_distance(j, results)
-                        if conf_ > max_:
-                            max_ = conf_
-                            label_ = label
-                conf.append((max_, label_))
-                name = conf[0] if conf[0][0] >= 0.5 else (1 - conf[0][0], "UNKNOWN")
-                self.put_text(
-                    f"name:{name[1]}",
-                    (face_coords[0], face_coords[1] - 35),
-                    (244, 0, 255),
-                )
-                self.put_text(
-                    f"conf:{name[0] * 100:.2f}%",
-                    (face_coords[0], face_coords[1] - 10),
-                    (244, 0, 255),
-                )
-        return True
-
-    def parse_fun(self):
-        if self.run_face_mn():
-            if self.run_head_pose():
-                if self.run_arcface():
-                    return True
+        face_in = recCfgQ.tryGet()
+        if face_in is not None and frame is not None:
+            print('New det')
+            rr = face_in.getRaw().cropConfig.cropRotatedRect
+            h, w, c = frame.shape
+            center = (int(rr.center.x * w), int(rr.center.y * h))
+            size = (int(rr.size.width * w), int(rr.size.height * h))
+            rotatedRect = (center, size, rr.angle)
+            points = np.int0(cv2.boxPoints(rotatedRect))
+            cv2.drawContours(frame, [points], 0, (255, 0, 0), 3)
+            # draw_detections(frame, face_in.detections)
+            print('1')
+            arcIn = arcQ.get()
+            print('2')
+            features = np.array(arcIn.getFirstLayerFp16())
+            # facerec.new_recognition(frame, center, features)
 
 
-if __name__ == "__main__":
-    if args.video:
-        Main(file=args.video).run()
-    else:
-        Main(camera=args.camera).run()
+        # rotateIn = rotateQ.tryGet()
+        # if rotateIn is not None:
+        #     cv2.imshow('rotate', rotateIn.getCvFrame())
+        if frame is not None:
+            cv2.imshow("color", cv2.resize(frame, (500,500)))
+
+        if cv2.waitKey(1) == ord('q'):
+            break
