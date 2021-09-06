@@ -8,6 +8,8 @@ Input video is resized to 426 x 240 (W x H). Due to a relatively heavy model, th
 
 ![Image example](imgs/example.gif)
 
+Example shows input video with overlay density map input. Example video taken from [VIRAT](https://viratdata.org/) dataset.
+
 ## Pre-requisites
 
 1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/))
@@ -29,5 +31,5 @@ python3 main.py [options]
 
 Options:
 
-* -v, --video_path: Path to the video input for inference. Default: *vids/vid1.mp4*.
+* -v, --video_path: Path to the video input for inference. Default: *vids/virat.mp4*.
 * -nn, --nn_model: Select model path for inference. Default: *models/vgg_openvino_2021.4_6shave.blob*

@@ -26,7 +26,7 @@ DepthAI 2.9.0.0 is required. Blob was compiled using OpenVino 2021.4
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
 parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/vgg_openvino_2021.4_6shave.blob', type=str)
-parser.add_argument('-v', '--video_path', help="Path to video frame", default="vids/vid1.mp4")
+parser.add_argument('-v', '--video_path', help="Path to video frame", default="vids/virat.mp4")
 
 args = parser.parse_args()
 
@@ -50,7 +50,7 @@ def decode_density_map(output_tensor):
 
 # merge 2 frames together
 def show_output(output_colors, frame):
-    return cv2.vconcat([frame, output_colors])
+    return cv2.addWeighted(frame, 1, output_colors, 0.5, 0)
 
 
 # --------------- Check input ---------------
