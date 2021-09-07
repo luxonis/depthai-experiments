@@ -24,20 +24,37 @@ camRgb.video.link(videoEnc.input)
 videoEnc.bitstream.link(xout.input)
 
 width, height = 720, 500
-cmd_out = ["ffplay", "-i", "-", "-x", str(width), "-y", str(height)]
+command = [
+    "ffplay",
+    "-i", "-",
+    "-x", str(width),
+    "-y", str(height),
+    "-framerate", "60",
+    "-fflags", "flush_packets",
+    "-flags", "low_delay",
+    "-framedrop",
+    "-strict", "experimental"
+]
 if osName == "nt":  # Running on Windows
-    cmd_out = ["cmd", "/c"] + cmd_out
+    command = ["cmd", "/c"] + command
+
+try:
+    proc = sp.Popen(command, stdin=sp.PIPE)  # Start the ffplay process
+except:
+    exit("Error: cannot run ffplay!\nTry running: sudo apt install ffmpeg")
 
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
     # Output queue will be used to get the encoded data from the output defined above
-    q = device.getOutputQueue(name="h265", maxSize=30, blocking=True)
+    q = device.getOutputQueue(name="h265", maxSize=120, blocking=True)
 
-    proc = sp.Popen(cmd_out, stdin=sp.PIPE)  # Start the ffplay process
     try:
         while True:
-            h265Packet = q.get()  # Blocking call, will wait until a new data has arrived
-            h265Packet.getData().tofile(proc.stdin)  # Appends the packet data to the process pipe
+            data = q.get().getData()  # Blocking call, will wait until new data has arrived
+
+            proc.stdin.write(data)
+            
+            # h265Packet.tofile(proc.stdin)  # Is a lot faster with h264, works only on Windows
     except:
         pass
 
