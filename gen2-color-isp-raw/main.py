@@ -41,6 +41,10 @@ parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k
                     help="Select RGB resolution. Default: %(default)s")
 parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
+parser.add_argument('-lens', '--lens_position', default=130, type=int,
+                    help="Initial lens position for manual focus, 0..255. Default: %(default)s")
+parser.add_argument('-ds', '--isp_downscale', default=1, type=int,
+                    help="Downscale the ISP output by this factor")
 args = parser.parse_args()
 
 streams = []
@@ -84,8 +88,8 @@ pipeline = dai.Pipeline()
 cam = pipeline.createColorCamera()
 cam.setResolution(rgb_res)
 # Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
-cam.initialControl.setManualFocus(130)
-#cam.setIspScale(1, 2)
+cam.initialControl.setManualFocus(args.lens_position)
+cam.setIspScale(1, args.isp_downscale)
 #cam.setFps(20.0)  # Default: 30
 
 # Camera control input
