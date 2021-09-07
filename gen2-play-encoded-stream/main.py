@@ -54,7 +54,8 @@ with dai.Device(pipeline) as device:
 
             proc.stdin.write(data)
             
-            # h265Packet.tofile(proc.stdin)  # Is a lot faster with h264, works only on Windows
+            # NOTE: This is a lot faster when using h264 encoding, works only on Windows
+            # h265Packet.tofile(proc.stdin)
     except:
         pass
 
