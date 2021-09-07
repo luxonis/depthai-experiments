@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 import depthai as dai
-import cv2
-import numpy as np
 import subprocess as sp
+from os import name as osName
 
 # Create pipeline
 pipeline = dai.Pipeline()
@@ -24,13 +23,10 @@ videoEnc.setDefaultProfilePreset(3840, 2160, 30, dai.VideoEncoderProperties.Prof
 camRgb.video.link(videoEnc.input)
 videoEnc.bitstream.link(xout.input)
 
-width, height = 500, 400
-
-# Command for Windows
-# cmd_out = ["cmd", "/c", "ffplay", "-i", "-", "-x", str(width), "-y", str(height)]
-
-# Command for Linux (TODO: Not tested)
+width, height = 720, 500
 cmd_out = ["ffplay", "-i", "-", "-x", str(width), "-y", str(height)]
+if osName == "nt":  # Running on Windows
+    cmd_out = ["cmd", "/c"] + cmd_out
 
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
