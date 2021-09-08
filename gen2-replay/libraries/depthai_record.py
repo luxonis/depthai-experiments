@@ -6,13 +6,13 @@ import depthai as dai
 
 class Record:
     def __init__(self, path, device) -> None:
-        a = 5
         self.save = ['color', 'mono']
         self.fps = 30
         self.device = device
 
         self.stereo = 1 < len(device.getConnectedCameras())
         self.path = Path(self.create_folder(path, device.getMxId()))
+        self.convert_mp4 = False
 
     def start_recording(self):
         if not self.stereo: # If device doesn't have stereo camera pair
@@ -166,13 +166,16 @@ class Record:
         for name in files:
             files[name].close()
 
-        if False:
+        if self.convert_mp4:
             print("Converting .mjpeg to .mp4")
             for stream_name in files:
                 self.convert_to_mp4((self.path / f"{stream_name}.mjpeg"))
         print('Exiting store frame process')
 
-    def convert_to_mp4(path, deleteMjpeg = False):
+    def convert_to_mp4(self, convert):
+        self.convert_mp4 = convert
+
+    def mp4(path, deleteMjpeg = False):
         try:
             import ffmpy3
             path_output = path.parent / (path.stem + '.mp4')

@@ -10,9 +10,7 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
-parser.add_argument('-d', '--depth', action='store_true', default=False, help="Use saved depth maps")
 args = parser.parse_args()
-
 
 # Create Replay object
 replay = Replay(args.path)
