@@ -17,7 +17,7 @@ xout.setStreamName("h265")
 # Properties
 camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-videoEnc.setDefaultProfilePreset(camRgb.getVideoSize(), camRgb.getFps(), dai.VideoEncoderProperties.Profile.H264_MAIN)
+videoEnc.setDefaultProfilePreset(camRgb.getVideoSize(), camRgb.getFps(), dai.VideoEncoderProperties.Profile.H265_MAIN)
 
 # Linking
 camRgb.video.link(videoEnc.input)
@@ -29,7 +29,6 @@ command = [
     "-i", "-",
     "-x", str(width),
     "-y", str(height),
-    "-framerate", "60",
     "-fflags", "flush_packets",
     "-flags", "low_delay",
     "-framedrop",
@@ -46,7 +45,7 @@ except:
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
     # Output queue will be used to get the encoded data from the output defined above
-    q = device.getOutputQueue(name="h265", maxSize=120, blocking=True)
+    q = device.getOutputQueue(name="h265", maxSize=240, blocking=True)
 
     try:
         while True:
@@ -55,7 +54,7 @@ with dai.Device(pipeline) as device:
             proc.stdin.write(data)
             
             # NOTE: This is a lot faster when using h264 encoding, works only on Windows
-            # h265Packet.tofile(proc.stdin)
+            # data.tofile(proc.stdin)
     except:
         pass
 
