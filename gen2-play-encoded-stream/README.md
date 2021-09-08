@@ -6,7 +6,7 @@ It does so by piping the output stream of the device to the input of the ffplay 
 
 ## Demo
 
-![Simple demo](https://user-images.githubusercontent.com/59799831/132342531-f9a4fc02-e8a8-4aca-85c2-0fd610aa7249.gif)
+![Encoding demo](https://user-images.githubusercontent.com/59799831/132475640-6e9f8b7f-52f4-4f75-af81-86c7f6e45b94.gif)
 
 ## Pre-requisites
 
