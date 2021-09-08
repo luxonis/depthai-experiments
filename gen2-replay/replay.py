@@ -16,86 +16,17 @@ parser.add_argument('-p', '--path', default="data", type=str, help="Path where t
 parser.add_argument('-d', '--depth', action='store_true', default=False, help="Use saved depth maps")
 args = parser.parse_args()
 
-def create_pipeline(mono, depth):
-    nodes = {}
-    if mono and depth:
-        mono = False # Use depth stream
-
-    pipeline = dai.Pipeline()
-
-    nodes['color_in'] = pipeline.createXLinkIn()
-    nodes['color_in'].setStreamName("color_in")
-
-    if mono:
-        nodes['left_in'] = pipeline.createXLinkIn()
-        nodes['left_in'].setStreamName("left_in")
-        nodes['right_in'] = pipeline.createXLinkIn()
-        nodes['right_in'].setStreamName("right_in")
-
-        nodes['stereo'] = pipeline.createStereoDepth()
-        nodes['stereo'].initialConfig.setConfidenceThreshold(240)
-        nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-        nodes['stereo'].setRectification(False)
-        nodes['stereo'].setLeftRightCheck(False)
-        nodes['stereo'].setExtendedDisparity(False)
-        nodes['stereo'].setSubpixel(False)
-        nodes['stereo'].setInputResolution(640,400)
-
-        nodes['left_in'].out.link(nodes['stereo'].left)
-        nodes['right_in'].out.link(nodes['stereo'].right)
-
-        right_s_out = pipeline.createXLinkOut()
-        right_s_out.setStreamName("rightS")
-        nodes['stereo'].syncedRight.link(right_s_out.input)
-
-        left_s_out = pipeline.createXLinkOut()
-        left_s_out.setStreamName("leftS")
-        nodes['stereo'].syncedLeft.link(left_s_out.input)
-
-    if depth or mono:
-        nn = pipeline.createMobileNetSpatialDetectionNetwork()
-        nn.setBoundingBoxScaleFactor(0.3)
-        nn.setDepthLowerThreshold(100)
-        nn.setDepthUpperThreshold(5000)
-
-        if depth:
-            nodes['depth_in'] = pipeline.createXLinkIn()
-            nodes['depth_in'].setStreamName("depth_in")
-            nodes['depth_in'].out.link(nn.inputDepth)
-        else:
-            nodes['stereo'].depth.link(nn.inputDepth)
-    else:
-        nn = pipeline.createMobileNetDetectonNetwork()
-
-    nn.setBlobPath("models/mobilenet-ssd_openvino_2021.4_6shave.blob")
-    nn.setConfidenceThreshold(0.5)
-    nn.input.setBlocking(False)
-
-    nodes['color_in'].out.link(nn.input)
-
-    bbOut = pipeline.createXLinkOut()
-    bbOut.setStreamName("bb_out")
-    nn.boundingBoxMapping.link(bbOut.input)
-
-    detOut = pipeline.createXLinkOut()
-    detOut.setStreamName("det_out")
-    nn.out.link(detOut.input)
-
-    depthOut = pipeline.createXLinkOut()
-    depthOut.setStreamName("depth_out")
-    nn.passthroughDepth.link(depthOut.input)
-
-    rgbOut = pipeline.createXLinkOut()
-    rgbOut.setStreamName("nn_passthrough_out")
-    nn.passthrough.link(rgbOut.input)
-    return pipeline, nodes
 
 class Replay:
     def __init__(self, path):
         self.path = path
-        # get all mjpegs
-        #  = cv2.VideoCapture(str(Path(path).resolve().absolute()))
-        self.cap = {}
+
+        self.cap = {} # VideoCapture objects
+        self.size = {} # Frame sizes
+
+        # steam_types = ['color', 'left', 'right', 'depth']
+        # extensions = ['mjpeg', 'avi', 'mp4']
+
         recordings = os.listdir(path)
         if "left.mjpeg" in recordings and "right.mjpeg" in recordings:
             self.cap['left'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'left.mjpeg'))
@@ -103,18 +34,92 @@ class Replay:
         if "color.mjpeg" in recordings:
             self.cap['color'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'color.mjpeg'))
 
-        if 'left' in self.cap:
-            create_pipeline(mono=True, depth=False)
-        else:
-            create_pipeline(mono=False, depth=False)
         if len(self.cap) == 0:
             raise RuntimeError("There are no .mjpeg recordings in the folder specified.")
 
-    # def __del__(self):
-    #     for vid in self.cap:
-    #         vid.release()
-    def set_queues(self, queues):
-        self.queues = queues
+        # Read basic info about the straems (resolution of streams etc.)
+        for name in self.cap:
+            self.size[name] = self.get_size(self.cap[name])
+
+        self.color_size = None
+        self.keep_ar = False
+
+    # Resize color frames prior to sending them to the device
+    def resize_color(self, size):
+        self.color_size = size
+    def keep_aspect_ratio(self, keep_aspect_ratio):
+        self.keep_ar = keep_aspect_ratio
+
+    def init_pipeline(self):
+        nodes = {}
+        mono = 'left' in self.cap
+        depth = 'depth' in self.cap
+        if mono and depth:
+            mono = False # Use depth stream by default
+
+        pipeline = dai.Pipeline()
+
+        nodes['color'] = pipeline.createXLinkIn()
+        nodes['color'].setStreamName("color_in")
+
+        if mono:
+            nodes['left'] = pipeline.createXLinkIn()
+            nodes['left'].setStreamName("left_in")
+            nodes['right'] = pipeline.createXLinkIn()
+            nodes['right'].setStreamName("right_in")
+
+            nodes['stereo'] = pipeline.createStereoDepth()
+            nodes['stereo'].initialConfig.setConfidenceThreshold(240)
+            nodes['stereo'].setRectification(False)
+            nodes['stereo'].setInputResolution(self.size['left'])
+
+            nodes['left'].out.link(nodes['stereo'].left)
+            nodes['right'].out.link(nodes['stereo'].right)
+
+            right_s_out = pipeline.createXLinkOut()
+            right_s_out.setStreamName("rightS")
+            nodes['stereo'].syncedRight.link(right_s_out.input)
+
+            left_s_out = pipeline.createXLinkOut()
+            left_s_out.setStreamName("leftS")
+            nodes['stereo'].syncedLeft.link(left_s_out.input)
+
+        if depth:
+            nodes['depth'] = pipeline.createXLinkIn()
+            nodes['depth'].setStreamName("depth_in")
+
+        if depth or mono:
+            nn = pipeline.createMobileNetSpatialDetectionNetwork()
+            nn.setBoundingBoxScaleFactor(0.3)
+            nn.setDepthLowerThreshold(100)
+            nn.setDepthUpperThreshold(5000)
+            
+
+        nn.setBlobPath("models/mobilenet-ssd_openvino_2021.4_6shave.blob")
+        nn.setConfidenceThreshold(0.5)
+        nn.input.setBlocking(False)
+
+        nodes['color'].out.link(nn.input)
+
+
+        detOut = pipeline.createXLinkOut()
+        detOut.setStreamName("det_out")
+        nn.out.link(detOut.input)
+
+        depthOut = pipeline.createXLinkOut()
+        depthOut.setStreamName("depth_out")
+        # nn.passthroughDepth.link(depthOut.input)
+        nodes['stereo'].disparity.link(depthOut.input)
+
+        rgbOut = pipeline.createXLinkOut()
+        rgbOut.setStreamName("nn_passthrough_out")
+        nn.passthrough.link(rgbOut.input)
+        return pipeline, nodes
+
+    def create_queues(self, device):
+        self.queues['left_in'] = device.getInputQueue('left_in')
+        self.queues['right_in'] = device.getInputQueue('right_in')
+        self.queues['color_in'] = device.getInputQueue('color_in')
 
     def to_planar(self, arr, shape = None):
         if shape is None: return arr.transpose(2, 0, 1).flatten()
@@ -126,7 +131,6 @@ class Replay:
             if not self.cap[name].isOpened(): return None
             ok, frame = self.cap[name].read()
             if ok:
-                # cv2.imshow('og_' + name, frame)
                 frames[name] = frame
         if len(frames) == 0: return None
         return frames
@@ -139,6 +143,12 @@ class Replay:
             self.send_frame(frames[name], name)
 
         return True
+
+    def get_size(self, cap):
+        return (
+            int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+        )
 
     def send_frame(self, frame, name):
         q_name = name + '_in'
@@ -156,7 +166,7 @@ class Replay:
         img = img[:,:,0] # all 3 planes are the same
         h, w = img.shape
         frame = dai.ImgFrame()
-        frame.setData(cv2.flip(img, 1)) # Flip the rectified frame
+        frame.setData(img)
         frame.setType(dai.RawImgFrame.Type.RAW8)
         frame.setWidth(w)
         frame.setHeight(h)
@@ -164,12 +174,20 @@ class Replay:
         q.send(frame)
 
     def send_color(self, q, img):
-        preview = img[0:1080, 420:1500] # Crop before sending
+        # TODO Use self.color_size to crop & resize
+        if self.color_size is not None:
+            if self.keep_ar:
+
+                img = cv2.resize(img, self.color_size)
+                # Crop to keep desired aspect ratio, resize later
+            else: img = cv2.resize(img, self.color_size)
+
+        h, w, c = img.shape
         frame = dai.ImgFrame()
         frame.setType(dai.RawImgFrame.Type.BGR888p)
-        frame.setData(self.to_planar(preview, (300, 300)))
-        frame.setWidth(300)
-        frame.setHeight(300)
+        frame.setData(self.to_planar(img))
+        frame.setWidth(w)
+        frame.setHeight(h)
         frame.setInstanceNum(0)
         q.send(frame)
 
@@ -190,22 +208,19 @@ class Replay:
 
 # Pipeline defined, now the device is connected to
 replay = Replay(args.path)
-mono = 'left' in replay.cap
-depth = 'depth' in replay.cap
-pipeline, nodes = create_pipeline(mono, depth)
+pipeline, nodes = replay.init_pipeline()
+
 with dai.Device(pipeline) as device:
     queues = {}
-    if depth:
-        queues['depth_in'] = device.getInputQueue('depth_in')
-    elif mono:
+    # if depth:
+    #     queues['depth_in'] = device.getInputQueue('depth_in')
+    # elif mono:
         # Use mono frames
-        queues['left_in'] = device.getInputQueue('left_in')
-        queues['right_in'] = device.getInputQueue('right_in')
-        queues['leftS'] = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
-        queues['rightS'] = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
+    queues['leftS'] = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
+    queues['rightS'] = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
 
     if 'color' in replay.cap:
-        queues['color_in'] = device.getInputQueue('color_in')
+        
 
     queues['depth_out'] = device.getOutputQueue(name="depth_out", maxSize=4, blocking=False)
 
@@ -215,19 +230,21 @@ with dai.Device(pipeline) as device:
 
     replay.set_queues(queues)
 
+    disparityMultiplier = 255 / nodes['stereo'].getMaxDisparity()
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     while replay.send_frames():
         inRgb = queues['nn_passthrough_out'].get()
-        rgbFrame = inRgb.getCvFrame().reshape((300, 300, 3))
+        rgbFrame = inRgb.getCvFrame() #.reshape((300, 300, 3))
 
-        if mono:
-            cv2.imshow("left", queues['leftS'].get().getCvFrame())
-            cv2.imshow("right", queues['rightS'].get().getCvFrame())
+        # if mono:
+        cv2.imshow("left", queues['leftS'].get().getCvFrame())
+        cv2.imshow("right", queues['rightS'].get().getCvFrame())
 
         depthFrame = queues['depth_out'].get().getFrame()
-        depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        depthFrameColor = cv2.equalizeHist(depthFrameColor)
+        depthFrameColor = (depthFrame*disparityMultiplier).astype(np.uint8)
+        # depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        # depthFrameColor = cv2.equalizeHist(depthFrameColor)
         depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
 
         height = inRgb.getHeight()
