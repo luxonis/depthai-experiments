@@ -39,7 +39,7 @@ print("    Median filtering:  ", median)
 req_resolution = (720,1280)
 
 # The following information is copied from the calibration print data that happens at the begining of gen1 depthai
-# To have this printed on the terminal go to pcl-projection-rgb folder. Install the requrements and execute one of the examples there.
+# To have this printed on the terminal go to pcl-projection-rgb folder. Install the requirements and execute one of the examples there.
 # P.S: This example doesn't work if you have recalibrated your device.
 
 '''
@@ -86,46 +86,45 @@ req_resolution = (720,1280)
     0.122242,
 '''
 
-T_neg = -1 * np.array([   -3.782213, 0.002144, 0.122242])
+# T_neg = -1 * np.array([   -3.782213, 0.002144, 0.122242])
 
-R2_right = np.array([[0.999763,   -0.012779,   -0.017639],
-                     [0.012732,    0.999915,   -0.002802],
-                     [0.017673,    0.002577,    0.999840]])
+# R2_right = np.array([[0.999763,   -0.012779,   -0.017639],
+#                      [0.012732,    0.999915,   -0.002802],
+#                      [0.017673,    0.002577,    0.999840]])
 
-R       = np.array([[0.999986,    0.004985,    0.001887],
-              [-0.004995,    0.999974,    0.005245],
-              [-0.001861,   -0.005254,    0.999984]])
+# R       = np.array([[0.999986,    0.004985,    0.001887],
+#               [-0.004995,    0.999974,    0.005245],
+#               [-0.001861,   -0.005254,    0.999984]])
 
-M_right = np.array([[855.000122,    0.000000,  644.814514],
-                    [0.000000,  855.263794,  407.305450],
-                    [0.000000,    0.000000,    1.000000]]) 
+# M_right = np.array([[855.000122,    0.000000,  644.814514],
+#                     [0.000000,  855.263794,  407.305450],
+#                     [0.000000,    0.000000,    1.000000]]) 
 
-# rgb is calibrated at 1080 p
-M_RGB = np.array([[1479.458984,    0.000000,  950.694458],
-                  [0.000000, 1477.587158,  530.697632],
-                  [0.000000,    0.000000,    1.000000]])
+# # rgb is calibrated at 1080 p
+# M_RGB = np.array([[1479.458984,    0.000000,  950.694458],
+#                   [0.000000, 1477.587158,  530.697632],
+#                   [0.000000,    0.000000,    1.000000]])
 
-M_right [1,2] -= 40
-
-
-R_inv = np.linalg.inv(R)
-H       = np.matmul(np.matmul(M_right, R2_right), np.linalg.inv(M_right))
-H_inv   = np.linalg.inv(H)
+# M_right [1,2] -= 40
 
 
-scale_width = 1280/1920
-m_scale = [[scale_width,      0,   0],
-            [0,         scale_width,        0],
-            [0,             0,         1]]
+# R_inv = np.linalg.inv(R)
+# H       = np.matmul(np.matmul(M_right, R2_right), np.linalg.inv(M_right))
+# H_inv   = np.linalg.inv(H)
 
 
-M_RGB = np.matmul(m_scale, M_RGB)
-K_inv = np.linalg.inv(M_right)
-inter_conv = np.matmul(K_inv, H_inv)
+# scale_width = 1280/1920
+# m_scale = [[scale_width,      0,   0],
+#             [0,         scale_width,        0],
+#             [0,             0,         1]]
 
+# M_RGB = np.matmul(m_scale, M_RGB)
+# K_inv = np.linalg.inv(M_right)
+# inter_conv = np.matmul(K_inv, H_inv)
 
-extrensics = np.hstack((R_inv, np.transpose([T_neg])))
-transform_matrix = np.vstack((extrensics, np.array([0, 0, 0, 1])))
+# extrensics = np.hstack((R_inv, np.transpose([T_neg])))
+# transform_matrix = np.vstack((extrensics, np.array([0, 0, 0, 1])))
+
 
 
 pcl_converter = None
@@ -171,7 +170,7 @@ def create_mono_cam_pipeline():
     cam        = pipeline.createColorCamera()
     xout_video = pipeline.createXLinkOut()
 
-    cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
+    cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
     cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
@@ -223,7 +222,8 @@ def create_stereo_depth_pipeline():
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)
-    
+    # stereo.setDepthAlign(dai.CameraBoardSocket.RGB) #TODO Uncomment
+
     stereo.setInputResolution(1280, 720)
 
     xout_depth   .setStreamName('depth')
@@ -246,17 +246,17 @@ def pixel_coord_np(width, height):
 
 
 # The operations done here seem very CPU-intensive, TODO
-def convert_to_cv2_frame(name, image):
+def convert_to_cv2_frame(name, image, M_right):
     global last_rectif_right
     baseline = 75 #mm
     focal = M_right[0][0]
     max_disp = 96
     disp_type = np.uint8
     disp_levels = 1
-    if (extended):
+    if extended:
         max_disp *= 2
-    if (subpixel):
-        max_disp *= 32;
+    if subpixel:
+        max_disp *= 32
         disp_type = np.uint16  # 5 bits fractional disparity
         disp_levels = 32
 
@@ -302,7 +302,7 @@ def convert_to_cv2_frame(name, image):
 
 color = None
 depth = None
-pixel_coords = pixel_coord_np(1280, 720) 
+pixel_coords = pixel_coord_np(1280, 720)
 
 def test_pipeline():
    #pipeline, streams = create_rgb_cam_pipeline()
@@ -311,6 +311,29 @@ def test_pipeline():
 
     print("Creating DepthAI device")
     with dai.Device(pipeline) as device:
+        calibData = device.readCalibration()
+        M_RGB, width, height = np.array(calibData.getDefaultIntrinsics(dai.CameraBoardSocket.RGB))
+        
+        R1 = np.array(calibData.getStereoLeftRectificationRotation())
+        R2 = np.array(calibData.getStereoRightRectificationRotation())
+
+        M_left = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.LEFT, 1280, 720))
+        M_right = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, 1280, 720))
+        
+        H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))
+        H_inv = np.linalg.inv(H_right)
+
+        scale_width = 1280/1920
+        m_scale = [[scale_width,      0,   0],
+                    [0,         scale_width,        0],
+                    [0,             0,         1]]
+
+        M_RGB = np.matmul(m_scale, M_RGB)
+        M_right_inv = np.linalg.inv(M_right)
+        inter_conv = np.matmul(M_right_inv, H_inv)
+
+        transform_matrix = np.array(calibData.getCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RIGHT))
+
         print("Starting pipeline")
         device.startPipeline()
         # Create a receive queue for each stream
@@ -329,7 +352,7 @@ def test_pipeline():
                 image = q.get()
                 #print("Received frame:", name)
                 # Skip some streams for now, to reduce CPU load
-                frame = convert_to_cv2_frame(name, image)                
+                frame = convert_to_cv2_frame(name, image, M_right)
                 
                 if name == 'rgb_video':
                     scale_width = req_resolution[1]/frame.shape[1]
@@ -343,10 +366,10 @@ def test_pipeline():
             if depth is None or color is None:
                 continue
 
-
             temp = depth.copy() # depth in right frame
             cam_coords = np.dot(inter_conv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
             del temp
+
 
             cam_coords[:, cam_coords[2] > 1500] = float('inf') 
             o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Debug)
@@ -371,7 +394,7 @@ def test_pipeline():
             y_idx = u_v_z_sampled[1].astype(int)
             x_idx = u_v_z_sampled[0].astype(int)
 
-            depth_rgb = np.full((720, 1280),  65535, dtype=np.uint16)
+            depth_rgb = np.full((720, 1280), 65535, dtype=np.uint16)
             depth_rgb[y_idx,x_idx] = u_v_z_sampled[3]*10
 
             end = time.time()
