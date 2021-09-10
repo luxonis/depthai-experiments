@@ -39,6 +39,14 @@ class Replay:
     def keep_aspect_ratio(self, keep_aspect_ratio):
         self.keep_ar = keep_aspect_ratio
 
+    def disable_stream(self, stream_name):
+        if stream_name not in self.cap:
+            print(f"There's no stream {stream_name} available!")
+            return
+        self.cap[stream_name].release()
+        # Remove the stream from the VideoCapture dict
+        self.cap.pop(stream_name, None)
+
     def resize_color(self, frame):
         if self.color_size is None:
             # No resizing needed

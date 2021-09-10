@@ -46,7 +46,7 @@ optional arguments:
 By default, script will save encoded (jpeg) color frames and depth map.
 ## Replay usage
 ```
-usage: replay.py [-p PATH]
+usage: replay.py -p PATH
 
 optional arguments:
   -p PATH, --path PATH  Path where to store the captured data

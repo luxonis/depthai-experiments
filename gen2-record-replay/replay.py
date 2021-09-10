@@ -2,6 +2,7 @@
 import argparse
 import cv2
 import depthai as dai
+import blobconverter
 import numpy as np
 from libraries.depthai_replay import Replay
 
@@ -29,7 +30,7 @@ nn.setBoundingBoxScaleFactor(0.3)
 nn.setDepthLowerThreshold(100)
 nn.setDepthUpperThreshold(5000)
 
-nn.setBlobPath("models/mobilenet-ssd_openvino_2021.4_6shave.blob")
+nn.setBlobPath(str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6)))
 nn.setConfidenceThreshold(0.5)
 nn.input.setBlocking(False)
 
