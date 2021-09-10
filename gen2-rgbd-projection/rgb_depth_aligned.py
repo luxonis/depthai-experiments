@@ -24,8 +24,11 @@ depthOut.setStreamName("depth")
 
 #Properties
 camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+
+# TODO: Downscale resolution to 720p (on device)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-camRgb.initialControl.setManualFocus(130)
+# camRgb.setVideoSize(1280, 720) # Not good, only crops
+
 camRgb.setIspScale(2, 3)
 
 left.setResolution(monoResolution)
@@ -57,9 +60,7 @@ with dai.Device(pipeline) as device:
 
     maxDisparity = stereo.getMaxDisparity()
 
-    frames = {}
-    frames["rgb"] = None
-    frames["depth"] = None
+    frames = dict.fromkeys(("rgb", "depth"))
     
     while True:
         queueEvents = device.getQueueEvents(("rgb", "depth"))
