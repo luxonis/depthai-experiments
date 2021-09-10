@@ -4,83 +4,95 @@ import cv2
 import numpy as np
 import depthai as dai
 
-# The disparity is computed at this resolution, then upscaled to RGB resolution
-monoResolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
+def create_pipeline():
+    pipeline = dai.Pipeline()
 
-# Create pipeline
-pipeline = dai.Pipeline()
+    # Define sources and outputs
+    camRgb = pipeline.createColorCamera()
+    left = pipeline.createMonoCamera()
+    right = pipeline.createMonoCamera()
+    stereo = pipeline.createStereoDepth()
+    rgbOut = pipeline.createXLinkOut()
+    disparityOut = pipeline.createXLinkOut()
 
-# Define sources and outputs
-camRgb = pipeline.createColorCamera()
-left = pipeline.createMonoCamera()
-right = pipeline.createMonoCamera()
-stereo = pipeline.createStereoDepth()
+    # Properties
+    camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    camRgb.setIspScale(2, 3)  # NOTE: This downscales to 1280x720?
+    camRgb.setInterleaved(False)
 
-rgbOut = pipeline.createXLinkOut()
-depthOut = pipeline.createXLinkOut()
+    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-rgbOut.setStreamName("rgb")
-depthOut.setStreamName("depth")
+    stereo.initialConfig.setConfidenceThreshold(230)
+    stereo.setLeftRightCheck(True)  # LR-check is required for depth alignment
+    stereo.setOutputRectified(True)  # Rectification is required for PointCloudVisualizer
+    stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 
-#Properties
-camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+    rgbOut.setStreamName("rgb")
+    disparityOut.setStreamName("disparity")
 
-# TODO: Downscale resolution to 720p (on device)
-camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-# camRgb.setVideoSize(1280, 720) # Not good, only crops
+    # Linking
+    camRgb.video.link(rgbOut.input)
+    left.out.link(stereo.left)
+    right.out.link(stereo.right)
+    stereo.disparity.link(disparityOut.input)
 
-camRgb.setIspScale(2, 3)
+    streams = ["rgb", "disparity"]
+    maxDisparity = stereo.getMaxDisparity()
 
-left.setResolution(monoResolution)
-left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-right.setResolution(monoResolution)
-right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+    return pipeline, streams, maxDisparity
 
-stereo.initialConfig.setConfidenceThreshold(230)
-# LR-check is required for depth alignment
-stereo.setLeftRightCheck(True)
-stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 
-# Linking
-camRgb.isp.link(rgbOut.input)
-left.out.link(stereo.left)
-right.out.link(stereo.right)
-stereo.disparity.link(depthOut.input) # NOTE: Change to stereo.depth ?
+def calculateDepthFrame(depthFrame):
+    depthFrame = (depthFrame * 255.0 / MAX_DISPARIRTY).astype(np.uint8)
+    depthFrame = cv2.applyColorMap(depthFrame, cv2.COLORMAP_HOT)
+    return np.ascontiguousarray(depthFrame)
 
-def getDepthFrame(packet):
-    frameDepth = packet.getFrame()
-    frameDepth = (frameDepth * 255. / maxDisparity).astype(np.uint8)
-    frameDepth = cv2.applyColorMap(frameDepth, cv2.COLORMAP_HOT)
-    return np.ascontiguousarray(frameDepth)
+
+def convert_to_cv2_frame(name, image):
+    data, w, h = image.getData(), image.getWidth(), image.getHeight()
+
+    if name == "rgb":
+        yuv = np.array(data).reshape((h * 3 // 2, w)).astype(np.uint8)
+        frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
+    elif name == "disparity":
+        depth = np.array(data).reshape((h, w))
+        frame = calculateDepthFrame(depth)
+
+    return frame
+
+
+def blend_rgb_depth(frameRgb, frameDepth):
+    # Need to have both frames in BGR format before blending
+    if len(frameDepth.shape) < 3:
+        frameDepth = cv2.cvtColor(frameDepth, cv2.COLOR_GRAY2BGR)
+    return cv2.addWeighted(frameRgb, 0.6, frameDepth, 0.4, 0)
+
+
+pipeline, streams, MAX_DISPARIRTY = create_pipeline()
 
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
-    device.getOutputQueue(name="rgb",   maxSize=4, blocking=False)
-    device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+    device.startPipeline()
+    calibData = device.readCalibration()
 
-    maxDisparity = stereo.getMaxDisparity()
+    queue_list = [device.getOutputQueue(stream, 8, blocking=False) for stream in streams]
+    blendFrames = [None, None]
 
-    frames = dict.fromkeys(("rgb", "depth"))
-    
     while True:
-        queueEvents = device.getQueueEvents(("rgb", "depth"))
-        for queueName in queueEvents:
-            packets = device.getOutputQueue(queueName).tryGetAll()
-            if len(packets) > 0:
-                frames[queueName] = packets[-1].getCvFrame() if queueName == "rgb" else getDepthFrame(packets[-1])
-                cv2.imshow(queueName, frames[queueName])
+        for i, queue in enumerate(queue_list):
+            name = queue.getName()
+            image = queue.get()
+            frame = convert_to_cv2_frame(name, image)
+            cv2.imshow(name, frame)
+            if i < 2:
+                blendFrames[i] = frame
 
-        # Blend when both received
-        if frames["rgb"] is not None and frames["depth"] is not None:
-            frameRgb, frameDepth = frames["rgb"], frames["depth"]
+        blended = blend_rgb_depth(*blendFrames)
+        cv2.imshow("rgb-disparity", blended)
 
-            # Need to have both frames in BGR format before blending
-            if len(frameDepth.shape) < 3:
-                frameDepth = cv2.cvtColor(frameDepth, cv2.COLOR_GRAY2BGR)
-            blended = cv2.addWeighted(frameRgb, 0.6, frameDepth, 0.4 ,0)
-            cv2.imshow("rgb-depth", blended)
-
-            frames["rgb"] = frames["depth"] = None
-
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             break
