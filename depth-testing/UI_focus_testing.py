@@ -68,7 +68,7 @@ def create_pipeline(enableLR, enableRgb):
         rgb_cam.setFps(10)
         rgb_cam.setIspScale(1, 3)
         rgb_cam.initialControl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
-        
+
         controlIn.setStreamName('control')
         controlIn.out.link(rgb_cam.inputControl)
 
