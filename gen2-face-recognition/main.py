@@ -1,6 +1,6 @@
 # coding=utf-8
 import os
-from pathlib import Path
+from datetime import timedelta
 import argparse
 import blobconverter
 import cv2
@@ -16,7 +16,26 @@ databases = "databases"
 if not os.path.exists(databases):
     os.mkdir(databases)
 
+class HostSync:
+    def __init__(self):
+        self.array = []
+    def add_msg(self, msg):
+        self.array.append(msg)
+    def get_msg(self, timestamp):
+        def getDiff(msg, timestamp):
+            return abs(msg.getTimestamp() - timestamp)
+        if len(self.array) == 0: return None
 
+        self.array.sort(key=lambda msg: getDiff(msg, timestamp))
+
+        # Remove all frames that are older than 0.5 sec
+        for i in range(len(self.array)):
+            j = len(self.array) - 1 - i
+            if getDiff(self.array[j], timestamp) > timedelta(milliseconds=500):
+                self.array.remove(self.array[j])
+
+        if len(self.array) == 0: return None
+        return self.array.pop(0)
 class FaceRecognition:
     def __init__(self, db_path, name) -> None:
         self.read_db(db_path)
@@ -95,9 +114,14 @@ def create_pipeline():
     cam = pipeline.create(dai.node.ColorCamera)
     # For ImageManip rotate you need input frame of multiple of 16
     cam.setPreviewSize(1072, 1072)
+    cam.setVideoSize(1072, 1072)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+
+    host_face_out = pipeline.create(dai.node.XLinkOut)
+    host_face_out.setStreamName('frame')
+    cam.video.link(host_face_out.input)
 
     # ImageManip that will crop the frame before sending it to the Face detection NN node
     face_det_manip = pipeline.create(dai.node.ImageManip)
@@ -116,6 +140,10 @@ def create_pipeline():
     # Link Face ImageManip -> Face detection NN node
     face_det_manip.out.link(face_det_nn.input)
 
+    det_out = pipeline.create(dai.node.XLinkOut)
+    det_out.setStreamName('det')
+    face_det_nn.out.link(det_out.input)
+
     # Script node will take the output from the face detection NN as an input and set ImageManipConfig
     # to the 'age_gender_manip' to crop the initial frame
     script = pipeline.create(dai.node.Script)
@@ -123,6 +151,12 @@ def create_pipeline():
     face_det_nn.out.link(script.inputs['face_det_in'])
     # We are only interested in timestamp, so we can sync depth frames with NN output
     face_det_nn.passthrough.link(script.inputs['face_pass'])
+
+    # Only send metadata for the host-side sync
+    pass_out = pipeline.create(dai.node.XLinkOut)
+    pass_out.setStreamName('pass')
+    pass_out.setMetadataOnly(True)
+    face_det_nn.passthrough.link(pass_out.input)
 
     with open("script.py", "r") as f:
         script.setScript(f.read())
@@ -133,16 +167,11 @@ def create_pipeline():
     # higher number will fix this issue.
     copy_manip = pipeline.create(dai.node.ImageManip)
     cam.preview.link(copy_manip.inputImage)
-    copy_manip.setNumFramesPool(16)
+    copy_manip.setNumFramesPool(15)
     copy_manip.setMaxOutputFrameSize(1072*1072*3)
 
     copy_manip.out.link(face_det_manip.inputImage)
     copy_manip.out.link(script.inputs['preview'])
-
-    # Send face synced detections (for bounding boxes) and color frames to the host
-    host_face_out = pipeline.create(dai.node.XLinkOut)
-    host_face_out.setStreamName('frame')
-    script.outputs['host_frame'].link(host_face_out.input)
 
     print("Creating Head pose estimation NN")
     headpose_manip = pipeline.create(dai.node.ImageManip)
@@ -174,9 +203,11 @@ def create_pipeline():
     face_rec_cfg_out.setStreamName('face_rec_cfg_out')
     script.outputs['manip2_cfg'].link(face_rec_cfg_out.input)
 
-    # rotate_out = pipeline.create(dai.node.XLinkOut)
-    # rotate_out.setStreamName('rotated_frame')
-    # face_rec_manip.out.link(rotate_out.input)
+    # Only send metadata for the host-side sync
+    pass2_out = pipeline.create(dai.node.XLinkOut)
+    pass2_out.setStreamName('pass2')
+    pass2_out.setMetadataOnly(True)
+    script.outputs['manip2_img'].link(pass2_out.input)
 
     face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
     # Removed from OMZ, so we can't use blobconverter for downloading, see here:
@@ -193,35 +224,64 @@ def create_pipeline():
 
 with dai.Device(create_pipeline()) as device:
     frameQ = device.getOutputQueue("frame", 4, False)
-    # rotateQ = device.getOutputQueue("rotated_frame", 4, False)
+    detQ = device.getOutputQueue("det", 4, False)
+    passQ = device.getOutputQueue("pass", 4, False)
+    pass2Q = device.getOutputQueue("pass2", 4, False)
     recCfgQ = device.getOutputQueue("face_rec_cfg_out", 4, False)
     arcQ = device.getOutputQueue("arc_out", 4, False)
 
     facerec = FaceRecognition(databases, args.name)
+    sync = HostSync()
     frame = None
 
     while True:
         frameIn = frameQ.tryGet()
         if frameIn is not None:
-            frame = frameIn.getCvFrame()
+            print('new frame')
+            sync.add_msg(frameIn)
 
-        face_in = recCfgQ.tryGet()
-        if face_in is not None and frame is not None:
-            print('New det')
-            rr = face_in.getRaw().cropConfig.cropRotatedRect
-            h, w, c = frame.shape
-            center = (int(rr.center.x * w), int(rr.center.y * h))
-            size = (int(rr.size.width * w), int(rr.size.height * h))
-            rotatedRect = (center, size, rr.angle)
-            points = np.int0(cv2.boxPoints(rotatedRect))
-            cv2.drawContours(frame, [points], 0, (255, 0, 0), 3)
-            # draw_detections(frame, face_in.detections)
-            print('1')
-            arcIn = arcQ.get()
-            print('2')
-            features = np.array(arcIn.getFirstLayerFp16())
+        detIn = detQ.tryGet()
+        if detIn is not None:
+            # print('New dets')
+            timestamp = passQ.get().getTimestamp()
+
+            if len(detIn.detections) == 0:
+                imgFrame = sync.get_msg(timestamp)
+                if imgFrame is not None:
+                    print('Synced frame no det')
+                    frame = imgFrame.getCvFrame()
+            else:
+                for i in range(len(detIn.detections)):
+                    # print('11')
+                    timestamp = pass2Q.get().getTimestamp()
+                    if i == 0:
+                        imgFrame = sync.get_msg(timestamp)
+                        if imgFrame is not None:
+                            print('Synced frame det')
+                            frame = imgFrame.getCvFrame()
+
+                    # print('22')
+                    rr = recCfgQ.get().getRaw().cropConfig.cropRotatedRect
+                    # print('33')
+                    arcIn = arcQ.get()
+                    # print('44')
+                    if frame is not None:
+                        h, w, c = frame.shape
+                        center = (int(rr.center.x * w), int(rr.center.y * h))
+                        size = (int(rr.size.width * w), int(rr.size.height * h))
+                        rotatedRect = (center, size, rr.angle)
+                        points = np.int0(cv2.boxPoints(rotatedRect))
+                        cv2.drawContours(frame, [points], 0, (255, 0, 0), 3)
+                        # draw_detections(frame, face_in.detections)
+                        features = np.array(arcIn.getFirstLayerFp16())
+                        # print('New features')
+
+
+            # print(f"PASS1 TS {timestamp}, PASS2 TS {pass2Q.get().getTimestamp()}")
+
+
+
             # facerec.new_recognition(frame, center, features)
-
 
         # rotateIn = rotateQ.tryGet()
         # if rotateIn is not None:
