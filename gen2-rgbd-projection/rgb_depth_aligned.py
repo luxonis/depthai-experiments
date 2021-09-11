@@ -28,7 +28,6 @@ def create_pipeline():
 
     stereo.initialConfig.setConfidenceThreshold(230)
     stereo.setLeftRightCheck(True)  # LR-check is required for depth alignment
-    stereo.setOutputRectified(True)  # Rectification is required for PointCloudVisualizer
     stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 
     rgbOut.setStreamName("rgb")
@@ -46,10 +45,10 @@ def create_pipeline():
     return pipeline, streams, maxDisparity
 
 
-def calculateDepthFrame(depthFrame):
-    depthFrame = (depthFrame * 255.0 / MAX_DISPARIRTY).astype(np.uint8)
-    depthFrame = cv2.applyColorMap(depthFrame, cv2.COLORMAP_HOT)
-    return np.ascontiguousarray(depthFrame)
+def visualizeDisparityFrame(disparityFrame):
+    disparityFrame = (disparityFrame * 255.0 / MAX_DISPARIRTY).astype(np.uint8)
+    disparityFrame = cv2.applyColorMap(disparityFrame, cv2.COLORMAP_HOT)
+    return np.ascontiguousarray(disparityFrame)
 
 
 def convert_to_cv2_frame(name, image):
@@ -60,23 +59,22 @@ def convert_to_cv2_frame(name, image):
         frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
     elif name == "disparity":
         depth = np.array(data).reshape((h, w))
-        frame = calculateDepthFrame(depth)
+        frame = visualizeDisparityFrame(depth)
 
     return frame
 
 
-def blend_rgb_depth(frameRgb, frameDepth):
+def blend_rgb_disparity(frameRgb, frameDisparity):
     # Need to have both frames in BGR format before blending
-    if len(frameDepth.shape) < 3:
-        frameDepth = cv2.cvtColor(frameDepth, cv2.COLOR_GRAY2BGR)
-    return cv2.addWeighted(frameRgb, 0.6, frameDepth, 0.4, 0)
+    if len(frameDisparity.shape) < 3:
+        frameDisparity = cv2.cvtColor(frameDisparity, cv2.COLOR_GRAY2BGR)
+    return cv2.addWeighted(frameRgb, 0.6, frameDisparity, 0.4, 0)
 
 
 pipeline, streams, MAX_DISPARIRTY = create_pipeline()
 
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
-    device.startPipeline()
     calibData = device.readCalibration()
 
     queue_list = [device.getOutputQueue(stream, 8, blocking=False) for stream in streams]
@@ -91,7 +89,7 @@ with dai.Device(pipeline) as device:
             if i < 2:
                 blendFrames[i] = frame
 
-        blended = blend_rgb_depth(*blendFrames)
+        blended = blend_rgb_disparity(*blendFrames)
         cv2.imshow("rgb-disparity", blended)
 
         if cv2.waitKey(1) == ord("q"):
