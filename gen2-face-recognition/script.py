@@ -26,15 +26,14 @@ def correct_bb(bb):
     if bb.ymax > 1: bb.ymax = 0.999
     return bb
 while True:
+    time.sleep(0.001)
     preview = node.io['preview'].tryGet()
     if preview is not None:
         # node.warn(f"New frame {preview.getSequenceNum()}, size {len(l)}")
         l.append(preview)
         # Max pool size is 10.
-        if 10 == len(l):
+        if 18 < len(l):
             l.pop(0)
-    else:
-        time.sleep(0.001)
 
     face_dets = node.io['face_det_in'].tryGet()
     if face_dets is not None:
@@ -87,7 +86,7 @@ while True:
         # True = coordinates are normalized (0..1)
         cfg.setCropRotatedRect(rr, True)
         cfg.setResize(112, 112)
-        cfg.setKeepAspectRatio(False)
+        cfg.setKeepAspectRatio(True)
 
         node.io['manip2_cfg'].send(cfg)
         node.io['manip2_img'].send(img)
