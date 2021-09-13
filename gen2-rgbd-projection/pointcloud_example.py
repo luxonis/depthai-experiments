@@ -29,8 +29,8 @@ def create_rgb_pipeline():
 
     # Properties
     camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    camRgb.setIspScale(2, 3)  # NOTE: This downscales to 1280x720 on the device?
+    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+    camRgb.setIspScale(1, 3)
     camRgb.setInterleaved(False)
 
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
@@ -73,11 +73,8 @@ pipeline, streams, MAX_DISPARIRTY = create_rgb_pipeline()
 with dai.Device(pipeline) as device:
     calibData = device.readCalibration()
 
-    # NOTE: Should be equivalent?
-    # right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
-    right_intrinsic = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, 1280, 720))
-
-    pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
+    rgb_intrinsic = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, 1280, 720))
+    pcl_converter = PointCloudVisualizer(rgb_intrinsic, 1280, 720)
     pcl_frames = [None, None]  # rgb and depth frame
     queue_list = [device.getOutputQueue(stream, 8, blocking=False) for stream in streams]
 
