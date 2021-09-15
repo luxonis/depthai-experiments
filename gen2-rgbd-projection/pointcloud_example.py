@@ -33,12 +33,12 @@ def create_rgb_pipeline():
     camRgb.setIspScale(1, 3)
     camRgb.setInterleaved(False)
 
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
     left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
     right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    stereo.initialConfig.setConfidenceThreshold(230)
+    stereo.initialConfig.setConfidenceThreshold(200)
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)  # NOTE: Subpixel cannot be enabled, since RGB stream is used
