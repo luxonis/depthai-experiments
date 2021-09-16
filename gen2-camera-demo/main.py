@@ -134,7 +134,7 @@ def create_stereo_depth_pipeline(from_camera=True):
         cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
         cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         for cam in [cam_left, cam_right]: # Common config
-            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
             #cam.setFps(20.0)
     else:
         cam_left .setStreamName('in_left')
@@ -175,8 +175,8 @@ def create_stereo_depth_pipeline(from_camera=True):
     if out_rectified:
         streams.extend(['rectified_left', 'rectified_right'])
     streams.extend(['disparity'])
-    left_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/left_mesh.calib"
-    right_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/right_mesh.calib"
+    left_mesh = "/home/sachin/Desktop/luxonis/depthai/resources/left_mesh.calib"
+    right_mesh = "/home/sachin/Desktop/luxonis/depthai/resources/right_mesh.calib"
 
     stereo.loadMeshFiles(left_mesh, right_mesh)
     return pipeline, streams
