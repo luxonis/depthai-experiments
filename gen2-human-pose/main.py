@@ -27,7 +27,7 @@ if args.camera:
 else:
     blob_path = "models/human-pose-estimation-0001_openvino_2021.2_8shave.blob"
     if str(args.video).startswith('https'):
-        args.video = downloadYTVideo(args.video)
+        args.video = downloadYTVideo(str(args.video))
         print("Youtube video downloaded.")
     if not Path(args.video).exists():
         raise ValueError("Path {} does not exists!".format(args.video))
@@ -45,19 +45,18 @@ keypoints_list = None
 detected_keypoints = None
 personwiseKeypoints = None
 
-bm = BlobManager(blob_path=blob_path)
-nm = NNetManager(input_size=(456, 256), blob_manager=bm)
+nm = NNetManager(input_size=(456, 256))
 pm = PipelineManager()
 pm.set_nn_manager(nm)
 
 if args.camera:
     fps = FPSHandler()
-    pm.create_color_cam(preview_size=(456, 256), xout=True)
+    pm.create_color_cam(preview_size=(456, 256))
 else:
     cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
     fps = FPSHandler(cap)
 
-nn_pipeline = nm.create_nn_pipeline(pm.p, pm.nodes, source=Previews.color.name if args.camera else "host", full_fov=True)
+nn_pipeline = nm.create_nn_pipeline(pm.pipeline, pm.nodes, source=Previews.color.name if args.camera else "host", blob_path=Path(blob_path), full_fov=True)
 pm.add_nn(nn=nn_pipeline)
 
 def decode_thread(in_queue):
@@ -122,7 +121,7 @@ def show(frame):
 
 
 print("Starting pipeline...")
-with dai.Device(pm.p, device_info) as device:
+with dai.Device(pm.pipeline, device_info) as device:
     if args.camera:
         pv = PreviewManager(display=[Previews.color.name], nn_source=Previews.color.name, scale={"color": 0.37}, fps_handler=fps)
         pv.create_queues(device)
