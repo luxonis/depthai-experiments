@@ -51,7 +51,7 @@ pm.set_nn_manager(nm)
 
 if args.camera:
     fps = FPSHandler()
-    pm.create_color_cam(preview_size=(456, 256))
+    pm.create_color_cam(preview_size=(456, 256), xout=True)
 else:
     cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
     fps = FPSHandler(cap)
