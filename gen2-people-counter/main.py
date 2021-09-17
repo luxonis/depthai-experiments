@@ -38,14 +38,14 @@ nn_source = "host" if IMAGE else "color"
 
 # Start defining a pipeline
 pm = PipelineManager()
+if not IMAGE:
+    pm.create_color_cam(preview_size=size, xout=True)
+    pv = PreviewManager(display=["color"], nn_source=nn_source)
+
 nm = NNetManager(input_size=size, nn_family="mobilenet", labels=labelMap, confidence=0.5)
 nn_pipeline = nm.create_nn_pipeline(pm.pipeline, pm.nodes, blob_path=nnPath, source=nn_source)
 pm.set_nn_manager(nm)
 pm.add_nn(nn_pipeline)
-
-if not IMAGE:
-    pm.create_color_cam(preview_size=size, xout=True)
-    pv = PreviewManager(display=["color"], nn_source=nn_source)
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pm.pipeline) as device:
