@@ -61,12 +61,19 @@ def populate_pipeline(p, name, resolution):
     image_manip_script.inputs['nn_in'].setQueueSize(1)
     face_nn.out.link(image_manip_script.inputs['nn_in'])
     image_manip_script.setScript("""
+    def limit_roi(nn_data):
+        if nn_data[3] < 0: nn_data[3] = 0
+        if nn_data[4] < 0: nn_data[4] = 0
+        if nn_data[5] > 0.999: nn_data[5] = 0.999
+        if nn_data[6] > 0.999: nn_data[6] = 0.999
+
     while True:
         nn_in = node.io['nn_in'].get()
         nn_data = nn_in.getFirstLayerFp16()
 
         conf=nn_data[2]
         if 0.2<conf:
+            limit_roi(nn_data)
             x_min=nn_data[3]
             y_min=nn_data[4]
             x_max=nn_data[5]
@@ -76,7 +83,7 @@ def populate_pipeline(p, name, resolution):
             cfg.setResize(48, 48)
             cfg.setKeepAspectRatio(False)
             node.io['to_manip'].send(cfg)
-            #node.warn(f"1 from nn_in: {x_min}, {y_min}, {x_max}, {y_max}")
+            # node.warn(f"1 from nn_in: {x_min}, {y_min}, {x_max}, {y_max}")
     """)
 
     # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
@@ -282,9 +289,9 @@ with dai.Device(p.getOpenVINOVersion()) as device:
                 pcl.points = o3d.utility.Vector3dVector(spatials)
                 vis.clear_geometries()
                 vis.add_geometry(pcl)
-            else:
-                for i, s in enumerate(spatials):
-                    print(f"[Landmark {i}] X: {s[0]}, Y: {s[1]}, Z: {s[2]}")
+            # else:
+            #     for i, s in enumerate(spatials):
+            #         print(f"[Landmark {i}] X: {s[0]}, Y: {s[1]}, Z: {s[2]}")
 
 
         cv2.imshow("Combined frame", np.concatenate((left, combined ,right), axis=1))
