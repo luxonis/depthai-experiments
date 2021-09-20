@@ -25,11 +25,11 @@ def crop_to_rect(frame):
     # print(height, width, delta)
     return frame[0:height, delta:width-delta]
 
-def annotate(img, text, pos, color, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, **kwargs):
-    cv2.putText(img, text, pos, fontFace, fontScale, color, **kwargs)
 
-def bold(x, level=2):
-    return range(x, x+level)
+def annotate_fun(img, color, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, **kwargs):
+    def fun(text, pos):
+        cv2.putText(img, text, pos, fontFace, fontScale, color, **kwargs)
+    return fun
 
 
 class HumanMachineSafety:
@@ -53,6 +53,14 @@ class HumanMachineSafety:
         ymin += deltaY
         xmax -= deltaX
         ymax -= deltaY
+        if xmin > xmax:  # bbox flipped
+            tmp = xmin
+            xmin = xmax
+            xmax = tmp
+        if ymin > ymax:  # bbox flipped
+            tmp = ymin
+            ymin = ymax
+            ymax = tmp
 
         # Calculate the average depth in the ROI.
         depthROI = depth[ymin:ymax, xmin:xmax]
@@ -72,7 +80,7 @@ class HumanMachineSafety:
         angle_x = self.calc_angle(bb_x_pos)
         angle_y = self.calc_angle(bb_y_pos)
 
-        z = averageDepth;
+        z = averageDepth
         x = z * math.tan(angle_x)
         y = -z * math.tan(angle_y)
 
@@ -81,9 +89,7 @@ class HumanMachineSafety:
 
     def calc_spatial_distance(self, spatialCoords, frame, detections):
         x,y,z, centroidX, centroidY = spatialCoords
-        
-        def annotate_frame(text, pos):
-            annotate(frame, text, pos, color=(0,0,255), fontScale=1.7)
+        annotate = annotate_fun(frame, (0, 0, 25), fontScale=1.7)
 
         for det in detections:
             # Ignore detections that aren't considered dangerous
@@ -111,8 +117,8 @@ class HumanMachineSafety:
                 # Putting the image back to its position
                 frame[y1:y2, x1:x2] = res
                 # Print twice to appear in bold
-                for x in bold(100, level=2):
-                    annotate_frame("Danger", (x, int(height/3)))
+                annotate("Danger", (100, int(height/3)))
+                annotate("Danger", (101, int(height/3)))
         cv2.imshow("color", frame)
 
     def draw_bbox(self, bbox, color):
@@ -128,8 +134,8 @@ class HumanMachineSafety:
         draw(self.depthFrameColor)
 
     def draw_detections(self, frame, detections):
-        def annotate_frame(text, pos):
-            annotate(frame, text, pos, color=(250,0,0))
+        color = (250,0,0)
+        annotate = annotate_fun(frame, (0, 0, 25))
             
         for detection in detections:
             if labelMap[detection.label] not in DANGEROUS_OBJECTS: continue
@@ -141,39 +147,41 @@ class HumanMachineSafety:
             y1 = int(detection.ymin * height)
             y2 = int(detection.ymax * height)
             offsetX = x1 + 10
-            annotate_frame("{:.2f}".format(detection.confidence*100), (offsetX, y1 + 35))
-            annotate_frame(f"X: {int(detection.spatialCoordinates.x)} mm", (offsetX, y1 + 50))
-            annotate_frame(f"Y: {int(detection.spatialCoordinates.y)} mm", (offsetX, y1 + 65))
-            annotate_frame(f"Z: {int(detection.spatialCoordinates.z)} mm", (offsetX, y1 + 80))
+            annotate("{:.2f}".format(detection.confidence*100), (offsetX, y1 + 35))
+            annotate(f"X: {int(detection.spatialCoordinates.x)} mm", (offsetX, y1 + 50))
+            annotate(f"Y: {int(detection.spatialCoordinates.y)} mm", (offsetX, y1 + 65))
+            annotate(f"Z: {int(detection.spatialCoordinates.z)} mm", (offsetX, y1 + 80))
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
             try:
                 label = labelMap[detection.label]
             except:
                 label = detection.label
 
-            annotate_frame(str(label), (offsetX, y1 + 20))
+            annotate(str(label), (offsetX, y1 + 20))
 
     def calc_angle(self, offset):
         return math.atan(math.tan(self.monoHFOV / 2.0) * offset / (self.depthWidth / 2.0))
 
     def draw_palm_detection(self, palm_coords, depth):
-        if palm_coords is None: return None
-        
-        def annotate_debug_frame(text, pos):
-            annotate(self.debug_frame, text, pos, color=(10,245,10))
+        if palm_coords is None:
+            return None
+
+        color = (10,245,10)
+        annotate = annotate_fun(self.debug_frame, color)
 
         for bbox in palm_coords:
             self.draw_bbox(bbox, color)
             spatialCoords = self.calc_spatials(bbox, depth)
             x,y,z,cx,cy = spatialCoords
-            annotate_debug_frame(f"X: {int(x)} mm", (bbox[0], bbox[1]))
-            annotate_debug_frame(f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15))
-            annotate_debug_frame(f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30))
+            annotate(f"X: {int(x)} mm", (bbox[0], bbox[1]))
+            annotate(f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15))
+            annotate(f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30))
             return spatialCoords
 
     def parse(self, in_palm_detections, detections, frame, depth, depthColored):
         self.debug_frame = frame.copy()
         self.depthFrameColor = depthColored
+        annotate = annotate_fun(self.debug_frame, (50,220,110), fontScale=1.4)
 
         # Parse palm detection output
         palm_coords = self.palmDetection.run_palm(
@@ -188,8 +196,9 @@ class HumanMachineSafety:
         # Mobilenet detections
         self.draw_detections(self.debug_frame, detections)
         # Put text 3 times for the bold appearance
-        for x in bold(50, level=3):
-            annotate(self.debug_frame, f"Distance: {int(self.distance)} mm", (x,700), color=(50,220,110), fontScale=1.4)
+        annotate(f"Distance: {int(self.distance)} mm", (50,700))
+        annotate(f"Distance: {int(self.distance)} mm", (51,700))
+        annotate(f"Distance: {int(self.distance)} mm", (52,700))
         cv2.imshow("color", self.debug_frame)
 
         if self.depthFrameColor is not None:
