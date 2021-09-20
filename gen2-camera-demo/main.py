@@ -138,7 +138,7 @@ def create_stereo_depth_pipeline(from_camera=True, mesh_directory=None):
         cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
         cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         for cam in [cam_left, cam_right]: # Common config
-            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
             #cam.setFps(20.0)
     else:
         cam_left .setStreamName('in_left')
