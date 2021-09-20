@@ -6,6 +6,7 @@ import depthai as dai
 from time import sleep
 import datetime
 import argparse
+from pathlib import Path
 
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
@@ -21,11 +22,14 @@ But like on Gen1, either depth or disparity has valid data. TODO enable both.
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-pcl", "--pointcloud", help="enables point cloud convertion and visualization", default=False, action="store_true")
+parser.add_argument("-md", "--mesh_dir", type = str, default=None,
+                    help="Contains mesh files, if not specified data from EEPROM will be used")
 parser.add_argument("-static", "--static_frames", default=False, action="store_true",
                     help="Run stereo on static frames passed from host 'dataset' folder")
 args = parser.parse_args()
 
 point_cloud    = args.pointcloud   # Create point cloud visualizer. Depends on 'out_rectified'
+mesh_directory = args.mesh_dir # Directory which contains mesh files
 
 # StereoDepth config options. TODO move to command line options
 source_camera  = not args.static_frames
@@ -109,7 +113,7 @@ def create_mono_cam_pipeline():
 
     return pipeline, streams
 
-def create_stereo_depth_pipeline(from_camera=True):
+def create_stereo_depth_pipeline(from_camera=True, mesh_directory=None):
     print("Creating Stereo Depth pipeline: ", end='')
     if from_camera:
         print("MONO CAMS -> STEREO -> XLINK OUT")
@@ -175,11 +179,82 @@ def create_stereo_depth_pipeline(from_camera=True):
     if out_rectified:
         streams.extend(['rectified_left', 'rectified_right'])
     streams.extend(['disparity'])
-    left_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/left_mesh.calib"
-    right_mesh = "/home/sachin/Desktop/luxonis/depthai/depthai_helpers/right_mesh.calib"
 
-    stereo.loadMeshFiles(left_mesh, right_mesh)
+    if mesh_directory is not None:
+        left_mesh = mesh_directory + "/left_mesh.calib"
+        right_mesh = mesh_directory + "/right_mesh.calib"
+        stereo.loadMeshFiles(left_mesh, right_mesh)
+
     return pipeline, streams
+
+
+def save_mesh(device, out_path=None):
+        curr_path = Path(__file__).parent.resolve()
+        output_path = str(curr_path) + "/resources" if out_path is None else out_path
+
+        calibData = device.readCalibration()
+        M1  = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.LEFT))
+        d1  = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.LEFT))
+        R = np.array([[0.999903,    0.011196,    0.008257],
+            [-0.011240,    0.999922,    0.005380],
+            [-0.008196,   -0.005472,    0.999951]])
+        M2  = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT))
+        d2  = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
+        shape = (1280, 800)
+        map_x_l, map_y_l = cv2.initUndistortRectifyMap(M1, d1, R, M2, shape, cv2.CV_32FC1)
+        map_x_r, map_y_r = cv2.initUndistortRectifyMap(M2, d2, R, M2, shape, cv2.CV_32FC1)
+
+        print("shape of maps")
+        print(map_x_l.shape)
+        print(map_y_l.shape)
+        print(map_x_r.shape)
+        print(map_y_r.shape)
+
+        meshCellSize = 16
+        mesh_left = []
+        mesh_right = []
+
+        for y in range(map_x_l.shape[0] + 1):
+            if y % meshCellSize == 0:
+                row_left = []
+                row_right = []
+                for x in range(map_x_l.shape[1] + 1):
+                    if x % meshCellSize == 0:
+                        if y == map_x_l.shape[0] and x == map_x_l.shape[1]:
+                            row_left.append(map_y_l[y - 1, x - 1])
+                            row_left.append(map_x_l[y - 1, x - 1])
+                            row_right.append(map_y_r[y - 1, x - 1])
+                            row_right.append(map_x_r[y - 1, x - 1])
+                        elif y == map_x_l.shape[0]:
+                            row_left.append(map_y_l[y - 1, x])
+                            row_left.append(map_x_l[y - 1, x])
+                            row_right.append(map_y_r[y - 1, x])
+                            row_right.append(map_x_r[y - 1, x])
+                        elif x == map_x_l.shape[1]:
+                            row_left.append(map_y_l[y, x - 1])
+                            row_left.append(map_x_l[y, x - 1])
+                            row_right.append(map_y_r[y, x - 1])
+                            row_right.append(map_x_r[y, x - 1])
+                        else:
+                            row_left.append(map_y_l[y, x])
+                            row_left.append(map_x_l[y, x])
+                            row_right.append(map_y_r[y, x])
+                            row_right.append(map_x_r[y, x])
+                if (map_x_l.shape[1] % meshCellSize) % 2 != 0:
+                            row_left.append(0)
+                            row_left.append(0)
+                            row_right.append(0)
+                            row_right.append(0)
+
+                mesh_left.append(row_left)
+                mesh_right.append(row_right)    
+        
+        mesh_left = np.array(mesh_left)
+        mesh_right = np.array(mesh_right)
+        print("Saving mesh to:", output_path)
+        mesh_left.tofile(output_path + "/left_mesh.calib")
+        mesh_right.tofile(output_path + "/right_mesh.calib")
+
 
 # The operations done here seem very CPU-intensive, TODO
 def convert_to_cv2_frame(name, image):
@@ -236,15 +311,18 @@ def convert_to_cv2_frame(name, image):
             last_rectif_right = frame
     return frame
 
+
 def test_pipeline():
    #pipeline, streams = create_rgb_cam_pipeline()
    #pipeline, streams = create_mono_cam_pipeline()
-    pipeline, streams = create_stereo_depth_pipeline(source_camera)
+    pipeline, streams = create_stereo_depth_pipeline(source_camera, mesh_directory)
 
     print("Creating DepthAI device")
     with dai.Device(pipeline) as device:
         print("Starting pipeline")
         device.startPipeline()
+
+        # save_mesh(device, mesh_directory) # NOTE: Needs device parameter, since it reads calibration
 
         in_streams = []
         if not source_camera:
