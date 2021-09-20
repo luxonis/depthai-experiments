@@ -35,8 +35,13 @@ class PointCloudVisualizer():
             self.pcl = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
         else:
             pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
+            # Remove noise
+            pcd = pcd.remove_statistical_outlier(30, 0.1)[0]
+
             self.pcl.points = pcd.points
             self.pcl.colors = pcd.colors
+            # Flip it, otherwise the pointcloud will be upside down
+            self.pcl.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         return self.pcl
 
     def visualize_pcd(self):
