@@ -13,7 +13,7 @@ camRgb.setInterleaved(False)
 
 # NN that detects faces in the image
 nn = p.createNeuralNetwork()
-nn.setBlobPath("models/blur_sim_openvino_2021.4_4shave.blob")
+nn.setBlobPath("models/blur_simplified_openvino_2021.4_6shave.blob")
 camRgb.preview.link(nn.input)
 
 # Send bouding box from the NN to the host via XLink

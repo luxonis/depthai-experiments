@@ -6,6 +6,7 @@ from torch import nn
 import kornia
 import onnx
 from onnxsim import simplify
+import blobconverter
 
 name = 'blur'
 
@@ -31,11 +32,19 @@ torch.onnx.export(
     do_constant_folding=True,
 )
 
+onnx_simplified_path = str(path / (name + '_simplified.onnx'))
+
 # Use onnx-simplifier to simplify the onnx model
 onnx_model = onnx.load(onnx_path)
 model_simp, check = simplify(onnx_model)
-onnx.save(model_simp, str(path / (name + '_simplified.onnx')))
+onnx.save(model_simp, onnx_simplified_path)
 
-# Use model optimizer to convert onnx->IR (bin/xml)
-
-# Use blobconverter to convert IR->blob
+# Use blobconverter to convert onnx->IR->blob
+blobconverter.from_onnx(
+    model=onnx_simplified_path,
+    data_type="FP16",
+    shaves=6,
+    use_cache=False,
+    output_dir="../models",
+    optimizer_params=[]
+)

@@ -52,7 +52,7 @@ while True:
 
 # NN that detects faces in the image
 nn = p.createNeuralNetwork()
-nn.setBlobPath("models/concat_openvino_2021.4_5shave.blob")
+nn.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
 nn.setNumInferenceThreads(2)
 script.outputs['out'].link(nn.input)
 
