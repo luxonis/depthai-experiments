@@ -1,0 +1,5 @@
+blobconverter>=1.1.1
+onnx-simplifier
+torch
+kornia
+onnx
