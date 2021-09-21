@@ -24,12 +24,9 @@ right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
 stereo = pipeline.createStereoDepth()
-stereo.setOutputRectified(True) # The rectified streams are horizontally mirrored by default
-stereo.setOutputDepth(False)
-stereo.setConfidenceThreshold(255)
+stereo.initialConfig.setConfidenceThreshold(255)
 stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout from rectification (black stripe on the edges)
 stereo.setLeftRightCheck(lrcheck)
-
 
 left.out.link(stereo.left)
 right.out.link(stereo.right)
@@ -37,7 +34,6 @@ right.out.link(stereo.right)
 # Create outputs
 xoutDisparity = pipeline.createXLinkOut()
 xoutDisparity.setStreamName("depth")
-
 stereo.disparity.link(xoutDisparity.input)
 
 xoutRectifiedRight = pipeline.createXLinkOut()
@@ -79,9 +75,7 @@ class wlsFilter:
             # raw depth values
             depthFrame = (depthScaleFactor / filteredDisp).astype(np.uint16)
 
-
         return filteredDisp, depthFrame
-       
 
 
 wlsFilter = wlsFilter(_lambda=8000, _sigma=1.5)
@@ -91,27 +85,24 @@ disp_levels = 96
 fov = 71.86
 
 # Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device:
-    # Start pipeline
-    device.startPipeline()
-
+with dai.Device() as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+    if not depth_enabled:
+        raise RuntimeError("Unable to run this experiment on device without depth capabilities! (Available cameras: {})".format(cams))
+    device.startPipeline(pipeline)
     # Output queues will be used to get the grayscale / depth frames and nn data from the outputs defined above
     qRight = device.getOutputQueue("rectifiedRight", maxSize=4, blocking=False)
     qDisparity = device.getOutputQueue("depth", maxSize=4, blocking=False)
 
-    rightFrame = None
-    disparityFrame = None
+    disp_multiplier = 255 / stereo.getMaxDisparity()
 
     while True:
-        inRight = qRight.get()
-        inDisparity = qDisparity.get()
+        rightFrame = qRight.get().getFrame()
+        disparityFrame = qDisparity.get().getFrame()
 
-        rightFrame = inRight.getFrame()
         rightFrame = cv2.flip(rightFrame, flipCode=1)
         cv2.imshow("rectified right", rightFrame)
-
-
-        disparityFrame = inDisparity.getFrame()
         cv2.imshow("disparity", disparityFrame)
 
         focal = disparityFrame.shape[1] / (2. * math.tan(math.radians(fov / 2)))
@@ -121,7 +112,7 @@ with dai.Device(pipeline) as device:
 
         cv2.imshow("wls raw depth", depthFrame)
 
-        filteredDisp = (filteredDisp * (255/(disp_levels-1))).astype(np.uint8)
+        filteredDisp = (filteredDisp * disp_multiplier).astype(np.uint8)
         cv2.imshow(wlsFilter.wlsStream, filteredDisp)
 
         coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_HOT)

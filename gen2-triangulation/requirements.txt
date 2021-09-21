@@ -1,5 +1,4 @@
-pygame==1.9.6
-pyopengl==3.1.5
 opencv-python==4.5.1.48
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.1.0.0.dev0+8c9d95ed727bd2efa81c5a3b7915a534994a6a5a
+depthai==2.10.0.0
+blobconverter==1.0.0
+open3d

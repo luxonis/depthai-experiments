@@ -8,6 +8,7 @@ import depthai as dai
 import east
 
 pipeline = dai.Pipeline()
+pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
 
 colorCam = pipeline.createColorCamera()
 colorCam.setPreviewSize(256, 256)
@@ -120,7 +121,7 @@ class CTCCodec(object):
             char_list = []
             for i in range(l):
                 # removing repeated characters and blank.
-                if t[i] != 0 and (not (i > 0 and t[i - 1] == t[i])):
+                if not (i > 0 and t[i - 1] == t[i]):
                     if self.characters[t[i]] != '#':
                         char_list.append(self.characters[t[i]])
             text = ''.join(char_list)
@@ -134,7 +135,7 @@ characters = '0123456789abcdefghijklmnopqrstuvwxyz#'
 codec = CTCCodec(characters)
 
 ctrl = dai.CameraControl()
-ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO)
 ctrl.setAutoFocusTrigger()
 controlQueue.send(ctrl)
 

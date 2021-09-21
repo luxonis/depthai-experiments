@@ -135,7 +135,6 @@ class DepthAI:
     def start_pipeline(self):
         self.device = depthai.Device(self.pipeline)
         print("Starting pipeline...")
-        self.device.startPipeline()
 
         self.start_nns()
 

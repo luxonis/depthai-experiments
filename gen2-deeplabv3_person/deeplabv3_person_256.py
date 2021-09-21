@@ -106,62 +106,66 @@ xout_nn.input.setBlocking(False)
 detection_nn.out.link(xout_nn.input)
 
 # Pipeline defined, now the device is assigned and pipeline is started
-device = dai.Device(pipeline)
-device.startPipeline()
+with dai.Device() as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+    if cam_source != "rgb" and not depth_enabled:
+        raise RuntimeError("Unable to run the experiment on {} camera! Available cameras: {}".format(cam_source, cams))
+    device.startPipeline(pipeline)
 
-# Output queues will be used to get the rgb frames and nn data from the outputs defined above
-q_nn_input = device.getOutputQueue(name="nn_input", maxSize=4, blocking=False)
-q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
+    # Output queues will be used to get the rgb frames and nn data from the outputs defined above
+    q_nn_input = device.getOutputQueue(name="nn_input", maxSize=4, blocking=False)
+    q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
-start_time = time.time()
-counter = 0
-fps = 0
-layer_info_printed = False
-while True:
-    # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
-    in_nn_input = q_nn_input.get()
-    in_nn = q_nn.get()
+    start_time = time.time()
+    counter = 0
+    fps = 0
+    layer_info_printed = False
+    while True:
+        # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
+        in_nn_input = q_nn_input.get()
+        in_nn = q_nn.get()
 
-    if in_nn_input is not None:
-        # if the data from the rgb camera is available, transform the 1D data into a HxWxC frame
-        shape = (3, in_nn_input.getHeight(), in_nn_input.getWidth())
-        frame = in_nn_input.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
-        frame = np.ascontiguousarray(frame)
+        if in_nn_input is not None:
+            # if the data from the rgb camera is available, transform the 1D data into a HxWxC frame
+            shape = (3, in_nn_input.getHeight(), in_nn_input.getWidth())
+            frame = in_nn_input.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
+            frame = np.ascontiguousarray(frame)
 
-    if in_nn is not None:
-        # print("NN received")
-        layers = in_nn.getAllLayers()
+        if in_nn is not None:
+            # print("NN received")
+            layers = in_nn.getAllLayers()
 
-        if not layer_info_printed:
-            for layer_nr, layer in enumerate(layers):
-                print(f"Layer {layer_nr}")
-                print(f"Name: {layer.name}")
-                print(f"Order: {layer.order}")
-                print(f"dataType: {layer.dataType}")
-                dims = layer.dims[::-1] # reverse dimensions
-                print(f"dims: {dims}")
-            layer_info_printed = True
+            if not layer_info_printed:
+                for layer_nr, layer in enumerate(layers):
+                    print(f"Layer {layer_nr}")
+                    print(f"Name: {layer.name}")
+                    print(f"Order: {layer.order}")
+                    print(f"dataType: {layer.dataType}")
+                    dims = layer.dims[::-1] # reverse dimensions
+                    print(f"dims: {dims}")
+                layer_info_printed = True
 
-        # get layer1 data
-        layer1 = in_nn.getLayerInt32(layers[0].name)
-        # reshape to numpy array
-        dims = layer.dims[::-1]
-        lay1 = np.asarray(layer1, dtype=np.int32).reshape(dims)
+            # get layer1 data
+            layer1 = in_nn.getLayerInt32(layers[0].name)
+            # reshape to numpy array
+            dims = layer.dims[::-1]
+            lay1 = np.asarray(layer1, dtype=np.int32).reshape(dims)
 
-        output_colors = decode_deeplabv3p(lay1)
+            output_colors = decode_deeplabv3p(lay1)
 
-        if frame is not None:
-            frame = show_deeplabv3p(output_colors, frame)
-            cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
-            cv2.imshow("nn_input", frame)
-    
-    counter+=1
-    if (time.time() - start_time) > 1 :
-        fps = counter / (time.time() - start_time)
+            if frame is not None:
+                frame = show_deeplabv3p(output_colors, frame)
+                cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
+                cv2.imshow("nn_input", frame)
 
-        counter = 0
-        start_time = time.time()
+        counter+=1
+        if (time.time() - start_time) > 1 :
+            fps = counter / (time.time() - start_time)
+
+            counter = 0
+            start_time = time.time()
 
 
-    if cv2.waitKey(1) == ord('q'):
-        break
+        if cv2.waitKey(1) == ord('q'):
+            break

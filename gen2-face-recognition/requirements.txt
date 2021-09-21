@@ -1,5 +1,6 @@
-depthai
+depthai==2.7.2.0
 opencv-python
 numpy
 scipy
 imutils
+blobconverter==1.0.0

@@ -3,16 +3,12 @@ import csv
 import threading
 import time
 from pathlib import Path
-import sys
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
 
 # Get argument first
-mobilenet_path = str((Path(__file__).parent / Path('models/mobilenet-ssd_openvino_2021.2_13shave.blob')).resolve().absolute())
-if len(sys.argv) > 1:
-    mobilenet_path = sys.argv[1]
-
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
@@ -23,8 +19,9 @@ cam_rgb.setPreviewSize(300, 300)
 cam_rgb.setInterleaved(False)
 
 # Define a neural network that will make predictions based on the source frames
-detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(mobilenet_path)
+detection_nn = pipeline.createMobileNetDetectionNetwork()
+detection_nn.setConfidenceThreshold(0.5)
+detection_nn.setBlobPath(str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=13)))
 cam_rgb.preview.link(detection_nn.input)
 
 # Create outputs
@@ -46,7 +43,7 @@ for text in texts:
 
 
 # Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_file:
+with dai.Device() as device, open('data/dataset.csv', 'w') as dataset_file:
     dataset = csv.DictWriter(
         dataset_file,
         ["timestamp", "label", "left", "top", "right", "bottom", "raw_frame", "overlay_frame", "cropped_frame"]
@@ -60,24 +57,24 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
         return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
 
 
-    def store_data(in_frame, in_bboxes,  in_labels):
+    def store_data(in_frame, detections):
         timestamp = int(time.time() * 10000)
         raw_frame_path = f'data/raw/{timestamp}.jpg'
         cv2.imwrite(raw_frame_path, in_frame)
-        for raw_bbox, label in zip(in_bboxes, in_labels):
+        for detection in detections:
             debug_frame = in_frame.copy()
-            bbox = frame_norm(debug_frame, raw_bbox)
+            bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
             det_frame = debug_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-            cropped_path = f'data/{texts[label]}/{timestamp}_cropped.jpg'
+            cropped_path = f'data/{texts[detection.label]}/{timestamp}_cropped.jpg'
             cv2.imwrite(cropped_path, det_frame)
             cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-            cv2.putText(debug_frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            overlay_path = f'data/{texts[label]}/{timestamp}_overlay.jpg'
+            cv2.putText(debug_frame, texts[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            overlay_path = f'data/{texts[detection.label]}/{timestamp}_overlay.jpg'
             cv2.imwrite(overlay_path, debug_frame)
 
             data = {
                 "timestamp": timestamp,
-                "label": texts[label],
+                "label": texts[detection.label],
                 "left": bbox[0],
                 "top": bbox[1],
                 "right": bbox[2],
@@ -88,7 +85,7 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
             }
             dataset.writerow(data)
     # Start pipeline
-    device.startPipeline()
+    device.startPipeline(pipeline)
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
@@ -96,8 +93,7 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
 
     frame = None
     thread = None
-    bboxes = []
-    labels = []
+    detections = []
 
 
     while True:
@@ -112,27 +108,19 @@ with dai.Device(pipeline) as device, open('data/dataset.csv', 'w') as dataset_fi
             frame = np.ascontiguousarray(frame)
 
         if in_nn is not None:
-            # one detection has 7 numbers, and the last detection is followed by -1 digit, which later is filled with 0
-            bboxes = np.array(in_nn.getFirstLayerFp16())
-            # transform the 1D array into Nx7 matrix
-            bboxes = bboxes.reshape((bboxes.size // 7, 7))
-            # filter out the results which confidence less than a defined threshold
-            bboxes = bboxes[bboxes[:, 2] > 0.5]
-            # Cut bboxes and labels
-            labels = bboxes[:, 1].astype(int)
-            bboxes = bboxes[:, 3:7]
+            detections = in_nn.detections
 
             if frame is not None:
-                thread = threading.Thread(target=store_data, args=(frame, bboxes, labels))
+                thread = threading.Thread(target=store_data, args=(frame, detections))
                 thread.start()
 
         if frame is not None:
             debug_frame = frame.copy()
             # if the frame is available, draw bounding boxes on it and show the frame
-            for raw_bbox, label in zip(bboxes, labels):
-                bbox = frame_norm(debug_frame, raw_bbox)
+            for detection in detections:
+                bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
                 cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-                cv2.putText(debug_frame, texts[label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(debug_frame, texts[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             cv2.imshow("rgb", debug_frame)
 
         if cv2.waitKey(1) == ord('q'):

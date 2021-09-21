@@ -69,7 +69,7 @@ This lay the groundwork to make DepthAI [OpenDataCam](https://github.com/opendat
 
 Because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
 
-[![Spatial AI](https://user-images.githubusercontent.com/18037362/116149182-bc2b4b00-a6d9-11eb-91a5-ad5359ca85ad.gif)](https://www.youtube.com/watch?v=YalHMcsZODs&feature=youtu.be "3D Facial Landmark visualization")
+![Stereo Inference GIF](https://user-images.githubusercontent.com/59799831/132098832-70a2d0b9-1a30-4994-8dad-dc880a803fb3.gif)
 
 ## People Counting ([here](https://github.com/luxonis/depthai-experiments/blob/master/people-counter))
 
@@ -110,6 +110,12 @@ This gives an example of doing host-side WLS filtering using the `rectified_righ
 Example running on [BW1092](https://shop.luxonis.com/collections/all/products/bw1092-pre-order) shown below:
 ![image](https://user-images.githubusercontent.com/32992551/94463964-fc920d00-017a-11eb-9e99-8a023cdc8a72.png)
 
+## Human-Machine safety ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-human-machine-safety))
+
+Calculates palm spatial coordinates on the host and calculates spatial distance between the palm and a dangerous object.
+If spatial distance is below selected threshold, it will warn the user.
+
+[![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4)
 ## Multiple devices per host ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices))
 
 This demo shows how you can use multiple devices per host. The demo will find all devices connected to the host and display an RGB preview from each of them.
