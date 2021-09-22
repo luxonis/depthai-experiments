@@ -56,9 +56,7 @@ class HumanMachineSafety:
         if xmin > xmax:  # bbox flipped
             xmin, xmax = xmax, xmin
         if ymin > ymax:  # bbox flipped
-            tmp = ymin
-            ymin = ymax
-            ymax = tmp
+            ymin, ymax = ymax, ymin
 
         # Calculate the average depth in the ROI.
         depthROI = depth[ymin:ymax, xmin:xmax]
