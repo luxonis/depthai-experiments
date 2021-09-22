@@ -54,9 +54,7 @@ class HumanMachineSafety:
         xmax -= deltaX
         ymax -= deltaY
         if xmin > xmax:  # bbox flipped
-            tmp = xmin
-            xmin = xmax
-            xmax = tmp
+            xmin, xmax = xmax, xmin
         if ymin > ymax:  # bbox flipped
             tmp = ymin
             ymin = ymax
