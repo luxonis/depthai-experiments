@@ -69,7 +69,7 @@ cam.setFps(40)
 # Create manip
 manip = pipeline.createImageManip()
 manip.initialConfig.setResize(NN_WIDTH, NN_HEIGHT)
-manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
 manip.initialConfig.setKeepAspectRatio(False)
 
 # Link preview to manip and manip to nn
