@@ -79,56 +79,6 @@ _sigma_slider_default = 15
 cv2.createTrackbar(_sigma_trackbar_name, wls_stream, _sigma_slider_min, _sigma_slider_max, on_trackbar_change_sigma)
 cv2.setTrackbarPos(_sigma_trackbar_name, wls_stream, _sigma_slider_default)
 
-
-
-def create_rgb_cam_pipeline():
-    print("Creating pipeline: RGB CAM -> XLINK")
-    pipeline = dai.Pipeline()
-
-    cam          = pipeline.createColorCamera()
-    xout_preview = pipeline.createXLinkOut()
-    xout_video   = pipeline.createXLinkOut()
-
-    cam.setPreviewSize(540, 540)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setCamId(0)
-
-    xout_preview.setStreamName('rgb_preview')
-    xout_video  .setStreamName('rgb_video')
-
-    cam.preview.link(xout_preview.input)
-    cam.video  .link(xout_video.input)
-
-    streams = ['rgb_preview', 'rgb_video']
-
-    return pipeline, streams
-
-def create_mono_cam_pipeline():
-    print("Creating pipeline: MONO CAMS -> XLINK")
-    pipeline = dai.Pipeline()
-
-    cam_left   = pipeline.createMonoCamera()
-    cam_right  = pipeline.createMonoCamera()
-    xout_left  = pipeline.createXLinkOut()
-    xout_right = pipeline.createXLinkOut()
-
-    cam_left .setCamId(1)
-    cam_right.setCamId(2)
-    for cam in [cam_left, cam_right]: # Common config
-        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-        #cam.setFps(20.0)
-
-    xout_left .setStreamName('left')
-    xout_right.setStreamName('right')
-
-    cam_left .out.link(xout_left.input)
-    cam_right.out.link(xout_right.input)
-
-    streams = ['left', 'right']
-
-    return pipeline, streams
-
 def create_stereo_depth_pipeline():
     print("Creating Stereo Depth pipeline: MONO CAMS -> STEREO -> XLINK")
     pipeline = dai.Pipeline()
@@ -171,7 +121,7 @@ def create_stereo_depth_pipeline():
     cam_right.out        .link(stereo.right)
     stereo.syncedLeft    .link(xout_left.input)
     stereo.syncedRight   .link(xout_right.input)
-    stereo.depth         .link(xout_depth.input)
+    # stereo.depth         .link(xout_depth.input)
     stereo.disparity     .link(xout_disparity.input)
     stereo.rectifiedLeft .link(xout_rectif_left.input)
     stereo.rectifiedRight.link(xout_rectif_right.input)

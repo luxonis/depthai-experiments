@@ -23,7 +23,7 @@ class PointCloudVisualizer():
         self.vis.create_window()
         self.isstarted = False
 
-    def rgbd_to_projection(self, depth_map, rgb,is_rgb):
+    def rgbd_to_projection(self, depth_map, rgb, is_rgb):
         self.depth_map = depth_map
         self.rgb = rgb
         rgb_o3d = o3d.geometry.Image(self.rgb)
