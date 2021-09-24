@@ -21,17 +21,17 @@ Path("./pcl_dataset/depth").mkdir(parents=True, exist_ok=True)
 Path("./pcl_dataset/rec_right").mkdir(parents=True, exist_ok=True)
 Path("./pcl_dataset/ply").mkdir(parents=True, exist_ok=True)
 # StereoDepth config options. TODO move to command line options
-out_depth      = False  # Disparity by default
-out_rectified  = True   # Output and display rectified streams
-lrcheck  = True #   # Better handling for occlusions
-extended = False  # Closer-in minimum depth, disparity range is doubled 
-subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
+out_depth     = False  # Disparity by default
+out_rectified = True   # Output and display rectified streams
+lrcheck       = True #   # Better handling for occlusions
+extended      = False  # Closer-in minimum depth, disparity range is doubled
+subpixel      = True   # Better accuracy for longer distance, fractional disparity 32-levels
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7 
 median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 
 # Sanitize some incompatible options
 if lrcheck or extended or subpixel:
-    median   = dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF # TODO
+    median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7 # TODO
 
 print("StereoDepth config options:")
 print("    Left-Right check:  ", lrcheck)
@@ -93,10 +93,10 @@ def test_pipeline():
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setInterleaved(False)
     cam_rgb.setCamId(0)
-    cam_rgb.setIspScale(2, 3)
+    cam_rgb.setIspScale(2, 6)
 
     for cam in [cam_left, cam_right]: # Common config
-        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        cam.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
         #cam.setFps(20.0)
 
     stereo.setOutputDepth(out_depth)
@@ -105,7 +105,7 @@ def test_pipeline():
     stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
     #stereo.loadCalibrationFile(path) # Default: EEPROM calib is used
     #stereo->setInputResolution(1280, 720); # Default: resolution is taken from Mono nodes
-    stereo.setMedianFilter(median) # KERNEL_7x7 default
+    stereo.initialConfig.setMedianFilter(median) # KERNEL_7x7 default
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)
@@ -129,8 +129,9 @@ def test_pipeline():
     calibData = device.readCalibration()
     device.startPipeline(pipeline)
 
-    rgb_intrinsic = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, 1280, 720))
-    pcl_converter = PointCloudVisualizer(rgb_intrinsic, 1280, 720)
+    rgb_intrinsic = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, int(1280/2), int(720/2)))
+    print("rgb_intrinsic {}".format(rgb_intrinsic))
+    pcl_converter = PointCloudVisualizer(rgb_intrinsic, int(1280/2), int(720/2))
 
 
     # Create a receive queue for each stream
@@ -149,7 +150,7 @@ def test_pipeline():
         disp_type = np.uint16  # 5 bits fractional disparity
         disp_levels = 32
     baseline = 75 #mm
-    focal = 855
+    focal = rgb_intrinsic[0][0]
 
     while True:
         for q in q_list:
@@ -173,7 +174,7 @@ def test_pipeline():
                     wls_filter.setSigmaColor(_sigma)
                     filtered_disp = wls_filter.filter(recent_disp, recent_rgb)
                     with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
-                        depth_wls = (disp_levels * baseline * focal / filtered_disp).astype(np.uint16)
+                        depth_wls = (disp_levels * baseline * focal / recent_disp).astype(np.uint16)
                         # cv2.imshow("wls_stream", depth_wls)
                         recent_rgb_ordered = cv2.cvtColor(recent_rgb, cv2.COLOR_BGR2RGB)
                         pcl_converter.rgbd_to_projection(depth_wls, recent_rgb_ordered, True)
@@ -195,6 +196,7 @@ def test_pipeline():
         if key == ord('d'):
             capture_pcl = True
         if key == ord('p'):
+            print('Capturing.....')
             ply_pth = str(curr_path) + '/pcl_dataset/ply/'
             # pcl_converter.save_ply(ply_pth)
             pcl_converter.save_mesh_from_rgbd(ply_pth)

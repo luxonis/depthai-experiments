@@ -19,6 +19,7 @@ class PointCloudVisualizer():
                                                                          intrinsic_matrix[1][1],
                                                                          intrinsic_matrix[0][2],
                                                                          intrinsic_matrix[1][2])
+        print("Intrinsic matrix: {}".format(self.pinhole_camera_intrinsic.intrinsic_matrix))
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window()
         self.isstarted = False
@@ -45,7 +46,7 @@ class PointCloudVisualizer():
         # pcl, _ = voxel_down_pcd.remove_radius_outlier(nb_points=30, radius=0.05)
         # self.pcl.points = pcl.points
         # self.pcl.colors = pcl.colors
-        print("color dim: {}, depth dim: {}".format(self.rgbd.color.dimension, self.rgbd.depth.dimension))
+        # print("color dim: {}, depth dim: {}".format(self.rgbd.color.dimension, self.rgbd.depth.dimension))
         return self.pcl
 
     def visualize_pcd(self):
@@ -66,7 +67,6 @@ class PointCloudVisualizer():
             sdf_trunc=0.06,
             color_type=o3d.integration.TSDFVolumeColorType.RGB8)
         ext = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]], dtype=np.float32)
-        print(type(self.rgbd))
         volume.integrate(
                     self.rgbd,
                     self.pinhole_camera_intrinsic,
