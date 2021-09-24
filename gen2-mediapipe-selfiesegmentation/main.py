@@ -8,7 +8,7 @@ cam_options = ['rgb', 'left', 'right']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-cam", "--cam_input", help="select camera input source for inference", default='rgb', choices=cam_options)
-parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/selfie_segmentation_landscape.blob', type=str)
+parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/selfie_segmentation_landscape_openvino_2021.4_6shave_RGB_interleaved.blob', type=str)
 
 args = parser.parse_args()
 
@@ -35,6 +35,7 @@ cam=None
 cam = pipeline.createColorCamera()
 cam.setPreviewSize(NN_W,NN_H)
 cam.setInterleaved(True)
+cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 cam.preview.link(detection_nn.input)
 cam.setFps(50)
 
