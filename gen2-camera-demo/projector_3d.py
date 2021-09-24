@@ -45,7 +45,7 @@ class PointCloudVisualizer():
         # pcl, _ = voxel_down_pcd.remove_radius_outlier(nb_points=30, radius=0.05)
         # self.pcl.points = pcl.points
         # self.pcl.colors = pcl.colors
-        
+        print("color dim: {}, depth dim: {}".format(self.rgbd.color.dimension, self.rgbd.depth.dimension))
         return self.pcl
 
     def visualize_pcd(self):
@@ -64,7 +64,7 @@ class PointCloudVisualizer():
         volume = o3d.integration.ScalableTSDFVolume(
             voxel_length=2.0 / 512.0,
             sdf_trunc=0.06,
-            color_type=o3d.integration.TSDFVolumeColorType.Gray32)
+            color_type=o3d.integration.TSDFVolumeColorType.RGB8)
         ext = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]], dtype=np.float32)
         print(type(self.rgbd))
         volume.integrate(
