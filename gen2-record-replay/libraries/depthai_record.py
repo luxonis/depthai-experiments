@@ -39,7 +39,7 @@ class Record:
         self.queues = []
         for stream in streams:
             self.queues.append({
-                'q': device.getOutputQueue(name=stream, maxSize=10, blocking=False),
+                'q': self.device.getOutputQueue(name=stream, maxSize=10, blocking=False),
                 'msgs': [],
                 'name': stream
             })
