@@ -106,7 +106,7 @@ xout_nn.input.setBlocking(False)
 detection_nn.out.link(xout_nn.input)
 
 # Pipeline defined, now the device is assigned and pipeline is started
-with dai.Device(dai.OpenVINO.Version.VERSION_2021_2) as device:
+with dai.Device(pipeline.getOpenVINOVersion()) as device:
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
     if cam_source != "rgb" and not depth_enabled:
