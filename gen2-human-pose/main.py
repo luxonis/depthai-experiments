@@ -45,19 +45,19 @@ keypoints_list = None
 detected_keypoints = None
 personwiseKeypoints = None
 
-nm = NNetManager(input_size=(456, 256))
+nm = NNetManager(inputSize=(456, 256))
 pm = PipelineManager()
-pm.set_nn_manager(nm)
+pm.setNnManager(nm)
 
 if args.camera:
     fps = FPSHandler()
-    pm.create_color_cam(preview_size=(456, 256), xout=True)
+    pm.createColorCam(previewSize=(456, 256), xout=True)
 else:
     cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
     fps = FPSHandler(cap)
 
-nn_pipeline = nm.create_nn_pipeline(pm.pipeline, pm.nodes, source=Previews.color.name if args.camera else "host", blob_path=Path(blob_path), full_fov=True)
-pm.add_nn(nn=nn_pipeline)
+nn = nm.createNN(pm.pipeline, pm.nodes, source=Previews.color.name if args.camera else "host", blobPath=Path(blob_path), fullFov=True)
+pm.addNn(nn=nn)
 
 def decode_thread(in_queue):
     global keypoints_list, detected_keypoints, personwiseKeypoints
@@ -80,7 +80,7 @@ def decode_thread(in_queue):
 
         for row in range(18):
             probMap = outputs[0, row, :, :]
-            probMap = cv2.resize(probMap, nm.input_size)  # (456, 256)
+            probMap = cv2.resize(probMap, nm.inputSize)  # (456, 256)
             keypoints = getKeypoints(probMap, 0.3)
             new_keypoints_list = np.vstack([new_keypoints_list, *keypoints])
             keypoints_with_id = []
@@ -91,7 +91,7 @@ def decode_thread(in_queue):
 
             new_keypoints.append(keypoints_with_id)
 
-        valid_pairs, invalid_pairs = getValidPairs(outputs, w=nm.input_size[0], h=nm.input_size[1], detected_keypoints=new_keypoints)
+        valid_pairs, invalid_pairs = getValidPairs(outputs, w=nm.inputSize[0], h=nm.inputSize[1], detected_keypoints=new_keypoints)
         newPersonwiseKeypoints = getPersonwiseKeypoints(valid_pairs, invalid_pairs, new_keypoints_list)
 
         detected_keypoints, keypoints_list, personwiseKeypoints = (new_keypoints, new_keypoints_list, newPersonwiseKeypoints)
@@ -101,8 +101,8 @@ def show(frame):
     global keypoints_list, detected_keypoints, personwiseKeypoints, nm
 
     if keypoints_list is not None and detected_keypoints is not None and personwiseKeypoints is not None:
-        scale_factor = frame.shape[0] / nm.input_size[1]
-        offset_w = int(frame.shape[1] - nm.input_size[0] * scale_factor) // 2
+        scale_factor = frame.shape[0] / nm.inputSize[1]
+        offset_w = int(frame.shape[1] - nm.inputSize[0] * scale_factor) // 2
 
         def scale(point):
             return int(point[0] * scale_factor) + offset_w, int(point[1] * scale_factor)
@@ -123,12 +123,12 @@ def show(frame):
 print("Starting pipeline...")
 with dai.Device(pm.pipeline, device_info) as device:
     if args.camera:
-        pv = PreviewManager(display=[Previews.color.name], nn_source=Previews.color.name, scale={"color": 0.37}, fps_handler=fps)
-        pv.create_queues(device)
+        pv = PreviewManager(display=[Previews.color.name], nnSource=Previews.color.name, scale={"color": 0.37}, fpsHandler=fps)
+        pv.createQueues(device)
     nm.createQueues(device)
     seq_num = 1
 
-    t = threading.Thread(target=decode_thread, args=(nm.output_queue, ))
+    t = threading.Thread(target=decode_thread, args=(nm.outputQueue, ))
     t.start()
 
     def should_run():
@@ -137,15 +137,15 @@ with dai.Device(pm.pipeline, device_info) as device:
 
     try:
         while should_run():
-            fps.next_iter()
+            fps.nextIter()
             if args.camera:
-                pv.prepare_frames()
+                pv.prepareFrames()
                 frame = pv.get(Previews.color.name)
                 if debug:
                     show(frame)
-                    cv2.putText(frame, f"RGB FPS: {round(fps.tick_fps(Previews.color.name), 1)}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-                    cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-                    pv.show_frames()
+                    cv2.putText(frame, f"RGB FPS: {round(fps.tickFps(Previews.color.name), 1)}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+                    cv2.putText(frame, f"NN FPS:  {round(fps.tickFps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+                    pv.showFrames()
             if not args.camera:
                 read_correctly, frame = cap.read()
 
@@ -157,8 +157,8 @@ with dai.Device(pm.pipeline, device_info) as device:
 
                 if debug:
                     show(frame)
-                    cv2.putText(frame, f"RGB FPS: {round(fps.tick_fps('host'), 1)}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-                    cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+                    cv2.putText(frame, f"RGB FPS: {round(fps.tickFps('host'), 1)}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+                    cv2.putText(frame, f"NN FPS:  {round(fps.tickFps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
                     cv2.imshow("rgb", frame)
 
             key = cv2.waitKey(1)
@@ -171,6 +171,6 @@ with dai.Device(pm.pipeline, device_info) as device:
     running = False
 
 t.join()
-fps.print_status()
+fps.printStatus()
 if not args.camera:
     cap.release()

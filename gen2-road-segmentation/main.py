@@ -4,12 +4,12 @@ import cv2
 import depthai as dai
 import numpy as np
 
-from depthai_sdk import PipelineManager, NNetManager, PreviewManager, Previews, FPSHandler, to_tensor_result
+from depthai_sdk import PipelineManager, NNetManager, PreviewManager, Previews, FPSHandler, toTensorResult
 
 nn_shape = 896, 512
 
 def decode(packet):
-    data = np.squeeze(to_tensor_result(packet)["L0317_ReWeight_SoftMax"])
+    data = np.squeeze(toTensorResult(packet)["L0317_ReWeight_SoftMax"])
     class_colors = [[0, 0, 0], [0, 255, 0], [255, 0, 0], [0, 0, 255]]
     class_colors = np.asarray(class_colors, dtype=np.uint8)
     indices = np.argmax(data, axis=0)
@@ -25,30 +25,30 @@ def draw(data, frame):
 
 # Start defining a pipeline
 pm = PipelineManager()
-pm.create_color_cam(preview_size=nn_shape)
+pm.createColorCam(previewSize=nn_shape)
 
-nm = NNetManager(input_size=nn_shape)
-pm.set_nn_manager(nm)
-pm.add_nn(
-    nm.create_nn_pipeline(pm.pipeline, pm.nodes, blobconverter.from_zoo(name='road-segmentation-adas-0001', shaves=6)),
+nm = NNetManager(inputSize=nn_shape)
+pm.setNnManager(nm)
+pm.addNn(
+    nm.createNN(pm.pipeline, pm.nodes, blobconverter.from_zoo(name='road-segmentation-adas-0001', shaves=6)),
     sync=True
 )
 fps = FPSHandler()
-pv = PreviewManager(display=[Previews.color.name], fps_handler=fps)
+pv = PreviewManager(display=[Previews.color.name], fpsHandler=fps)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.pipeline) as device:
     nm.createQueues(device)
-    pv.create_queues(device)
+    pv.createQueues(device)
 
     while True:
-        fps.tick_fps('color')
-        pv.prepare_frames(blocking=True)
+        fps.tick('color')
+        pv.prepareFrames(blocking=True)
         frame = pv.get(Previews.color.name)
 
-        road_decoded = decode(nm.output_queue.get())
+        road_decoded = decode(nm.outputQueue.get())
         draw(road_decoded, frame)
-        fps.draw_fps(frame, 'color')
+        fps.drawFps(frame, 'color')
         cv2.imshow('color', frame)
 
         if cv2.waitKey(1) == ord('q'):
