@@ -2,11 +2,17 @@
 import json
 import os
 import tempfile
+import platform
 from pathlib import Path
 
 import cv2
 import depthai
-from projector_3d import PointCloudVisualizer
+
+try:
+    from projector_3d import PointCloudVisualizer
+except ImportError as e:
+    raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e} \033[0m ")
+
 
 device = depthai.Device("", False)
 pipeline = device.create_pipeline(config={

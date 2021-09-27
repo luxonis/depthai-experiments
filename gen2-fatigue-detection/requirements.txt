@@ -1,0 +1,5 @@
+scipy==1.6.0
+numpy==1.19.4
+opencv-python==4.2.0.34; platform_machine != "armv7l"
+opencv-python==4.1.0.25; platform_machine == "armv7l"
+depthai==2.7.2.0

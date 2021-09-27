@@ -1,0 +1,3 @@
+[submodule "gen2-spi-jpeg/esp32-spi-message-demo"]
+	path = gen2-spi/esp32-spi-message-demo
+	url = https://github.com/luxonis/esp32-spi-message-demo.git

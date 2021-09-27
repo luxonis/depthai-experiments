@@ -30,7 +30,7 @@ while True:
         cam = nnet_packet.getMetadata().getCameraName()
         detections[cam] = {
             'face': nnet_packet.getDetectedObjects(),
-            'land': list(zip(*[iter(nnet_packet.getOutputsList()[1].reshape((10, )))] * 2))
+            'land': list(zip(*[iter(nnet_packet.get_tensor(1).reshape((10, )))] * 2))
         }
 
     for packet in data_packets:

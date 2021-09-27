@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 opencv-python==4.2.0.34; platform_machine != "armv7l"
 opencv-python==4.1.0.25; platform_machine == "armv7l"
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==0.0.2.1+81501f49d6168d1a682c35f8bf842be17a97eda1
+=======
+opencv-python
+depthai==2.7.2.0
+>>>>>>> origin/master
 

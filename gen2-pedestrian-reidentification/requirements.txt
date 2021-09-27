@@ -1,0 +1,3 @@
+opencv-python
+imutils==0.5.4
+depthai==2.7.2.0
