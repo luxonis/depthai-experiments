@@ -144,6 +144,7 @@ stereo.initialConfig.setConfidenceThreshold(210)
 stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
 
 stereo.setLeftRightCheck(True)
+stereo.setSubpixel(True)
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
