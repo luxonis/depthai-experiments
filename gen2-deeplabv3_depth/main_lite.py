@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 import time
 from datetime import datetime, timedelta
+from projector_3d import PointCloudVisualizer
 
 '''
 Blob taken from the great PINTO zoo
@@ -22,6 +23,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-shape", "--nn_shape", help="select NN model shape", default=256, type=int)
 parser.add_argument("-nn", "--nn_path", help="select model path for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
 args = parser.parse_args()
+
+lrcheck  = True
+extended = False
+subpixel = False
 
 # Custom JET colormap with 0 mapped to `black` - better disparity visualization
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
@@ -143,8 +148,10 @@ stereo = pipeline.createStereoDepth()
 stereo.initialConfig.setConfidenceThreshold(210)
 stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
 
-stereo.setLeftRightCheck(True)
-stereo.setSubpixel(True)
+stereo.setLeftRightCheck(lrcheck)
+stereo.setSubpixel(subpixel)
+stereo.setExtendedDisparity(extended)
+
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
@@ -154,8 +161,26 @@ xout_disp = pipeline.createXLinkOut()
 xout_disp.setStreamName("disparity")
 stereo.disparity.link(xout_disp.input)
 
+
+max_disp = 96
+disp_levels = 1
+if (extended):
+    max_disp *= 2
+if (subpixel):
+    max_disp *= 32;
+    disp_type = np.uint16  # 5 bits fractional disparity
+    disp_levels = 32
+
+    
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pipeline.getOpenVINOVersion()) as device:
+    baseline = 75 # 75mm
+    calibData = device.readCalibration()
+
+    rgb_intrinsics = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, 720, 720))
+    print("rgb_intrinsics : {}".format(rgb_intrinsics))
+    pcl_converter = PointCloudVisualizer(rgb_intrinsics, 720, 720)
+    focal_length = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, 1280, 720)[0][0]
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
     if not depth_enabled:
@@ -171,7 +196,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     sync = HostSync()
     disp_frame = None
     disp_multiplier = 255 / stereo.getMaxDisparity()
-
+    print("Max disp_frame: {}".format(stereo.getMaxDisparity()))
     frame = None
     frame_back = None
     depth = None
@@ -200,11 +225,16 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
 
             # To match depth frames
             output_colors = cv2.resize(output_colors, TARGET_SHAPE)
-
+            rgb_frame = None
             if "color" in msgs:
                 frame = msgs["color"].getCvFrame()
+                print("Shape of RGB {}".format(frame.shape))
+
                 frame = crop_to_square(frame)
+                print("Shape of resized RGB {}".format(frame.shape))
+                rgb_frame = frame.copy()
                 frame = cv2.resize(frame, TARGET_SHAPE)
+
                 frames['frame'] = frame
                 frame = cv2.addWeighted(frame, 1, output_colors,0.5,0)
                 cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
@@ -212,18 +242,37 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
 
             if "depth" in msgs:
                 disp_frame = msgs["depth"].getFrame()
+                depth_frame = None
+                print("Shape of disp_frame {}".format(disp_frame.shape))
+                if not extended and not subpixel:
+                    # print("disp_multiplier: {}".format(disp_multiplier))
+                    depth_frame = (focal_length * baseline / disp_frame).astype(np.uint16)
+                    depth_frame = crop_to_square(depth_frame)
                 disp_frame = (disp_frame * disp_multiplier).astype(np.uint8)
                 disp_frame = crop_to_square(disp_frame)
-                disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
+                print("Shape of cropped disp_frame {}".format(disp_frame.shape))
+                cv2.imshow("Cropped disp img", disp_frame)
 
+                disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
+                if depth_frame is not None:
+                    cv2.imshow("Depth img", depth_frame)
                 # Colorize the disparity
                 frames['depth'] = cv2.applyColorMap(disp_frame, jet_custom)
 
                 multiplier = get_multiplier(lay1)
                 multiplier = cv2.resize(multiplier, TARGET_SHAPE)
+
+                resized_multiplier = cv2.resize(multiplier, (720, 720))
+                actual_depth_overlay = depth_frame * resized_multiplier
                 depth_overlay = disp_frame * multiplier
                 frames['cutout'] = cv2.applyColorMap(depth_overlay, jet_custom)
-
+                
+                if depth_frame is not None:
+                    cv2.imshow("Actual Depth filtered", actual_depth_overlay)
+                    temp = cv2.resize(frames['cutout'], (720, 720))
+                    overlayed_rgb_dep = cv2.addWeighted(rgb_frame, 1, temp, 0.5,0)
+                    cv2.imshow("overlayed_rgb_depd", overlayed_rgb_dep)
+                    
                 if 'frame' in frames:
                     # shape (400,400) multipliers -> shape (400,400,3)
                     multiplier = np.repeat(multiplier[:, :, np.newaxis], 3, axis=2)
