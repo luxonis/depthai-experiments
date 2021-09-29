@@ -60,21 +60,40 @@ class FPSHandler:
 class HostSync:
     def __init__(self):
         self.arrays = {}
-    def add_msg(self, name, msg):
-        if not name in self.arrays:
-            self.arrays[name] = []
-        self.arrays[name].append(msg)
-    def get_msgs(self, timestamp):
-        ret = {}
+        self.new_msgs = None
+    def add_msg(self, msg_name, msg, seq):
+        if not msg_name in self.arrays:
+            self.arrays[msg_name] = []
+        self.arrays[msg_name].append({
+            'msg': msg,
+            'seq': seq
+        })
+
+        matched_arr = []
         for name, arr in self.arrays.items():
+            # if name == msg_name: continue
             for i, msg in enumerate(arr):
-                time_diff = abs(msg.getTimestamp() - timestamp)
-                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
-                # time difference is below 20ms, it's considered as synced
-                if time_diff < timedelta(milliseconds=20):
-                    ret[name] = msg
-                    self.arrays[name] = arr[i:]
-                    break
+                if seq == msg['seq']:
+                    matched_arr.append({
+                        'msg': msg['msg'],
+                        'i': i,
+                        'name': name
+                    })
+
+        if len(matched_arr) == len(self.arrays):
+            self.new_msgs = {}
+            # We have our matched messages.
+            for matched in matched_arr:
+                self.remove_old_msgs(matched['name'], matched['i'])
+                self.new_msgs[matched['name']] = matched['msg']
+
+    # Remove old, out-of-sync messages
+    def remove_old_msgs(self, name, i):
+        self.arrays[name] = self.arrays[name][i:]
+
+    def get_msgs(self):
+        ret = self.new_msgs
+        self.new_msgs = None
         return ret
 
 
@@ -145,6 +164,7 @@ stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERN
 # stereo.initialConfig.setBilateralFilterSigma(64000)
 stereo.setLeftRightCheck(True)
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+stereo.setSubpixel(True)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
@@ -169,7 +189,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     fps = FPSHandler()
     sync = HostSync()
     disp_frame = None
-    disp_multiplier = 255 / stereo.getMaxDisparity()
+    disp_multiplier = 255 / stereo.initialConfig.getMaxDisparity()
 
     frame = None
     frame_back = None
@@ -178,21 +198,26 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     frames = {}
 
     while True:
-        sync.add_msg("color", q_color.get())
+        in_color = q_color.tryGet()
+        if in_color is not None:
+            sync.add_msg("color", in_color, in_color.getSequenceNum())
 
         in_depth = q_disp.tryGet()
         if in_depth is not None:
-            sync.add_msg("depth", in_depth)
+            sync.add_msg("depth", in_depth, in_depth.getSequenceNum())
 
         in_nn = q_nn.tryGet()
         if in_nn is not None:
+            seq = q_pass.get().getSequenceNum()
+            sync.add_msg("nn", in_nn, seq)
             fps.next_iter()
-            # Get NN output timestamp from the passthrough
-            timestamp = q_pass.get().getTimestamp()
-            msgs = sync.get_msgs(timestamp)
 
+        # Get NN output timestamp from the passthrough
+        msgs = sync.get_msgs()
+        if msgs is not None:
+            if len(msgs) != 3: continue
             # get layer1 data
-            layer1 = in_nn.getFirstLayerInt32()
+            layer1 = msgs['nn'].getFirstLayerInt32()
             # reshape to numpy array
             lay1 = np.asarray(layer1, dtype=np.int32).reshape((nn_shape, nn_shape))
             output_colors = decode_deeplabv3p(lay1)
@@ -200,39 +225,36 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             # To match depth frames
             output_colors = cv2.resize(output_colors, TARGET_SHAPE)
 
-            if "color" in msgs:
-                frame = msgs["color"].getCvFrame()
-                frame = crop_to_square(frame)
-                frame = cv2.resize(frame, TARGET_SHAPE)
-                frames['frame'] = frame
-                frame = cv2.addWeighted(frame, 1, output_colors,0.5,0)
-                cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
-                frames['colored_frame'] = frame
+            frame = msgs["color"].getCvFrame()
+            frame = crop_to_square(frame)
+            frame = cv2.resize(frame, TARGET_SHAPE)
+            frames['frame'] = frame
+            frame = cv2.addWeighted(frame, 1, output_colors,0.5,0)
+            cv2.putText(frame, "Fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
+            frames['colored_frame'] = frame
 
-            if "depth" in msgs:
-                disp_frame = msgs["depth"].getFrame()
-                disp_frame = (disp_frame * disp_multiplier).astype(np.uint8)
-                disp_frame = crop_to_square(disp_frame)
-                disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
+            disp_frame = msgs["depth"].getFrame()
+            disp_frame = (disp_frame * disp_multiplier).astype(np.uint8)
+            disp_frame = crop_to_square(disp_frame)
+            disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
 
-                # Colorize the disparity
-                frames['depth'] = cv2.applyColorMap(disp_frame, jet_custom)
+            # Colorize the disparity
+            frames['depth'] = cv2.applyColorMap(disp_frame, jet_custom)
 
-                multiplier = get_multiplier(lay1)
-                multiplier = cv2.resize(multiplier, TARGET_SHAPE)
-                depth_overlay = disp_frame * multiplier
-                frames['cutout'] = cv2.applyColorMap(depth_overlay, jet_custom)
+            multiplier = get_multiplier(lay1)
+            multiplier = cv2.resize(multiplier, TARGET_SHAPE)
+            depth_overlay = disp_frame * multiplier
+            frames['cutout'] = cv2.applyColorMap(depth_overlay, jet_custom)
 
-                if 'frame' in frames:
-                    # shape (400,400) multipliers -> shape (400,400,3)
-                    multiplier = np.repeat(multiplier[:, :, np.newaxis], 3, axis=2)
-                    rgb_cutout = frames['frame'] * multiplier
-                    multiplier[multiplier == 0] = 255
-                    multiplier[multiplier == 1] = 0
-                    multiplier[multiplier == 255] = 1
-                    frames['background'] = colorBackground * multiplier
-                    frames['background'] += rgb_cutout
-                # You can add custom code here, for example depth averaging
+            # shape (400,400) multipliers -> shape (400,400,3)
+            multiplier = np.repeat(multiplier[:, :, np.newaxis], 3, axis=2)
+            rgb_cutout = frames['frame'] * multiplier
+            multiplier[multiplier == 0] = 255
+            multiplier[multiplier == 1] = 0
+            multiplier[multiplier == 255] = 1
+            frames['background'] = colorBackground * multiplier
+            frames['background'] += rgb_cutout
+            # You can add custom code here, for example depth averaging
 
         if len(frames) == 5:
             row1 = np.concatenate((frames['colored_frame'], frames['background']), axis=1)
