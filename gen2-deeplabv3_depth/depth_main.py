@@ -6,6 +6,8 @@ import numpy as np
 import argparse
 import time
 from datetime import datetime, timedelta
+from projector_3d import PointCloudVisualizer
+from pathlib import Path
 
 '''
 Blob taken from the great PINTO zoo
@@ -23,6 +25,11 @@ parser.add_argument("-shape", "--nn_shape", help="select NN model shape", defaul
 parser.add_argument("-nn", "--nn_path", help="select model path for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
 args = parser.parse_args()
 
+lrcheck  = True
+extended = False
+subpixel = True
+curr_path = Path(__file__).parent.resolve()
+
 # Custom JET colormap with 0 mapped to `black` - better disparity visualization
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 jet_custom[0] = [0, 0, 0]
@@ -30,6 +37,8 @@ jet_custom[0] = [0, 0, 0]
 nn_shape = args.nn_shape
 nn_path = args.nn_path
 TARGET_SHAPE = (400,400)
+
+res = dai.MonoCameraProperties.SensorResolution.THE_480_P
 
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
@@ -150,21 +159,23 @@ detection_nn.passthrough.link(xout_passthrough.input)
 
 # Left mono camera
 left = pipeline.createMonoCamera()
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+left.setResolution(res)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 # Right mono camera
 right = pipeline.createMonoCamera()
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+right.setResolution(res)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
 stereo = pipeline.createStereoDepth()
 stereo.initialConfig.setConfidenceThreshold(210)
-stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+# stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
 
-stereo.setLeftRightCheck(True)
+stereo.setLeftRightCheck(lrcheck)
+stereo.setSubpixel(subpixel)
+stereo.setExtendedDisparity(extended)
+
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-stereo.setSubpixel(True)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
@@ -175,6 +186,14 @@ stereo.depth.link(xout_disp.input)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pipeline.getOpenVINOVersion()) as device:
+    baseline = 75 # 75mm
+    calibData = device.readCalibration()
+
+    rgb_intrinsics = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, 720, 720))
+    # print("rgb_intrinsics : {}".format(rgb_intrinsics))
+    pcl_converter = PointCloudVisualizer(rgb_intrinsics, 720, 720)
+    # focal_length = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, 1280, 720)[0][0]
+    
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
     if not depth_enabled:
@@ -189,7 +208,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     fps = FPSHandler()
     sync = HostSync()
     disp_frame = None
-    disp_multiplier = 255 / stereo.initialConfig.getMaxDisparity()
+    # disp_multiplier = 255 / stereo.initialConfig.getMaxDisparity()
 
     frame = None
     frame_back = None
@@ -227,6 +246,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
 
             frame = msgs["color"].getCvFrame()
             frame = crop_to_square(frame)
+            rgb_frame = frame.copy()
             frame = cv2.resize(frame, TARGET_SHAPE)
             frames['frame'] = frame
             frame = cv2.addWeighted(frame, 1, output_colors,0.5,0)
@@ -234,32 +254,54 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             frames['colored_frame'] = frame
 
             disp_frame = msgs["depth"].getFrame()
-            disp_frame = (disp_frame * disp_multiplier).astype(np.uint8)
+            depth_frame = disp_frame.copy()
+            depth_frame = crop_to_square(depth_frame)
+
+            # disp_frame = (disp_frame/256).astype(np.uint8)
+            disp_frame = cv2.normalize(disp_frame, dst=None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+            disp_frame = disp_frame.astype(np.uint8)
             disp_frame = crop_to_square(disp_frame)
             disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
 
+            cv2.imshow("Depth img", depth_frame)
             # Colorize the disparity
             frames['depth'] = cv2.applyColorMap(disp_frame, jet_custom)
-
             multiplier = get_multiplier(lay1)
             multiplier = cv2.resize(multiplier, TARGET_SHAPE)
+            resized_multiplier = cv2.resize(multiplier, (720, 720))
+            sampled_depth_frame = depth_frame * resized_multiplier
+            cv2.imshow("Overlay Depth img", sampled_depth_frame)
+
             depth_overlay = disp_frame * multiplier
             frames['cutout'] = cv2.applyColorMap(depth_overlay, jet_custom)
 
             # shape (400,400) multipliers -> shape (400,400,3)
             multiplier = np.repeat(multiplier[:, :, np.newaxis], 3, axis=2)
+            resized_multiplier = np.repeat(resized_multiplier[:, :, np.newaxis], 3, axis=2)
             rgb_cutout = frames['frame'] * multiplier
+            rgb_frame_cutout = rgb_frame * resized_multiplier
+            cv2.imshow("Overlay rgb_frame_cutout img", rgb_frame_cutout)
+
             multiplier[multiplier == 0] = 255
             multiplier[multiplier == 1] = 0
             multiplier[multiplier == 255] = 1
             frames['background'] = colorBackground * multiplier
             frames['background'] += rgb_cutout
             # You can add custom code here, for example depth averaging
-
+            recent_rgb_ordered = cv2.cvtColor(rgb_frame_cutout, cv2.COLOR_BGR2RGB)
+            pcl_converter.rgbd_to_projection(sampled_depth_frame, recent_rgb_ordered, True)
+            pcl_converter.visualize_pcd()
+                        
         if len(frames) == 5:
             row1 = np.concatenate((frames['colored_frame'], frames['background']), axis=1)
             row2 = np.concatenate((frames['depth'], frames['cutout']), axis=1)
             cv2.imshow("Combined frame", np.concatenate((row1,row2), axis=0))
-
-        if cv2.waitKey(1) == ord('q'):
+        
+        key = cv2.waitKey(1) 
+        if key == ord('q'):
             break
+        if key == ord('p'):
+            ply_pth = str(curr_path) + '/pcl_dataset/ply/'
+            # pcl_converter.save_ply(ply_pth)
+            pcl_converter.save_mesh_from_rgbd(ply_pth)
+            # pcl_converter.save_mesh_as_ply_vista(ply_pth)
