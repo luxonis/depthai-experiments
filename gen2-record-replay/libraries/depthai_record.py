@@ -91,8 +91,6 @@ class Record:
             i += 1
             recordings_path = Path(path) / f"{i}-{str(mxid)}"
             if not recordings_path.is_dir():
-                # os.umask(0)
-                # os.mkdir(str(recordings_path), os.O_CREAT | os.O_WRONLY)
                 recordings_path.mkdir(parents=True, exist_ok=False)
                 return recordings_path
 
