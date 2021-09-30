@@ -66,8 +66,8 @@ class HumanMachineSafety:
         # print(f"Average depth: {averageDepth}")
 
         # Palm detection centroid
-        centroidX = int((xmax - xmin) / 2) + bbox[0]
-        centroidY = int((ymax - ymin) / 2) + bbox[1]
+        centroidX = int((xmax - xmin) / 2) + xmin
+        centroidY = int((ymax - ymin) / 2) + ymin
 
         mid = int(depth.shape[0] / 2) # middle of the depth img
         bb_x_pos = centroidX - mid
