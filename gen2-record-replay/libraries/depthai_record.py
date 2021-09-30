@@ -2,7 +2,41 @@
 from pathlib import Path
 from multiprocessing import Process, Queue
 from cv2 import VideoWriter, VideoWriter_fourcc
+import os
 import depthai as dai
+
+def store_frames(path, frame_q):
+    files = {}
+
+    def create_video_file(name):
+        file_path = str(path / f"{name}.mjpeg")
+        # fourcc = VideoWriter_fourcc(*'MJPG')
+        # width = self.nodes[name].getResolutionWidth()
+        # height = self.nodes[name].getResolutionHeight()
+        # writer = VideoWriter(path, fourcc, self.fps, (width, height))
+        # writer.release()
+        # time.sleep(0.001)
+        files[name] = open(file_path, 'wb')
+
+    while True:
+        try:
+            frames = frame_q.get()
+            if frames is None:
+                break
+            for name in frames:
+
+                if name not in files: # File wasn't created yet
+                    create_video_file(name)
+
+                files[name].write(frames[name])
+                # frames[name].tofile(files[name])
+        except KeyboardInterrupt:
+            break
+    # Close all files
+    for name in files:
+        files[name].close()
+
+    print('Exiting store frame process')
 
 class Record:
     def __init__(self, path, device) -> None:
@@ -31,7 +65,7 @@ class Record:
             streams.append("right")
 
         self.frame_q = Queue(20)
-        self.process = Process(target=self.store_frames, args=())
+        self.process = Process(target=store_frames, args=(self.path, self.frame_q))
         self.process.start()
 
         self.device.startPipeline(pipeline)
@@ -57,6 +91,8 @@ class Record:
             i += 1
             recordings_path = Path(path) / f"{i}-{str(mxid)}"
             if not recordings_path.is_dir():
+                # os.umask(0)
+                # os.mkdir(str(recordings_path), os.O_CREAT | os.O_WRONLY)
                 recordings_path.mkdir(parents=True, exist_ok=False)
                 return recordings_path
 
@@ -77,7 +113,6 @@ class Record:
             nodes['color'].video.link(rgb_encoder.input)
 
             # Create output for the rgb
-            print('creating color xout')
             rgbOut = pipeline.createXLinkOut()
             rgbOut.setStreamName("color")
             rgb_encoder.bitstream.link(rgbOut.input)
@@ -135,65 +170,3 @@ class Record:
         self.pipeline = pipeline
         return pipeline, nodes
 
-    def store_frames(self):
-        files = {}
-
-        def create_video_file(name):
-            fourcc = VideoWriter_fourcc(*'MJPG')
-            width = self.nodes[name].getResolutionWidth()
-            height = self.nodes[name].getResolutionHeight()
-            path = str(self.path / f"{name}.mjpeg")
-            # writer = VideoWriter(path, fourcc, self.fps, (width, height))
-            # writer.release()
-            # time.sleep(0.001)
-            files[name] = open(path, 'wb')
-
-        while True:
-            try:
-                frames = self.frame_q.get()
-                if frames is None:
-                    break
-                for name in frames:
-
-                    if name not in files: # File wasn't created yet
-                        create_video_file(name)
-
-                    files[name].write(frames[name])
-                    # frames[name].tofile(files[name])
-            except KeyboardInterrupt:
-                break
-        # Close all files
-        for name in files:
-            files[name].close()
-
-        if self.convert_mp4:
-            print("Converting .mjpeg to .mp4")
-            for stream_name in files:
-                self.convert_to_mp4((self.path / f"{stream_name}.mjpeg"))
-        print('Exiting store frame process')
-
-    def convert_to_mp4(self, convert):
-        self.convert_mp4 = convert
-
-    def mp4(path, deleteMjpeg = False):
-        try:
-            import ffmpy3
-            path_output = path.parent / (path.stem + '.mp4')
-            print(path_output)
-            print(path)
-            try:
-                ff = ffmpy3.FFmpeg(
-                    inputs={str(path): "-y"},
-                    outputs={str(path_output): "-c copy -framerate {}".format(self.fps)}
-                )
-                print("Running conversion command... [{}]".format(ff.cmd))
-                ff.run()
-            except ffmpy3.FFExecutableNotFoundError:
-                print("FFMPEG executable not found!")
-            except ffmpy3.FFRuntimeError:
-                print("FFMPEG runtime error!")
-            print("Video conversion complete!")
-        except ImportError:
-            print("Module ffmpy3 not fouund!")
-        except:
-            print("Unknown error in convert_to_mp4!")

@@ -6,6 +6,8 @@ from datetime import timedelta
 import contextlib
 import math
 import time
+from pathlib import Path
+
 # DepthAI Record library
 from libraries.depthai_record import Record
 
@@ -18,8 +20,8 @@ parser.add_argument('-s', '--save', default=["color", "mono"], nargs="+", choice
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
 # TODO: make camera resolutions configrable
-
 args = parser.parse_args()
+save_path = Path(__file__).parent.absolute() / args.path
 
 class FPSHandler:
     def __init__(self):
@@ -51,53 +53,60 @@ def check_sync(queues, timestamp):
     else:
         return False
 
-# Record from all available devices
-with contextlib.ExitStack() as stack:
-    device_infos = dai.Device.getAllAvailableDevices()
+def run_record():
+    # Record from all available devices
+    with contextlib.ExitStack() as stack:
+        device_infos = dai.Device.getAllAvailableDevices()
 
-    if len(device_infos) == 0:
-        raise RuntimeError("No devices found!")
-    else:
-        print("Found", len(device_infos), "devices")
+        if len(device_infos) == 0:
+            raise RuntimeError("No devices found!")
+        else:
+            print("Found", len(device_infos), "devices")
 
-    recordings = []
-    # TODO: allow users to specify which available devices should record
-    for device_info in device_infos:
-        openvino_version = dai.OpenVINO.Version.VERSION_2021_4
-        usb2_mode = True
-        device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
+        recordings = []
+        # TODO: allow users to specify which available devices should record
+        for device_info in device_infos:
+            openvino_version = dai.OpenVINO.Version.VERSION_2021_4
+            usb2_mode = True
+            device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
-        # Create recording object for this device
-        recording = Record(args.path, device)
-        # Set recording configuration
-        # TODO: add support for specifying resolution, encoding quality
-        recording.set_fps(args.fps)
-        recording.set_save_streams(args.save)
-        recording.start_recording()
+            # Create recording object for this device
+            recording = Record(str(save_path), device)
+            # Set recording configuration
+            # TODO: add support for specifying resolution, encoding quality
+            recording.set_fps(args.fps)
+            recording.set_save_streams(args.save)
+            recording.start_recording()
 
-        recordings.append(recording)
+            recordings.append(recording)
 
-    queues = [q for recording in recordings for q in recording.queues]
-    while True:
-        for q in queues:
-            new_msg = q['q'].tryGet()
-            if new_msg is not None:
-                q['msgs'].append(new_msg)
-                if check_sync(queues, new_msg.getTimestamp()):
-                    # print('frames synced')
-                    for recording in recordings:
-                        frames = {}
-                        for stream in recording.queues:
-                            frames[stream['name']] = stream['msgs'].pop(0).getCvFrame()
-                            # cv2.imshow(f"{stream['name']} - {device['mx']}", cv2.imdecode(frames[stream['name']], cv2.IMREAD_UNCHANGED))
-                        # print('For mx', device['mx'], 'frames')
-                        # print('frames', frames)
-                        recording.frame_q.put(frames)
-        if cv2.waitKey(1) == ord('q'):
-            break
+        queues = [q for recording in recordings for q in recording.queues]
+        while True:
+            try:
+                for q in queues:
+                    new_msg = q['q'].tryGet()
+                    if new_msg is not None:
+                        q['msgs'].append(new_msg)
+                        if check_sync(queues, new_msg.getTimestamp()):
+                            # print('frames synced')
+                            for recording in recordings:
+                                frames = {}
+                                for stream in recording.queues:
+                                    frames[stream['name']] = stream['msgs'].pop(0).getCvFrame()
+                                    # cv2.imshow(f"{stream['name']} - {device['mx']}", cv2.imdecode(frames[stream['name']], cv2.IMREAD_UNCHANGED))
+                                # print('For mx', device['mx'], 'frames')
+                                # print('frames', frames)
+                                recording.frame_q.put(frames)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+            except KeyboardInterrupt:
+                break
 
-    for recording in recordings:
-        recording.frame_q.put(None)
-        time.sleep(0.01) # Wait 10ms for process to close all video files
-        recording.process.join() # Terminate the process
+        for recording in recordings:
+            recording.frame_q.put(None)
+            time.sleep(0.01) # Wait 10ms for process to close all video files
+            recording.process.join() # Terminate the process
+        print("All recordings have stopped. Exiting program")
 
+if __name__ == '__main__':
+    run_record()
