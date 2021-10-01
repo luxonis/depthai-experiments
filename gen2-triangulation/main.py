@@ -45,7 +45,8 @@ def populate_pipeline(p, name, resolution):
     cam.out.link(face_manip.inputImage)
 
     # NN that detects faces in the image
-    face_nn = p.create(dai.node.NeuralNetwork)
+    face_nn = p.create(dai.node.MobileNetDetectionNetwork)
+    face_nn.setConfidenceThreshold(0.2)
     face_nn.setBlobPath(str(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version=openvinoVersion)))
     face_manip.out.link(face_nn.input)
 
@@ -61,29 +62,25 @@ def populate_pipeline(p, name, resolution):
     image_manip_script.inputs['nn_in'].setQueueSize(1)
     face_nn.out.link(image_manip_script.inputs['nn_in'])
     image_manip_script.setScript("""
-    def limit_roi(nn_data):
-        if nn_data[3] < 0: nn_data[3] = 0
-        if nn_data[4] < 0: nn_data[4] = 0
-        if nn_data[5] > 0.999: nn_data[5] = 0.999
-        if nn_data[6] > 0.999: nn_data[6] = 0.999
+import time
+def limit_roi(det):
+    if det.xmin <= 0: det.xmin = 0.001
+    if det.ymin <= 0: det.ymin = 0.001
+    if det.xmax >= 1: det.xmax = 0.999
+    if det.ymax >= 1: det.ymax = 0.999
 
-    while True:
-        nn_in = node.io['nn_in'].get()
-        nn_data = nn_in.getFirstLayerFp16()
-
-        conf=nn_data[2]
-        if 0.2<conf:
-            limit_roi(nn_data)
-            x_min=nn_data[3]
-            y_min=nn_data[4]
-            x_max=nn_data[5]
-            y_max=nn_data[6]
-            cfg = ImageManipConfig()
-            cfg.setCropRect(x_min, y_min, x_max, y_max)
-            cfg.setResize(48, 48)
-            cfg.setKeepAspectRatio(False)
-            node.io['to_manip'].send(cfg)
-            # node.warn(f"1 from nn_in: {x_min}, {y_min}, {x_max}, {y_max}")
+while True:
+    face_dets = node.io['nn_in'].get().detections
+    # node.warn(f"Faces detected: {len(face_dets)}")
+    for det in face_dets:
+        limit_roi(det)
+        # node.warn(f"Detection rect: {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
+        cfg = ImageManipConfig()
+        cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
+        cfg.setResize(48, 48)
+        cfg.setKeepAspectRatio(False)
+        node.io['to_manip'].send(cfg)
+        # node.warn(f"1 from nn_in: {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
     """)
 
     # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
@@ -180,8 +177,8 @@ with dai.Device(p.getOpenVINOVersion()) as device:
         raise RuntimeError("Unable to run this experiment on device without depth capabilities! (Available cameras: {})".format(cams))
     device.startPipeline(p)
     # Set device log level - to see logs from the Script node
-    device.setLogLevel(dai.LogLevel.WARN)
-    device.setLogOutputLevel(dai.LogLevel.WARN)
+    device.setLogLevel(dai.LogLevel.INFO)
+    device.setLogOutputLevel(dai.LogLevel.INFO)
 
     stereoInference = StereoInference(device, resolution_num, mono_width=300, mono_heigth=300)
 
