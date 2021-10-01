@@ -21,7 +21,7 @@ parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
-save_path = Path(__file__).parent.absolute() / args.path
+save_path = Path.cwd() / args.path
 
 class FPSHandler:
     def __init__(self):
