@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+from contextlib import ExitStack
 from pathlib import Path
-from multiprocessing import Process, Queue
+from multiprocessing import Array, Process, Queue
 from cv2 import VideoWriter, VideoWriter_fourcc
 import os
+import contextlib
 import depthai as dai
 
-def store_frames(path, frame_q):
+def store_frames(path: Path, frame_q: Queue, stack: ExitStack) -> None:
     files = {}
 
     def create_video_file(name):
@@ -16,7 +18,7 @@ def store_frames(path, frame_q):
         # writer = VideoWriter(path, fourcc, self.fps, (width, height))
         # writer.release()
         # time.sleep(0.001)
-        files[name] = open(file_path, 'wb')
+        files[name] = stack.enter_context(open(file_path, 'wb'))
 
     while True:
         try:
@@ -32,23 +34,21 @@ def store_frames(path, frame_q):
                 # frames[name].tofile(files[name])
         except KeyboardInterrupt:
             break
-    # Close all files
-    for name in files:
-        files[name].close()
 
     print('Exiting store frame process')
 
 class Record:
-    def __init__(self, path, device) -> None:
+    def __init__(self, path: str, device: dai.Device, stack: ExitStack) -> None:
         self.save = ['color', 'mono']
         self.fps = 30
         self.device = device
 
         self.stereo = 1 < len(device.getConnectedCameras())
-        self.path = Path(self.create_folder(path, device.getMxId()))
+        self.path = self.create_folder(path, device.getMxId())
         self.convert_mp4 = False
+        self.exit_stack = stack
 
-    def start_recording(self):
+    def start_recording(self) -> None:
         if not self.stereo: # If device doesn't have stereo camera pair
             if "mono" in self.save:
                 self.save.remove("mono")
@@ -65,7 +65,7 @@ class Record:
             streams.append("right")
 
         self.frame_q = Queue(20)
-        self.process = Process(target=store_frames, args=(self.path, self.frame_q))
+        self.process = Process(target=store_frames, args=(self.path, self.frame_q, self.exit_stack))
         self.process.start()
 
         self.device.startPipeline(pipeline)
@@ -79,17 +79,17 @@ class Record:
             })
 
 
-    def set_fps(self, fps):
+    def set_fps(self, fps: int):
         self.fps = fps
 
     def set_save_streams(self, save_streams):
         self.save = save_streams
 
-    def create_folder(self, path, mxid):
+    def create_folder(self, path: str, mxid: str) -> Path:
         i = 0
         while True:
             i += 1
-            recordings_path = Path(path) / f"{i}-{str(mxid)}"
+            recordings_path = Path(path) / f"{i}-{mxid}"
             if not recordings_path.is_dir():
                 recordings_path.mkdir(parents=True, exist_ok=False)
                 return recordings_path
@@ -97,7 +97,6 @@ class Record:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
         nodes = {}
-        print(self.save)
 
         if "color" in self.save:
             nodes['color'] = pipeline.createColorCamera()

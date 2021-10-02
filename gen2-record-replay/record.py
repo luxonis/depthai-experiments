@@ -71,7 +71,7 @@ def run_record():
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
             # Create recording object for this device
-            recording = Record(str(save_path), device)
+            recording = Record(str(save_path), device, stack)
             # Set recording configuration
             # TODO: add support for specifying resolution, encoding quality
             recording.set_fps(args.fps)
@@ -104,7 +104,6 @@ def run_record():
 
         for recording in recordings:
             recording.frame_q.put(None)
-            time.sleep(0.01) # Wait 10ms for process to close all video files
             recording.process.join() # Terminate the process
         print("All recordings have stopped. Exiting program")
 
