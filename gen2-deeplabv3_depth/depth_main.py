@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 lrcheck  = True
 extended = False
-subpixel = True
+subpixel = False
 curr_path = Path(__file__).parent.resolve()
 
 # Custom JET colormap with 0 mapped to `black` - better disparity visualization
@@ -217,6 +217,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     frames = {}
 
     while True:
+        rgb_depth = None
         in_color = q_color.tryGet()
         if in_color is not None:
             sync.add_msg("color", in_color, in_color.getSequenceNum())
@@ -263,14 +264,14 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             disp_frame = crop_to_square(disp_frame)
             disp_frame = cv2.resize(disp_frame, TARGET_SHAPE)
 
-            cv2.imshow("Depth img", depth_frame)
+            # cv2.imshow("Depth img", depth_frame)
             # Colorize the disparity
             frames['depth'] = cv2.applyColorMap(disp_frame, jet_custom)
             multiplier = get_multiplier(lay1)
             multiplier = cv2.resize(multiplier, TARGET_SHAPE)
             resized_multiplier = cv2.resize(multiplier, (720, 720))
             sampled_depth_frame = depth_frame * resized_multiplier
-            cv2.imshow("Overlay Depth img", sampled_depth_frame)
+            # cv2.imshow("Overlay Depth img", sampled_depth_frame)
 
             depth_overlay = disp_frame * multiplier
             frames['cutout'] = cv2.applyColorMap(depth_overlay, jet_custom)
@@ -288,10 +289,14 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             frames['background'] = colorBackground * multiplier
             frames['background'] += rgb_cutout
             # You can add custom code here, for example depth averaging
+            backtorgb = cv2.cvtColor(sampled_depth_frame.astype(np.uint8), cv2.COLOR_GRAY2BGR)
+            rgb_depth = np.hstack((rgb_frame_cutout, backtorgb))
+            cv2.imshow("side side frame", rgb_depth)
+
             recent_rgb_ordered = cv2.cvtColor(rgb_frame_cutout, cv2.COLOR_BGR2RGB)
             pcl_converter.rgbd_to_projection(sampled_depth_frame, recent_rgb_ordered, True)
             pcl_converter.visualize_pcd()
-                        
+
         if len(frames) == 5:
             row1 = np.concatenate((frames['colored_frame'], frames['background']), axis=1)
             row2 = np.concatenate((frames['depth'], frames['cutout']), axis=1)
@@ -304,4 +309,9 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             ply_pth = str(curr_path) + '/pcl_dataset/ply/'
             # pcl_converter.save_ply(ply_pth)
             pcl_converter.save_mesh_from_rgbd(ply_pth)
+        if key == ord('s'):
+            rgbd_folder = str(curr_path) + '/pcl_dataset/rgb_depth/'
+            # pcl_converter.save_ply(ply_pth)
+            pcl_converter.save_mesh_from_rgbd(ply_pth)
+
             # pcl_converter.save_mesh_as_ply_vista(ply_pth)

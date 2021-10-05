@@ -263,3 +263,8 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
 
         if cv2.waitKey(1) == ord('q'):
             break
+
+
+
+
+
