@@ -182,7 +182,7 @@ right.out.link(stereo.right)
 # Create depth output
 xout_disp = pipeline.createXLinkOut()
 xout_disp.setStreamName("disparity")
-stereo.depth.link(xout_disp.input)
+stereo.disparity.link(xout_disp.input)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pipeline.getOpenVINOVersion()) as device:
@@ -215,9 +215,11 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     depth = None
     depth_weighted = None
     frames = {}
+    rgb_depth = None
+    count = 0
 
     while True:
-        rgb_depth = None
+
         in_color = q_color.tryGet()
         if in_color is not None:
             sync.add_msg("color", in_color, in_color.getSequenceNum())
@@ -289,7 +291,9 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             frames['background'] = colorBackground * multiplier
             frames['background'] += rgb_cutout
             # You can add custom code here, for example depth averaging
-            backtorgb = cv2.cvtColor(sampled_depth_frame.astype(np.uint8), cv2.COLOR_GRAY2BGR)
+            # print(sampled_depth_frame.dtype)
+            # sampled_depth_frame = cv2.normalize(sampled_depth_frame, None, 255, 0, cv2.NORM_MINMAX)
+            backtorgb = cv2.cvtColor(sampled_depth_frame, cv2.COLOR_GRAY2BGR)
             rgb_depth = np.hstack((rgb_frame_cutout, backtorgb))
             cv2.imshow("side side frame", rgb_depth)
 
@@ -312,6 +316,10 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
         if key == ord('s'):
             rgbd_folder = str(curr_path) + '/pcl_dataset/rgb_depth/'
             # pcl_converter.save_ply(ply_pth)
-            pcl_converter.save_mesh_from_rgbd(ply_pth)
+            # pcl_converter.save_mesh_from_rgbd(ply_pth)
+            count += 1
+            filename = rgbd_folder + 'rgbd_' + str(count) + '.png'
 
+            cv2.imwrite(filename, rgb_depth)
+            print("Saving")
             # pcl_converter.save_mesh_as_ply_vista(ply_pth)
