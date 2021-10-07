@@ -5,6 +5,7 @@ import depthai as dai
 import numpy as np
 import argparse
 import time
+from pathlib import Path
 
 '''
 FastDepth demo running on device.
@@ -21,6 +22,7 @@ https://github.com/PINTO0309/PINTO_model_zoo/tree/main/153_MegaDepth
 
 # --------------- Arguments ---------------
 nn_path = "models/megadepth_192x256_openvino_2021.4_6shave.blob"
+curr_path = Path(__file__).parent.resolve()
 
 # choose width and height based on model
 NN_WIDTH, NN_HEIGHT = 256, 192
@@ -48,6 +50,9 @@ cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 xout_cam = pipeline.createXLinkOut()
 xout_cam.setStreamName("cam")
 
+xout_vid = pipeline.createXLinkOut()
+xout_vid.setStreamName("video")
+
 xout_nn = pipeline.createXLinkOut()
 xout_nn.setStreamName("nn")
 
@@ -55,6 +60,7 @@ xout_nn.setStreamName("nn")
 cam.preview.link(detection_nn.input)
 detection_nn.passthrough.link(xout_cam.input)
 detection_nn.out.link(xout_nn.input)
+cam.video.link(xout_vid.input)
 
 
 # --------------- Inference ---------------
@@ -63,18 +69,25 @@ with dai.Device(pipeline) as device:
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     q_cam = device.getOutputQueue("cam", 4, blocking=False)
+    q_vid = device.getOutputQueue("video", 4, blocking=False)
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
     start_time = time.time()
     counter = 0
     fps = 0
     layer_info_printed = False
+    count = 0
     while True:
         in_frame = q_cam.get()
         in_nn = q_nn.get()
+        in_vid = q_vid.get()
 
         frame = in_frame.getCvFrame()
-
+        rgb = in_vid.getCvFrame()
+        dest_width = rgb.shape[0] * NN_WIDTH / NN_HEIGHT
+        offset = int((rgb.shape[1] - dest_width) // 2)
+        rgb = rgb[:, offset : int(dest_width) + offset]
+        # rgb = 
         # Get output layer
         pred = np.array(in_nn.getFirstLayerFp16()).reshape((NN_HEIGHT, NN_WIDTH))
 
@@ -87,6 +100,7 @@ with dai.Device(pipeline) as device:
         depth_relative = np.array(depth_relative) * 255
         depth_relative = depth_relative.astype(np.uint8)
         depth_relative = 255 - depth_relative
+        depth_relative_black = depth_relative.copy()
         depth_relative = cv2.applyColorMap(depth_relative, cv2.COLORMAP_INFERNO)
 
         # Show FPS
@@ -99,6 +113,10 @@ with dai.Device(pipeline) as device:
 
         # Concatenate NN input and produced depth
         cv2.imshow("Detections", cv2.hconcat([frame, depth_relative]))
+        depth_relative2 = cv2.resize(depth_relative_black, (rgb.shape[1], rgb.shape[0]))
+        depth_relative2 = cv2.cvtColor(depth_relative2, cv2.COLOR_GRAY2BGR)
+        concated_rgbd = cv2.hconcat([rgb, depth_relative2])
+        cv2.imshow("Detections full size", concated_rgbd)
 
         counter += 1
         if (time.time() - start_time) > 1:
@@ -107,5 +125,15 @@ with dai.Device(pipeline) as device:
             counter = 0
             start_time = time.time()
 
-        if cv2.waitKey(1) == ord('q'):
+        key = cv2.waitKey(1)
+        if key == ord('q'):
             break
+        if key == ord('s'):
+            rgbd_folder = str(curr_path) + '/pcl_dataset/rgb_depth/'
+            # pcl_converter.save_ply(ply_pth)
+            # pcl_converter.save_mesh_from_rgbd(ply_pth)
+            count += 1
+            filename = rgbd_folder + 'rgbd_' + str(count) + '.png'
+
+            cv2.imwrite(filename, concated_rgbd)
+            print("Saving")
