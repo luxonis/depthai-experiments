@@ -6,9 +6,9 @@ from torch import nn
 import blobconverter
 
 class Model(nn.Module):
-    def forward(self, img: torch.Tensor, mul: torch.Tensor, add: torch.Tensor):
-        mul = torch.mul(img, mul)
-        return torch.add(mul, add)
+    def forward(self, img: torch.Tensor, scale: torch.Tensor, mean: torch.Tensor):
+        # output = (input - mean) / scale
+        return torch.div(torch.sub(img, mean), scale)
 
 # Define the expected input shape (dummy input)
 shape = (3, 300, 300)
@@ -26,7 +26,7 @@ torch.onnx.export(
     onnx_file,
     opset_version=12,
     do_constant_folding=True,
-    input_names = ['frame', 'multiplier', 'addend'], # Optional
+    input_names = ['frame', 'scale', 'mean'], # Optional
     output_names = ['output'], # Optional
 )
 
@@ -36,8 +36,9 @@ torch.onnx.export(
 blobconverter.from_onnx(
     model=onnx_file,
     data_type="FP16",
-    shaves=6,
+    shaves=4,
     use_cache=False,
     output_dir="../models",
-    optimizer_params=[]
+    optimizer_params=[],
+    compile_params = ["--ip=FP16"]
 )
