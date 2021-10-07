@@ -1,5 +1,5 @@
 numpy==1.20.3
 opencv_python==4.5.1.48
-depthai==2.7.2.0
+depthai==2.10.0.0
 scipy==1.4.1
 blobconverter==1.0.0

@@ -1,3 +1,2 @@
 opencv-python
-depthai==2.7.2.0
-
+depthai==2.10.0.0

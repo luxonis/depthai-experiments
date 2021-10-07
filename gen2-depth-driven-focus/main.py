@@ -59,11 +59,11 @@ def create_pipeline():
     controlIn.out.link(cam.inputControl)
 
     left = pipeline.createMonoCamera()
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
     right = pipeline.createMonoCamera()
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
     stereo = pipeline.createStereoDepth()

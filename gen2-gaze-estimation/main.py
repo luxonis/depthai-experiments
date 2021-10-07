@@ -1,4 +1,5 @@
 import argparse
+from os import pipe
 import queue
 import threading
 import signal
@@ -100,7 +101,6 @@ def padded_point(point, padding, frame_shape=None):
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = depthai.Pipeline()
-    pipeline.setOpenVINOVersion(depthai.OpenVINO.VERSION_2020_1)
 
     if camera:
         print("Creating Color Camera...")
