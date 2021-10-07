@@ -113,7 +113,7 @@ with dai.Device(pipeline) as device:
 
         # Concatenate NN input and produced depth
         cv2.imshow("Detections", cv2.hconcat([frame, depth_relative]))
-        depth_relative2 = cv2.resize(depth_relative_black, (rgb.shape[1], rgb.shape[0]))
+        depth_relative2 = cv2.resize(depth_relative_black, (rgb.shape[1], rgb.shape[0]), cv2.INTER_CUBIC)
         depth_relative2 = cv2.cvtColor(depth_relative2, cv2.COLOR_GRAY2BGR)
         concated_rgbd = cv2.hconcat([rgb, depth_relative2])
         cv2.imshow("Detections full size", concated_rgbd)
