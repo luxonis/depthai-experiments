@@ -44,7 +44,7 @@ colorCam.video.link(cam_xout.input)
 # ---------------------------------------
 
 nn = pipeline.createNeuralNetwork()
-nn.setBlobPath(blobconverter.from_zoo(name="east-text-detection_256x256", zoo_type="depthai"))
+nn.setBlobPath(blobconverter.from_zoo(name="east-text-detection_256x256",zoo_type="depthai",shaves=6))
 nn.setNumPoolFrames(1)
 colorCam.preview.link(nn.input)
 
@@ -127,11 +127,9 @@ with dai.Device(pipeline) as device:
             for i, char in enumerate(dict_character):
                 self.dict[char] = i + 1
 
-        
             self.characters = dict_character
             #print(self.characters)
             #input()
-            
         def decode(self, preds):
             """ convert text-index into text-label. """
             texts = []
@@ -208,7 +206,7 @@ with dai.Device(pipeline) as device:
                 scores = np.reshape(scores, (1, 1, 64, 64))
                 geom1 = np.reshape(geom1, (1, 4, 64, 64))
                 geom2 = np.reshape(geom2, (1, 1, 64, 64))
-        
+
                 bboxes, confs, angles = east.decode_predictions(scores, geom1, geom2)
                 boxes, angles = east.non_max_suppression(np.array(bboxes), probs=confs, angles=np.array(angles))
                 rotated_rectangles = [
@@ -267,7 +265,7 @@ with dai.Device(pipeline) as device:
                         cropped_stacked = transformed
                     else:
                         cropped_stacked = np.vstack((cropped_stacked, transformed))
-            
+
         if cropped_stacked is not None:
             cv2.imshow('cropped_stacked', cropped_stacked)
 
