@@ -14,13 +14,17 @@ Output is an unnormalized depth map of the same size. Note that this experiment 
 
 1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/)).
 
-3. Install requirements.
+2. Install requirements.
    ```
    python3 -m pip install -r requirements.txt
    ```
 
-## Usage
+## OAK-D-Lite usage with Looking Glass Portrait
 
-```
-python3 main.py [options]
-```
+1. `python3 main.py`
+2. Stand/Sit in a still place in front of the RGB camera and press “S” to capture the image.
+3. captured images are saved in rgb_depth subfolder
+4. Use this on HoloPlay studio by loading the saved images as RGBD Photo and Video option. 
+Link to using HoloPlay Studio [here](https://learn.lookingglassfactory.com/tutorials/getting-started-with-holoplay-studio)
+
+Tip: Use Zoom by scrolling and pan the model to better position it in the Looking Glass Portrait using the mouse. 
