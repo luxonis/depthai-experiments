@@ -304,7 +304,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
         if len(frames) == 5:
             row1 = np.concatenate((frames['colored_frame'], frames['background']), axis=1)
             row2 = np.concatenate((frames['depth'], frames['cutout']), axis=1)
-            cv2.imshow("Combined frame", np.concatenate((row1,row2), axis=0))
+            cv2.imshow("Combined frame", np.concatenate((row1, row2), axis=0))
         
         key = cv2.waitKey(1) 
         if key == ord('q'):

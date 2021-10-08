@@ -3,4 +3,5 @@
 */__pycache__/*
 */pcl_dataset/*
 __pycache__
+*/rgb_depth/*
 */data/*

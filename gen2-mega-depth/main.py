@@ -7,6 +7,7 @@ import argparse
 import time
 from pathlib import Path
 
+
 '''
 FastDepth demo running on device.
 https://github.com/zl548/MegaDepth
@@ -21,6 +22,7 @@ https://github.com/PINTO0309/PINTO_model_zoo/tree/main/153_MegaDepth
 '''
 
 # --------------- Arguments ---------------
+Path("./rgb_depth").mkdir(parents=True, exist_ok=True)
 nn_path = "models/megadepth_192x256_openvino_2021.4_6shave.blob"
 curr_path = Path(__file__).parent.resolve()
 
@@ -129,7 +131,7 @@ with dai.Device(pipeline) as device:
         if key == ord('q'):
             break
         if key == ord('s'):
-            rgbd_folder = str(curr_path) + '/pcl_dataset/rgb_depth/'
+            rgbd_folder = str(curr_path) + '/rgb_depth/'
             # pcl_converter.save_ply(ply_pth)
             # pcl_converter.save_mesh_from_rgbd(ply_pth)
             count += 1
