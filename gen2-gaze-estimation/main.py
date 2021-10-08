@@ -1,5 +1,4 @@
 import argparse
-from os import pipe
 import queue
 import threading
 import signal
