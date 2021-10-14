@@ -177,11 +177,13 @@ frame_q = Queue(50)
 
 
 def store_frames(in_q):
+    num = 0
     while True:
         frames_dict = in_q.get()
         if frames_dict is None:
             return
-        frames_path = dest / Path(str(uuid4()))
+        frames_path = dest / Path(str('{:>05}'.format(num)))
+        num+=1
         frames_path.mkdir(parents=False, exist_ok=False)
         for stream_name, item in frames_dict.items():
             cv2.imwrite(str(frames_path / Path(f"{stream_name}.png")), item)
