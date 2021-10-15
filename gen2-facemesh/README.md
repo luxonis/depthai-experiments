@@ -8,6 +8,10 @@ We use input image 416 x 416 and resize it to 192 x 192 using ImageManip node.
 
 ![Image example](imgs/example.gif)
 
+The model also includes effect renderer from 2D PNG image.
+
+![Rendered effect](imgs/example_renderer.gif)
+
 ## Pre-requisites
 
 1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/)).

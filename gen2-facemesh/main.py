@@ -5,20 +5,15 @@ import depthai as dai
 import argparse
 import time
 import numpy as np
+from utils.effect import EffectRenderer2D
 
 '''
-YoloV5 object detector running on selected camera.
+MediaPipe Facial Landmark detector with PNG EffectRenderer.
 Run as:
 python3 -m pip install -r requirements.txt
-python3 main.py -cam rgb
-Possible input choices (-cam):
-'rgb', 'left', 'right'
+python3 main.py -conf [CONF]
 
-Blob is taken from ML training examples:
-https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks
-
-You can clone the YoloV5_training.ipynb notebook and try training the model yourself.
-
+Blob is converted from MediaPipe's tflite model.
 '''
 
 
@@ -30,6 +25,7 @@ CONF_THRESH = args.confidence_thresh
 NN_PATH = "models/face_landmark_openvino_2021.4_6shave.blob"
 NN_WIDTH, NN_HEIGHT = 192, 192
 PREVIEW_WIDTH, PREVIEW_HEIGHT = 416, 416
+OVERLAY_IMAGE = "mask/facepaint.png"
 
 
 # Start defining a pipeline
@@ -41,7 +37,6 @@ pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 cam = pipeline.createColorCamera()
 cam.setPreviewSize(PREVIEW_WIDTH, PREVIEW_HEIGHT)
 cam.setInterleaved(False)
-#cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 cam.setFps(30)
 
 
@@ -88,6 +83,9 @@ with dai.Device(pipeline) as device:
     q_cam = device.getOutputQueue(name="cam", maxSize=4)
     q_nn = device.getOutputQueue(name="nn", maxSize=4)
 
+    # Read face overlay
+    effect_rendered = EffectRenderer2D(OVERLAY_IMAGE)
+
     # FPS Init
     start_time = time.time()
     counter = 0
@@ -107,11 +105,25 @@ with dai.Device(pipeline) as device:
         landmarks = np.array(in_nn.getLayerFp16('conv2d_21')).reshape((468, 3))
 
         if score > CONF_THRESH:
-            ldms = landmarks.copy()
+            # scale landmarks
+            ldms = landmarks#.copy()
             ldms *= np.array([PREVIEW_WIDTH/NN_WIDTH, PREVIEW_HEIGHT/NN_HEIGHT, 1])
 
+            # render frame
+            target_frame = frame.copy()
+            applied_effect = effect_rendered.render_effect(target_frame, ldms)
+            cv2.imshow("Effect", applied_effect)
+
+            # show landmarks on frame
             for ldm in ldms:
-                cv2.circle(frame, (int(ldm[0]), int(ldm[1])), 1, (255, 0, 0) if ldm[2] > 0 else (255, 255, 0), 1)
+                col = (0, 0, int(ldm[2]) * 5 + 100)
+                cv2.circle(frame, (int(ldm[0]), int(ldm[1])), 1, col, 1)
+
+        else:
+            applied_effect = frame
+
+        cv2.imshow("Demo", np.hstack([frame, applied_effect]))
+
 
         # Show FPS and score
         color_black, color_white = (0, 0, 0), (255, 255, 255)
@@ -128,6 +140,8 @@ with dai.Device(pipeline) as device:
                     0.4, color_black)
         cv2.putText(frame, label_count, (2, 12), cv2.FONT_HERSHEY_TRIPLEX,
                     0.4, color_black)
+
+
 
         cv2.imshow("Landmarks", frame)
 
