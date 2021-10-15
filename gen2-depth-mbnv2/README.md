@@ -28,4 +28,4 @@ python3 main.py [options]
 
 Options:
 
-* `-nn, --nn_model`: Select model path for inference. Default: *`models/depth_estimation_mbnv2_240x320_openvino_2021.4_6shave`*.
+* `-w, --width`: Select width of the model for inference. Default: `320`. Possible options: `320` or `640`.

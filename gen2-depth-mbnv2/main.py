@@ -5,6 +5,7 @@ import depthai as dai
 import numpy as np
 import argparse
 import time
+import blobconverter
 
 '''
 Monocular Depth Estimation \w Transfer Learning demo running on device.
@@ -21,16 +22,18 @@ https://github.com/PINTO0309/PINTO_model_zoo/blob/main/149_depth_estimation
 
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
-parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/depth_estimation_mbnv2_240x320_openvino_2021.4_6shave.blob', type=str)
+parser.add_argument("-w", "--width", help="select model width for inference", default=320, type=float)
 
 args = parser.parse_args()
-nn_path = args.nn_model
 
 # choose width and height based on model
-if "240x320" in args.nn_model:
+if args.width == 320:
     NN_WIDTH, NN_HEIGHT = 320, 240
+    NN_PATH = blobconverter.from_zoo(name="depth_estimation_mbnv2_240x320", zoo_type="depthai")
 else:
     NN_WIDTH, NN_HEIGHT = 640, 480
+    NN_PATH = blobconverter.from_zoo(name="depth_estimation_mbnv2_480x640", zoo_type="depthai")
+
 
 # --------------- Pipeline ---------------
 # Start defining a pipeline
@@ -39,7 +42,7 @@ pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 # Define a neural network
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(nn_path)
+detection_nn.setBlobPath(NN_PATH)
 detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
@@ -93,7 +96,6 @@ with dai.Device(pipeline) as device:
         # Color it
         depth_relative = np.array(depth_relative) * 255
         depth_relative = depth_relative.astype(np.uint8)
-        depth_relative = 255 - depth_relative
         depth_relative = cv2.applyColorMap(depth_relative, cv2.COLORMAP_INFERNO)
 
         # Downscale frame
