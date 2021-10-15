@@ -5,6 +5,7 @@ import depthai as dai
 import numpy as np
 import argparse
 import time
+import blobconverter
 
 '''
 FastDepth demo running on device.
@@ -21,16 +22,17 @@ https://github.com/PINTO0309/PINTO_model_zoo/tree/main/146_FastDepth
 
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
-parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/fast_depth_256x320_openvino_2021.4_6shave.blob', type=str)
+parser.add_argument("-w", "--width", help="select model width for inference", default=320, type=float)
 
 args = parser.parse_args()
-nn_path = args.nn_model
 
 # choose width and height based on model
-if "256x320" in args.nn_model:
+if args.width == 320:
     NN_WIDTH, NN_HEIGHT = 320, 256
+    NN_PATH = blobconverter.from_zoo(name="fast_depth_256x320", zoo_type="depthai")
 else:
     NN_WIDTH, NN_HEIGHT = 640, 480
+    NN_PATH = blobconverter.from_zoo(name="fast_depth_480x640", zoo_type="depthai")
 
 # --------------- Pipeline ---------------
 # Start defining a pipeline

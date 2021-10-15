@@ -26,4 +26,5 @@ python3 main.py [options]
 
 Options:
 
-* `-nn, --nn_model`: Select model path for inference. Default: *`models/fast_depth_256x320_openvino_2021.4_6shave`*.
+* `-w, --width`: Select width of the inference model. Default: *`320`*. Possible: `320` or `640`.
+
