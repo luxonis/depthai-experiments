@@ -10,16 +10,9 @@ DEPTH_THRESH_HIGH = 3000
 DEPTH_THRESH_LOW = 500
 WARNING_DIST = 300
 
-PALM_START_X = 300
-PALM_START_Y = -100
-PALM_START_Z = 1300
-
-# If dangerous object is too close to the palm, warning will be displayed
-DANGEROUS_OBJECTS = ['fixed_coordinate']
-
-# MobilenetSSD label texts
-labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+PALM_START_X = -1
+PALM_START_Y = -1
+PALM_START_Z = -1
 
 
 def crop_to_rect(frame):
@@ -92,54 +85,13 @@ class HumanMachineSafety:
 
         annotate = annotate_fun(frame, (0, 0, 25), fontScale=1.7)
         
-        # ignore the detected bottle and use a fixed point
-        # global PALM_START_X
-        # global PALM_START_Y
-        # global PALM_START_Z
-        # if PALM_START_X == 100:
-        #     PALM_START_X = x
-        #     PALM_START_Y = y
-        #     PALM_START_Z = z
-
-        fixed_3d_point = dict()
-        fixed_x = PALM_START_X
-        fixed_y = PALM_START_Y
-        fixed_z = PALM_START_Z
-        fixed_3d_point_pos = {'x': fixed_x, 'y': fixed_y, 'z': fixed_z}
-        fixed_3d_point['spatialCoordinates'] = fixed_3d_point_pos
-        fixed_3d_point['label'] = 'fixed_coordinate'
-        fixed_3d_point['xmin'] = fixed_x
-        fixed_3d_point['xmax'] = fixed_x
-        fixed_3d_point['ymin'] = fixed_y
-        fixed_3d_point['ymax'] = fixed_y
-        detections = [fixed_3d_point]
-        
         for det in detections:
-            # Ignore detections that aren't considered dangerous
-            # if labelMap[det['label']] not in DANGEROUS_OBJECTS: continue
-
             self.distance = math.sqrt((det['spatialCoordinates']['x']-x)**2 + (det['spatialCoordinates']['y']-y)**2 + (det['spatialCoordinates']['z']-z)**2)
 
             height = frame.shape[0]
-            x1 = int(det['xmin'] * height)
-            x2 = int(det['xmax'] * height)
-            y1 = int(det['ymin'] * height)
-            y2 = int(det['ymax'] * height)
-            objectCenterX = int((x1+x2)/2)
-            objectCenterY = int((y1+y2)/2)
-            cv2.line(frame, (centroidX, centroidY), (objectCenterX, objectCenterY), (50,220,100), 4)
+            cv2.line(frame, (centroidX, centroidY), (int(det['spatialCoordinates']['x']), int(det['spatialCoordinates']['y'])), (50,220,100), 4)
 
             if self.distance < WARNING_DIST:
-                # Color dangerous objects in red
-                sub_img = frame[y1:y2, x1:x2]
-                red_rect = np.ones(sub_img.shape, dtype=np.uint8) * 255
-                # Setting blue/green to 0
-                red_rect[:,:,0] = 0
-                red_rect[:,:,1] = 0
-                res = cv2.addWeighted(sub_img, 0.5, red_rect, 0.5, 1.0)
-                # Putting the image back to its position
-                frame[y1:y2, x1:x2] = res
-                # Print twice to appear in bold
                 annotate("Danger", (100, int(height/3)))
                 annotate("Danger", (101, int(height/3)))
         cv2.imshow("color", frame)
@@ -155,32 +107,6 @@ class HumanMachineSafety:
             )
         draw(self.debug_frame)
         draw(self.depthFrameColor)
-
-    def draw_detections(self, frame, detections):
-        color = (250,0,0)
-        annotate = annotate_fun(frame, (0, 0, 25))
-            
-        for detection in detections:
-            if labelMap[detection.label] not in DANGEROUS_OBJECTS: continue
-            height = frame.shape[0]
-            width  = frame.shape[1]
-            # Denormalize bounding box
-            x1 = int(detection.xmin * width)
-            x2 = int(detection.xmax * width)
-            y1 = int(detection.ymin * height)
-            y2 = int(detection.ymax * height)
-            offsetX = x1 + 10
-            annotate("{:.2f}".format(detection.confidence*100), (offsetX, y1 + 35))
-            annotate(f"X: {int(detection.spatialCoordinates.x)} mm", (offsetX, y1 + 50))
-            annotate(f"Y: {int(detection.spatialCoordinates.y)} mm", (offsetX, y1 + 65))
-            annotate(f"Z: {int(detection.spatialCoordinates.z)} mm", (offsetX, y1 + 80))
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-            try:
-                label = labelMap[detection.label]
-            except:
-                label = detection.label
-
-            annotate(str(label), (offsetX, y1 + 20))
 
     def calc_angle(self, offset):
         return math.atan(math.tan(self.monoHFOV / 2.0) * offset / (self.depthWidth / 2.0))
@@ -202,8 +128,32 @@ class HumanMachineSafety:
             annotate(f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15))
             annotate(f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30))
             return spatialCoords
+    
+    def generate_3DPoint_detection(self, spatialCoords):
+        # TODO: set to initial detected point of pose
+        x,y,z, centroidX, centroidY = spatialCoords
+        
+        # ignore the detected bottle and use a fixed point
+        global PALM_START_X
+        global PALM_START_Y
+        global PALM_START_Z
+        if PALM_START_X == -1:
+            PALM_START_X = 127
+            PALM_START_Y = 114
+            PALM_START_Z = 1082
+            # PALM_START_X = x
+            # PALM_START_Y = y
+            # PALM_START_Z = z
 
-    def parse(self, in_palm_detections, detections, frame, depth, depthColored):
+        fixed_3d_point = dict()
+        fixed_x = PALM_START_X
+        fixed_y = PALM_START_Y
+        fixed_z = PALM_START_Z
+        fixed_3d_point_pos = {'x': fixed_x, 'y': fixed_y, 'z': fixed_z}
+        fixed_3d_point['spatialCoordinates'] = fixed_3d_point_pos
+        return [fixed_3d_point]
+    
+    def parse(self, in_palm_detections, frame, depth, depthColored):
         self.debug_frame = frame.copy()
         self.depthFrameColor = depthColored
         annotate = annotate_fun(self.debug_frame, (50,220,110), fontScale=1.4)
@@ -214,12 +164,15 @@ class HumanMachineSafety:
             in_palm_detections)
         # Calculate and draw spatial coordinates of the palm
         spatialCoords = self.draw_palm_detection(palm_coords, depth)
+
+        # 3D_point in space detection
+        if spatialCoords is not None:
+            detections = self.generate_3DPoint_detection(spatialCoords)
+        
         # Calculate distance, show warning
         if spatialCoords is not None:
             self.calc_spatial_distance(spatialCoords,self.debug_frame, detections)
 
-        # Mobilenet detections
-        self.draw_detections(self.debug_frame, detections)
         # Put text 3 times for the bold appearance
         if math.isnan(self.distance):
             return None
@@ -227,10 +180,6 @@ class HumanMachineSafety:
         annotate(f"Distance: {int(self.distance)} mm", (51,700))
         annotate(f"Distance: {int(self.distance)} mm", (52,700))
         cv2.imshow("color", self.debug_frame)
-
-        if self.depthFrameColor is not None:
-            self.draw_detections(self.depthFrameColor, detections)
-            cv2.imshow("depth", self.depthFrameColor)
 
         if cv2.waitKey(1) == ord("q"):
             cv2.destroyAllWindows()
@@ -334,8 +283,6 @@ with dai.Device() as device:
 
         # Check for mobilenet detections
         in_det = detQ.tryGet()
-        if in_det is not None:
-            detections = in_det.detections
 
         in_depth = depthQ.tryGet()
         if in_depth is not None:
@@ -349,7 +296,6 @@ with dai.Device() as device:
             try:
                 humanMachineSafety.parse(
                     palm_in,
-                    detections,
                     frame,
                     depthFrame,
                     depthFrameColor)
