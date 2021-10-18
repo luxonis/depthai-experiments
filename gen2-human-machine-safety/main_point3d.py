@@ -80,20 +80,20 @@ class HumanMachineSafety:
         # print(f"X: {x}mm, Y: {y} mm, Z: {z} mm")
         return (x,y,z, centroidX, centroidY)
 
-    def calc_spatial_distance(self, spatialCoords, frame, detections):
+    def calc_spatial_distance(self, spatialCoords, frame, spatialCoords_fixed_3dPoint):
         x,y,z, centroidX, centroidY = spatialCoords
+        fixed_x, fixed_y, fixed_z = spatialCoords_fixed_3dPoint
 
         annotate = annotate_fun(frame, (0, 0, 25), fontScale=1.7)
         
-        for det in detections:
-            self.distance = math.sqrt((det['spatialCoordinates']['x']-x)**2 + (det['spatialCoordinates']['y']-y)**2 + (det['spatialCoordinates']['z']-z)**2)
+        self.distance = math.sqrt((fixed_x-x)**2 + (fixed_y-y)**2 + (fixed_z-z)**2)
 
-            height = frame.shape[0]
-            cv2.line(frame, (centroidX, centroidY), (int(det['spatialCoordinates']['x']), int(det['spatialCoordinates']['y'])), (50,220,100), 4)
+        height = frame.shape[0]
+        cv2.line(frame, (centroidX, centroidY), (int(fixed_x), int(fixed_y)), (50,220,100), 4)
 
-            if self.distance < WARNING_DIST:
-                annotate("Danger", (100, int(height/3)))
-                annotate("Danger", (101, int(height/3)))
+        if self.distance < WARNING_DIST:
+            annotate("Danger", (100, int(height/3)))
+            annotate("Danger", (101, int(height/3)))
         cv2.imshow("color", frame)
 
     def draw_bbox(self, bbox, color):
@@ -129,7 +129,7 @@ class HumanMachineSafety:
             annotate(f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30))
             return spatialCoords
     
-    def generate_3DPoint_detection(self, spatialCoords):
+    def generate_fixed_3DPoint(self, spatialCoords):
         # TODO: set to initial detected point of pose
         x,y,z, centroidX, centroidY = spatialCoords
         
@@ -144,14 +144,7 @@ class HumanMachineSafety:
             # PALM_START_X = x
             # PALM_START_Y = y
             # PALM_START_Z = z
-
-        fixed_3d_point = dict()
-        fixed_x = PALM_START_X
-        fixed_y = PALM_START_Y
-        fixed_z = PALM_START_Z
-        fixed_3d_point_pos = {'x': fixed_x, 'y': fixed_y, 'z': fixed_z}
-        fixed_3d_point['spatialCoordinates'] = fixed_3d_point_pos
-        return [fixed_3d_point]
+        return (PALM_START_X, PALM_START_Y, PALM_START_Z)
     
     def parse(self, in_palm_detections, frame, depth, depthColored):
         self.debug_frame = frame.copy()
@@ -167,11 +160,11 @@ class HumanMachineSafety:
 
         # 3D_point in space detection
         if spatialCoords is not None:
-            detections = self.generate_3DPoint_detection(spatialCoords)
+            spatialCoords_fixed_3dPoint = self.generate_fixed_3DPoint(spatialCoords)
         
         # Calculate distance, show warning
         if spatialCoords is not None:
-            self.calc_spatial_distance(spatialCoords,self.debug_frame, detections)
+            self.calc_spatial_distance(spatialCoords,self.debug_frame, spatialCoords_fixed_3dPoint)
 
         # Put text 3 times for the bold appearance
         if math.isnan(self.distance):
@@ -271,7 +264,6 @@ with dai.Device() as device:
 
     humanMachineSafety = HumanMachineSafety()
 
-    detections = []
     depthFrame = None
     depthFrameColor = None
     frame = None
@@ -280,9 +272,6 @@ with dai.Device() as device:
         in_rgb = vidQ.tryGet()
         if in_rgb is not None:
             frame = crop_to_rect(in_rgb.getCvFrame())
-
-        # Check for mobilenet detections
-        in_det = detQ.tryGet()
 
         in_depth = depthQ.tryGet()
         if in_depth is not None:
