@@ -169,6 +169,8 @@ class HumanMachineSafety:
             self.draw_bbox(bbox, color)
             spatialCoords = self.calc_spatials(bbox, depth)
             x,y,z,cx,cy = spatialCoords
+            if math.isnan(x) | math.isnan(y) | math.isnan(z):
+                return None
             annotate(f"X: {int(x)} mm", (bbox[0], bbox[1]))
             annotate(f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15))
             annotate(f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30))
@@ -192,6 +194,8 @@ class HumanMachineSafety:
         # Mobilenet detections
         self.draw_detections(self.debug_frame, detections)
         # Put text 3 times for the bold appearance
+        if math.isnan(self.distance):
+            return None
         annotate(f"Distance: {int(self.distance)} mm", (50,700))
         annotate(f"Distance: {int(self.distance)} mm", (51,700))
         annotate(f"Distance: {int(self.distance)} mm", (52,700))
