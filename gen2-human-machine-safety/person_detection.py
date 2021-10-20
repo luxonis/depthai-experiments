@@ -31,18 +31,6 @@ if args.camera and args.video:
 elif args.camera is False and args.video is None:
     raise ValueError("Missing inference source! Either use \"-cam\" to run on DepthAI camera or \"-vid <path>\" to run on video file")
 
-
-def cos_dist(a, b):
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-# parse frame through this method
-def frame_norm(frame, bbox):
-    return (np.clip(np.array(bbox), 0, 1) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
-
-def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
-    resized = cv2.resize(arr, shape)
-    return resized.transpose(2,0,1)
-
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
@@ -98,6 +86,14 @@ def create_pipeline():
     return pipeline
 
 class Main:
+    # parse frame through this method
+    def frame_norm(self, frame, bbox):
+        return (np.clip(np.array(bbox), 0, 1) * np.array([*frame.shape[:2], *frame.shape[:2]])[::-1]).astype(int)
+
+    def to_planar(self, arr: np.ndarray, shape: tuple) -> np.ndarray:
+        resized = cv2.resize(arr, shape)
+        return resized.transpose(2,0,1)
+
     def __init__(self):
 
         self.running = True
@@ -170,20 +166,20 @@ class Main:
                 # Send bboxes to be infered upon
                 for det in inference.detections:
                     raw_bbox = [det.xmin, det.ymin, det.xmax, det.ymax]
-                    bbox = frame_norm(infered_frame, raw_bbox)
+                    bbox = self.frame_norm(infered_frame, raw_bbox)
                     det_frame = infered_frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
                     nn_data = dai.NNData()
-                    nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
+                    nn_data.setLayer("data", self.to_planar(det_frame, (48, 96)))
                  
                 # Retrieve infered bboxes
                 for det in inference.detections:
 
                     raw_bbox = [det.xmin, det.ymin, det.xmax, det.ymax]
-                    bbox = frame_norm(infered_frame, raw_bbox)
+                    bbox = self.frame_norm(infered_frame, raw_bbox)
 
                     if debug:
                         for frame in frames:
-                            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+                            self.draw_bbox(frame, bbox, (10, 245, 10), 10)
 
                 # Send of to visualization thread
                 for frame in frames:
@@ -207,6 +203,9 @@ class Main:
 
             except RuntimeError:
                 continue
+
+    def draw_bbox(self, frame, bbox, color, thickness):
+        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, thickness)
 
     def input_task(self):
         seq_num = 0
@@ -235,7 +234,7 @@ class Main:
                 frame_nn.setSequenceNum(seq_num)
                 frame_nn.setWidth(544)
                 frame_nn.setHeight(320)
-                frame_nn.setData(to_planar(vid_frame, (544, 320)))
+                frame_nn.setData(self.to_planar(vid_frame, (544, 320)))
                 self.device.getInputQueue("detection_in").send(frame_nn)
 
                 # if high quality, send original frames
@@ -244,7 +243,7 @@ class Main:
                     frame_orig.setSequenceNum(seq_num)
                     frame_orig.setWidth(vid_frame.shape[1])
                     frame_orig.setHeight(vid_frame.shape[0])
-                    frame_orig.setData(to_planar(vid_frame, (vid_frame.shape[1], vid_frame.shape[0])))
+                    frame_orig.setData(self.to_planar(vid_frame, (vid_frame.shape[1], vid_frame.shape[0])))
                     self.frame_queue.put(frame_orig)
                 # else send resized frames
                 else: 
