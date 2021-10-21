@@ -26,11 +26,8 @@ DepthAI 2.9.0.0 is required. Blob was compiled using OpenVino 2021.4
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
 parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/vgg_openvino_2021.4_6shave.blob', type=str)
-parser.add_argument('-v', '--video_path', help="Path to video frame", default="vids/virat.mp4")
 
 args = parser.parse_args()
-
-video_source = args.video_path
 nn_path = args.nn_model 
 
 # resize input to smaller size for faster inference
@@ -53,35 +50,25 @@ def show_output(output_colors, frame):
     return cv2.addWeighted(frame, 1, output_colors, 0.5, 0)
 
 
-# --------------- Check input ---------------
-vid_path = Path(video_source)
-if not vid_path.is_file():
-    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), video_source)
-
 # --------------- Pipeline ---------------
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 # Create Manip for image resizing and NN for count inference
-manip = pipeline.createImageManip()
 detection_nn = pipeline.createNeuralNetwork()
+
+camRgb = pipeline.createColorCamera()
+camRgb.setPreviewSize(NN_WIDTH, NN_HEIGHT)
 
 # Create output links, and in link for video
 manipOut = pipeline.createXLinkOut()
-xinFrame = pipeline.createXLinkIn()
 xlinkOut = pipeline.createXLinkOut()
 nnOut = pipeline.createXLinkOut()
 
 manipOut.setStreamName("manip")
-xinFrame.setStreamName("inFrame")
 xlinkOut.setStreamName("trackerFrame")
 nnOut.setStreamName("nn")
-
-# Properties
-manip.initialConfig.setResizeThumbnail(NN_WIDTH, NN_HEIGHT)
-manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-manip.inputImage.setBlocking(True)
 
 # setting node configs
 detection_nn.setBlobPath(nn_path)
@@ -90,15 +77,14 @@ detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 
 # Linking
-manip.out.link(manipOut.input)
-manip.out.link(detection_nn.input)
-xinFrame.out.link(manip.inputImage)
+camRgb.preview.link(manipOut.input)
+camRgb.preview.link(detection_nn.input)
+camRgb.setInterleaved(False)
 detection_nn.out.link(nnOut.input)
 
 # --------------- Inference ---------------
 # Pipeline defined, now the device is assigned and pipeline is started
 with dai.Device(pipeline) as device:
-    qIn = device.getInputQueue(name="inFrame", maxSize=1, blocking=False)
     qManip = device.getOutputQueue(name="manip", maxSize=4)
     qNN = device.getOutputQueue(name="nn", maxSize=4)
 
@@ -112,27 +98,7 @@ with dai.Device(pipeline) as device:
     def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
         return cv2.resize(arr, shape).transpose(2, 0, 1).flatten()
 
-    cap = cv2.VideoCapture(args.video_path)
-    baseTs = time.monotonic()
-    simulatedFps = 30
-    inputFrameShape = (NN_WIDTH, NN_HEIGHT)
-
-    while cap.isOpened():
-        # read, process image and send it to NN
-        read_correctly, frame = cap.read()
-        if not read_correctly:
-            break
-
-        img = dai.ImgFrame()
-        img.setType(dai.ImgFrame.Type.BGR888p)
-        img.setData(to_planar(frame, inputFrameShape))
-        img.setTimestamp(baseTs)
-        baseTs += 1 / simulatedFps
-
-        img.setWidth(inputFrameShape[0])
-        img.setHeight(inputFrameShape[1])
-        qIn.send(img)
-
+    while True:
         # get resized image and NN output queues
         manip = qManip.get()
         inNN = qNN.get()
