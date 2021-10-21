@@ -10,12 +10,28 @@ from imutils.video import FPS
 log = logging.getLogger(__name__)
 
 
+class spatialCoordinates():
+    x = 500
+    y = 500
+    z = 2000
+class generatePoint():
+    id = uuid.uuid4()
+    label = 'generated_3d_point'
+    confidence = 0.6
+
+    xmin = 0.0
+    xmax = 0.0
+    ymin = -0.1
+    ymax= -0.1
+
+    spatialCoordinates = spatialCoordinates()
+
 class DepthAI:
     def create_pipeline(self, model_name):
         log.info("Creating DepthAI pipeline...")
 
         pipeline = dai.Pipeline()
-        pipeline.setOpenVINOVersion(dai.OpenVINO.Version.VERSION_2021_2)
+        # pipeline.setOpenVINOVersion(dai.OpenVINO.Version.VERSION_2021_2)
 
         # Define sources and outputs
         camRgb = pipeline.createColorCamera()
@@ -83,7 +99,9 @@ class DepthAI:
 
                 if inDet is not None:
                     self.detections = inDet.detections
-
+                    generatePoint.spatialCoordinates.x = frame.shape[1]/2
+                    generatePoint.spatialCoordinates.y = frame.shape[0]/2
+                    self.detections.append(generatePoint)
                 bboxes = []
                 height = frame.shape[0]
                 width  = frame.shape[1]
@@ -118,6 +136,8 @@ class DepthAIDebug(DepthAI):
         for frame, detections in super().capture():
             self.fps.update()
             for detection in detections:
+                if detection['x_min'] == detection['x_max']:
+                    continue
                 cv2.rectangle(frame, (detection['x_min'], detection['y_min']), (detection['x_max'], detection['y_max']), (0, 255, 0), 2)
                 cv2.putText(frame, "x: {}".format(round(detection['depth_x'], 1)), (detection['x_min'], detection['y_min'] + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, "y: {}".format(round(detection['depth_y'], 1)), (detection['x_min'], detection['y_min'] + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
