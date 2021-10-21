@@ -40,10 +40,20 @@ class DistanceGuardianDebug(DistanceGuardian):
         results = super().parse_frame(frame, boxes)
         overlay = frame.copy()
         for result in results:
-            x1 = result['detection1']['x_min'] + (result['detection1']['x_max'] - result['detection1']['x_min']) // 2
-            y1 = result['detection1']['y_max']
-            x2 = result['detection2']['x_min'] + (result['detection2']['x_max'] - result['detection2']['x_min']) // 2
-            y2 = result['detection2']['y_max']
+            if result['detection1']['x_min'] == result['detection1']['x_max']:
+                x1 = result['detection1']['x_min']
+                y1 = result['detection1']['y_min']
+            else:
+                x1 = result['detection1']['x_min'] + (result['detection1']['x_max'] - result['detection1']['x_min']) // 2
+                y1 = result['detection1']['y_max']
+
+            if result['detection2']['x_min'] == result['detection2']['x_max']:
+                x2 = result['detection2']['x_min']
+                y2 = result['detection2']['y_min']
+            else:
+                x2 = result['detection2']['x_min'] + (result['detection2']['x_max'] - result['detection2']['x_min']) // 2
+                y2 = result['detection2']['y_max']
+
             color = (0, 0, 255) if result['dangerous'] else (255, 0, 0)
             cv2.ellipse(overlay, (x1, y1), (40, 10), 0, 0, 360, color, thickness=cv2.FILLED)
             cv2.ellipse(overlay, (x2, y2), (40, 10), 0, 0, 360, color, thickness=cv2.FILLED)
