@@ -1,5 +1,5 @@
 opencv-python
-depthai==2.9.0.0
+depthai==2.11.1.0
 gdown
 numpy
 scikit-learn
