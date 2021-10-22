@@ -1,10 +1,10 @@
 ## [Gen2] Crowd Counting with density maps on DepthAI
 
-This example shows an implementation of Crowd Counting with density maps on DepthAI in the Gen2 API system.  We use [DM-Count](https://github.com/cvlab-stonybrook/DM-Count) ([LICENSE](https://github.com/cvlab-stonybrook/DM-Count/blob/master/LICENSE)) model, which has a VGG-19 backbone and is trained on Shanghai B data set.
+This example shows an implementation of Crowd Counting with density maps on DepthAI in the Gen2 API system.  We use [DM-Count](https://github.com/cvlab-stonybrook/DM-Count) ([LICENSE](https://github.com/cvlab-stonybrook/DM-Count/blob/master/LICENSE)) model, which has a VGG-19 backbone and is trained on Shanghai A data set.
 
 The model produces density map from which predicted count can be computed.
 
-Input video is resized to 426 x 240 (W x H). Due to a relatively heavy model, the inference speed is around 1 FPS.
+Input video is resized to 960 x 540 (W x H). Due to a relatively heavy model, the inference speed is around 0.21 FPS.
 
 ![Image example](imgs/example.gif)
 
