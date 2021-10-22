@@ -84,20 +84,25 @@ class Replay:
 
         pipeline = dai.Pipeline()
 
+        color_size = self.size['color']
+        print('color_size', color_size)
         nodes['color'] = pipeline.createXLinkIn()
-        nodes['color'].setMaxDataSize(1920*1080*3)
+        nodes['color'].setMaxDataSize(self.get_max_size('color'))
         nodes['color'].setStreamName("color_in")
 
         if mono:
             nodes['left'] = pipeline.createXLinkIn()
             nodes['left'].setStreamName("left_in")
+            nodes['left'].setMaxDataSize(self.get_max_size('left'))
+
             nodes['right'] = pipeline.createXLinkIn()
             nodes['right'].setStreamName("right_in")
+            nodes['right'].setMaxDataSize(self.get_max_size('right'))
 
             nodes['stereo'] = pipeline.createStereoDepth()
             nodes['stereo'].initialConfig.setConfidenceThreshold(240)
             nodes['stereo'].setRectification(False)
-            nodes['stereo'].setInputResolution(self.size['left'])
+            nodes['stereo'].setInputResolution(self.size['left'][0], self.size['left'][1])
 
             nodes['left'].out.link(nodes['stereo'].left)
             nodes['right'].out.link(nodes['stereo'].right)
@@ -142,6 +147,10 @@ class Replay:
             int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
             int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
         )
+    def get_max_size(self, name):
+        total = self.size[name][0] * self.size[name][1]
+        if name == 'color': total *= 3 # 3 channels
+        return total
 
     def send_frame(self, frame, name):
         q_name = name + '_in'
