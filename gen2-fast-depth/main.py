@@ -22,7 +22,7 @@ https://github.com/PINTO0309/PINTO_model_zoo/tree/main/146_FastDepth
 
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
-parser.add_argument("-w", "--width", help="select model width for inference", default=320, type=float)
+parser.add_argument("-w", "--width", help="select model width for inference", default=320, type=int)
 
 args = parser.parse_args()
 
@@ -30,9 +30,11 @@ args = parser.parse_args()
 if args.width == 320:
     NN_WIDTH, NN_HEIGHT = 320, 256
     NN_PATH = blobconverter.from_zoo(name="fast_depth_256x320", zoo_type="depthai")
-else:
+elif args.width == 640:
     NN_WIDTH, NN_HEIGHT = 640, 480
     NN_PATH = blobconverter.from_zoo(name="fast_depth_480x640", zoo_type="depthai")
+else:
+    raise ValueError(f"Width can be only 320 or 640, not {args.width}")
 
 # --------------- Pipeline ---------------
 # Start defining a pipeline
@@ -41,7 +43,7 @@ pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 # Define a neural network
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(nn_path)
+detection_nn.setBlobPath(str(NN_PATH))
 detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
