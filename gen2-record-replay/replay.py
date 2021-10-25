@@ -63,7 +63,7 @@ with dai.Device(pipeline) as device:
     rightS_Q = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
     leftS_Q = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
 
-    disparityMultiplier = 255 / nodes['stereo'].getMaxDisparity()
+    disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     while replay.send_frames():
