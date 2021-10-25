@@ -3,6 +3,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from multiprocessing import Array, Process, Queue
 from cv2 import VideoWriter, VideoWriter_fourcc
+import types
 import os
 import contextlib
 import depthai as dai
@@ -45,6 +46,10 @@ class Record:
 
         self.stereo = 1 < len(device.getConnectedCameras())
         self.path = self.create_folder(path, device.getMxId())
+
+        calibData = device.readCalibration()
+        calibData.eepromToJsonFile(str(self.path / "calib.json"))
+
         self.convert_mp4 = False
         self.exit_stack = stack
 
@@ -96,18 +101,18 @@ class Record:
 
     def create_pipeline(self):
         pipeline = dai.Pipeline()
-        nodes = {}
+        nodes = types.SimpleNamespace()
 
         if "color" in self.save:
-            nodes['color'] = pipeline.createColorCamera()
-            nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
-            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-            nodes['color'].setFps(self.fps)
+            nodes.color = pipeline.createColorCamera()
+            nodes.color.setBoardSocket(dai.CameraBoardSocket.RGB)
+            nodes.color.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+            nodes.color.setFps(self.fps)
 
             rgb_encoder = pipeline.createVideoEncoder()
-            rgb_encoder.setDefaultProfilePreset(nodes['color'].getVideoSize(), nodes['color'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            rgb_encoder.setDefaultProfilePreset(nodes.color.getVideoSize(), nodes.color.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             # rgb_encoder.setLossless(True)
-            nodes['color'].video.link(rgb_encoder.input)
+            nodes.color.video.link(rgb_encoder.input)
 
             # Create output for the rgb
             rgbOut = pipeline.createXLinkOut()
@@ -116,48 +121,47 @@ class Record:
 
         if "mono" or "depth" in self.save:
             # Create mono cameras
-            nodes['left'] = pipeline.createMonoCamera()
-            nodes['left'].setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-            nodes['left'].setBoardSocket(dai.CameraBoardSocket.LEFT)
-            nodes['left'].setFps(self.fps)
+            nodes.left = pipeline.createMonoCamera()
+            nodes.left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            nodes.left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+            nodes.left.setFps(self.fps)
 
-            nodes['right'] = pipeline.createMonoCamera()
-            nodes['right'].setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-            nodes['right'].setBoardSocket(dai.CameraBoardSocket.RIGHT)
-            nodes['right'].setFps(self.fps)
-
-            nodes['stereo'] = pipeline.createStereoDepth()
-            nodes['stereo'].initialConfig.setConfidenceThreshold(240)
-            nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-            nodes['stereo'].setLeftRightCheck(False)
-            nodes['stereo'].setExtendedDisparity(False)
-            nodes['stereo'].setSubpixel(False)
-            # nodes['stereo'].setRectification(False)
-            # nodes['stereo'].setRectifyMirrorFrame(False)
-
-            nodes['left'].out.link(nodes['stereo'].left)
-            nodes['right'].out.link(nodes['stereo'].right)
+            nodes.right = pipeline.createMonoCamera()
+            nodes.right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            nodes.right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+            nodes.right.setFps(self.fps)
 
             if "depth" in self.save:
+                nodes.stereo = pipeline.createStereoDepth()
+                nodes.stereo.initialConfig.setConfidenceThreshold(240)
+                nodes.stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
+                nodes.stereo.setLeftRightCheck(False)
+                nodes.stereo.setExtendedDisparity(False)
+                nodes.stereo.setSubpixel(False)
+
+                nodes.left.out.link(nodes.stereo.left)
+                nodes.right.out.link(nodes.stereo.right)
+
                 depthOut = pipeline.createXLinkOut()
                 depthOut.setStreamName("depth")
-                nodes['stereo'].depth.link(depthOut.input)
+                nodes.stereo.depth.link(depthOut.input)
+
 
             # Create output
             if "mono" in self.save:
                 left_encoder = pipeline.createVideoEncoder()
-                left_encoder.setDefaultProfilePreset(nodes['left'].getResolutionSize(), nodes['left'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                left_encoder.setDefaultProfilePreset(nodes.left.getResolutionSize(), nodes.left.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
                 # left_encoder.setLossless(True)
-                nodes['stereo'].rectifiedLeft.link(left_encoder.input)
+                nodes.left.out.link(left_encoder.input)
                 # Create XLink output for left MJPEG stream
                 leftOut = pipeline.createXLinkOut()
                 leftOut.setStreamName("left")
                 left_encoder.bitstream.link(leftOut.input)
 
                 right_encoder = pipeline.createVideoEncoder()
-                right_encoder.setDefaultProfilePreset(nodes['right'].getResolutionSize(), nodes['right'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                right_encoder.setDefaultProfilePreset(nodes.right.getResolutionSize(), nodes.right.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
                 # right_encoder.setLossless(True)
-                nodes['stereo'].rectifiedRight.link(right_encoder.input)
+                nodes.right.out.link(right_encoder.input)
                 # Create XLink output for right MJPEG stream
                 rightOut = pipeline.createXLinkOut()
                 rightOut.setStreamName("right")

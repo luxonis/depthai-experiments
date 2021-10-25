@@ -35,8 +35,8 @@ nn.setConfidenceThreshold(0.5)
 nn.input.setBlocking(False)
 
 # Link required inputs to the Spatial detection network
-nodes['color'].out.link(nn.input)
-nodes['stereo'].depth.link(nn.inputDepth)
+nodes.color.out.link(nn.input)
+nodes.stereo.depth.link(nn.inputDepth)
 
 detOut = pipeline.createXLinkOut()
 detOut.setStreamName("det_out")
@@ -44,15 +44,15 @@ nn.out.link(detOut.input)
 
 depthOut = pipeline.createXLinkOut()
 depthOut.setStreamName("depth_out")
-nodes['stereo'].disparity.link(depthOut.input)
+nodes.stereo.disparity.link(depthOut.input)
 
 right_s_out = pipeline.createXLinkOut()
 right_s_out.setStreamName("rightS")
-nodes['stereo'].syncedRight.link(right_s_out.input)
+nodes.stereo.syncedRight.link(right_s_out.input)
 
 left_s_out = pipeline.createXLinkOut()
 left_s_out.setStreamName("leftS")
-nodes['stereo'].syncedLeft.link(left_s_out.input)
+nodes.stereo.syncedLeft.link(left_s_out.input)
 
 with dai.Device(pipeline) as device:
     queues = {}

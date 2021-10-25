@@ -1,11 +1,12 @@
 from pathlib import Path
 import os
 import cv2
+import types
 import depthai as dai
 
 class Replay:
     def __init__(self, path):
-        self.path = path
+        self.path = Path(path).resolve().absolute()
 
         self.cap = {} # VideoCapture objects
         self.size = {} # Frame sizes
@@ -17,13 +18,16 @@ class Replay:
         recordings = os.listdir(path)
         # Check if depth recording exists - if it does, don't create mono VideoCaptures
         if "left.mjpeg" in recordings and "right.mjpeg" in recordings:
-            self.cap['left'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'left.mjpeg'))
-            self.cap['right'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'right.mjpeg'))
+            self.cap['left'] = cv2.VideoCapture(str(self.path / 'left.mjpeg'))
+            self.cap['right'] = cv2.VideoCapture(str(self.path / 'right.mjpeg'))
         if "color.mjpeg" in recordings:
-            self.cap['color'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'color.mjpeg'))
+            self.cap['color'] = cv2.VideoCapture(str(self.path / 'color.mjpeg'))
 
         if len(self.cap) == 0:
             raise RuntimeError("There are no .mjpeg recordings in the folder specified.")
+
+        # Load calibration data from the recording folder
+        self.calibData = dai.CalibrationHandler(str(self.path / "calib.json"))
 
         # Read basic info about the straems (resolution of streams etc.)
         for name in self.cap:
@@ -83,33 +87,34 @@ class Replay:
             mono = False # Use depth stream by default
 
         pipeline = dai.Pipeline()
+        pipeline.setCalibrationData(self.calibData)
+        nodes = types.SimpleNamespace()
 
         color_size = self.size['color']
         print('color_size', color_size)
-        nodes['color'] = pipeline.createXLinkIn()
-        nodes['color'].setMaxDataSize(self.get_max_size('color'))
-        nodes['color'].setStreamName("color_in")
+        nodes.color = pipeline.createXLinkIn()
+        nodes.color.setMaxDataSize(self.get_max_size('color'))
+        nodes.color.setStreamName("color_in")
 
         if mono:
-            nodes['left'] = pipeline.createXLinkIn()
-            nodes['left'].setStreamName("left_in")
-            nodes['left'].setMaxDataSize(self.get_max_size('left'))
+            nodes.left = pipeline.createXLinkIn()
+            nodes.left.setStreamName("left_in")
+            nodes.left.setMaxDataSize(self.get_max_size('left'))
 
-            nodes['right'] = pipeline.createXLinkIn()
-            nodes['right'].setStreamName("right_in")
-            nodes['right'].setMaxDataSize(self.get_max_size('right'))
+            nodes.right = pipeline.createXLinkIn()
+            nodes.right.setStreamName("right_in")
+            nodes.right.setMaxDataSize(self.get_max_size('right'))
 
-            nodes['stereo'] = pipeline.createStereoDepth()
-            nodes['stereo'].initialConfig.setConfidenceThreshold(240)
-            nodes['stereo'].setRectification(False)
-            nodes['stereo'].setInputResolution(self.size['left'][0], self.size['left'][1])
+            nodes.stereo = pipeline.createStereoDepth()
+            nodes.stereo.initialConfig.setConfidenceThreshold(245)
+            nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
 
-            nodes['left'].out.link(nodes['stereo'].left)
-            nodes['right'].out.link(nodes['stereo'].right)
+            nodes.left.out.link(nodes.stereo.left)
+            nodes.right.out.link(nodes.stereo.right)
 
         if depth:
-            nodes['depth'] = pipeline.createXLinkIn()
-            nodes['depth'].setStreamName("depth_in")
+            nodes.depth = pipeline.createXLinkIn()
+            nodes.depth.setStreamName("depth_in")
 
         return pipeline, nodes
 

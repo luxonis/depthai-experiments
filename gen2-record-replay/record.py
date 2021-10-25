@@ -76,7 +76,7 @@ def run_record():
             # TODO: add support for specifying resolution, encoding quality
             recording.set_fps(args.fps)
             recording.set_save_streams(args.save)
-            recording.start_recording()
+            # recording.start_recording()
 
             recordings.append(recording)
 
