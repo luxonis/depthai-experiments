@@ -11,7 +11,7 @@ from pathlib import Path
 # DepthAI Record library
 from libraries.depthai_record import Record
 
-_save_choices = ("color", "mono") # TODO: depth/IMU/ToF...
+_save_choices = ("color", "mono", "disparity") # TODO: depth/IMU/ToF...
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
@@ -19,6 +19,10 @@ parser.add_argument('-s', '--save', default=["color", "mono"], nargs="+", choice
                     help="Choose which streams to save. Default: %(default)s")
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
+parser.add_argument('-de', '--disable_enc', default=False, action="store_true",
+                    help='Disable encoding streams. Will consume more disk space')
+parser.add_argument('-fc', '--frame_cnt', type=int, default=0,
+                    help='Number of frames to record. Record until stopped by default.')
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
 save_path = Path.cwd() / args.path
@@ -76,11 +80,13 @@ def run_record():
             # TODO: add support for specifying resolution, encoding quality
             recording.set_fps(args.fps)
             recording.set_save_streams(args.save)
+            recording.set_encoding([] if args.disable_enc else args.save)
             recording.start_recording()
 
             recordings.append(recording)
 
         queues = [q for recording in recordings for q in recording.queues]
+        frame_counter = 0
         while True:
             try:
                 for q in queues:
@@ -88,6 +94,8 @@ def run_record():
                     if new_msg is not None:
                         q['msgs'].append(new_msg)
                         if check_sync(queues, new_msg.getTimestamp()):
+                            frame_counter+=1
+                            if args.frame_cnt == frame_counter: raise KeyboardInterrupt
                             # print('frames synced')
                             for recording in recordings:
                                 frames = {}
