@@ -5,7 +5,7 @@ a custom CV model ([tutorial](https://docs.luxonis.com/en/latest/pages/tutorials
 
 ## Demo
 
-![Blur Face]()
+![Blur Face](https://user-images.githubusercontent.com/18037362/139135932-b907f037-9336-4c42-a479-5715d9693c9c.gif)
 
 ## Usage
 
