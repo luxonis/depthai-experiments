@@ -71,7 +71,7 @@ def run_record():
         # TODO: allow users to specify which available devices should record
         for device_info in device_infos:
             openvino_version = dai.OpenVINO.Version.VERSION_2021_4
-            usb2_mode = True
+            usb2_mode = False
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
             # Create recording object for this device

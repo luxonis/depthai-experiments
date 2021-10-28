@@ -18,7 +18,11 @@ def store_frames(path: str, frame_q, encode, fps, sizes):
         if name in encode:
             files[name] = open(str(path / f"{name}.mjpeg"), 'wb')
         else:
-            files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*'DIVX'), fps, sizes[name])
+            # print('creating videoencoder for ', name, 'size', sizes[name])
+            if name == "color": fourcc = "I420"
+            elif name == "depth": fourcc = "Y16" # 16-bit uncompressed greyscale image
+            else : fourcc = "GREY" #Simple, single Y plane for monochrome images.
+            files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
         # fourcc = VideoWriter_fourcc(*'MJPG')
         # writer = VideoWriter(path, fourcc, self.fps, (width, height))
         # writer.release()
@@ -133,15 +137,30 @@ class Record:
             nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
             nodes['color'].setFps(self.fps)
 
-            rgb_encoder = pipeline.createVideoEncoder()
-            rgb_encoder.setDefaultProfilePreset(nodes['color'].getVideoSize(), nodes['color'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-            # rgb_encoder.setLossless(True)
-            nodes['color'].video.link(rgb_encoder.input)
-
-            # Create output for the rgb
             rgbOut = pipeline.createXLinkOut()
             rgbOut.setStreamName("color")
-            rgb_encoder.bitstream.link(rgbOut.input)
+
+            if "color" in self.encode:
+                rgb_encoder = pipeline.createVideoEncoder()
+                rgb_encoder.setDefaultProfilePreset(nodes['color'].getVideoSize(), nodes['color'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                # rgb_encoder.setLossless(True)
+                nodes['color'].video.link(rgb_encoder.input)
+                rgb_encoder.bitstream.link(rgbOut.input)
+            else:
+                # TODO change to .isp
+                nodes['color'].video.link(rgbOut.input)
+        #         def create_mono(name):
+        #     nodes[name] = pipeline.createMonoCamera()
+        #     nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        #     socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
+        #     nodes[name].setBoardSocket(socket)
+        #     nodes[name].setFps(self.fps)
+
+
+        # if "mono" or "disparity" in self.save:
+        #     # Create mono cameras
+        #     create_mono("left")
+        #     create_mono("left")
 
         if "mono" or "disparity" in self.save:
             # Create mono cameras
