@@ -11,15 +11,15 @@ from pathlib import Path
 # DepthAI Record library
 from libraries.depthai_record import Record
 
-_save_choices = ("color", "mono", "disparity") # TODO: depth/IMU/ToF...
+_save_choices = ("color", "left", "right", "disparity", "depth") # TODO: depth/IMU/ToF...
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
-parser.add_argument('-s', '--save', default=["color", "mono"], nargs="+", choices=_save_choices,
+parser.add_argument('-s', '--save', default=["color", "left", "right"], nargs="+", choices=_save_choices,
                     help="Choose which streams to save. Default: %(default)s")
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
-parser.add_argument('-de', '--disable_enc', default=False, action="store_true",
+parser.add_argument('-ne', '--no_enc', default=False, action="store_true",
                     help='Disable encoding streams. Will consume more disk space')
 parser.add_argument('-fc', '--frame_cnt', type=int, default=0,
                     help='Number of frames to record. Record until stopped by default.')
@@ -79,14 +79,16 @@ def run_record():
             # Set recording configuration
             # TODO: add support for specifying resolution, encoding quality
             recording.set_fps(args.fps)
+            print(args.save)
             recording.set_save_streams(args.save)
-            recording.set_encoding([] if args.disable_enc else args.save)
+            recording.set_encoding([] if args.no_enc else args.save)
             recording.start_recording()
 
             recordings.append(recording)
 
         queues = [q for recording in recordings for q in recording.queues]
         frame_counter = 0
+        start_time = time.time()
         while True:
             try:
                 for q in queues:
@@ -94,16 +96,16 @@ def run_record():
                     if new_msg is not None:
                         q['msgs'].append(new_msg)
                         if check_sync(queues, new_msg.getTimestamp()):
-                            frame_counter+=1
+                            # Wait for Auto focus/exposure/white-balance
+                            if time.time() - start_time < 1.3: continue
+
                             if args.frame_cnt == frame_counter: raise KeyboardInterrupt
-                            # print('frames synced')
+                            frame_counter+=1
+
                             for recording in recordings:
                                 frames = {}
                                 for stream in recording.queues:
                                     frames[stream['name']] = stream['msgs'].pop(0).getCvFrame()
-                                    # cv2.imshow(f"{stream['name']} - {device['mx']}", cv2.imdecode(frames[stream['name']], cv2.IMREAD_UNCHANGED))
-                                # print('For mx', device['mx'], 'frames')
-                                # print('frames', frames)
                                 recording.frame_q.put(frames)
                 if cv2.waitKey(1) == ord('q'):
                     break
