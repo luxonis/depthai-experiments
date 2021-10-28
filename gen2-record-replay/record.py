@@ -21,7 +21,7 @@ parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
 parser.add_argument('-ne', '--no_enc', default=False, action="store_true",
                     help='Disable encoding streams. Will consume more disk space')
-parser.add_argument('-fc', '--frame_cnt', type=int, default=0,
+parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
                     help='Number of frames to record. Record until stopped by default.')
 # TODO: make camera resolutions configrable
 args = parser.parse_args()

@@ -19,10 +19,10 @@ def store_frames(path: str, frame_q, encode, fps, sizes):
             files[name] = open(str(path / f"{name}.mjpeg"), 'wb')
         else:
             print('creating videoencoder for ', name, 'size', sizes[name])
-            if name == "color": fourcc = ['I','4','2','0']
-            elif name == "depth": fourcc = ['Y','1','6',''] # 16-bit uncompressed greyscale image
-            else : fourcc = ['G','R','E','Y'] #Simple, single Y plane for monochrome images.
-            files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(fourcc), fps, sizes[name], isColor=name=="color")
+            if name == "color": fourcc = "I420"
+            elif name == "depth": fourcc = "Y16 " # 16-bit uncompressed greyscale image
+            else : fourcc = "GREY" #Simple, single Y plane for monochrome images.
+            files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
         # fourcc = VideoWriter_fourcc(*'MJPG')
         # writer = VideoWriter(path, fourcc, self.fps, (width, height))
         # writer.release()
@@ -191,13 +191,9 @@ class Record:
             nodes['left'].out.link(nodes['stereo'].left)
             nodes['right'].out.link(nodes['stereo'].right)
 
-            disparityOut = pipeline.createXLinkOut()
-            disparityOut.setStreamName("disparity")
-
             if "disparity" in self.save:
                 stream_out("disparity", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['stereo'].disparity)
             if "depth" in self.save:
-                print("depthhh")
                 stream_out("depth", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['stereo'].depth)
 
         self.nodes = nodes
