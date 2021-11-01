@@ -55,7 +55,6 @@ left_s_out.setStreamName("leftS")
 nodes.stereo.syncedLeft.link(left_s_out.input)
 
 with dai.Device(pipeline) as device:
-    queues = {}
     replay.create_queues(device)
 
     depthQ = device.getOutputQueue(name="depth_out", maxSize=4, blocking=False)
