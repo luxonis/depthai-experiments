@@ -1,4 +1,3 @@
-import itertools
 import logging
 import math
 import cv2
