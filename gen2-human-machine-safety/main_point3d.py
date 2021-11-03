@@ -5,7 +5,6 @@ import cv2
 import depthai as dai
 import numpy as np
 from palm_detection import PalmDetection
-from person_detection import Main
 
 DEPTH_THRESH_HIGH = 3000
 DEPTH_THRESH_LOW = 500
@@ -34,7 +33,6 @@ class HumanMachineSafety:
     def __init__(self):
         print("Loading pipeline...")
         self.palmDetection = PalmDetection()
-        self.personDetection = Main()
 
         self.distance = 1000
 
@@ -143,9 +141,6 @@ class HumanMachineSafety:
             PALM_START_X = 127
             PALM_START_Y = 114
             PALM_START_Z = 1082
-            # PALM_START_X = x
-            # PALM_START_Y = y
-            # PALM_START_Z = z
         return (PALM_START_X, PALM_START_Y, PALM_START_Z)
     
     def parse(self, in_palm_detections, frame, depth, depthColored):
@@ -159,12 +154,6 @@ class HumanMachineSafety:
             in_palm_detections)
         # Calculate and draw spatial coordinates of the palm
         spatialCoords = self.draw_palm_detection(palm_coords, depth)
-
-                
-        # TODO: Parse person detection output
-        # person_coords = self.personDetection.frame_norm(frame, bbox)
-        # TODO: Calculate and draw spatial coordinates of the person
-        # spatialCoords = Retrieve infered bboxes(bbox,)
 
         # 3D_point in space detection
         if spatialCoords is not None:
