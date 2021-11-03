@@ -16,9 +16,10 @@ class Replay:
         self.stream_types = ['color', 'left', 'right', 'depth']
 
         file_types = ['color', 'left', 'right', 'disparity', 'depth']
-        extensions = ['mjpeg', 'avi', 'mp4']
+        extensions = ['mjpeg', 'avi', 'mp4', 'h265', 'h264']
 
         for file in os.listdir(path):
+            if not '.' in file: continue # Folder
             name, extension = file.split('.')
             if name in file_types and extension in extensions:
                 self.cap[name] = cv2.VideoCapture(str(self.path / file))
@@ -90,9 +91,10 @@ class Replay:
         pipeline.setCalibrationData(self.calibData)
         nodes = types.SimpleNamespace()
 
-        nodes.color = pipeline.createXLinkIn()
-        nodes.color.setMaxDataSize(self.get_max_size('color'))
-        nodes.color.setStreamName("color_in")
+        if 'color' in self.cap:
+            nodes.color = pipeline.createXLinkIn()
+            nodes.color.setMaxDataSize(self.get_max_size('color'))
+            nodes.color.setStreamName("color_in")
 
         if mono:
             nodes.left = pipeline.createXLinkIn()
@@ -137,7 +139,6 @@ class Replay:
 
     def send_frames(self):
         if self.read_frames():
-            print('end')
             return False # end of recording
         for name in self.frames:
             if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:

@@ -9,9 +9,10 @@ import time
 from pathlib import Path
 
 # DepthAI Record library
-from libraries.depthai_record import Record
+from libraries.depthai_record import EncodingQuality, Record
 
 _save_choices = ("color", "left", "right", "disparity", "depth") # TODO: depth/IMU/ToF...
+_quality_choices = ("BEST", "HIGH", "MEDIUM", "LOW")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
@@ -19,8 +20,8 @@ parser.add_argument('-s', '--save', default=["color", "left", "right"], nargs="+
                     help="Choose which streams to save. Default: %(default)s")
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
-parser.add_argument('-ne', '--no_enc', default=False, action="store_true",
-                    help='Disable encoding streams. Will consume more disk space')
+parser.add_argument('-q', '--quality', default="HIGH", type=str, choices=_quality_choices,
+                    help='Selects the quality of the recording. Default: %(default)s')
 parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
                     help='Number of frames to record. Record until stopped by default.')
 # TODO: make camera resolutions configrable
@@ -77,11 +78,10 @@ def run_record():
             # Create recording object for this device
             recording = Record(str(save_path), device)
             # Set recording configuration
-            # TODO: add support for specifying resolution, encoding quality
+            # TODO: add support for specifying resolution
             recording.set_fps(args.fps)
-            print(args.save)
             recording.set_save_streams(args.save)
-            recording.set_encoding([] if args.no_enc else args.save)
+            recording.set_quality(EncodingQuality[args.quality])
             recording.start_recording()
 
             recordings.append(recording)
