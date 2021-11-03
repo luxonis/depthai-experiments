@@ -5,8 +5,7 @@ the whole recorded scene, depth included.
 
 When running `record.py`, it will record streams from all devices and will synchronize all streams across all devices on the host. Recordings
 will be saved in the specified folder (with `-p`, by default that folder is `recordings/`). Recordings will be saved as MJPEG (motion JPEG)
-files. You can manually use `ffmpeg` to convert these `.mjpeg` recordings to `.mp4`. You can also specify `record.convert_to_mp4(True)` to
-automatically convert these recordings to `.mp4` (it requires `ffmpeg` system library and `ffmpy3` python library).
+files or H265, depending on the quality of the recording. You can manually use `ffmpeg` to convert these `.mjpeg` recordings to `.mp4`.
 
 For `replay.py`, we have created a default demo app that runs Mobilenet and sends bounding boxes/spatial coordinates to the host where
 it these are displayed.
@@ -38,12 +37,17 @@ usage: record.py [-h] [-p PATH] [-s [STREAMS]] [-f FPS]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -p, --path PATH,    default="recordings/"       Path where to store the captured data
-  -s, --save STREAMS, default=["color", "mono"]   Choose which streams to save.
-  -f, --fps FPS_NUM,  default=30                  Camera sensor FPS, applied to all cams
+  -p, --path,         default="recordings/"       Path where to store the captured data
+  -s, --save,         default=["color", "left", "right"]   Choose which streams to save
+  -f, --fps,          default=30          Camera sensor FPS, applied to all cameras
+  -q, --quality,      default="HIGH",     Selects the quality of the recording
+  -fc,--frame_cnt     default=-1,         Number of frames to record. Record until stopped by default
 ```
 
-By default, script will save encoded (jpeg) color frames and depth map.
+For the `frame_cnt`, -1 means it will record streams until user terminates the program (`CTRL+C`). If you select eg. `-fc 300 --fps 30`, recording will be of 300 frames (of each stream), for a total of 10 seconds.
+
+`quality` specifies the quality of encoded video streams. It can either be `BEST` (lossless encoding), `HIGH`, `MEDIUM` or `LOW`. More information regarding **file sizes and quality of recordings** can be [found here](encoding_quality/README.md).
+.
 ## Replay usage
 ```
 usage: replay.py -p PATH
