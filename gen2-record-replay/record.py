@@ -25,7 +25,7 @@ parser.add_argument('-q', '--quality', default="HIGH", type=str, choices=_qualit
 parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
                     help='Number of frames to record. Record until stopped by default.')
 parser.add_argument('-tl', '--timelapse', type=int, default=-1,
-                    help='Number of seconds to take a photo for timelapse recording. Default: timelapse disabled')
+                    help='Number of seconds between frames for timelapse recording. Default: timelapse disabled')
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
 save_path = Path.cwd() / args.path

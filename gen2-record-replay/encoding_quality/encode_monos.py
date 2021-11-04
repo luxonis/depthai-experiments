@@ -3,7 +3,6 @@ import argparse
 import depthai as dai
 from libraries.depthai_replay import Replay
 from pathlib import Path
-#from skimage.measure import compare_ssim as ssim
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="recordings/720NEW", type=str, help="Path where to store the captured data")
