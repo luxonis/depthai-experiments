@@ -24,20 +24,11 @@ parser.add_argument('-q', '--quality', default="HIGH", type=str, choices=_qualit
                     help='Selects the quality of the recording. Default: %(default)s')
 parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
                     help='Number of frames to record. Record until stopped by default.')
+parser.add_argument('-tl', '--timelapse', type=int, default=-1,
+                    help='Number of seconds to take a photo for timelapse recording. Default: timelapse disabled')
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
 save_path = Path.cwd() / args.path
-
-class FPSHandler:
-    def __init__(self):
-        self.timestamp = time.time()
-        self.start = time.time()
-        self.frame_cnt = 0
-    def next_iter(self):
-        self.timestamp = time.time()
-        self.frame_cnt += 1
-    def fps(self):
-        return self.frame_cnt / (self.timestamp - self.start)
 
 # Host side timestamp frame sync across multiple devices
 def check_sync(queues, timestamp):
@@ -80,6 +71,7 @@ def run_record():
             # Set recording configuration
             # TODO: add support for specifying resolution
             recording.set_fps(args.fps)
+            recording.set_timelapse(args.timelapse)
             recording.set_save_streams(args.save)
             recording.set_quality(EncodingQuality[args.quality])
             recording.start_recording()
@@ -89,16 +81,20 @@ def run_record():
         queues = [q for recording in recordings for q in recording.queues]
         frame_counter = 0
         start_time = time.time()
+        timelapse = 0
         while True:
             try:
                 for q in queues:
+                    if 0 < args.timelapse and time.time() - timelapse < args.timelapse:
+                        continue
                     new_msg = q['q'].tryGet()
                     if new_msg is not None:
                         q['msgs'].append(new_msg)
                         if check_sync(queues, new_msg.getTimestamp()):
                             # Wait for Auto focus/exposure/white-balance
-                            if time.time() - start_time < 1.3: continue
-
+                            if time.time() - start_time < 1.5: continue
+                            # Timelapse
+                            if 0 < args.timelapse: timelapse = time.time()
                             if args.frame_cnt == frame_counter: raise KeyboardInterrupt
                             frame_counter+=1
 
@@ -107,8 +103,8 @@ def run_record():
                                 for stream in recording.queues:
                                     frames[stream['name']] = stream['msgs'].pop(0).getCvFrame()
                                 recording.frame_q.put(frames)
-                if cv2.waitKey(1) == ord('q'):
-                    break
+                # Avoid lazy looping
+                time.sleep(0.001)
             except KeyboardInterrupt:
                 break
 

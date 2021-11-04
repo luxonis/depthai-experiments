@@ -48,6 +48,7 @@ class Record:
     def __init__(self, path, device) -> None:
         self.save = ['color', 'left', 'right']
         self.fps = 30
+        self.timelapse = -1
         self.device = device
         self.quality = EncodingQuality.HIGH
 
@@ -66,6 +67,9 @@ class Record:
             if "disparity" in self.save: self.save.remove("disparity")
             if "depth" in self.save: self.save.remove("depth")
 
+        if 0 < self.timelapse:
+            self.fps = 5
+
         self.pipeline, self.nodes = self.create_pipeline()
 
         self.frame_q = Queue(20)
@@ -75,9 +79,10 @@ class Record:
         self.device.startPipeline(self.pipeline)
 
         self.queues = []
+        maxSize = 1 if 0 < self.timelapse else 10
         for stream in self.save:
             self.queues.append({
-                'q': self.device.getOutputQueue(name=stream, maxSize=10, blocking=False),
+                'q': self.device.getOutputQueue(name=stream, maxSize=maxSize, blocking=False),
                 'msgs': [],
                 'name': stream
             })
@@ -85,6 +90,9 @@ class Record:
 
     def set_fps(self, fps):
         self.fps = fps
+
+    def set_timelapse(self, timelapse):
+        self.timelapse = timelapse
 
     def set_quality(self, quality: EncodingQuality):
         self.quality = quality
