@@ -11,18 +11,19 @@ log = logging.getLogger(__name__)
 
 
 class spatialCoordinates():
-    x = 500
-    y = 500
-    z = 2000
+    x = -18.38
+    y = -272.698
+    z = 1353.0
+
 class generatePoint():
     id = uuid.uuid4()
     label = 'generated_3d_point'
     confidence = 0.6
 
-    xmin = 0.0
-    xmax = 0.0
-    ymin = -0.1
-    ymax= -0.1
+    xmin = 0.32
+    xmax = 0.32
+    ymin = 0.65
+    ymax= 0.65
 
     spatialCoordinates = spatialCoordinates()
 
@@ -98,8 +99,6 @@ class DepthAI:
 
                 if inDet is not None:
                     self.detections = inDet.detections
-                    generatePoint.spatialCoordinates.x = frame.shape[1]/2
-                    generatePoint.spatialCoordinates.y = frame.shape[0]/2
                     self.detections.append(generatePoint)
                 bboxes = []
                 height = frame.shape[0]
@@ -135,8 +134,6 @@ class DepthAIDebug(DepthAI):
         for frame, detections in super().capture():
             self.fps.update()
             for detection in detections:
-                if detection['x_min'] == detection['x_max']:
-                    continue
                 cv2.rectangle(frame, (detection['x_min'], detection['y_min']), (detection['x_max'], detection['y_max']), (0, 255, 0), 2)
                 cv2.putText(frame, "x: {}".format(round(detection['depth_x'], 1)), (detection['x_min'], detection['y_min'] + 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, "y: {}".format(round(detection['depth_y'], 1)), (detection['x_min'], detection['y_min'] + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
