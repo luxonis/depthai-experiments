@@ -42,7 +42,7 @@ pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 # Define a neural network
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(NN_PATH)
+detection_nn.setBlobPath(str(NN_PATH))
 detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
