@@ -4,7 +4,7 @@ This demo recognizes facial emotions (`neutral`, `happy`, `sad`, `surprise`, `an
 
 ## Demo
 
-![Demo]()
+![Demo](https://user-images.githubusercontent.com/18037362/140508779-f9b1465a-8bc1-48e0-8747-80cdb7f2e4fc.png)
 
 ## Installation
 
