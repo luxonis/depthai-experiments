@@ -7,7 +7,7 @@ There are two available blob's for different input sizes:
 * `fast_depth_256x320_openvino_2021.4_6shave`, for 256x320 (H x W) input, which runs with ~30 FPS, and
 * `fast_depth_480x640_openvino_2021.4_6shave`, for 480x640 (H x W) input, which runs with ~10 FPS.
 
-![Image example](imgs/example.gif)
+![Image example](https://user-images.githubusercontent.com/18037362/140495636-0721dea1-7eaf-461e-9a39-23a890513324.gif)
 
 ## Pre-requisites
 
