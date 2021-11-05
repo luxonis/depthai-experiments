@@ -9,7 +9,7 @@ There are two available blob's for different input sizes:
 
 Output of the model is a unnormalized density map of size (INPUT_HEIGHT / 2) x (INPUT_WIDTH / 2). We rescale the input frame to have the same size when showing the demo.
 
-![Image example](imgs/example.gif)
+![Image example](https://user-images.githubusercontent.com/18037362/140496170-6e3ad321-7314-40cb-8cc0-f622464aa4bd.gif)
 
 ## Pre-requisites
 
