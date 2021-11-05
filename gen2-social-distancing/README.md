@@ -6,6 +6,10 @@ Below you can see 3 people in a scene.  DepthAI monitors their 3D positions and 
 
 [![COVID-19 Social Distancing with DepthAI](https://user-images.githubusercontent.com/5244214/90741333-73f89500-e2cf-11ea-919b-b1f47dc55c4a.gif)](https://www.youtube.com/watch?v=-Ut9TemGZ8I "DepthAI Social Distancing Proof of Concept")
 
+# Gen2 Social distancing (3D point Space/ Object added)
+
+An arbitrary 3d point is added in space among the detctions and the same concept is implied to it. Check [Work Safety 2.0 demo](https://drive.google.com/file/d/1bhvD-_UllHx_4qtoaZ83vQCzh2r8OGOR/view?usp=sharing) to see person and 3d point in the scene.
+
 ## Pre-requisites
 
 Purchase a DepthAI model (see https://shop.luxonis.com/)
