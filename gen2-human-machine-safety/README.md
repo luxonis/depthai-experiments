@@ -25,3 +25,17 @@ uses function `def calc_spatials(self, bbox, depth):` to calculate spatial coord
 ```
 
 > Press 'q' to exit the program.
+
+
+# Gen2 Human-Machine safety(Part 2)
+
+This resembles Gen2 Human-Machine safety with the main difference that the bottle is replaced with an arbitrary 3d point in space as the detected dangerous object to meet our special use case.
+
+## Demo:
+Check [Work safety 2.0 3dPointPalmDetection](https://drive.google.com/file/d/1Ydl5rakbUFULtcpFP0scEdzyCzhS6bnA/view?usp=sharing)
+
+## Usage
+
+```bash
+   python3 main_point3d.py
+```
