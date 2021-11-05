@@ -18,8 +18,6 @@ sudo apt-get install python3-pygame
 python3 -m pip install -r requirements.txt
 ```
 
-Note that this experiment uses the `Script` node that is currently in alpha mode, so you have to install the latest `gen2-scripting` branch of the library (you get it by installing `requirements.txt`)
-
 ## Usage
 
 Run the application
