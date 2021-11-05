@@ -56,7 +56,7 @@ def populate_pipeline(p, name, resolution):
     face_nn.passthrough.link(cam_xout.input)
 
     # Script node will take the output from the NN as an input, get the first bounding box
-    # and if the confidence is greater than 0.2, script will send ImageManipConfig to the manip_crop
+    # and send ImageManipConfig to the manip_crop
     image_manip_script = p.create(dai.node.Script)
     image_manip_script.inputs['nn_in'].setBlocking(False)
     image_manip_script.inputs['nn_in'].setQueueSize(1)
