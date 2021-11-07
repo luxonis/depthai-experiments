@@ -78,6 +78,10 @@ monoRight.out.link(xoutRight.input)
 monoLeft.out.link(xoutLeft.input)
 
 device = dai.Device()
+cams = device.getConnectedCameras()
+depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+if not depth_enabled:
+    raise RuntimeError("Unable to run this experiment on device without left & right cameras! (Available cameras: {})".format(cams))
 calibObj = device.readCalibration()
 
 M_left = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoLeftCameraId(), 1280, 720))

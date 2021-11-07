@@ -234,13 +234,18 @@ def convert_to_cv2_frame(name, image):
             last_rectif_right = frame
     return frame
 
-def test_pipeline():
-   #pipeline, streams = create_rgb_cam_pipeline()
-   #pipeline, streams = create_mono_cam_pipeline()
-    pipeline, streams = create_stereo_depth_pipeline(source_camera)
 
+def test_pipeline():
     print("Creating DepthAI device")
     with dai.Device() as device:
+        cams = device.getConnectedCameras()
+        depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+        if depth_enabled:
+            pipeline, streams = create_stereo_depth_pipeline(source_camera)
+        else:
+            pipeline, streams = create_rgb_cam_pipeline()
+        #pipeline, streams = create_mono_cam_pipeline()
+
         print("Starting pipeline")
         device.startPipeline(pipeline)
 

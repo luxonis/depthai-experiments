@@ -106,7 +106,12 @@ xout_nn.input.setBlocking(False)
 detection_nn.out.link(xout_nn.input)
 
 # Pipeline defined, now the device is assigned and pipeline is started
-with dai.Device(pipeline) as device:
+with dai.Device(pipeline.getOpenVINOVersion()) as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+    if cam_source != "rgb" and not depth_enabled:
+        raise RuntimeError("Unable to run the experiment on {} camera! Available cameras: {}".format(cam_source, cams))
+    device.startPipeline(pipeline)
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     q_nn_input = device.getOutputQueue(name="nn_input", maxSize=4, blocking=False)

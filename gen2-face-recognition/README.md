@@ -3,7 +3,28 @@
 Face recognition
 ================
 
-This example demonstrates the Gen2 Pipeline Builder running [face detection network](https://docs.openvinotoolkit.org/latest/omz_models_model_face_detection_retail_0004.html)  ,[head posture estimation network](https://docs.openvinotoolkit.org/latest/omz_models_model_head_pose_estimation_adas_0001.html) and [face recognition network](https://docs.openvinotoolkit.org/latest/omz_models_model_face_recognition_mobilefacenet_arcface.html)
+This example demonstrates the Gen2 Pipeline Builder running [face detection network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_detection_retail_0004.html), [head posture estimation network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_head_pose_estimation_adas_0001.html) and [face recognition network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_recognition_mobilefacenet_arcface.html)
+
+## Demo
+
+[![Face recognition](https://user-images.githubusercontent.com/18037362/134054837-eed40899-7c1d-4160-aaf0-1d7c405bb7f4.gif)](https://www.youtube.com/watch?v=HNAeBwNCRek "Face recognition")
+
+## Usage
+
+```bash
+usage: main.py [-name NAME]
+
+optional arguments:
+  -name, --name     Name of the person for database saving [Optional]
+
+```
+
+**Before this example works, you have to "teach" it what face to associate with which name:**
+
+1. Run `python3 main.py --name JohnDoe`. Then you should face the camera to JohnDoe from different angles, so he will later be recognized from different angles as well. This will just save (his) face vectors to the person's databse (in this case `JohnDoe.npz`).
+2. Repeat step 1 for other people you would like to recognize
+3. Run `python3 main.py` for face recognition demo. Whenever the device sees a new face, it will calculate the face vector (arcface NN model) and it will get compared with other vectors from the databases (`.npz`) using cosine distance.
+
 
 ## How it works:
 
@@ -32,48 +53,8 @@ This example demonstrates the Gen2 Pipeline Builder running [face detection netw
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-   ```bash
-   python3 -m pip install -r requirements.txt
-   ```
-
-
-## Usage
+Install requirements
 
 ```bash
-usage: main.py [-h] [-nd] [-cam] [-vid VIDEO]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -nd, --no-debug       prevent debug output
-  -cam, --camera        Use DepthAI 4K RGB camera for inference (conflicts with -vid)
-  -vid VIDEO, --video VIDEO
-                        The path of the video file used for inference (conflicts with -cam)
-  -db, --databases      Save data (only used when running recognition network)
-  -n NAME, --name NAME  Data name (used with -db) [Optional]
-
+python3 -m pip install -r requirements.txt
 ```
-
-To use with video files and build a face database
-```bash
-python main.py -db -n <name> -vid <path>
-```
-
-To use with DepthAI 4K RGB camera, use instead
-```bash
-python main.py -db -n <name> -cam
-```
-
-To use with a video file, run the script with the following arguments
-
-```bash
-python main.py -vid <path>
-```
-
-To use with DepthAI 4K RGB camera, use instead
-```bash
-python main.py -cam
-```
-
-> Press 'q' to exit the program.

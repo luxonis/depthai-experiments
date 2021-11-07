@@ -1,0 +1,4 @@
+opencv-python
+depthai==2.11.1.0
+gdown
+numpy

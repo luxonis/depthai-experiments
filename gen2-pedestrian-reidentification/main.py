@@ -45,7 +45,6 @@ def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
-    pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2020_1)
 
     if camera:
         # ColorCamera

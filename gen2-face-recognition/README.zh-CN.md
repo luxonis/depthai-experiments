@@ -5,6 +5,9 @@
 
 该示例演示了Gen2 Pipeline Builder运行的人[face detection network](https://docs.openvinotoolkit.org/latest/omz_models_model_face_detection_retail_0004.html)  ,[head posture estimation network](https://docs.openvinotoolkit.org/latest/omz_models_model_head_pose_estimation_adas_0001.html) 和 [face recognition network](https://docs.openvinotoolkit.org/latest/omz_models_model_face_recognition_mobilefacenet_arcface.html)
 
+
+[![Face recognition](https://user-images.githubusercontent.com/18037362/134054837-eed40899-7c1d-4160-aaf0-1d7c405bb7f4.gif)](https://www.youtube.com/watch?v=HNAeBwNCRek "Face recognition")
+
 ## 这个怎么运作:
 
 ### 1. 运行人脸检测模型

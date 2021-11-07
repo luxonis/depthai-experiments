@@ -1,14 +1,57 @@
 #!/usr/bin/env python3
 
 import cv2
+import argparse
 import numpy as np
 import numba as nb
 import depthai as dai
 
+''' User controls
+'C' - to capture a set of images (from isp and/or raw streams)
+'T' - to trigger autofocus
+'IOKL,.' for manual exposure/focus:
+  Control:      key[dec/inc]  min..max
+  exposure time:     I   O      1..33000 [us]
+  sensitivity iso:   K   L    100..1600
+  focus:             ,   .      0..255 [far..near]
+To go back to auto controls:
+  'E' - autoexposure
+  'F' - autofocus (continuous)
+Other controls:
+'1' - AWB lock (true / false)
+'2' - AE lock (true / false)
+'3' - Select control: AWB mode
+'4' - Select control: AE compensation
+'5' - Select control: anti-banding/flicker mode
+'6' - Select control: effect mode
+'7' - Select control: brightness
+'8' - Select control: contrast
+'9' - Select control: saturation
+'0' - Select control: sharpness
+'[' - Select control: luma denoise
+']' - Select control: chroma denoise
+
+For the 'Select control: ...' options, use these keys to modify the value:
+  '-' or '_' to decrease
+  '+' or '=' to increase
+'''
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k', '12mp'},
+                    help="Select RGB resolution. Default: %(default)s")
+parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
+                    help='Enable the color RAW stream')
+parser.add_argument('-lens', '--lens_position', default=130, type=int,
+                    help="Initial lens position for manual focus, 0..255. Default: %(default)s")
+parser.add_argument('-ds', '--isp_downscale', default=1, type=int,
+                    help="Downscale the ISP output by this factor")
+args = parser.parse_args()
+
 streams = []
 # Enable one or both streams
 streams.append('isp')
-streams.append('raw')
+if args.enable_raw:
+    streams.append('raw')
 
 ''' Packing scheme for RAW10 - MIPI CSI-2
 - 4 pixels: p0[9:0], p1[9:0], p2[9:0], p3[9:0]
@@ -32,10 +75,27 @@ def unpack_raw10(input, out, expand16bit):
     return out
 
 print("depthai version:", dai.__version__)
+
+rgb_res_opts = {
+    '1080': dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+    '4k'  : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+    '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+}
+rgb_res = rgb_res_opts.get(args.resolution)
+
 pipeline = dai.Pipeline()
 
 cam = pipeline.createColorCamera()
-cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
+cam.setResolution(rgb_res)
+# Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
+cam.initialControl.setManualFocus(args.lens_position)
+cam.setIspScale(1, args.isp_downscale)
+#cam.setFps(20.0)  # Default: 30
+
+# Camera control input
+control = pipeline.createXLinkIn()
+control.setStreamName('control')
+control.out.link(cam.inputControl)
 
 if 'isp' in streams:
     xout_isp = pipeline.createXLinkOut()
@@ -47,8 +107,7 @@ if 'raw' in streams:
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 
-device = dai.Device()
-device.startPipeline(pipeline)
+device = dai.Device(pipeline)
 
 q_list = []
 for s in streams:
@@ -57,6 +116,76 @@ for s in streams:
     # Make window resizable, and configure initial size
     cv2.namedWindow(s, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(s, (960, 540))
+
+controlQueue = device.getInputQueue('control')
+
+# Manual exposure/focus set step, configurable
+EXP_STEP = 500  # us
+ISO_STEP = 50
+LENS_STEP = 3
+
+# Defaults and limits for manual focus/exposure controls
+lens_pos = 150
+lens_min = 0
+lens_max = 255
+
+exp_time = 20000
+exp_min = 1
+# Note: need to reduce FPS (see .setFps) to be able to set higher exposure time
+# With the custom FW, larger exposures can be set automatically (requirements not yet updated)
+exp_max = 1000000 #33000
+
+sens_iso = 800
+sens_min = 100
+sens_max = 3200
+
+# TODO how can we make the enums automatically iterable?
+awb_mode_idx = -1
+awb_mode_list = [
+    dai.CameraControl.AutoWhiteBalanceMode.OFF,
+    dai.CameraControl.AutoWhiteBalanceMode.AUTO,
+    dai.CameraControl.AutoWhiteBalanceMode.INCANDESCENT,
+    dai.CameraControl.AutoWhiteBalanceMode.FLUORESCENT,
+    dai.CameraControl.AutoWhiteBalanceMode.WARM_FLUORESCENT,
+    dai.CameraControl.AutoWhiteBalanceMode.DAYLIGHT,
+    dai.CameraControl.AutoWhiteBalanceMode.CLOUDY_DAYLIGHT,
+    dai.CameraControl.AutoWhiteBalanceMode.TWILIGHT,
+    dai.CameraControl.AutoWhiteBalanceMode.SHADE,
+]
+
+anti_banding_mode_idx = -1
+anti_banding_mode_list = [
+    dai.CameraControl.AntiBandingMode.OFF,
+    dai.CameraControl.AntiBandingMode.MAINS_50_HZ,
+    dai.CameraControl.AntiBandingMode.MAINS_60_HZ,
+    dai.CameraControl.AntiBandingMode.AUTO,
+]
+
+effect_mode_idx = -1
+effect_mode_list = [
+    dai.CameraControl.EffectMode.OFF,
+    dai.CameraControl.EffectMode.MONO,
+    dai.CameraControl.EffectMode.NEGATIVE,
+    dai.CameraControl.EffectMode.SOLARIZE,
+    dai.CameraControl.EffectMode.SEPIA,
+    dai.CameraControl.EffectMode.POSTERIZE,
+    dai.CameraControl.EffectMode.WHITEBOARD,
+    dai.CameraControl.EffectMode.BLACKBOARD,
+    dai.CameraControl.EffectMode.AQUA,
+]
+
+ae_comp = 0  # Valid: -9 .. +9
+ae_lock = False
+awb_lock = False
+saturation = 0
+contrast = 0
+brightness = 0
+sharpness = 0
+luma_denoise = 0
+chroma_denoise = 0
+control = 'none'
+
+def clamp(num, v0, v1): return max(v0, min(num, v1))
 
 capture_flag = False
 while True:
@@ -105,5 +234,118 @@ while True:
     key = cv2.waitKey(1)
     if key == ord('c'):
         capture_flag = True
-    if key == ord('q'):
+    elif key == ord('t'):
+        print("Autofocus trigger (and disable continuous)")
+        ctrl = dai.CameraControl()
+        ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+        ctrl.setAutoFocusTrigger()
+        controlQueue.send(ctrl)
+    elif key == ord('f'):
+        print("Autofocus enable, continuous")
+        ctrl = dai.CameraControl()
+        ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO)
+        controlQueue.send(ctrl)
+    elif key == ord('e'):
+        print("Autoexposure enable")
+        ctrl = dai.CameraControl()
+        ctrl.setAutoExposureEnable()
+        controlQueue.send(ctrl)
+    elif key in [ord(','), ord('.')]:
+        if key == ord(','): lens_pos -= LENS_STEP
+        if key == ord('.'): lens_pos += LENS_STEP
+        lens_pos = clamp(lens_pos, lens_min, lens_max)
+        print("Setting manual focus, lens position:", lens_pos)
+        ctrl = dai.CameraControl()
+        ctrl.setManualFocus(lens_pos)
+        controlQueue.send(ctrl)
+    elif key in [ord('i'), ord('o'), ord('k'), ord('l')]:
+        if key == ord('i'): exp_time -= EXP_STEP
+        if key == ord('o'): exp_time += EXP_STEP
+        if key == ord('k'): sens_iso -= ISO_STEP
+        if key == ord('l'): sens_iso += ISO_STEP
+        exp_time = clamp(exp_time, exp_min, exp_max)
+        sens_iso = clamp(sens_iso, sens_min, sens_max)
+        print("Setting manual exposure, time:", exp_time, "iso:", sens_iso)
+        ctrl = dai.CameraControl()
+        ctrl.setManualExposure(exp_time, sens_iso)
+        controlQueue.send(ctrl)
+    elif key == ord('1'):
+        awb_lock = not awb_lock
+        print("Auto white balance lock:", awb_lock)
+        ctrl = dai.CameraControl()
+        ctrl.setAutoWhiteBalanceLock(awb_lock)
+        controlQueue.send(ctrl)
+    elif key == ord('2'):
+        ae_lock = not ae_lock
+        print("Auto exposure lock:", ae_lock)
+        ctrl = dai.CameraControl()
+        ctrl.setAutoExposureLock(ae_lock)
+        controlQueue.send(ctrl)
+    elif key >= 0 and chr(key) in '34567890[]':
+        if   key == ord('3'): control = 'awb_mode'
+        elif key == ord('4'): control = 'ae_comp'
+        elif key == ord('5'): control = 'anti_banding_mode'
+        elif key == ord('6'): control = 'effect_mode'
+        elif key == ord('7'): control = 'brightness'
+        elif key == ord('8'): control = 'contrast'
+        elif key == ord('9'): control = 'saturation'
+        elif key == ord('0'): control = 'sharpness'
+        elif key == ord('['): control = 'luma_denoise'
+        elif key == ord(']'): control = 'chroma_denoise'
+        print("Selected control:", control)
+    elif key in [ord('-'), ord('_'), ord('+'), ord('=')]:
+        change = 0
+        if key in [ord('-'), ord('_')]: change = -1
+        if key in [ord('+'), ord('=')]: change = 1
+        ctrl = dai.CameraControl()
+        if control == 'none':
+            print("Please select a control first using keys 3..9 0 [ ]")
+        elif control == 'ae_comp':
+            ae_comp = clamp(ae_comp + change, -9, 9)
+            print("Auto exposure compensation:", ae_comp)
+            ctrl.setAutoExposureCompensation(ae_comp)
+        elif control == 'anti_banding_mode':
+            cnt = len(anti_banding_mode_list)
+            anti_banding_mode_idx = (anti_banding_mode_idx + cnt + change) % cnt
+            anti_banding_mode = anti_banding_mode_list[anti_banding_mode_idx]
+            print("Anti-banding mode:", anti_banding_mode)
+            ctrl.setAntiBandingMode(anti_banding_mode)
+        elif control == 'awb_mode':
+            cnt = len(awb_mode_list)
+            awb_mode_idx = (awb_mode_idx + cnt + change) % cnt
+            awb_mode = awb_mode_list[awb_mode_idx]
+            print("Auto white balance mode:", awb_mode)
+            ctrl.setAutoWhiteBalanceMode(awb_mode)
+        elif control == 'effect_mode':
+            cnt = len(effect_mode_list)
+            effect_mode_idx = (effect_mode_idx + cnt + change) % cnt
+            effect_mode = effect_mode_list[effect_mode_idx]
+            print("Effect mode:", effect_mode)
+            ctrl.setEffectMode(effect_mode)
+        elif control == 'brightness':
+            brightness = clamp(brightness + change, -10, 10)
+            print("Brightness:", brightness)
+            ctrl.setBrightness(brightness)
+        elif control == 'contrast':
+            contrast = clamp(contrast + change, -10, 10)
+            print("Contrast:", contrast)
+            ctrl.setContrast(contrast)
+        elif control == 'saturation':
+            saturation = clamp(saturation + change, -10, 10)
+            print("Saturation:", saturation)
+            ctrl.setSaturation(saturation)
+        elif control == 'sharpness':
+            sharpness = clamp(sharpness + change, 0, 4)
+            print("Sharpness:", sharpness)
+            ctrl.setSharpness(sharpness)
+        elif control == 'luma_denoise':
+            luma_denoise = clamp(luma_denoise + change, 0, 4)
+            print("Luma denoise:", luma_denoise)
+            ctrl.setLumaDenoise(luma_denoise)
+        elif control == 'chroma_denoise':
+            chroma_denoise = clamp(chroma_denoise + change, 0, 4)
+            print("Chroma denoise:", chroma_denoise)
+            ctrl.setChromaDenoise(chroma_denoise)
+        controlQueue.send(ctrl)
+    elif key == ord('q'):
         break
