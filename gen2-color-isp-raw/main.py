@@ -41,6 +41,8 @@ parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k
                     help="Select RGB resolution. Default: %(default)s")
 parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
+parser.add_argument('-fps', '--fps', default=15, type=int,
+                    help="Camera FPS. Default: %(default)s")
 parser.add_argument('-lens', '--lens_position', default=130, type=int,
                     help="Initial lens position for manual focus, 0..255. Default: %(default)s")
 parser.add_argument('-ds', '--isp_downscale', default=1, type=int,
@@ -90,7 +92,7 @@ cam.setResolution(rgb_res)
 # Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
 cam.initialControl.setManualFocus(args.lens_position)
 cam.setIspScale(1, args.isp_downscale)
-#cam.setFps(20.0)  # Default: 30
+cam.setFps(args.fps)  # Default: 30
 
 # Camera control input
 control = pipeline.createXLinkIn()
@@ -133,11 +135,11 @@ exp_time = 20000
 exp_min = 1
 # Note: need to reduce FPS (see .setFps) to be able to set higher exposure time
 # With the custom FW, larger exposures can be set automatically (requirements not yet updated)
-exp_max = 1000000 #33000
+exp_max = int(0.99 * 1000000 / args.fps)
 
 sens_iso = 800
 sens_min = 100
-sens_max = 3200
+sens_max = 1600
 
 # TODO how can we make the enums automatically iterable?
 awb_mode_idx = -1
