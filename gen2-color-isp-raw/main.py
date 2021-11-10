@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 import numba as nb
 import depthai as dai
+from pathlib import Path
 
 ''' User controls
 'C' - to capture a set of images (from isp and/or raw streams)
@@ -47,6 +48,8 @@ parser.add_argument('-lens', '--lens_position', default=130, type=int,
                     help="Initial lens position for manual focus, 0..255. Default: %(default)s")
 parser.add_argument('-ds', '--isp_downscale', default=1, type=int,
                     help="Downscale the ISP output by this factor")
+parser.add_argument('-tun', '--camera_tuning', type=Path,
+                    help="Path to custom camera tuning database")
 args = parser.parse_args()
 
 streams = []
@@ -86,6 +89,9 @@ rgb_res_opts = {
 rgb_res = rgb_res_opts.get(args.resolution)
 
 pipeline = dai.Pipeline()
+
+if args.camera_tuning:
+    pipeline.setCameraTuningBlobPath(str(args.camera_tuning))
 
 cam = pipeline.createColorCamera()
 cam.setResolution(rgb_res)
