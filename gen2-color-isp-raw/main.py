@@ -44,12 +44,15 @@ parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
 parser.add_argument('-fps', '--fps', default=15, type=int,
                     help="Camera FPS. Default: %(default)s")
-parser.add_argument('-lens', '--lens_position', default=130, type=int,
-                    help="Initial lens position for manual focus, 0..255. Default: %(default)s")
+parser.add_argument('-lens', '--lens_position', default=-1, type=int,
+                    help="Lens position for manual focus 0..255, or auto: -1. Default: %(default)s")
 parser.add_argument('-ds', '--isp_downscale', default=1, type=int,
                     help="Downscale the ISP output by this factor")
 parser.add_argument('-tun', '--camera_tuning', type=Path,
                     help="Path to custom camera tuning database")
+parser.add_argument('-rot', '--rotate', action='store_true',
+                    help="Camera image orientation set to 180 degrees rotation")
+
 args = parser.parse_args()
 
 streams = []
@@ -96,9 +99,12 @@ if args.camera_tuning:
 cam = pipeline.createColorCamera()
 cam.setResolution(rgb_res)
 # Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
-cam.initialControl.setManualFocus(args.lens_position)
+if args.lens_position >= 0:
+    cam.initialControl.setManualFocus(args.lens_position)
 cam.setIspScale(1, args.isp_downscale)
 cam.setFps(args.fps)  # Default: 30
+if args.rotate:
+    cam.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
 # Camera control input
 control = pipeline.createXLinkIn()
