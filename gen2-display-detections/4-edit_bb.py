@@ -14,15 +14,12 @@ NN_SIZE = (300,300)
 
 # Create pipeline
 pipeline = dai.Pipeline()
-pipeline.setXLinkChunkSize(0)
 
-# Define sources and outputs
 camRgb = pipeline.createColorCamera()
 camRgb.setPreviewSize(NN_SIZE)
 camRgb.setInterleaved(False)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-# camRgb.setIspScale(1,3) # You don't need to downscale (4k -> 720P) video frames
-camRgb.setFps(40)
+camRgb.setIspScale(1,3) # You don't need to downscale (4k -> 720P) video frames
 
 xoutFrames = pipeline.createXLinkOut()
 xoutFrames.setStreamName("frames")
@@ -75,7 +72,6 @@ with dai.Device(pipeline) as device:
 
     while True:
         frame = qFrames.get().getCvFrame()
-        print(frame.shape)
 
         inDet = qDet.tryGet()
         if inDet is not None:
@@ -87,7 +83,7 @@ with dai.Device(pipeline) as device:
             displayFrame('Passthrough', inPass.getCvFrame())
 
         # If the frame is available, draw bounding boxes on it and show the frame
-        text.putText(frame, "NN fps: {:.2f}".format(fps.fps()), (5, 25))
+        text.putText(frame, "NN fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4))
         displayFrame("Frame", frame)
 
         if cv2.waitKey(1) == ord('q'):

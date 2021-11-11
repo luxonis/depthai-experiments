@@ -13,7 +13,6 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 # Create pipeline
 pipeline = dai.Pipeline()
 
-# Define sources and outputs
 camRgb = pipeline.createColorCamera()
 camRgb.setPreviewSize(300, 300)
 camRgb.setInterleaved(False)
@@ -25,6 +24,7 @@ nn.setConfidenceThreshold(0.5)
 nn.setBlobPath(str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6)))
 camRgb.preview.link(nn.input)
 
+# Send passthrough frames to the host, so frames are in sync with bounding boxes
 passthroughOut = pipeline.createXLinkOut()
 passthroughOut.setStreamName("pass")
 nn.passthrough.link(passthroughOut.input)

@@ -13,15 +13,13 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 # Create pipeline
 pipeline = dai.Pipeline()
 
-# Define sources and outputs
 camRgb = pipeline.createColorCamera()
 camRgb.setPreviewSize(300, 300)
 camRgb.setInterleaved(False)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-camRgb.setIspScale(1,3) # You don't need to downscale (4k -> 720P) video frames
-# Crop video to match aspect ratio of aspect ratio of preview (1:1)
-camRgb.setVideoSize(720,720)
-camRgb.setFps(40)
+camRgb.setIspScale(1, 3) # You don't need to downscale (4k -> 720P) video frames
+# Squeeze the frame
+camRgb.setPreviewKeepAspectRatio(False)
 
 xoutFrames = pipeline.createXLinkOut()
 xoutFrames.setStreamName("frames")

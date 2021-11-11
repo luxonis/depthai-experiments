@@ -13,14 +13,13 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 # Create pipeline
 pipeline = dai.Pipeline()
 
-# Define sources and outputs
 camRgb = pipeline.createColorCamera()
 camRgb.setPreviewSize(300, 300)
 camRgb.setInterleaved(False)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-camRgb.setIspScale(2,7) # You don't need to downscale (4k -> 1098x618) video frames
-camRgb.setPreviewKeepAspectRatio(False)
-camRgb.setFps(40)
+camRgb.setIspScale(1,3) # You don't need to downscale (4k -> 720P) video frames
+# Crop video to match aspect ratio of aspect ratio of preview (1:1)
+camRgb.setVideoSize(720,720)
 
 xoutFrames = pipeline.createXLinkOut()
 xoutFrames.setStreamName("frames")
@@ -67,7 +66,6 @@ with dai.Device(pipeline) as device:
 
     while True:
         frame = qFrames.get().getCvFrame()
-        print(frame.shape)
 
         inDet = qDet.tryGet()
         if inDet is not None:
@@ -78,7 +76,7 @@ with dai.Device(pipeline) as device:
         if inPass is not None:
             displayFrame('Passthrough', inPass.getCvFrame())
 
-        # If the frame is available, draw bounding boxes on it and show the frame
+        # Draw bounding boxes on high-res frame and show it
         text.putText(frame, "NN fps: {:.2f}".format(fps.fps()), (2, frame.shape[0] - 4))
         displayFrame("Frame", frame)
 
