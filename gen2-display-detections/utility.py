@@ -17,7 +17,7 @@ class TextHelper:
 
 class FPSHandler:
     def __init__(self):
-        self.timestamp = time.time()
+        self.timestamp = time.time() + 1
         self.start = time.time()
         self.frame_cnt = 0
     def next_iter(self):
