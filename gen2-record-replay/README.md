@@ -4,7 +4,9 @@ These tools allow you to record encoded and synced camera streams and replay the
 
 ### Recording
 
-When running `record.py`, it will record encoded streams from all devices and will synchronize all streams across all devices on the host. Recordings will be saved in the specified folder (with `-p`, by default that folder is `recordings/`). Recordings will be saved as MJPEG (motion JPEG) files or H265, depending on the quality of the recording. You can manually use `ffmpeg` to convert these `.mjpeg` recordings to `.mp4`.
+When running `record.py`, it will record encoded streams from all devices and will synchronize all streams across all devices on the host. Recordings will be saved in the specified folder (with `-p`, by default that folder is `recordings/`). Recordings will be saved as MJPEG (motion JPEG) files or H265, depending on the quality of the recording. You can manually use `ffmpeg` to convert these `.mjpeg` recordings to `.mp4`. If you enable depth, program will save into rosbag (`.bag`), which you can open with [RealSense Viewer](https://www.intelrealsense.com/sdk-2/#sdk2-tools):
+
+![depth gif](https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif)
 
 #### Record usage
 ```

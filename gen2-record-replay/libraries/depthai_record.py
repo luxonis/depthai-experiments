@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
+from threading import Thread
 import depthai as dai
 from enum import Enum
 import cv2
@@ -11,46 +12,8 @@ class EncodingQuality(Enum):
     MEDIUM = 3 # MJPEG Quality=93
     LOW = 4 # H265 BitrateKbps=10000
 
-# path: Folder to where we save our streams
-# frame_q: Queue of synced frames to be saved
-# Nodes
-# encode: Array of strings; which streams are encoded
-def store_frames(path: Path, frame_q, quality: EncodingQuality, rotate:int, depthaiBags = None):
-    files = {}
 
-    def create_video_file(name):
-        if name == 'depth':
-            files[name] = depthaiBags
-        else:
-            ext = 'h265' if quality == EncodingQuality.LOW else 'mjpeg'
-            files[name] = open(str(path / f"{name}.{ext}"), 'wb')
-        # if name == "color": fourcc = "I420"
-        # elif name == "depth": fourcc = "Y16 " # 16-bit uncompressed greyscale image
-        # else : fourcc = "GREY" #Simple, single Y plane for monochrome images.
-        # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
-
-    while True:
-        try:
-            frames = frame_q.get()
-            if frames is None:
-                break
-            for name in frames:
-                if name not in files: # File wasn't created yet
-                    create_video_file(name)
-
-                if rotate != -1:
-                    cv2.rotate(frames[name], rotate, dst=frames[name])
-
-                files[name].write(frames[name])
-                # frames[name].tofile(files[name])
-        except KeyboardInterrupt:
-            break
-    # Close all files - Can't use ExitStack with VideoWriter
-    for name in files:
-        files[name].close()
-    print('Exiting store frame process')
-
-class Record:
+class Record():
     def __init__(self, path: Path, device) -> None:
         self.save = ['color', 'left', 'right']
         self.fps = 30
@@ -67,7 +30,41 @@ class Record:
 
         self.convert_mp4 = False
 
-    def start_recording(self):
+    def run(self):
+        files = {}
+        def create_video_file(name):
+            if name == 'depth':
+                files[name] = self.depthAiBag
+            else:
+                ext = 'h265' if self.quality == EncodingQuality.LOW else 'mjpeg'
+                files[name] = open(str(self.path / f"{name}.{ext}"), 'wb')
+            # if name == "color": fourcc = "I420"
+            # elif name == "depth": fourcc = "Y16 " # 16-bit uncompressed greyscale image
+            # else : fourcc = "GREY" #Simple, single Y plane for monochrome images.
+            # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
+
+        while True:
+            try:
+                frames = self.frame_q.get()
+                if frames is None:
+                    break
+                for name in frames:
+                    if name not in files: # File wasn't created yet
+                        create_video_file(name)
+
+                    # if self.rotate != -1: # Doesn't work atm
+                    #     frames[name] = cv2.rotate(frames[name], self.rotate)
+
+                    files[name].write(frames[name])
+                    # frames[name].tofile(files[name])
+            except KeyboardInterrupt:
+                break
+        # Close all files - Can't use ExitStack with VideoWriter
+        for name in files:
+            files[name].close()
+        print('Exiting store frame thread')
+
+    def start(self):
         if not self.stereo: # If device doesn't have stereo camera pair
             if "left" in self.save: self.save.remove("left")
             if "right" in self.save: self.save.remove("right")
@@ -79,18 +76,15 @@ class Record:
 
         self.pipeline, self.nodes = self.create_pipeline()
 
-        depthbags = None
         if "depth" in self.save:
             from libraries.depthai_rosbags import DepthAiBags
             res = self.get_sizes()['depth']
-            print(self.rotate)
             # If rotate 90 degrees
             if self.rotate in [0,2]: res = (res[1], res[0])
-            print('res', res)
-            depthbags = DepthAiBags(self.path, self.device, res)
+            self.depthAiBag = DepthAiBags(self.path, self.device, res)
 
         self.frame_q = Queue(20)
-        self.process = Process(target=store_frames, args=(self.path, self.frame_q, self.quality, self.rotate, depthbags))
+        self.process = Thread(target=self.run)
         self.process.start()
 
         self.device.startPipeline(self.pipeline)
@@ -116,11 +110,13 @@ class Record:
 
     '''
     Available values for `angle`:
-    - cv2.ROTATE_90_CLOCKWISE (1)
-    - cv2.ROTATE_180 (2)
-    - cv2.ROTATE_90_COUNTERCLOCKWISE (3)
+    - cv2.ROTATE_90_CLOCKWISE (0)
+    - cv2.ROTATE_180 (1)
+    - cv2.ROTATE_90_COUNTERCLOCKWISE (2)
     '''
     def set_rotate(self, angle):
+        raise Exception("Rotating not yet supported!")
+        # Currently RealSense Viewer throws error "memory access violation". Debug.
         self.rotate = angle
 
     # Which streams to save to the disk (on the host)
@@ -152,7 +148,7 @@ class Record:
 
         def create_mono(name):
             nodes[name] = pipeline.createMonoCamera()
-            nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+            nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
             nodes[name].setFps(self.fps)

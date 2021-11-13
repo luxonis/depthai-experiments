@@ -23,3 +23,10 @@ All file sizes are estimation and will vary a bit case-by-case. **Sizes are for 
 ![comparison marked](comparison_chart_marked.jpg)
 
 There is also a `.odb` (LibreOffice Calc format) file which contains all the testing results and a chart.
+
+### Depth saving
+
+When you enable saving depth, it will get recorded into a rosbag (`.bag`). This allows you to use [RealSense Viewer](https://www.intelrealsense.com/sdk-2/#sdk2-tools) to view the depth recording. Depth frames won't be compressed, and each frame will consume about 1.8 MB @ 720P (each pixel is 2 bytes, `1280x720x2=1.8MB`).
+
+![depth gif](https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif)
+

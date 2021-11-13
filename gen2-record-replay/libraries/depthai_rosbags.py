@@ -29,7 +29,6 @@ class DepthAiBags:
         self.close()
 
     def __init__(self, path: Path, device, resolution, overwrite = False):
-        print(path)
         if not str(path).endswith('.bag'):
             path = path / 'depth.bag'
 
@@ -41,11 +40,12 @@ class DepthAiBags:
 
         self.start_nanos = time.time_ns()
         self.writer = Writer(path)
+        # Compression will cause error in RealSense
         # self.writer.set_compression(Writer.CompressionFormat.LZ4)
         self.writer.open()
 
         # sensor_msgs__msg__CameraInfo won't work, as parameters (eg. D, K, R) are in lowercase (d, k, r), so
-        # realsense viewer doesn't recognize the msg
+        # RealSense Viewer doesn't recognize the msg
         self.dir = os.path.dirname(os.path.realpath(__file__))
         register_types(get_types_from_msg((Path(self.dir) / 'msgs' / 'CameraInfo.msg').read_text(), 'sensor_msgs/msg/CamInfo'))
         from rosbags.typesys.types import sensor_msgs__msg__CamInfo as CamInfo
@@ -57,8 +57,6 @@ class DepthAiBags:
         self.write_uint32('/file_version', 2)
         self.write_keyvalues('/device_0/info', {
             'Name': 'OAK-D',
-            'Serial Number': device.getMxId(),
-            'Library Version': dai.__version__,
             'Location': '',
             'Debug Op Code': 0,
             'Advanced Mode': 'YES',
@@ -69,6 +67,8 @@ class DepthAiBags:
         self.write_keyvalues('/device_0/sensor_0/info', {'Name': 'Stereo'})
         self.write_keyvalues('/device_0/sensor_0/property', {
             'Depth Units': '0.001000',
+            # 'Serial Number': device.getMxId(),
+            # 'Library Version': dai.__version__,
             # 'Exposure': '8000.000000',
             # 'Gain': '16.0',
             # 'Enable Auto Exposure': '0.000000',
@@ -153,7 +153,7 @@ class DepthAiBags:
         dist = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
 
         # Intrinsic camera matrix
-        M_right = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, 1280, 720))
+        M_right = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, resolution[0], resolution[1]))
 
         R1 = np.array(calibData.getStereoLeftRectificationRotation())
 
@@ -186,7 +186,7 @@ class DepthAiBags:
                 width=w,
                 encoding='mono16',
                 is_bigendian=0,
-                step=2560,
+                step=w*2,
                 data=frame.flatten().view(dtype=np.int8))
         type = Image.__msgtype__
         self._write(self.depth_conn, type, img)

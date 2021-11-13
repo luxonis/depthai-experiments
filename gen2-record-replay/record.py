@@ -74,8 +74,7 @@ def run_record():
             recording.set_timelapse(args.timelapse)
             recording.set_save_streams(args.save)
             recording.set_quality(EncodingQuality[args.quality])
-            recording.set_rotate(cv2.ROTATE_90_CLOCKWISE)
-            recording.start_recording()
+            recording.start()
 
             recordings.append(recording)
 
