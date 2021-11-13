@@ -1,12 +1,12 @@
 ### Encoded mono streams quality
 
-We have been tested how the encoding of mono frames affects the disparity quality. For that, we have recorded raw mono and disparity stream, encoded mono streams with different profiles/quality and then compared the resulting disparity with the raw disparity using [SSIM](https://en.wikipedia.org/wiki/Structural_similarity) from Skimage package.
+We have been tested how the encoding of mono frames affects the disparity quality. For that, we have recorded raw mono and disparity stream, encoded mono streams with different profiles/quality and then compared the resulting "reconstructed" disparity with the raw disparity (ground-trouth) using [SSIM](https://en.wikipedia.org/wiki/Structural_similarity) from Skimage package.
 
 ## Results
 
 ![comparison](comparison_chart.jpg)
 
-The **Y axis** represents the SSIM score, 1 means that disparity from encoded mono stream is identical to raw disparity stream. There is a yellow triangle (MJPEG) that has SSIM score of 1; that is the lossless MJPEG option (`encoder.setLossless(True)`).
+The **Y axis** represents the SSIM score, 1 means that reconstructed disparity from encoded mono stream is identical to raw disparity stream. There is a yellow triangle (MJPEG) that has SSIM score of 1; that is the lossless MJPEG option (`encoder.setLossless(True)`).
 The **X axis** represents the size of the 2 mono streams at 720P, 150 frames in total (so 5 seconds of 30FPS footage). Less is better.
 
 So we abstracted these configurations into 4 user options - qualities of encoding - when using `depthai_record` module:

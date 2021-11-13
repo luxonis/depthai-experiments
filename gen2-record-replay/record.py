@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import argparse
-import cv2
 import depthai as dai
 from datetime import timedelta
 import contextlib
 import math
 import time
 from pathlib import Path
+import cv2
 
 # DepthAI Record library
 from libraries.depthai_record import EncodingQuality, Record
@@ -67,13 +67,14 @@ def run_record():
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
             # Create recording object for this device
-            recording = Record(str(save_path), device)
+            recording = Record(save_path, device)
             # Set recording configuration
             # TODO: add support for specifying resolution
             recording.set_fps(args.fps)
             recording.set_timelapse(args.timelapse)
             recording.set_save_streams(args.save)
             recording.set_quality(EncodingQuality[args.quality])
+            recording.set_rotate(cv2.ROTATE_90_CLOCKWISE)
             recording.start_recording()
 
             recordings.append(recording)
