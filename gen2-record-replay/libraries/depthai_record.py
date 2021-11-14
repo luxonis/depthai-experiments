@@ -212,12 +212,12 @@ class Record():
             if "disparity" not in self.save and "depth" in self.save:
                 nodes['stereo'].setSubpixel(True) # For better depth visualization
 
-            if "depth" and "color" in self.save: # RGB depth alignment
-                nodes['color'].setIspScale(1,3) # 4k -> 720P
-                # For now, RGB needs fixed focus to properly align with depth.
-                # This value was used during calibration
-                nodes['color'].initialControl.setManualFocus(130)
-                nodes['stereo'].setDepthAlign(dai.CameraBoardSocket.RGB)
+            # if "depth" and "color" in self.save: # RGB depth alignment
+            #     nodes['color'].setIspScale(1,3) # 4k -> 720P
+            #     # For now, RGB needs fixed focus to properly align with depth.
+            #     # This value was used during calibration
+            #     nodes['color'].initialControl.setManualFocus(130)
+            #     nodes['stereo'].setDepthAlign(dai.CameraBoardSocket.RGB)
 
             nodes['left'].out.link(nodes['stereo'].left)
             nodes['right'].out.link(nodes['stereo'].right)
