@@ -26,6 +26,8 @@ parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
                     help='Number of frames to record. Record until stopped by default.')
 parser.add_argument('-tl', '--timelapse', type=int, default=-1,
                     help='Number of seconds between frames for timelapse recording. Default: timelapse disabled')
+parser.add_argument('-d', '--display', action="store_true", help="Display color preview")
+
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
 save_path = Path.cwd() / args.path
@@ -74,6 +76,7 @@ def run_record():
             recording.set_timelapse(args.timelapse)
             recording.set_save_streams(args.save)
             recording.set_quality(EncodingQuality[args.quality])
+            recording.set_preview(args.display)
             recording.start()
 
             recordings.append(recording)
@@ -102,9 +105,14 @@ def run_record():
                                 frames = {}
                                 for stream in recording.queues:
                                     frames[stream['name']] = stream['msgs'].pop(0).getCvFrame()
+                                    if stream['name'] == 'preview':
+                                        cv2.imshow(q['mxid'], frames[stream['name']])
+                                        del frames[stream['name']]
                                 recording.frame_q.put(frames)
                 # Avoid lazy looping
                 time.sleep(0.001)
+                if cv2.waitKey(1) == ord('q'):
+                    break
             except KeyboardInterrupt:
                 break
 

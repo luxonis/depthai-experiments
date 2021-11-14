@@ -45,7 +45,7 @@ class DepthAiBags:
             else:
                 raise Exception('Specified path already exists. Set argument overwrite=True to delete the bag at that path')
 
-        self.start_nanos = time.time_ns()
+        self.start_nanos = 0
         self.writer = Writer(path)
         # Compression will cause error in RealSense
         # self.writer.set_compression(Writer.CompressionFormat.LZ4)
@@ -206,6 +206,9 @@ class DepthAiBags:
         self._write(c, type, info)
 
     def write(self, frame):
+        # First frames
+        if self.start_nanos == 0: self.start_nanos = time.time_ns()
+
         rgb = len(frame.shape) == 3
         if rgb:
             frame = frame[:, :, [2, 1, 0]]

@@ -21,9 +21,11 @@ class Record():
         self.device = device
         self.quality = EncodingQuality.HIGH
         self.rotate = -1
+        self.preview = False
 
         self.stereo = 1 < len(device.getConnectedCameras())
-        self.path = self.create_folder(path, device.getMxId())
+        self.mxid = device.getMxId()
+        self.path = self.create_folder(path, self.mxid)
 
         calibData = device.readCalibration()
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
@@ -71,6 +73,8 @@ class Record():
             if "disparity" in self.save: self.save.remove("disparity")
             if "depth" in self.save: self.save.remove("depth")
 
+        if self.preview: self.save.append('preview')
+
         if 0 < self.timelapse:
             self.fps = 5
 
@@ -95,7 +99,8 @@ class Record():
             self.queues.append({
                 'q': self.device.getOutputQueue(name=stream, maxSize=maxSize, blocking=False),
                 'msgs': [],
-                'name': stream
+                'name': stream,
+                'mxid': self.mxid
             })
 
 
@@ -107,6 +112,9 @@ class Record():
 
     def set_quality(self, quality: EncodingQuality):
         self.quality = quality
+
+    def set_preview(self, preview: bool):
+        self.preview = preview
 
     '''
     Available values for `angle`:
@@ -185,6 +193,10 @@ class Record():
             nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
             nodes['color'].setIspScale(1,2) # 1080P
             nodes['color'].setFps(self.fps)
+
+            if self.preview:
+                nodes['color'].setPreviewSize(640, 360)
+                stream_out("preview", None, None, nodes['color'].preview, noEnc=True)
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
