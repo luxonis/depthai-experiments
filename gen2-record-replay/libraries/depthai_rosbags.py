@@ -28,7 +28,14 @@ class DepthAiBags:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.close()
 
-    def __init__(self, path: Path, device, resolution, overwrite = False):
+    '''
+    path: Path to the folder where rosbag will be saved
+    resolutions: dict of resolutions ('depth', 'color')
+    rgb: Whether to save color stream as well
+    overwrite: Whether to overwrite existing rosbag (if it exists)
+    '''
+    def __init__(self, path: Path, device, resolutions, rgb=False, overwrite = False):
+        rgb=False # Not yet supported
         if not str(path).endswith('.bag'):
             path = path / 'depth.bag'
 
@@ -42,6 +49,7 @@ class DepthAiBags:
         self.writer = Writer(path)
         # Compression will cause error in RealSense
         # self.writer.set_compression(Writer.CompressionFormat.LZ4)
+        self.closed = False
         self.writer.open()
 
         # sensor_msgs__msg__CameraInfo won't work, as parameters (eg. D, K, R) are in lowercase (d, k, r), so
@@ -62,7 +70,7 @@ class DepthAiBags:
             'Advanced Mode': 'YES',
             'Product Id': '0000',
         })
-        self.write_streaminfo(depth=True)
+        self.write_streamInfo(depth=True, rgb=rgb)
 
         self.write_keyvalues('/device_0/sensor_0/info', {'Name': 'Stereo'})
         self.write_keyvalues('/device_0/sensor_0/property', {
@@ -83,36 +91,42 @@ class DepthAiBags:
         self.write_transform('/device_0/sensor_0/Depth_0/tf/0')
 
         calibData = device.readCalibration()
-        self.write_camerainfo('/device_0/sensor_0/Depth_0/info/camera_info', resolution, calibData)
+        self.write_depthInfo('/device_0/sensor_0/Depth_0/info/camera_info', resolutions['depth'], calibData)
 
-        # Color recording isn't yet possible.
-        # bag.write_keyvalues('/device_0/sensor_1/info', {'Name': 'RGB Camera'})
-        # bag.write_keyvalues('/device_0/sensor_1/property', {
-        #     'Backlight Compensation': '0.000000',
-        #     'Brightness': '0.000000',
-        #     'Contrast': '50.000000',
-        #     'Exposure': '6.000000',
-        #     'Gain': '64.000000',
-        #     'Gamma': '300.000000',
-        #     'Hue': '0.000000',
-        #     'Saturation': '64.000000',
-        #     'Sharpness': '50.000000',
-        #     'White Balance': '4600.000000',
-        #     'Enable Auto Exposure': '1.000000',
-        #     'Enable Auto White Balance': '1.000000',
-        #     'Frames Queue Size': '16.000000',
-        #     'Power Line Frequency': '3.000000',
-        # })
-        # bag.write_transform('/device_0/sensor_1/Color_0/tf/0')
-        # bag.write_camerainfo('/device_0/sensor_1/Color_0/info/camera_info', 1920, 1080, np.array(np.zeros(9)))
+        if rgb:
+            # Color recording isn't yet possible.
+            self.write_keyvalues('/device_0/sensor_1/info', {'Name': 'RGB Camera'})
+            self.write_keyvalues('/device_0/sensor_1/property', {
+                'Backlight Compensation': '0.000000',
+                # 'Brightness': '0.000000',
+                # 'Contrast': '50.000000',
+                # 'Exposure': '6.000000',
+                # 'Gain': '64.000000',
+                # 'Gamma': '300.000000',
+                # 'Hue': '0.000000',
+                # 'Saturation': '64.000000',
+                # 'Sharpness': '50.000000',
+                # 'White Balance': '4600.000000',
+                # 'Enable Auto Exposure': '1.000000',
+                # 'Enable Auto White Balance': '1.000000',
+                # 'Frames Queue Size': '16.000000',
+                # 'Power Line Frequency': '3.000000',
+            })
+            self.write_transform('/device_0/sensor_1/Color_0/tf/0')
+            self.write_colorInfo('/device_0/sensor_1/Color_0/info/camera_info', resolutions['color'], calibData)
+
+            self.rgb_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/data', Image.__msgtype__, latching=1)
+            self.rgb_meta_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/metadata', KeyValue.__msgtype__, latching=1)
 
     def close(self):
+        if self.closed: return
         self.writer.close()
+        self.closed = True
 
     def _write(self, connection, type, data):
         self.writer.write(connection, time.time_ns() - self.start_nanos, cdr_to_ros1(serialize_cdr(data, type), type))
 
-    def write_streaminfo(self, depth = False, rgb = False):
+    def write_streamInfo(self, depth = False, rgb = False):
         # Inspired by https://github.com/IntelRealSense/librealsense/blob/master/third-party/realsense-file/rosbag/msgs/realsense_msgs/StreamInfo.h
         register_types(get_types_from_msg((Path(self.dir) / 'msgs' / 'StreamInfo.msg').read_text(), 'realsense_msgs/msg/StreamInfo'))
         from rosbags.typesys.types import realsense_msgs__msg__StreamInfo as StreamInfo
@@ -141,14 +155,14 @@ class DepthAiBags:
     # translation: [x,y,z]
     # rotation: [x,y,z,w]
     # We will use depth alignment to color camera in case we record depth
-    def write_transform(self, topic, translation=[0,0,0], rotation=[0,0,0,1]):
+    def write_transform(self, topic, translation=[0,0,0], rotation=[0,0,0,0]):
         type = Transform.__msgtype__
         translation = Vector3(x=translation[0], y=translation[1], z=translation[2])
         rotation = Quaternion(x=rotation[0], y=rotation[1], z=rotation[2], w=rotation[3])
         c = self.writer.add_connection(topic, type, latching=1)
         self._write(c, type, Transform(translation=translation, rotation=rotation))
 
-    def write_camerainfo(self, topic, resolution, calibData):
+    def write_depthInfo(self, topic, resolution, calibData):
         # Distortion parameters (k1,k2,t1,t2,k3)
         dist = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
 
@@ -163,6 +177,18 @@ class DepthAiBags:
         # Projection/camera matrix
         lr_extrinsics = np.array(calibData.getCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RIGHT))
 
+        self.write_cameraInfo(topic, resolution, M_right, H_right, lr_extrinsics)
+
+    def write_colorInfo(self, topic, resolution, calibData):
+        # Distortion parameters (k1,k2,t1,t2,k3)
+        dist = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
+
+        # Intrinsic camera matrix
+        M_color = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, resolution[0], resolution[1]))
+        self.write_cameraInfo(topic, resolution, M_color, np.zeros((3,3)), np.zeros((4,4)))
+
+    def write_cameraInfo(self, topic, resolution, intrinsics, rect, project):
+        print(topic, resolution)
         type = self.CamInfo.__msgtype__
         c = self.writer.add_connection(topic, type, latching=1)
         info = self.CamInfo(header=self.get__default_header(),
@@ -171,27 +197,30 @@ class DepthAiBags:
                     distortion_model='Brown Conrady',
                     # D=dist[:5], # Doesn't work:(
                     D=np.zeros(5), # Distortion parameters (k1,k2,t1,t2,k3)
-                    K=M_right.flatten(), # Intrinsic camera matrix
-                    R=H_right.flatten(), # Rectification matrix (stereo cameras only)
-                    P=lr_extrinsics[:3,:].flatten(), # Projection/camera matrix
+                    K=intrinsics.flatten(), # Intrinsic camera matrix
+                    R=rect.flatten(), # Rectification matrix (stereo cameras only)
+                    P=project[:3,:].flatten(), # Projection/camera matrix
                     binning_x=0,
                     binning_y=0,
                     roi=self.get_default_roi())
         self._write(c, type, info)
 
     def write(self, frame):
-        h, w = frame.shape
+        rgb = len(frame.shape) == 3
+        if rgb:
+            frame = frame[:, :, [2, 1, 0]]
         img = Image(header=self.get_current_header(),
-                height=h,
-                width=w,
-                encoding='mono16',
+                height=frame.shape[0],
+                width=frame.shape[1],
+                encoding='rgb8' if rgb else 'mono16',
                 is_bigendian=0,
-                step=w*2,
+                step=frame.shape[1]*2,
                 data=frame.flatten().view(dtype=np.int8))
         type = Image.__msgtype__
-        self._write(self.depth_conn, type, img)
 
-        self.write_keyvalues(self.depth_meta_conn, {
+        self._write(self.rgb_conn if rgb else self.depth_conn, type, img)
+
+        self.write_keyvalues(self.rgb_meta_conn if rgb else self.depth_meta_conn, {
             'system_time': "%.6f" % time.time(),
             'timestamp_domain': 'System Time',
             'Time Of Arrival': int(time.time())

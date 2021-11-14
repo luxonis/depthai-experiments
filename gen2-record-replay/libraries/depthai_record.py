@@ -33,7 +33,7 @@ class Record():
     def run(self):
         files = {}
         def create_video_file(name):
-            if name == 'depth':
+            if name == 'depth': # or (name=='color' and 'depth' in self.save):
                 files[name] = self.depthAiBag
             else:
                 ext = 'h265' if self.quality == EncodingQuality.LOW else 'mjpeg'
@@ -78,10 +78,10 @@ class Record():
 
         if "depth" in self.save:
             from libraries.depthai_rosbags import DepthAiBags
-            res = self.get_sizes()['depth']
+            res = ['depth']
             # If rotate 90 degrees
             if self.rotate in [0,2]: res = (res[1], res[0])
-            self.depthAiBag = DepthAiBags(self.path, self.device, res)
+            self.depthAiBag = DepthAiBags(self.path, self.device, self.get_sizes(), rgb='color' in self.save)
 
         self.frame_q = Queue(20)
         self.process = Thread(target=self.run)
@@ -148,15 +148,18 @@ class Record():
 
         def create_mono(name):
             nodes[name] = pipeline.createMonoCamera()
-            nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
             nodes[name].setFps(self.fps)
 
-        def stream_out(name, size, fps, out):
+        def stream_out(name, size, fps, out, noEnc=False):
             # Create XLinkOutputs for the stream
             xout = pipeline.createXLinkOut()
             xout.setStreamName(name)
+            if noEnc:
+                out.link(xout.input)
+                return
 
             encoder = pipeline.createVideoEncoder()
             profile = dai.VideoEncoderProperties.Profile.H265_MAIN if self.quality == EncodingQuality.LOW else dai.VideoEncoderProperties.Profile.MJPEG
@@ -177,12 +180,15 @@ class Record():
         if "color" in self.save:
             nodes['color'] = pipeline.createColorCamera()
             nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
+            # RealSense Viewer expects RGB color order
+            nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
             nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-            # nodes['color'].setIspScale(1,2) # 1080P
+            nodes['color'].setIspScale(1,2) # 1080P
             nodes['color'].setFps(self.fps)
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
-            stream_out("color", nodes['color'].getVideoSize(), nodes['color'].getFps(), nodes['color'].video)
+            # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
+            stream_out("color", nodes['color'].getVideoSize(), nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
 
         if "left" or "disparity" or "depth" in self.save:
             create_mono("left")
@@ -202,8 +208,16 @@ class Record():
             # TODO: configurable
             nodes['stereo'].setLeftRightCheck(True)
             nodes['stereo'].setExtendedDisparity(False)
+
             if "disparity" not in self.save and "depth" in self.save:
                 nodes['stereo'].setSubpixel(True) # For better depth visualization
+
+            if "depth" and "color" in self.save: # RGB depth alignment
+                nodes['color'].setIspScale(1,3) # 4k -> 720P
+                # For now, RGB needs fixed focus to properly align with depth.
+                # This value was used during calibration
+                nodes['color'].initialControl.setManualFocus(130)
+                nodes['stereo'].setDepthAlign(dai.CameraBoardSocket.RGB)
 
             nodes['left'].out.link(nodes['stereo'].left)
             nodes['right'].out.link(nodes['stereo'].right)
@@ -211,10 +225,7 @@ class Record():
             if "disparity" in self.save:
                 stream_out("disparity", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['stereo'].disparity)
             if "depth" in self.save:
-                # Depth can't be encoded, so we won't use `stream_out()`
-                depth_xout = pipeline.createXLinkOut()
-                depth_xout.setStreamName('depth')
-                nodes['stereo'].depth.link(depth_xout.input)
+                stream_out('depth', None, None, nodes['stereo'].depth, noEnc=True)
 
         self.nodes = nodes
         self.pipeline = pipeline
