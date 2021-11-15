@@ -173,9 +173,6 @@ extract_frame = {
     "disparity": lambda item: cv2.applyColorMap(item.getFrame(), cv2.COLORMAP_JET),
 }
 
-frame_q = Queue(50)
-
-
 def store_frames(in_q):
     while True:
         frames_dict = in_q.get()
@@ -186,61 +183,64 @@ def store_frames(in_q):
         for stream_name, item in frames_dict.items():
             cv2.imwrite(str(frames_path / Path(f"{stream_name}.png")), item)
 
+def main():
+    frame_q = Queue(50)
 
-store_p = Process(target=store_frames, args=(frame_q, ))
-store_p.start()
+    store_p = Process(target=store_frames, args=(frame_q, ))
+    store_p.start()
 
-# Pipeline defined, now the device is connected to
-try:
-    with dai.Device() as device:
-        cams = device.getConnectedCameras()
-        depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
-        ps = None
-        if depth_enabled:
-            ps = PairingSystem()
-        else:
-            PairingSystem.seq_streams = []
-        device.startPipeline(create_pipeline(depth_enabled))
-        qControl = device.getInputQueue('control')
+    try:
+        # Pipeline defined, now the device is connected to
+        with dai.Device() as device:
+            cams = device.getConnectedCameras()
+            depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+            ps = None
+            if depth_enabled:
+                ps = PairingSystem()
+            else:
+                PairingSystem.seq_streams = []
+            device.startPipeline(create_pipeline(depth_enabled))
+            qControl = device.getInputQueue('control')
 
-        ctrl = dai.CameraControl()
-        if args.autofocus:
-            ctrl.setAutoFocusMode(getattr(dai.CameraControl.AutoFocusMode, args.autofocus))
-        if args.manualfocus:
-            ctrl.setManualFocus(args.manualfocus)
-        if all(exposure):
-            ctrl.setManualExposure(*exposure)
+            ctrl = dai.CameraControl()
+            if args.autofocus:
+                ctrl.setAutoFocusMode(getattr(dai.CameraControl.AutoFocusMode, args.autofocus))
+            if args.manualfocus:
+                ctrl.setManualFocus(args.manualfocus)
+            if all(exposure):
+                ctrl.setManualExposure(*exposure)
 
-        qControl.send(ctrl)
+            qControl.send(ctrl)
 
-        cfg = dai.ImageManipConfig()
+            start_ts = monotonic()
+            while True:
+                for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
+                    packets = device.getOutputQueue(queueName).tryGetAll()
+                    if ps is not None:
+                        ps.add_packets(packets, queueName)
+                    elif queueName == "color":
+                        for packet in packets:
+                            frame_q.put({"color": extract_frame[queueName](packet)})
+                    if queueName == "color" and len(packets) > 0 and not args.prod:
+                        cv2.imshow("preview", packets[-1].getCvFrame())
 
-        start_ts = monotonic()
-        while True:
-            for queueName in PairingSystem.seq_streams + PairingSystem.ts_streams:
-                packets = device.getOutputQueue(queueName).tryGetAll()
                 if ps is not None:
-                    ps.add_packets(packets, queueName)
-                elif queueName == "color":
-                    for packet in packets:
-                        frame_q.put({"color": extract_frame[queueName](packet)})
-                if queueName == "color" and len(packets) > 0 and not args.prod:
-                    cv2.imshow("preview", packets[-1].getCvFrame())
+                    pairs = ps.get_pairs()
+                    for pair in pairs:
+                        extracted_pair = {stream_name: extract_frame[stream_name](item) for stream_name, item in pair.items()}
+                        if not args.prod:
+                            for stream_name, item in extracted_pair.items():
+                                cv2.imshow(stream_name, item)
+                        frame_q.put(extracted_pair)
 
-            if ps is not None:
-                pairs = ps.get_pairs()
-                for pair in pairs:
-                    extracted_pair = {stream_name: extract_frame[stream_name](item) for stream_name, item in pair.items()}
-                    if not args.prod:
-                        for stream_name, item in extracted_pair.items():
-                            cv2.imshow(stream_name, item)
-                    frame_q.put(extracted_pair)
+                if not args.prod and cv2.waitKey(1) == ord('q'):
+                    break
 
-            if not args.prod and cv2.waitKey(1) == ord('q'):
-                break
+                if monotonic() - start_ts > args.time:
+                    break
+    finally:
+        frame_q.put(None)
+        store_p.join()
 
-            if monotonic() - start_ts > args.time:
-                break
-finally:
-    frame_q.put(None)
-    store_p.join()
+if __name__ == "__main__":
+    main()
