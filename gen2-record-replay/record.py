@@ -1,38 +1,36 @@
 #!/usr/bin/env python3
 import argparse
-import cv2
 import depthai as dai
 from datetime import timedelta
 import contextlib
 import math
 import time
 from pathlib import Path
+import cv2
 
 # DepthAI Record library
-from libraries.depthai_record import Record
+from libraries.depthai_record import EncodingQuality, Record
 
-_save_choices = ("color", "mono") # TODO: depth/IMU/ToF...
+_save_choices = ("color", "left", "right", "disparity", "depth") # TODO: depth/IMU/ToF...
+_quality_choices = ("BEST", "HIGH", "MEDIUM", "LOW")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
-parser.add_argument('-s', '--save', default=["color", "mono"], nargs="+", choices=_save_choices,
+parser.add_argument('-s', '--save', default=["color", "left", "right"], nargs="+", choices=_save_choices,
                     help="Choose which streams to save. Default: %(default)s")
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
+parser.add_argument('-q', '--quality', default="HIGH", type=str, choices=_quality_choices,
+                    help='Selects the quality of the recording. Default: %(default)s')
+parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
+                    help='Number of frames to record. Record until stopped by default.')
+parser.add_argument('-tl', '--timelapse', type=int, default=-1,
+                    help='Number of seconds between frames for timelapse recording. Default: timelapse disabled')
+parser.add_argument('-d', '--display', action="store_true", help="Display color preview")
+
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
 save_path = Path.cwd() / args.path
-
-class FPSHandler:
-    def __init__(self):
-        self.timestamp = time.time()
-        self.start = time.time()
-        self.frame_cnt = 0
-    def next_iter(self):
-        self.timestamp = time.time()
-        self.frame_cnt += 1
-    def fps(self):
-        return self.frame_cnt / (self.timestamp - self.start)
 
 # Host side timestamp frame sync across multiple devices
 def check_sync(queues, timestamp):
@@ -67,36 +65,52 @@ def run_record():
         # TODO: allow users to specify which available devices should record
         for device_info in device_infos:
             openvino_version = dai.OpenVINO.Version.VERSION_2021_4
-            usb2_mode = True
+            usb2_mode = False
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
             # Create recording object for this device
-            recording = Record(str(save_path), device, stack)
+            recording = Record(save_path, device)
             # Set recording configuration
-            # TODO: add support for specifying resolution, encoding quality
+            # TODO: add support for specifying resolution
             recording.set_fps(args.fps)
+            recording.set_timelapse(args.timelapse)
             recording.set_save_streams(args.save)
-            recording.start_recording()
+            recording.set_quality(EncodingQuality[args.quality])
+            recording.set_preview(args.display)
+            recording.start()
 
             recordings.append(recording)
 
         queues = [q for recording in recordings for q in recording.queues]
+        frame_counter = 0
+        start_time = time.time()
+        timelapse = 0
         while True:
             try:
                 for q in queues:
+                    if 0 < args.timelapse and time.time() - timelapse < args.timelapse:
+                        continue
                     new_msg = q['q'].tryGet()
                     if new_msg is not None:
                         q['msgs'].append(new_msg)
                         if check_sync(queues, new_msg.getTimestamp()):
-                            # print('frames synced')
+                            # Wait for Auto focus/exposure/white-balance
+                            if time.time() - start_time < 1.5: continue
+                            # Timelapse
+                            if 0 < args.timelapse: timelapse = time.time()
+                            if args.frame_cnt == frame_counter: raise KeyboardInterrupt
+                            frame_counter+=1
+
                             for recording in recordings:
                                 frames = {}
                                 for stream in recording.queues:
                                     frames[stream['name']] = stream['msgs'].pop(0).getCvFrame()
-                                    # cv2.imshow(f"{stream['name']} - {device['mx']}", cv2.imdecode(frames[stream['name']], cv2.IMREAD_UNCHANGED))
-                                # print('For mx', device['mx'], 'frames')
-                                # print('frames', frames)
+                                    if stream['name'] == 'preview':
+                                        cv2.imshow(q['mxid'], frames[stream['name']])
+                                        del frames[stream['name']]
                                 recording.frame_q.put(frames)
+                # Avoid lazy looping
+                time.sleep(0.001)
                 if cv2.waitKey(1) == ord('q'):
                     break
             except KeyboardInterrupt:

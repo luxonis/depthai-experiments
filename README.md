@@ -87,6 +87,11 @@ The model used in this example is [person_detection_retail_0013](https://docs.op
 
 [![Watch the demo](https://user-images.githubusercontent.com/18037362/116413235-56e96e00-a82f-11eb-8007-bfcdb27d015c.gif)](https://www.youtube.com/watch?v=MHmzp--pqUA)
 
+## Recording and reconstruction of the scene ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-record-replay))
+
+The `record.py` app syncs all streams (across all devices) and saves them into mjpeg/h265 files, or, in case of depth, into rosbag that can be viewed by the [RealSense Viewer](https://www.intelrealsense.com/sdk-2/#sdk2-tools) (gif below). `Replay` class is used to send the frames back to the device, and it allows reconstruction of the depth perception from two (synced) mono frames.
+
+![depth gif](https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif)
 
 ## Point Cloud Projection ([here](https://github.com/luxonis/depthai-experiments/blob/master/point-cloud-projection))
 

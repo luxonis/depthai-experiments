@@ -1,95 +1,151 @@
 #!/usr/bin/env python3
-from contextlib import ExitStack
 from pathlib import Path
-from multiprocessing import Array, Process, Queue
-from cv2 import VideoWriter, VideoWriter_fourcc
-import os
-import contextlib
+from multiprocessing import Queue
+from threading import Thread
 import depthai as dai
+from enum import Enum
+import cv2
 
-def store_frames(path: Path, frame_q: Queue, stack: ExitStack) -> None:
-    files = {}
+class EncodingQuality(Enum):
+    BEST = 1 # Lossless MJPEG
+    HIGH = 2 # MJPEG Quality=97 (default)
+    MEDIUM = 3 # MJPEG Quality=93
+    LOW = 4 # H265 BitrateKbps=10000
 
-    def create_video_file(name):
-        file_path = str(path / f"{name}.mjpeg")
-        # fourcc = VideoWriter_fourcc(*'MJPG')
-        # width = self.nodes[name].getResolutionWidth()
-        # height = self.nodes[name].getResolutionHeight()
-        # writer = VideoWriter(path, fourcc, self.fps, (width, height))
-        # writer.release()
-        # time.sleep(0.001)
-        files[name] = stack.enter_context(open(file_path, 'wb'))
 
-    while True:
-        try:
-            frames = frame_q.get()
-            if frames is None:
-                break
-            for name in frames:
-
-                if name not in files: # File wasn't created yet
-                    create_video_file(name)
-
-                files[name].write(frames[name])
-                # frames[name].tofile(files[name])
-        except KeyboardInterrupt:
-            break
-
-    print('Exiting store frame process')
-
-class Record:
-    def __init__(self, path: str, device: dai.Device, stack: ExitStack) -> None:
-        self.save = ['color', 'mono']
+class Record():
+    def __init__(self, path: Path, device) -> None:
+        self.save = ['color', 'left', 'right']
         self.fps = 30
+        self.timelapse = -1
         self.device = device
+        self.quality = EncodingQuality.HIGH
+        self.rotate = -1
+        self.preview = False
 
         self.stereo = 1 < len(device.getConnectedCameras())
-        self.path = self.create_folder(path, device.getMxId())
+        self.mxid = device.getMxId()
+        self.path = self.create_folder(path, self.mxid)
+
+        calibData = device.readCalibration()
+        calibData.eepromToJsonFile(str(self.path / "calib.json"))
+
         self.convert_mp4 = False
-        self.exit_stack = stack
 
-    def start_recording(self) -> None:
+    def run(self):
+        files = {}
+        def create_video_file(name):
+            if name == 'depth': # or (name=='color' and 'depth' in self.save):
+                files[name] = self.depthAiBag
+            else:
+                ext = 'h265' if self.quality == EncodingQuality.LOW else 'mjpeg'
+                files[name] = open(str(self.path / f"{name}.{ext}"), 'wb')
+            # if name == "color": fourcc = "I420"
+            # elif name == "depth": fourcc = "Y16 " # 16-bit uncompressed greyscale image
+            # else : fourcc = "GREY" #Simple, single Y plane for monochrome images.
+            # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
+
+        while True:
+            try:
+                frames = self.frame_q.get()
+                if frames is None:
+                    break
+                for name in frames:
+                    if name not in files: # File wasn't created yet
+                        create_video_file(name)
+
+                    # if self.rotate != -1: # Doesn't work atm
+                    #     frames[name] = cv2.rotate(frames[name], self.rotate)
+
+                    files[name].write(frames[name])
+                    # frames[name].tofile(files[name])
+            except KeyboardInterrupt:
+                break
+        # Close all files - Can't use ExitStack with VideoWriter
+        for name in files:
+            files[name].close()
+        print('Exiting store frame thread')
+
+    def start(self):
         if not self.stereo: # If device doesn't have stereo camera pair
-            if "mono" in self.save:
-                self.save.remove("mono")
-            if "depth" in self.save:
-                self.save.remove("depth")
+            if "left" in self.save: self.save.remove("left")
+            if "right" in self.save: self.save.remove("right")
+            if "disparity" in self.save: self.save.remove("disparity")
+            if "depth" in self.save: self.save.remove("depth")
 
-        pipeline, nodes = self.create_pipeline()
+        if self.preview: self.save.append('preview')
 
-        streams = []
-        if "color" in self.save: streams.append("color")
-        if "depth" in self.save: streams.append("depth")
-        if "mono" in self.save:
-            streams.append("left")
-            streams.append("right")
+        if 0 < self.timelapse:
+            self.fps = 5
+
+        self.pipeline, self.nodes = self.create_pipeline()
+
+        if "depth" in self.save:
+            from libraries.depthai_rosbags import DepthAiBags
+            res = ['depth']
+            # If rotate 90 degrees
+            if self.rotate in [0,2]: res = (res[1], res[0])
+            self.depthAiBag = DepthAiBags(self.path, self.device, self.get_sizes(), rgb='color' in self.save)
 
         self.frame_q = Queue(20)
-        self.process = Process(target=store_frames, args=(self.path, self.frame_q, self.exit_stack))
+        self.process = Thread(target=self.run)
         self.process.start()
 
-        self.device.startPipeline(pipeline)
+        self.device.startPipeline(self.pipeline)
 
         self.queues = []
-        for stream in streams:
+        maxSize = 1 if 0 < self.timelapse else 10
+        for stream in self.save:
             self.queues.append({
-                'q': self.device.getOutputQueue(name=stream, maxSize=10, blocking=False),
+                'q': self.device.getOutputQueue(name=stream, maxSize=maxSize, blocking=False),
                 'msgs': [],
-                'name': stream
+                'name': stream,
+                'mxid': self.mxid
             })
 
 
-    def set_fps(self, fps: int):
+    def set_fps(self, fps):
         self.fps = fps
 
+    def set_timelapse(self, timelapse):
+        self.timelapse = timelapse
+
+    def set_quality(self, quality: EncodingQuality):
+        self.quality = quality
+
+    def set_preview(self, preview: bool):
+        self.preview = preview
+
+    '''
+    Available values for `angle`:
+    - cv2.ROTATE_90_CLOCKWISE (0)
+    - cv2.ROTATE_180 (1)
+    - cv2.ROTATE_90_COUNTERCLOCKWISE (2)
+    '''
+    def set_rotate(self, angle):
+        raise Exception("Rotating not yet supported!")
+        # Currently RealSense Viewer throws error "memory access violation". Debug.
+        self.rotate = angle
+
+    # Which streams to save to the disk (on the host)
     def set_save_streams(self, save_streams):
         self.save = save_streams
+        print('save', self.save)
 
-    def create_folder(self, path: str, mxid: str) -> Path:
+    def get_sizes(self):
+        dict = {}
+        if "color" in self.save: dict['color'] = self.nodes['color'].getVideoSize()
+        if "right" in self.save: dict['right'] = self.nodes['right'].getResolutionSize()
+        if "left" in self.save: dict['left'] = self.nodes['left'].getResolutionSize()
+        if "disparity" in self.save: dict['disparity'] = self.nodes['left'].getResolutionSize()
+        if "depth" in self.save: dict['depth'] = self.nodes['left'].getResolutionSize()
+        return dict
+
+    def create_folder(self, path: Path, mxid: str):
         i = 0
         while True:
             i += 1
-            recordings_path = Path(path) / f"{i}-{mxid}"
+            recordings_path = path / f"{i}-{str(mxid)}"
             if not recordings_path.is_dir():
                 recordings_path.mkdir(parents=True, exist_ok=False)
                 return recordings_path
@@ -98,70 +154,90 @@ class Record:
         pipeline = dai.Pipeline()
         nodes = {}
 
+        def create_mono(name):
+            nodes[name] = pipeline.createMonoCamera()
+            nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+            socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
+            nodes[name].setBoardSocket(socket)
+            nodes[name].setFps(self.fps)
+
+        def stream_out(name, size, fps, out, noEnc=False):
+            # Create XLinkOutputs for the stream
+            xout = pipeline.createXLinkOut()
+            xout.setStreamName(name)
+            if noEnc:
+                out.link(xout.input)
+                return
+
+            encoder = pipeline.createVideoEncoder()
+            profile = dai.VideoEncoderProperties.Profile.H265_MAIN if self.quality == EncodingQuality.LOW else dai.VideoEncoderProperties.Profile.MJPEG
+            encoder.setDefaultProfilePreset(size, fps, profile)
+
+            if self.quality == EncodingQuality.BEST:
+                encoder.setLossless(True)
+            elif self.quality == EncodingQuality.HIGH:
+                encoder.setQuality(97)
+            elif self.quality == EncodingQuality.MEDIUM:
+                encoder.setQuality(93)
+            elif self.quality == EncodingQuality.LOW:
+                encoder.setBitrateKbps(10000)
+
+            out.link(encoder.input)
+            encoder.bitstream.link(xout.input)
+
         if "color" in self.save:
             nodes['color'] = pipeline.createColorCamera()
             nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
-            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+            # RealSense Viewer expects RGB color order
+            nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+            nodes['color'].setIspScale(1,2) # 1080P
             nodes['color'].setFps(self.fps)
 
-            rgb_encoder = pipeline.createVideoEncoder()
-            rgb_encoder.setDefaultProfilePreset(nodes['color'].getVideoSize(), nodes['color'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-            # rgb_encoder.setLossless(True)
-            nodes['color'].video.link(rgb_encoder.input)
+            if self.preview:
+                nodes['color'].setPreviewSize(640, 360)
+                stream_out("preview", None, None, nodes['color'].preview, noEnc=True)
 
-            # Create output for the rgb
-            rgbOut = pipeline.createXLinkOut()
-            rgbOut.setStreamName("color")
-            rgb_encoder.bitstream.link(rgbOut.input)
+            # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
+            # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
+            stream_out("color", nodes['color'].getVideoSize(), nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
 
-        if "mono" or "depth" in self.save:
+        if "left" or "disparity" or "depth" in self.save:
+            create_mono("left")
+            if "left" in self.save:
+                stream_out("left", nodes['left'].getResolutionSize(), nodes['left'].getFps(), nodes['left'].out)
+
+        if "right" or "disparity" or "depth" in self.save:
             # Create mono cameras
-            nodes['left'] = pipeline.createMonoCamera()
-            nodes['left'].setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-            nodes['left'].setBoardSocket(dai.CameraBoardSocket.LEFT)
-            nodes['left'].setFps(self.fps)
+            create_mono("right")
+            if "right" in self.save:
+                stream_out("right", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['right'].out)
 
-            nodes['right'] = pipeline.createMonoCamera()
-            nodes['right'].setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-            nodes['right'].setBoardSocket(dai.CameraBoardSocket.RIGHT)
-            nodes['right'].setFps(self.fps)
-
+        if "disparity" or "depth" in self.save:
             nodes['stereo'] = pipeline.createStereoDepth()
-            nodes['stereo'].initialConfig.setConfidenceThreshold(240)
+            nodes['stereo'].initialConfig.setConfidenceThreshold(255)
             nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-            nodes['stereo'].setLeftRightCheck(False)
+            # TODO: configurable
+            nodes['stereo'].setLeftRightCheck(True)
             nodes['stereo'].setExtendedDisparity(False)
-            nodes['stereo'].setSubpixel(False)
-            # nodes['stereo'].setRectification(False)
-            # nodes['stereo'].setRectifyMirrorFrame(False)
+
+            if "disparity" not in self.save and "depth" in self.save:
+                nodes['stereo'].setSubpixel(True) # For better depth visualization
+
+            # if "depth" and "color" in self.save: # RGB depth alignment
+            #     nodes['color'].setIspScale(1,3) # 4k -> 720P
+            #     # For now, RGB needs fixed focus to properly align with depth.
+            #     # This value was used during calibration
+            #     nodes['color'].initialControl.setManualFocus(130)
+            #     nodes['stereo'].setDepthAlign(dai.CameraBoardSocket.RGB)
 
             nodes['left'].out.link(nodes['stereo'].left)
             nodes['right'].out.link(nodes['stereo'].right)
 
+            if "disparity" in self.save:
+                stream_out("disparity", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['stereo'].disparity)
             if "depth" in self.save:
-                depthOut = pipeline.createXLinkOut()
-                depthOut.setStreamName("depth")
-                nodes['stereo'].depth.link(depthOut.input)
-
-            # Create output
-            if "mono" in self.save:
-                left_encoder = pipeline.createVideoEncoder()
-                left_encoder.setDefaultProfilePreset(nodes['left'].getResolutionSize(), nodes['left'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-                # left_encoder.setLossless(True)
-                nodes['stereo'].rectifiedLeft.link(left_encoder.input)
-                # Create XLink output for left MJPEG stream
-                leftOut = pipeline.createXLinkOut()
-                leftOut.setStreamName("left")
-                left_encoder.bitstream.link(leftOut.input)
-
-                right_encoder = pipeline.createVideoEncoder()
-                right_encoder.setDefaultProfilePreset(nodes['right'].getResolutionSize(), nodes['right'].getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-                # right_encoder.setLossless(True)
-                nodes['stereo'].rectifiedRight.link(right_encoder.input)
-                # Create XLink output for right MJPEG stream
-                rightOut = pipeline.createXLinkOut()
-                rightOut.setStreamName("right")
-                right_encoder.bitstream.link(rightOut.input)
+                stream_out('depth', None, None, nodes['stereo'].depth, noEnc=True)
 
         self.nodes = nodes
         self.pipeline = pipeline

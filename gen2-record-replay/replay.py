@@ -35,8 +35,8 @@ nn.setConfidenceThreshold(0.5)
 nn.input.setBlocking(False)
 
 # Link required inputs to the Spatial detection network
-nodes['color'].out.link(nn.input)
-nodes['stereo'].depth.link(nn.inputDepth)
+nodes.color.out.link(nn.input)
+nodes.stereo.depth.link(nn.inputDepth)
 
 detOut = pipeline.createXLinkOut()
 detOut.setStreamName("det_out")
@@ -44,18 +44,17 @@ nn.out.link(detOut.input)
 
 depthOut = pipeline.createXLinkOut()
 depthOut.setStreamName("depth_out")
-nodes['stereo'].disparity.link(depthOut.input)
+nodes.stereo.disparity.link(depthOut.input)
 
 right_s_out = pipeline.createXLinkOut()
 right_s_out.setStreamName("rightS")
-nodes['stereo'].syncedRight.link(right_s_out.input)
+nodes.stereo.syncedRight.link(right_s_out.input)
 
 left_s_out = pipeline.createXLinkOut()
 left_s_out.setStreamName("leftS")
-nodes['stereo'].syncedLeft.link(left_s_out.input)
+nodes.stereo.syncedLeft.link(left_s_out.input)
 
 with dai.Device(pipeline) as device:
-    queues = {}
     replay.create_queues(device)
 
     depthQ = device.getOutputQueue(name="depth_out", maxSize=4, blocking=False)
@@ -63,7 +62,7 @@ with dai.Device(pipeline) as device:
     rightS_Q = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
     leftS_Q = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
 
-    disparityMultiplier = 255 / nodes['stereo'].getMaxDisparity()
+    disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     while replay.send_frames():

@@ -1,29 +1,34 @@
 from pathlib import Path
 import os
 import cv2
+import types
 import depthai as dai
 
 class Replay:
     def __init__(self, path):
-        self.path = path
+        self.path = Path(path).resolve().absolute()
 
         self.cap = {} # VideoCapture objects
         self.size = {} # Frame sizes
         self.lastFrame = {} # Last frame sent to the device
+        self.frames = {} # Frames read from the VideoCapture
+        # Disparity shouldn't get streamed to the device, nothing to do with it.
+        self.stream_types = ['color', 'left', 'right', 'depth']
 
-        # steam_types = ['color', 'left', 'right', 'depth']
-        # extensions = ['mjpeg', 'avi', 'mp4']
+        file_types = ['color', 'left', 'right', 'disparity', 'depth']
+        extensions = ['mjpeg', 'avi', 'mp4', 'h265', 'h264']
 
-        recordings = os.listdir(path)
-        # Check if depth recording exists - if it does, don't create mono VideoCaptures
-        if "left.mjpeg" in recordings and "right.mjpeg" in recordings:
-            self.cap['left'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'left.mjpeg'))
-            self.cap['right'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'right.mjpeg'))
-        if "color.mjpeg" in recordings:
-            self.cap['color'] = cv2.VideoCapture(str(Path(path).resolve().absolute() / 'color.mjpeg'))
+        for file in os.listdir(path):
+            if not '.' in file: continue # Folder
+            name, extension = file.split('.')
+            if name in file_types and extension in extensions:
+                self.cap[name] = cv2.VideoCapture(str(self.path / file))
 
         if len(self.cap) == 0:
-            raise RuntimeError("There are no .mjpeg recordings in the folder specified.")
+            raise RuntimeError("There are no recordings in the folder specified.")
+
+        # Load calibration data from the recording folder
+        self.calibData = dai.CalibrationHandler(str(self.path / "calib.json"))
 
         # Read basic info about the straems (resolution of streams etc.)
         for name in self.cap:
@@ -83,62 +88,63 @@ class Replay:
             mono = False # Use depth stream by default
 
         pipeline = dai.Pipeline()
+        pipeline.setCalibrationData(self.calibData)
+        nodes = types.SimpleNamespace()
 
-        color_size = self.size['color']
-        print('color_size', color_size)
-        nodes['color'] = pipeline.createXLinkIn()
-        nodes['color'].setMaxDataSize(self.get_max_size('color'))
-        nodes['color'].setStreamName("color_in")
+        if 'color' in self.cap:
+            nodes.color = pipeline.createXLinkIn()
+            nodes.color.setMaxDataSize(self.get_max_size('color'))
+            nodes.color.setStreamName("color_in")
 
         if mono:
-            nodes['left'] = pipeline.createXLinkIn()
-            nodes['left'].setStreamName("left_in")
-            nodes['left'].setMaxDataSize(self.get_max_size('left'))
+            nodes.left = pipeline.createXLinkIn()
+            nodes.left.setStreamName("left_in")
+            nodes.left.setMaxDataSize(self.get_max_size('left'))
 
-            nodes['right'] = pipeline.createXLinkIn()
-            nodes['right'].setStreamName("right_in")
-            nodes['right'].setMaxDataSize(self.get_max_size('right'))
+            nodes.right = pipeline.createXLinkIn()
+            nodes.right.setStreamName("right_in")
+            nodes.right.setMaxDataSize(self.get_max_size('right'))
 
-            nodes['stereo'] = pipeline.createStereoDepth()
-            nodes['stereo'].initialConfig.setConfidenceThreshold(240)
-            nodes['stereo'].setRectification(False)
-            nodes['stereo'].setInputResolution(self.size['left'][0], self.size['left'][1])
+            nodes.stereo = pipeline.createStereoDepth()
+            nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
 
-            nodes['left'].out.link(nodes['stereo'].left)
-            nodes['right'].out.link(nodes['stereo'].right)
+            nodes.left.out.link(nodes.stereo.left)
+            nodes.right.out.link(nodes.stereo.right)
 
         if depth:
-            nodes['depth'] = pipeline.createXLinkIn()
-            nodes['depth'].setStreamName("depth_in")
+            nodes.depth = pipeline.createXLinkIn()
+            nodes.depth.setStreamName("depth_in")
 
         return pipeline, nodes
 
     def create_queues(self, device):
         self.queues = {}
         for name in self.cap:
-            self.queues[name+'_in'] = device.getInputQueue(name+'_in')
+            if name in self.stream_types:
+                self.queues[name+'_in'] = device.getInputQueue(name+'_in')
 
     def to_planar(self, arr, shape = None):
         if shape is not None: arr = cv2.resize(arr, shape)
         return arr.transpose(2, 0, 1).flatten()
 
-    def get_frames(self):
-        frames = {}
+    def read_frames(self):
+        self.frames = {}
         for name in self.cap:
-            if not self.cap[name].isOpened(): return None
+            if not self.cap[name].isOpened():
+                return True
             ok, frame = self.cap[name].read()
             if ok:
-                frames[name] = frame
-        if len(frames) == 0: return None
-        return frames
+                self.frames[name] = frame
+        return len(self.frames) == 0
 
     def send_frames(self):
-        frames = self.get_frames()
-        if frames is None: return False # end of recording
+        if self.read_frames():
+            return False # end of recording
+        for name in self.frames:
+            if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:
+                self.frames[name] = self.frames[name][:,:,0] # All 3 planes are the same
 
-        for name in frames:
-            frame = frames[name]
-            self.send_frame(frame, name)
+            self.send_frame(self.frames[name], name)
 
         return True
 
@@ -165,7 +171,6 @@ class Replay:
                 self.send_depth(self.queues[q_name], frame)
 
     def send_mono(self, q, img, right):
-        img = img[:,:,0] # all 3 planes are the same
         self.lastFrame['right' if right else 'left'] = img
         h, w = img.shape
         frame = dai.ImgFrame()
