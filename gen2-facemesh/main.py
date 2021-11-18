@@ -18,7 +18,7 @@ Blob is converted from MediaPipe's tflite model.
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-conf", "--confidence_thresh", help="set the confidence threshold", default=10, type=float)
+parser.add_argument("-conf", "--confidence_thresh", help="set the confidence threshold", default=0.5, type=float)
 
 args = parser.parse_args()
 CONF_THRESH = args.confidence_thresh
@@ -101,7 +101,7 @@ with dai.Device(pipeline) as device:
 
         # Get outputs
         score = np.array(in_nn.getLayerFp16('conv2d_31')).reshape((1,))
-        score = score[0]
+        score = 1 / (1 + np.exp(-score[0]))     # sigmoid on score
         landmarks = np.array(in_nn.getLayerFp16('conv2d_21')).reshape((468, 3))
 
         if score > CONF_THRESH:
