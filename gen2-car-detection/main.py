@@ -16,7 +16,7 @@ import numpy as np
 import time
 
 # Get argument first
-nnPath = "models/yolo_v3_tiny_openvino_2021.3_6shave.blob"
+nnPath = "models/yolo_v4_tiny_openvino_2021.3_6shave.blob"
 
 # Read labels from obj.names
 labelMap = ["car"]
