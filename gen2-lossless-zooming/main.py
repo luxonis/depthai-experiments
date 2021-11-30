@@ -91,7 +91,7 @@ xout = pipeline.createXLinkOut()
 xout.setStreamName('1080P')
 if MJPEG:
     videoEnc = pipeline.create(dai.node.VideoEncoder)
-    videoEnc.setDefaultProfilePreset(20, dai.VideoEncoderProperties.Profile.MJPEG)
+    videoEnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
     crop_manip.out.link(videoEnc.input)
     # Link
     videoEnc.bitstream.link(xout.input)
