@@ -2,7 +2,6 @@ from datetime import timedelta
 import blobconverter
 import cv2
 import depthai as dai
-import numpy as np
 import math
 
 LENS_STEP = 3
@@ -142,9 +141,6 @@ with dai.Device(create_pipeline()) as device:
 
     while True:
         sync.add_msg("color", frame_q.get())
-
-        # Using tracklets instead of ImgDetections in case NN inaccuratelly detected face, so blur
-        # will still happen on all tracklets (even LOST ones)
         nn_in = nn_q.tryGet()
         if nn_in is not None:
             # Get NN output timestamp from the passthrough
