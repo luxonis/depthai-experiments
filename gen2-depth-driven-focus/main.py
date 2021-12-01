@@ -165,19 +165,18 @@ with dai.Device(create_pipeline()) as device:
                 if dist < closest_dist: closest_dist = dist
                 text.rectangle(frame, x1,y1,x2,y2)
 
-            new_lens_pos = clamp(get_lens_position_lite(closest_dist), lensMin, lensMax)
-            if new_lens_pos != lensPos and new_lens_pos != 255:
-                lensPos = new_lens_pos
-                print("Setting manual focus, lens position: ", lensPos)
-                ctrl = dai.CameraControl()
-                ctrl.setManualFocus(lensPos)
-                controlQ.send(ctrl)
-
-            text.putText(frame, f"Lens position: {lensPos}", (330, 1000))
             if closest_dist != 99999999:
                 text.putText(frame,  "Face distance: {:.2f} m".format(closest_dist/1000), (330, 1045))
+                new_lens_pos = clamp(get_lens_position_lite(closest_dist), lensMin, lensMax)
+                if new_lens_pos != lensPos and new_lens_pos != 255:
+                    lensPos = new_lens_pos
+                    print("Setting manual focus, lens position: ", lensPos)
+                    ctrl = dai.CameraControl()
+                    ctrl.setManualFocus(lensPos)
+                    controlQ.send(ctrl)
             else:
                 text.putText(frame,  "Face distance: /", (330, 1045))
+            text.putText(frame, f"Lens position: {lensPos}", (330, 1000))
             cv2.imshow("preview", cv2.resize(frame, (750,750)))
 
         if DEBUG:
