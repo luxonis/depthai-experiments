@@ -4,7 +4,7 @@ This demo shows will constantly focus on the first detected face. It will get th
 
 ## Demo
 
-![Depth driven focus]()
+![Depth driven focus](https://user-images.githubusercontent.com/18037362/144228694-68344fce-8932-4c23-b2f0-601be59184b6.gif)
 
 ## Installation
 
