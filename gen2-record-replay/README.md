@@ -14,6 +14,7 @@ usage: record.py [-h] [-p PATH] [-s [STREAMS]] [-f FPS]
 
 optional arguments:
   -h, --help            show this help message and exit
+  -d, --display       default=False,      Display color preview
   -p, --path,         default="recordings/"       Path where to store the captured data
   -s, --save,         default=["color", "left", "right"]   Choose which streams to save
   -f, --fps,          default=30          Camera sensor FPS, applied to all cameras
