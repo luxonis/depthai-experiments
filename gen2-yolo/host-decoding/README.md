@@ -1,6 +1,6 @@
 ## YoloV5 decoding on host
 
-This example shows how to run YoloV5 object detection on DepthAI with decoding on host.
+This example shows how to run YoloV5 object detection on DepthAI with decoding on host. We also provide support for on-device decoding. Detailed steps are available in the **YoloV5_training.ipynb** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/master/colab-notebooks/YoloV5_training.ipynb) tutorial.
 
 The following *.blob*s are available:
 
@@ -14,7 +14,7 @@ You can find the tutorial for training the model and generation of *.blob* file 
 
 See the example of a model pretrained on SKU-110K dataset in action:
 
-![Example Image](imgs/example.gif)
+![Example Image](https://user-images.githubusercontent.com/56075061/144816009-7de2af38-166a-451e-94b3-6df099f92480.png)
 
 ## Pre-requisites
 

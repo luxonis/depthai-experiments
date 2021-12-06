@@ -3,6 +3,7 @@ from depthai_sdk.managers import PipelineManager, PreviewManager, BlobManager, N
 import depthai as dai
 import cv2
 import argparse
+from pathlib import Path
 
 # parse arguments
 parser = argparse.ArgumentParser()
@@ -14,8 +15,14 @@ args = parser.parse_args()
 CONFIG_PATH = args.config
 
 # create blob, NN, and preview managers
-bm = BlobManager(blobPath=args.model)
-nm = NNetManager(nnFamily="YOLO")
+if Path(args.model).exists():
+    bm = BlobManager(blobPath=args.model)
+else:
+    raise ValueError("Only local models are implemented in the SDK for now. "
+                     "Instead, please try using main.py for models from the DepthAI ZOO.")
+    #bm = BlobManager(zooName=args.model)
+
+nm = NNetManager(nnFamily="YOLO", inputSize=4)
 nm.readConfig(CONFIG_PATH)  # this will also parse the correct input size
 
 pm = PipelineManager()
@@ -27,7 +34,7 @@ pv = PreviewManager(display=[Previews.color.name], scale={"color":0.33}, fpsHand
 
 # create NN with managers
 nn = nm.createNN(pipeline=pm.pipeline, nodes=pm.nodes, source=Previews.color.name,
-                 blobPath=bm.getBlob(shaves=6, openvinoVersion=pm.pipeline.getOpenVINOVersion()))
+                 blobPath=bm.getBlob(shaves=6, openvinoVersion=pm.pipeline.getOpenVINOVersion(), zoo_type="depthai"))
 pm.addNn(nn)
 
 # initialize pipeline

@@ -12,10 +12,11 @@ import numpy as np
 import time
 import argparse
 import json
+import blobconverter
 
 # parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("-m", "--model", help="Provide model path for inference",
+parser.add_argument("-m", "--model", help="Provide model name or model path for inference",
                     default='models/yolo_v3_tiny_openvino_2021.3_6shave.blob', type=str)
 parser.add_argument("-c", "--config", help="Provide config path for inference",
                     default='yolo-tiny.json', type=str)
@@ -43,12 +44,18 @@ anchorMasks = metadata.get("anchor_masks", {})
 iouThreshold = metadata.get("iou_threshold", {})
 confidenceThreshold = metadata.get("confidence_threshold", {})
 
+print(metadata)
+
 # parse labels
 nnMappings = config.get("mappings", {})
 labels = nnMappings.get("labels", {})
 
 # get model path
 nnPath = args.model
+if not Path(nnPath).exists():
+    print("No blob found at {}. Looking into DepthAI model zoo.".format(nnPath))
+    nnPath = str(blobconverter.from_zoo(args.model, shaves = 6, zoo_type = "depthai", use_cache=True))
+# sync outputs
 syncNN = True
 
 # Create pipeline
@@ -106,7 +113,7 @@ with dai.Device(pipeline) as device:
         normVals[::2] = frame.shape[1]
         return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
-    def displayFrame(name, frame):
+    def displayFrame(name, frame, detections):
         color = (255, 0, 0)
         for detection in detections:
             bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
@@ -130,7 +137,7 @@ with dai.Device(pipeline) as device:
             counter += 1
 
         if frame is not None:
-            displayFrame("rgb", frame)
+            displayFrame("rgb", frame, detections)
 
         if cv2.waitKey(1) == ord('q'):
             break
