@@ -2,13 +2,13 @@
 
 ![Yolo-on-device](https://user-images.githubusercontent.com/56075061/144863222-a52be87e-b1f0-4a0a-b39b-f865bbb6e4a4.png)
 
-This repository contains the code for running Yolo object detection with on-device decoding with DepthAI SDK (`main_sdk.py`)  or DepthAI API (`main.py`) directly. Currently, the supported versions are:
+This repository contains the code for running Yolo object detection with on-device decoding with DepthAI SDK (`main.py`)  or DepthAI API (`main_api.py`) directly. Currently, the supported versions are:
 
 * YoloV3 & YoloV3-tiny,
 * YoloV4 & YoloV4-tiny,
 * YoloV5.
 
-We use the same style of JSON parsing in `main.py` and in `main_sdk.py`, but you can also set the values in both cases manually in the code.
+We use the same style of JSON parsing in `main.py` and in `main_api.py`, but you can also set the values in both cases manually in the code.
 
 ### Export your model
 
@@ -30,7 +30,7 @@ As the models have to be exported to OpenVINO IR in a certain way, we provide th
     ```
     or
     ```python
-    python3 main_sdk.py -m <model_name> -c <config_json>
+    python3 main_api.py -m <model_name> -c <config_json>
     ```
     where:
 

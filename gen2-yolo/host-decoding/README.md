@@ -14,7 +14,7 @@ You can find the tutorial for training the model and generation of *.blob* file 
 
 See the example of a model pretrained on SKU-110K dataset in action:
 
-![Example Image](https://user-images.githubusercontent.com/56075061/144816009-7de2af38-166a-451e-94b3-6df099f92480.png)
+![Example Image](https://user-images.githubusercontent.com/56075061/145186805-38e3115d-94fa-4850-9ec4-c34f90c05d30.gif)
 
 ## Pre-requisites
 
