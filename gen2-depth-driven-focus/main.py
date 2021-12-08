@@ -79,11 +79,11 @@ def create_pipeline():
     print("Creating Face Detection Neural Network...")
     face_det_nn = pipeline.createMobileNetSpatialDetectionNetwork()
     face_det_nn.setConfidenceThreshold(0.4)
-    face_det_nn.setBlobPath(str(blobconverter.from_zoo(
+    face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",
         shaves=6,
         version='2021.3'
-    )))
+    ))
 
     face_det_nn.setBoundingBoxScaleFactor(0.5)
     face_det_nn.setDepthLowerThreshold(200)

@@ -59,10 +59,10 @@ def create_pipeline():
     print("Creating Face Detection Neural Network...")
     face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(str(blobconverter.from_zoo(
+    face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",
         shaves=6 if args.camera else 8
-    )))
+    ))
     # Link Face ImageManip -> Face detection NN node
     face_det_manip.out.link(face_det_nn.input)
 
@@ -144,10 +144,10 @@ while True:
     # Age/Gender second stange NN
     print("Creating Age Gender Neural Network...")
     age_gender_nn = pipeline.create(dai.node.NeuralNetwork)
-    age_gender_nn.setBlobPath(str(blobconverter.from_zoo(
+    age_gender_nn.setBlobPath(blobconverter.from_zoo(
         name="age-gender-recognition-retail-0013",
         shaves=6 if args.camera else 8
-    )))
+    ))
     age_gender_manip.out.link(age_gender_nn.input)
 
     age_gender_nn_xout = pipeline.create(dai.node.XLinkOut)

@@ -24,7 +24,7 @@ parser.add_argument('-s', '--sync', action="store_true",
 args = parser.parse_args()
 
 if args.model is None:
-    args.model = str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=7))
+    args.model = blobconverter.from_zoo(name="mobilenet-ssd", shaves=7)
 
 # Create pipeline
 pipeline = dai.Pipeline()

@@ -77,7 +77,7 @@ class DepthAIVideoTransformTrack(VideoTransformTrack):
         if options.nn != "":
             self.nn = self.pipeline.createMobileNetDetectionNetwork()
             self.nn.setConfidenceThreshold(0.5)
-            self.nn.setBlobPath(str(blobconverter.from_zoo(options.nn, shaves=6)))
+            self.nn.setBlobPath(blobconverter.from_zoo(options.nn, shaves=6))
             self.nn.setNumInferenceThreads(2)
             self.nn.input.setBlocking(False)
             self.nnOut = self.pipeline.createXLinkOut()

@@ -21,7 +21,7 @@ cam_rgb.setInterleaved(False)
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createMobileNetDetectionNetwork()
 detection_nn.setConfidenceThreshold(0.5)
-detection_nn.setBlobPath(str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=13)))
+detection_nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=13))
 cam_rgb.preview.link(detection_nn.input)
 
 # Create outputs

@@ -150,11 +150,11 @@ def create_pipeline():
     print("Creating Face Detection Neural Network...")
     face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(str(blobconverter.from_zoo(
+    face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",
         shaves=6,
         version=openvino_version
-    )))
+    ))
     # Link Face ImageManip -> Face detection NN node
     face_det_manip.out.link(face_det_nn.input)
 
@@ -189,11 +189,11 @@ def create_pipeline():
     script.outputs['manip_img'].link(headpose_manip.inputImage)
 
     headpose_nn = pipeline.create(dai.node.NeuralNetwork)
-    headpose_nn.setBlobPath(str(blobconverter.from_zoo(
+    headpose_nn.setBlobPath(blobconverter.from_zoo(
         name="head-pose-estimation-adas-0001",
         shaves=6,
         version=openvino_version
-    )))
+    ))
     headpose_manip.out.link(headpose_nn.input)
 
     headpose_nn.out.link(script.inputs['headpose_in'])

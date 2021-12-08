@@ -25,7 +25,7 @@ parser.add_argument('-t', '--threshold', type=float, help="Coonfidence threshold
 
 args = parser.parse_args()
 THRESHOLD = args.threshold
-NN_PATH = str(blobconverter.from_zoo(name="mobile_object_localizer_192x192", zoo_type="depthai"))
+NN_PATH = blobconverter.from_zoo(name="mobile_object_localizer_192x192", zoo_type="depthai")
 NN_WIDTH = 192
 NN_HEIGHT = 192
 PREVIEW_WIDTH = 640
