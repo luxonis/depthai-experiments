@@ -217,8 +217,6 @@ def convert_to_cv2_frame(name, image):
 
     else: # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
-        if name.startswith('rectified_'):
-            frame = cv2.flip(frame, 1)
         if name == 'rectified_right':
             last_rectif_right = frame
     return frame
