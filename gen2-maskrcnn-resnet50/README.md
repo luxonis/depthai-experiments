@@ -2,9 +2,7 @@
 
 This example shows how to run a Mask R-CNN model on DepthAI. Please note that since it is a heavier model so the expected speed is ~ 2-4 FPS
 
-
-
-TODO: Add example
+![Example](https://user-images.githubusercontent.com/56075061/145182204-af540962-f233-480c-82a0-56b2587e5072.gif)
 
 ## Export
 You can export your Mask R-CNN directly to OpenVINO IR and then to blob. For the first conversion you can use [this repository](https://github.com/openvinotoolkit/openvino_contrib/tree/master/modules/mo_pytorch), where you would select `torchvision.models.detection.mask_rcnn.maskrcnn_resnet50_fpn` model and load your weights. More instruction can be found in the repository. After obtaining XML and BIN you can use [blobconverter](https://blobconverter.luxonis.com/) to convert them to blob and use them on OAK.
