@@ -101,7 +101,6 @@ with dai.Device() as device:
         rightFrame = qRight.get().getFrame()
         disparityFrame = qDisparity.get().getFrame()
 
-        rightFrame = cv2.flip(rightFrame, flipCode=1)
         cv2.imshow("rectified right", rightFrame)
         cv2.imshow("disparity", disparityFrame)
 
