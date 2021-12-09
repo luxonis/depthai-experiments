@@ -45,7 +45,7 @@ IR_WIDTH = 640
 IR_HEIGHT = 360
 
 # --------------- Get Blob ------------------
-NN_PATH = str(blobconverter.from_zoo(name="yolop_320x320", zoo_type="depthai"))
+NN_PATH = blobconverter.from_zoo(name="yolop_320x320", zoo_type="depthai")
 
 # --------------- Check input ---------------
 vid_path = Path(VIDEO_SOURCE)

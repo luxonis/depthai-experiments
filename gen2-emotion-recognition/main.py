@@ -38,7 +38,7 @@ cam.preview.link(face_det_manip.inputImage)
 # NN that detects faces in the image
 face_nn = p.create(dai.node.MobileNetDetectionNetwork)
 face_nn.setConfidenceThreshold(0.3)
-face_nn.setBlobPath(str(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version=openvinoVersion)))
+face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version=openvinoVersion))
 face_det_manip.out.link(face_nn.input)
 
 # Send ImageManipConfig to host so it can visualize the landmarks
@@ -86,7 +86,7 @@ manip_crop.setWaitForConfigInput(True)
 
 # Second NN that detcts emotions from the cropped 64x64 face
 landmarks_nn = p.createNeuralNetwork()
-landmarks_nn.setBlobPath(str(blobconverter.from_zoo("emotions-recognition-retail-0003", shaves=6, version=openvinoVersion)))
+landmarks_nn.setBlobPath(blobconverter.from_zoo("emotions-recognition-retail-0003", shaves=6, version=openvinoVersion))
 manip_crop.out.link(landmarks_nn.input)
 
 landmarks_nn_xout = p.createXLinkOut()

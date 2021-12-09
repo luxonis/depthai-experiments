@@ -23,7 +23,7 @@ cam.initialControl.setManualFocus(130)
 
 # Create MobileNet detection network
 mobilenet = pipeline.createMobileNetDetectionNetwork()
-mobilenet.setBlobPath(str(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5)))
+mobilenet.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
 mobilenet.setConfidenceThreshold(0.7)
 cam.preview.link(mobilenet.input)
 

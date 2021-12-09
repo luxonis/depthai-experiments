@@ -94,7 +94,7 @@ def create_pipeline(depth):
     colorCam.setInterleaved(False)
     colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-    mobilenet.setBlobPath(str(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.2")))
+    mobilenet.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.2"))
     mobilenet.setConfidenceThreshold(0.5)
     mobilenet.input.setBlocking(False)
 

@@ -45,7 +45,7 @@ class DepthAI:
         # Setting node configs
         stereo.setConfidenceThreshold(255)
 
-        spatialDetectionNetwork.setBlobPath(str(blobconverter.from_zoo(name=model_name, shaves=6)))
+        spatialDetectionNetwork.setBlobPath(blobconverter.from_zoo(name=model_name, shaves=6))
         spatialDetectionNetwork.setConfidenceThreshold(0.5)
         spatialDetectionNetwork.input.setBlocking(False)
         spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
