@@ -83,9 +83,7 @@ So you could use this to make plots over a day of room occupancy.  One could mod
 
 This application counts how many people went upwards / downwards / leftwards / rightwards in the video stream, allowing you to receive an information about how many people went into a room or went through a corridor.
 
-The model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) from the OpenVIN Model Zoo.
-
-[![Watch the demo](https://user-images.githubusercontent.com/18037362/116413235-56e96e00-a82f-11eb-8007-bfcdb27d015c.gif)](https://www.youtube.com/watch?v=MHmzp--pqUA)
+[![Watch the demo](https://user-images.githubusercontent.com/18037362/145656510-94e12444-7524-47f9-a036-7ed8ee78fd7a.gif)](https://www.youtube.com/watch?v=MHmzp--pqUA)
 
 ## Recording and reconstruction of the scene ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-record-replay))
 
