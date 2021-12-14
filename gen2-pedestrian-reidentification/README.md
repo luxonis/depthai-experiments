@@ -5,6 +5,7 @@
 This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pipeline Builder.
 
 Original OpenVINO demo, on which this example was made, is [here](https://docs.openvinotoolkit.org/2020.1/_demos_pedestrian_tracker_demo_README.html).
+Models used: [person_detection_retail_0013](https://docs.openvino.ai/latest/omz_models_model_person_detection_retail_0013.html) and [person_reidentification_retail_0031](https://docs.openvino.ai/2020.1/_models_intel_person_reidentification_retail_0031_description_person_reidentification_retail_0031.html)
 
 ## Demo
 
@@ -30,7 +31,6 @@ Optional arguments:
  - `-cam, --camera` Use DepthAI RGB camera for inference (conflicts with -vid)
  - `-vid VIDEO, --video VIDEO` Path to video file to be used for inference (conflicts with -cam)
  - `-w WIDTH, --width WIDTH` Visualization width
- - `-lq, --lowquality` Uses resized frames instead of source
 
 
 To use with a video file, run the script with the following arguments
@@ -43,4 +43,4 @@ To use with DepthAI 4K RGB camera, use instead
 
 ```
 python3 main.py -cam
-``` 
+```

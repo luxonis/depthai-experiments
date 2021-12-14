@@ -4,6 +4,7 @@ import queue
 import signal
 import threading
 from pathlib import Path
+import blobconverter
 
 import cv2
 import depthai as dai
@@ -16,7 +17,6 @@ parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debu
 parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
 parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
 parser.add_argument('-w', '--width', default=1280, type=int, help="Visualization width. Height is calculated automatically from aspect ratio")
-parser.add_argument('-lq', '--lowquality', action="store_true", help="Low quality visualization - uses resized frames")
 args = parser.parse_args()
 
 if not args.camera and not args.video:
@@ -24,7 +24,6 @@ if not args.camera and not args.video:
 
 debug = not args.no_debug
 camera = not args.video
-hq = not args.lowquality
 
 if args.camera and args.video:
     raise ValueError("Incorrect command line parameters! \"-cam\" cannot be used with \"-vid\"!")
@@ -45,6 +44,7 @@ def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
+    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_4)
 
     if camera:
         # ColorCamera
@@ -57,15 +57,12 @@ def create_pipeline():
         cam_xout = pipeline.createXLinkOut()
         cam_xout.setStreamName("cam_out")
         # Link video output to host for higher resolution
-        if hq:
-            cam.video.link(cam_xout.input)
-        else:
-            cam.preview.link(cam_xout.input)
+        cam.video.link(cam_xout.input)
 
     # NeuralNetwork
     print("Creating Person Detection Neural Network...")
     detection_nn = pipeline.createMobileNetDetectionNetwork()
-    detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013_openvino_2020.1_4shave.blob").resolve().absolute()))
+    detection_nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013",shaves=4))
     # Confidence
     detection_nn.setConfidenceThreshold(0.7)
     # Increase threads for detection
@@ -74,8 +71,6 @@ def create_pipeline():
     detection_nn.input.setQueueSize(1)
     detection_nn.input.setBlocking(False)
 
-    detection_nn_xout = pipeline.createXLinkOut()
-    detection_nn_xout.setStreamName("detection_nn")
 
     detection_nn_passthrough = pipeline.createXLinkOut()
     detection_nn_passthrough.setStreamName("detection_passthrough")
@@ -92,17 +87,32 @@ def create_pipeline():
     detection_nn.out.link(detection_nn_xout.input)
     detection_nn.passthrough.link(detection_nn_passthrough.input)
 
+        # Script node will take the output from the face detection NN as an input and set ImageManipConfig
+    # to the 'age_gender_manip' to crop the initial frame
+    script = pipeline.create(dai.node.Script)
+
+    face_det_nn.out.link(script.inputs['face_det_in'])
+    # We are only interested in timestamp, so we can sync depth frames with NN output
+    face_det_nn.passthrough.link(script.inputs['face_pass'])
+
+    with open("script.py", "r") as f:
+        script.setScript(f.read())
+
+
+    json_xout = pipeline.createXLinkOut()
+    json_xout.setStreamName("json")
+
 
     # NeuralNetwork
     print("Creating Person Reidentification Neural Network...")
     reid_in = pipeline.createXLinkIn()
     reid_in.setStreamName("reid_in")
     reid_nn = pipeline.createNeuralNetwork()
-    reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031_openvino_2020.1_4shave.blob").resolve().absolute()))
-    
+    reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031.blob").resolve().absolute()))
+
     # Decrease threads for reidentification
     reid_nn.setNumInferenceThreads(1)
-    
+
     reid_nn_xout = pipeline.createXLinkOut()
     reid_nn_xout.setStreamName("reid_nn")
     reid_in.out.link(reid_nn.input)
@@ -141,7 +151,6 @@ class Main:
         detection_passthrough = self.device.getOutputQueue("detection_passthrough")
         detection_nn = self.device.getOutputQueue("detection_nn")
 
-        bboxes = []
         results = {}
         results_path = {}
         next_id = 0
@@ -149,7 +158,6 @@ class Main:
         # Match up frames and detections
         try:
             prev_passthrough = detection_passthrough.getAll()[0]
-            prev_inference = detection_nn.getAll()[0]
         except RuntimeError:
             pass
 
@@ -170,10 +178,10 @@ class Main:
                 while True:
 
                     frm = self.frame_queue.get()
-                    if camera and hq:
+                    if camera:
                         # Convert NV12 to BGR
                         yuv = frm.getData().reshape((frm.getHeight() * 3 // 2, frm.getWidth()))
-                        cv_frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)                      
+                        cv_frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
                     else:
                         # get the frames corresponding to inference
                         cv_frame = np.ascontiguousarray(frm.getData().reshape(3, frm.getHeight(), frm.getWidth()).transpose(1,2,0))
@@ -195,7 +203,6 @@ class Main:
                     nn_data.setLayer("data", to_planar(det_frame, (48, 96)))
                     self.device.getInputQueue("reid_in").send(nn_data)
 
-                 
                 # Retrieve infered bboxes
                 for det in inference.detections:
 
@@ -257,8 +264,6 @@ class Main:
         seq_num = 0
         while self.is_running():
 
-            # Send images to next stage
-
             # if camera - receive frames from camera
             if camera:
                 try:
@@ -266,10 +271,8 @@ class Main:
                     self.frame_queue.put(frame)
                 except RuntimeError:
                     continue
-            
             # else if video - send frames down to NN
             else:
-
                 # Get frame from video capture
                 read_correctly, vid_frame = self.cap.read()
                 if not read_correctly:
@@ -284,16 +287,12 @@ class Main:
                 self.device.getInputQueue("detection_in").send(frame_nn)
 
                 # if high quality, send original frames
-                if hq:
-                    frame_orig = dai.ImgFrame()
-                    frame_orig.setSequenceNum(seq_num)
-                    frame_orig.setWidth(vid_frame.shape[1])
-                    frame_orig.setHeight(vid_frame.shape[0])
-                    frame_orig.setData(to_planar(vid_frame, (vid_frame.shape[1], vid_frame.shape[0])))
-                    self.frame_queue.put(frame_orig)
-                # else send resized frames
-                else: 
-                    self.frame_queue.put(frame_nn)                
+                frame_orig = dai.ImgFrame()
+                frame_orig.setSequenceNum(seq_num)
+                frame_orig.setWidth(vid_frame.shape[1])
+                frame_orig.setHeight(vid_frame.shape[0])
+                frame_orig.setData(to_planar(vid_frame, (vid_frame.shape[1], vid_frame.shape[0])))
+                self.frame_queue.put(frame_orig)
 
                 seq_num = seq_num + 1
 
@@ -305,7 +304,6 @@ class Main:
 
 
     def visualization_task(self):
-        
         first = True
         while self.running:
 
@@ -322,7 +320,7 @@ class Main:
             to_sleep_ms = ((1.0 / self.FRAMERATE) - (time.time() - t1)) * 1000
             key = None
             if to_sleep_ms >= 1:
-                key = cv2.waitKey(int(to_sleep_ms)) 
+                key = cv2.waitKey(int(to_sleep_ms))
             else:
                 key = cv2.waitKey(1)
             # Exit
@@ -330,11 +328,8 @@ class Main:
                 self.running = False
                 break
 
-            
 
     def run(self):
-
-
         pipeline = create_pipeline()
 
         # Connect to the device
