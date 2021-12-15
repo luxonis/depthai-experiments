@@ -1,19 +1,18 @@
 # Gen2 People tracker
 
-This application counts how many people went upwards / downwards / leftwards / rightwards in the video stream, allowing you to
+This application counts how many people went up / down / left / right in the video stream, allowing you to
 receive an information about how many people went into a room or went through a corridor.
 
-This demo can also send tracklets results through the SPI.
+Demo uses [Script](https://docs.luxonis.com/projects/api/en/latest/components/nodes/script/) node to "decode" movement from trackelts information. In script node, when a new tracklet is added, it's coordiantes are saved. When it's removed/lost, it compares starting coordinates
+with end coordinates and if movement was greater than `THRESH_DIST_DELTA`, it means a person movement was valid and added to counter.
 
-The model used in this example is [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) from the OpenVINO Model Zoo.
+This demo can also send counter results through the SPI.
+
+Demo uses [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest/omz_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html) from the Open Model Zoo for person detection.
 
 ## Demo
 
-[![Watch the demo](https://user-images.githubusercontent.com/18037362/116413235-56e96e00-a82f-11eb-8007-bfcdb27d015c.gif)](https://www.youtube.com/watch?v=MHmzp--pqUA)
-
-## Pre-requisites
-
-Purchase a DepthAI model (see https://shop.luxonis.com/)
+![demo](https://user-images.githubusercontent.com/18037362/145656510-94e12444-7524-47f9-a036-7ed8ee78fd7a.gif)
 
 ## Install project requirements
 
