@@ -40,6 +40,8 @@ Found 4 devices
 Script `multi-device-mobilenet.py` will run `mobilenet-ssd` single shot object detector on all devices and display detections on frames.
 If you would want to display detections on high-res frames (not 300x300), check [tutorial here](https://docs.luxonis.com/projects/api/en/latest/tutorials/dispaying_detections/).
 
+![Demo image](https://user-images.githubusercontent.com/18037362/146223605-e4fd0fb3-7cf9-40a0-87e0-73d63a46eb2d.png)
+
 ## Setup
 
 ```
