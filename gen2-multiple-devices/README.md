@@ -35,6 +35,11 @@ Found 4 devices
    >>> Loading pipeline for: OAK-1-POE
 ```
 
+## Object detection on multiple devices
+
+Script `multi-device-mobilenet.py` will run `mobilenet-ssd` single shot object detector on all devices and display detections on frames.
+If you would want to display detections on high-res frames (not 300x300), check [tutorial here](https://docs.luxonis.com/projects/api/en/latest/tutorials/dispaying_detections/).
+
 ## Setup
 
 ```
