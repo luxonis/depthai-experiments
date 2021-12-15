@@ -65,7 +65,7 @@ if __name__ == "__main__":
     colorCam.setFps(10)
 
     videnc = pipeline.createVideoEncoder()
-    videnc.setDefaultProfilePreset(1920, 1080, 10, dai.VideoEncoderProperties.Profile.H265_MAIN)
+    videnc.setDefaultProfilePreset(10, dai.VideoEncoderProperties.Profile.H265_MAIN)
     colorCam.video.link(videnc.input)
 
     veOut = pipeline.createXLinkOut()

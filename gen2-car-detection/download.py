@@ -11,5 +11,5 @@ gdown.download(url, output, quiet=False)
 with ZipFile(output, 'r') as zipObj:
    # Extract all the contents of zip file to ./vids/ directory
    zipObj.extractall(path = "./models/")
-   
+
 os.remove("gen2-car-detection.zip")
