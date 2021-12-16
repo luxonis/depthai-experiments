@@ -13,8 +13,9 @@ except ImportError as e:
 # StereoDepth config options. TODO move to command line options
 lrcheck = True  # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled
-subpixel = False  # Better accuracy for longer distance, fractional disparity 32-levels
-
+subpixel = True  # Better accuracy for longer distance, fractional disparity 32-levels
+LRchecktresh = 5
+confidenceThreshold = 200
 
 def create_rgb_pipeline():
     pipeline = dai.Pipeline()
@@ -38,7 +39,8 @@ def create_rgb_pipeline():
     right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
     right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    stereo.initialConfig.setConfidenceThreshold(200)
+    stereo.initialConfig.setConfidenceThreshold(confidenceThreshold)
+    stereo.initialConfig.setLeftRightCheckThreshold(LRchecktresh);
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)  # NOTE: Subpixel cannot be enabled, since RGB stream is used
