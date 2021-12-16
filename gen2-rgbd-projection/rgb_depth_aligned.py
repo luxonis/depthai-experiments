@@ -40,7 +40,7 @@ def create_pipeline():
     stereo.disparity.link(disparityOut.input)
 
     streams = ["rgb", "disparity"]
-    maxDisparity = stereo.getMaxDisparity()
+    maxDisparity = stereo.initialConfig.getMaxDisparity()
 
     return pipeline, streams, maxDisparity
 

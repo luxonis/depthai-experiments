@@ -40,8 +40,6 @@ class PointCloudVisualizer():
 
             self.pcl.points = pcd.points
             self.pcl.colors = pcd.colors
-            # Flip it, otherwise the pointcloud will be upside down
-            self.pcl.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         return self.pcl
 
     def visualize_pcd(self):
