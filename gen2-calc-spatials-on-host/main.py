@@ -5,6 +5,7 @@ import depthai as dai
 from calc import HostSpatialsCalc
 from utility import *
 import numpy as np
+import math
 
 # Create pipeline
 pipeline = dai.Pipeline()
@@ -63,9 +64,9 @@ with dai.Device(pipeline) as device:
         disp = cv2.applyColorMap(disp, cv2.COLORMAP_JET)
 
         text.rectangle(disp, (x-delta, y-delta), (x+delta, y+delta))
-        text.putText(disp, "X: {:.1f}m".format(spatials['x']/1000), (x + 10, y + 20))
-        text.putText(disp, "Y: {:.1f}m".format(spatials['y']/1000), (x + 10, y + 35))
-        text.putText(disp, "Z: {:.1f}m".format(spatials['z']/1000), (x + 10, y + 50))
+        text.putText(disp, "X: " + ("{:.1f}m".format(spatials['x']/1000) if not math.isnan(spatials['x']) else "/"), (x + 10, y + 20))
+        text.putText(disp, "Y: " + ("{:.1f}m".format(spatials['y']/1000) if not math.isnan(spatials['y']) else "/"), (x + 10, y + 35))
+        text.putText(disp, "Z: " + ("{:.1f}m".format(spatials['z']/1000) if not math.isnan(spatials['z']) else "/"), (x + 10, y + 50))
 
         # Show the frame
         cv2.imshow("depth", disp)
