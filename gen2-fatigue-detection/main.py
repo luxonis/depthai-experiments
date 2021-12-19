@@ -2,17 +2,6 @@ import blobconverter
 import cv2
 import depthai as dai
 import face_landmarks
-class TextHelper:
-    def __init__(self) -> None:
-        self.bg_color = (0, 0, 0)
-        self.color = (255, 255, 255)
-        self.text_type = cv2.FONT_HERSHEY_SIMPLEX
-        self.line_type = cv2.LINE_AA
-    def putText(self, frame, text, coords):
-        cv2.putText(frame, text, coords, self.text_type, 0.5, self.bg_color, 4, self.line_type)
-        cv2.putText(frame, text, coords, self.text_type, 0.5, self.color, 1, self.line_type)
-
-class_names = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
 openvinoVersion = "2020.3"
 p = dai.Pipeline()
@@ -90,6 +79,7 @@ manip_crop.setWaitForConfigInput(True)
 
 # Second NN that detcts emotions from the cropped 64x64 face
 landmarks_nn = p.createNeuralNetwork()
+# landmarks_nn.setBlobPath(blobconverter.from_zoo(name="facial_landmarks_68_160x160", zoo_type="depthai", version=openvinoVersion))
 landmarks_nn.setBlobPath("models/face_landmark_160x160_openvino_2020_1_4shave.blob")
 manip_crop.out.link(landmarks_nn.input)
 
@@ -97,50 +87,26 @@ landmarks_nn_xout = p.createXLinkOut()
 landmarks_nn_xout.setStreamName("nn")
 landmarks_nn.out.link(landmarks_nn_xout.input)
 
-# def frame_norm(frame, bbox):
-#     normVals = np.full(len(bbox), frame.shape[0])
-#     normVals[::2] = frame.shape[1]
-#     return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
-
 # Pipeline is defined, now we can connect to the device
 with dai.Device(p) as device:
     videoQ = device.getOutputQueue(name="video", maxSize=1, blocking=False)
     faceDetQ = device.getOutputQueue(name="face_det", maxSize=1, blocking=False)
     nnQ = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
-    textHelper = TextHelper()
     decode = face_landmarks.FaceLandmarks()
 
     while True:
         frame = videoQ.get().getCvFrame()
 
         if nnQ.has():
-            faceDet = faceDetQ.get().detections[0]
-            face_coords = [faceDet.xmin, faceDet.ymin,faceDet.xmax,faceDet.ymax]
-            nndata = nnQ.get()
-            decode.run_land68(frame, nndata, face_coords)
-            # [print(f"Layer name: {l.name}, Type: {l.dataType}, Dimensions: {l.dims}") for l in nndata.getAllLayers()]
-            # Layer name: StatefulPartitionedCall/strided_slice_2/Split.0, Type: DataType.FP16, Dimensions: [1, 136]
-            # Layer name: StatefulPartitionedCall/strided_slice_2/Split.1, Type: DataType.FP16, Dimensions: [1, 3]
-            # Layer name: StatefulPartitionedCall/strided_slice_2/Split.2, Type: DataType.FP16, Dimensions: [1, 4]
-        # if faceDetQ.has():
-        #     detections = faceDetQ.get().detections
-        #     frame = videoQ.get().getCvFrame()
-        #     for detection in detections:
-        #         bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-        #         cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 255, 255), 1)
-        #         # Each face detection will be sent to emotion estimation model. Wait for the result
-        #         nndata = nnQ.get()
+            dets = faceDetQ.get().detections
+            if 0 < len(dets):
+                faceDet = dets[0]
+                face_coords = [faceDet.xmin, faceDet.ymin,faceDet.xmax,faceDet.ymax]
+                nndata = nnQ.get()
+                decode.run_land68(frame, nndata, face_coords)
 
-        #         results = np.array(nndata.getFirstLayerFp16())
-        #         result_conf = np.max(results)
-        #         if 0.3 < result_conf:
-        #             name = class_names[np.argmax(results)]
-        #             conf = round(100 * result_conf, 1)
-        #             textHelper.putText(frame, f"{name}, {conf}%", (bbox[0] + 10, bbox[1] + 20))
-
-            cv2.imshow("a", frame)
-        # if frame is not None:
+        cv2.imshow("frame", frame)
 
         if cv2.waitKey(1) == ord('q'):
             break

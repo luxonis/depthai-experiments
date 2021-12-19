@@ -34,11 +34,9 @@ class FaceLandmarks:
             if i == 16 or i == 60 or i == 72 or i == 90 or i == 96 or i == 108:
                 hand_points.append((result[i]+face_coords[0],result[i+1]+face_coords[1]))
 
+        # Whether dead is tilted downwards
         ret, rotation_vector, translation_vector, camera_matrix, dist_coeffs = self.get_pose_estimation(self.frame.shape, np.array(hand_points,dtype='double'))
         ret, pitch, yaw, roll = self.get_euler_angle(rotation_vector)
-        (nose_end_point2D, jacobian) = cv2.projectPoints(np.array([(0.0, 0.0, 1000.0)]), rotation_vector, translation_vector, camera_matrix, dist_coeffs)
-        euler_angle_str = 'Y:{}, X:{}, Z:{}'.format(pitch, yaw, roll)
-        cv2.putText(self.frame,euler_angle_str,(10,20),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.5,(0,0,255))
         if pitch < 0:
             self.hCOUNTER += 1
             if self.hCOUNTER >= 20:
@@ -48,6 +46,7 @@ class FaceLandmarks:
                 self.hTOTAL += 1
             self.hCOUNTER = 0
 
+        # Whether eyes are closed (based on eye aspect ratio)
         left_ear = self.eye_aspect_ratio(eye_left)
         right_ear = self.eye_aspect_ratio(eye_right)
         ear = (left_ear + right_ear) / 2.0
@@ -62,6 +61,7 @@ class FaceLandmarks:
             # Reset the eye frame counter
             self.COUNTER = 0
 
+        # Yawning detection - based on mouth aspect ratio
         mouth_ratio = self.mouth_aspect_ratio(mouth)
         if mouth_ratio > 0.5:
             self.mCOUNTER += 1
@@ -70,12 +70,9 @@ class FaceLandmarks:
                 self.mTOTAL += 1
             self.mCOUNTER = 0
 
-        cv2.putText(self.frame,"eye:{:d},mouth:{:d},head:{:d}".format(self.TOTAL,self.mTOTAL,self.hTOTAL),(10,40),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.5,(255,0,0,))
+        cv2.putText(self.frame,"eye:{:d},mouth:{:d},head:{:d}".format(self.TOTAL,self.mTOTAL,self.hTOTAL),(10,40),cv2.FONT_HERSHEY_COMPLEX_SMALL,1.0,(255,0,0,))
         if self.TOTAL >= 50 or self.mTOTAL>=15 or self.hTOTAL >= 10:
             cv2.putText(self.frame, "Danger!!!", (100, 200),cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-        # except:
-        #     print('error parsing nndata')
-        #     pass
 
     def frame_norm(self, frame, *xy_vals):
         height, width = frame.shape[:2]
