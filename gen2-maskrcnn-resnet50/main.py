@@ -32,12 +32,13 @@ LABEL_MAP = [
     "pottedplant",    "bed",        "mirror",        "diningtable",   "window",      "desk",         "toilet",
     "door",           "tvmonitor",  "laptop",        "mouse",         "remote",      "keyboard",     "cell phone",
     "microwave",      "oven",       "toaster",       "sink",          "refrigerator","blender",      "book",
-    "clock",          "vase",       "scissors",      "teddy bear",    "hair drier",  "toothbrush",   "hair brush"
+    "clock",          "vase",       "scissors",      "teddy bear",    "hair drier",  "toothbrush"
 ]
 
 # Start defining a pipeline
 pm = PipelineManager()
 pm.createColorCam(previewSize=NN_SHAPE, fullFov=False, xout=False)
+pm.nodes.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
 nm = NNetManager(inputSize=NN_SHAPE)
 pm.setNnManager(nm)
@@ -58,7 +59,6 @@ def show_boxes_and_regions(frame, boxes, masks):
         if prob < THRESHOLD:
             continue
 
-        #print(f"{LABEL_MAP[cls-1]}: {prob}")
         bbox = frameNorm(frame, box[-4:])
         cv2.rectangle(frame, (bbox[0], bbox[1]-15), (bbox[2], bbox[1]), COLORS[cls], -1)
         cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), COLORS[cls], 1)
@@ -75,15 +75,6 @@ def show_boxes_and_regions(frame, boxes, masks):
         roi[mask] = roi[mask] * 0.6 + COLORS[cls] * 0.4
         frame[bbox[1]:bbox[3], bbox[0]:bbox[2]] = roi
 
-        #print(f"Class {cls}")
-
-        #mask = cv2.resize(masks[i, cls], (bbox_w, bbox_h))
-        #mask = (mask > REGION_THRESHOLD).astype(np.uint8) * 255
-        #cv2.imshow("M1", mask)
-
-        #mask = cv2.resize(masks[i, cls-1], (bbox_w, bbox_h))
-        #mask = (mask > REGION_THRESHOLD).astype(np.uint8) * 255
-        #cv2.imshow("M2", mask)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.pipeline) as device:
@@ -100,8 +91,8 @@ with dai.Device(pm.pipeline) as device:
         masks = output["Sigmoid_733"]
 
         show_boxes_and_regions(frame, boxes, masks)
-        fps.drawFps(frame, 'color')
-        cv2.imshow('color', frame)
+        fps.drawFps(frame, Previews.nnInput.name)
+        cv2.imshow(Previews.nnInput.name, frame)
 
         if cv2.waitKey(1) == ord('q'):
             break
