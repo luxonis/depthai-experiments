@@ -17,5 +17,5 @@ This example shows how to run Deeplabv3+ on DepthAI in the Gen2 API system.
 ## Usage
 
 ```
-python3 deeplabv3_person_256.py
+python3 main.py
 ```

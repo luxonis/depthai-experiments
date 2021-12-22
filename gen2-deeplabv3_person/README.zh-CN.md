@@ -17,5 +17,5 @@
 ## 用法
 
 ```
-python3 deeplabv3_person_256.py
+python3 main.py
 ```

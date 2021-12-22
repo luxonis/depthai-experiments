@@ -1,5 +1,5 @@
 opencv-python
 numpy
-depthai>=2.12.0.0
-blobconverter>=1.2.6
+depthai>=2.13.3.0
+blobconverter>=1.2.8
 rosbags>=0.9.7
