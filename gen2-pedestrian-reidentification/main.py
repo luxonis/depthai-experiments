@@ -13,7 +13,6 @@ import numpy as np
 from imutils.video import FPS
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
 parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
 parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
 parser.add_argument('-w', '--width', default=1280, type=int, help="Visualization width. Height is calculated automatically from aspect ratio")
@@ -22,7 +21,6 @@ args = parser.parse_args()
 if not args.camera and not args.video:
     raise RuntimeError("No source selected. Please use either \"-cam\" to use RGB camera as a source or \"-vid <path>\" to run on video")
 
-debug = not args.no_debug
 camera = not args.video
 
 if args.camera and args.video:
@@ -108,7 +106,9 @@ def create_pipeline():
     reid_in = pipeline.createXLinkIn()
     reid_in.setStreamName("reid_in")
     reid_nn = pipeline.createNeuralNetwork()
-    reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031.blob").resolve().absolute()))
+    reid_nn.setBlobPath(blobconverter.from_zoo(
+        name="person-reidentification-retail-0031_96x48",
+        zoo_type="depthai"))
 
     # Decrease threads for reidentification
     reid_nn.setNumInferenceThreads(1)
@@ -223,23 +223,19 @@ class Main:
                         results_path[result_id] = []
                         next_id += 1
 
-                    if debug:
-                        for frame in frames:
-                            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
-                            x = (bbox[0] + bbox[2]) // 2
-                            y = (bbox[1] + bbox[3]) // 2
-                            results_path[result_id].append([x, y])
-                            cv2.putText(frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-                            if len(results_path[result_id]) > 1:
-                                cv2.polylines(frame, [np.array(results_path[result_id], dtype=np.int32)], False, (255, 0, 0), 2)
-                    else:
-                        print(f"Saw id: {result_id}")
+                    for frame in frames:
+                        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+                        x = (bbox[0] + bbox[2]) // 2
+                        y = (bbox[1] + bbox[3]) // 2
+                        results_path[result_id].append([x, y])
+                        cv2.putText(frame, str(result_id), (x, y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+                        if len(results_path[result_id]) > 1:
+                            cv2.polylines(frame, [np.array(results_path[result_id], dtype=np.int32)], False, (255, 0, 0), 2)
 
                 # Send of to visualization thread
                 for frame in frames:
                     # put nn_fps
-                    if debug:
-                        cv2.putText(frame, 'NN FPS: '+str(self.nn_fps), (5,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255,0,0), 2)
+                    cv2.putText(frame, 'NN FPS: '+str(self.nn_fps), (5,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255,0,0), 2)
 
                     if self.visualization_queue.full():
                         self.visualization_queue.get_nowait()
