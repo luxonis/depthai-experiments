@@ -44,14 +44,12 @@ with open("script-crop.py", "r") as f:
 
 # Recieves 256 byte person vector, runs cosinus distance between them
 reid_script = p.create(dai.node.Script)
-reid_script.setProcessor(dai.ProcessorType.LEON_MSS)
 with open("script-reid.py", "r") as f:
     reid_script.setScript(f.read())
 # Forward person bounding box from one script to another
 image_manip_script.outputs['manip_cfg'].link(reid_script.inputs['cfg'])
 
-# This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
-# face that was detected by the face-detection NN.
+# This ImageManip will crop the frame based on the NN detections. Resulting image will be the cropped
 manip_crop = p.create(dai.node.ImageManip)
 image_manip_script.outputs['manip_img'].link(manip_crop.inputImage)
 image_manip_script.outputs['manip_cfg'].link(manip_crop.inputConfig)
@@ -59,9 +57,9 @@ image_manip_script.outputs['manip_cfg'].link(manip_crop.inputConfig)
 manip_crop.initialConfig.setResize(48, 96)
 manip_crop.setWaitForConfigInput(True)
 
-crop_xout = p.createXLinkOut()
-crop_xout.setStreamName("crop")
-manip_crop.out.link(crop_xout.input)
+# crop_xout = p.createXLinkOut()
+# crop_xout.setStreamName("crop")
+# manip_crop.out.link(crop_xout.input)
 
 # Second NN that detcts emotions from the cropped 64x64 face
 reid_nn = p.createNeuralNetwork()
@@ -89,7 +87,7 @@ reid_script.outputs['out'].link(result_xout.input)
 with dai.Device(p) as device:
     videoQ = device.getOutputQueue(name="video")
     outQ = device.getOutputQueue(name="out")
-    cropQ = device.getOutputQueue(name="crop")
+    # cropQ = device.getOutputQueue(name="crop")
     results = {}
     text = TextHelper()
     while True:
@@ -104,18 +102,18 @@ with dai.Device(p) as device:
                 'cnt': dict['cnt'],
             }
 
-        if cropQ.has():
-            cv2.imshow("crop", cropQ.get().getCvFrame())
+        # if cropQ.has():
+        #     cv2.imshow("crop", cropQ.get().getCvFrame())
 
         for id, obj in results.items():
-            print(id, obj)
+            # print(id, obj)
             # Remove results older than 0.2 sec
             if time.time() - obj['ts'] > 0.2:
                 # results.pop(id)
                 continue
             bbox = frameNorm(frame, obj['bbox'])
-            text.putText(frame, id, (bbox[0] + 10, bbox[1] + 20))
-            text.putText(frame, f"Age: {obj['cnt']}", (bbox[0] + 10, bbox[1] + 40))
+            text.putText(frame, f"ID: {id}", (bbox[0] + 10, bbox[1] + 30))
+            text.putText(frame, f"Age: {obj['cnt']}", (bbox[0] + 10, bbox[1] + 60))
             text.rectangle(frame, bbox)
 
         cv2.imshow("frame", frame)
