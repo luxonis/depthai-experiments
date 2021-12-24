@@ -27,3 +27,10 @@ Uses [kornia.filters.GaussianBlur2d](https://kornia.readthedocs.io/en/latest/fil
 ![Laplacian corner detection](https://user-images.githubusercontent.com/18037362/134209951-4e1c7343-a333-4fb6-bdc9-bc86f6dc36b2.jpeg)
 
 Uses [kornia.filters.Laplacian](https://kornia.readthedocs.io/en/latest/filters.html?highlight=laplacian#kornia.filters.Laplacian) filter to create corner detection model.
+
+#### Cosinus distance
+
+[Cosinus distance/similarity](https://en.wikipedia.org/wiki/Cosine_similarity) model that allows you to compare vectors on the device itself. Currently used in [Person reidentification](https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification) demo, it could also be used in [Face recognition](https://github.com/luxonis/depthai-experiments/tree/master/gen2-face-recognition) demo.
+
+Creating this model was a bit tricky, as some values in between calculations exceeded [FP16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format#Half_precision_examples) upper limit of 65504. That means it returned `inf`, which lead to `0` or `inf` end result.
+**Solution:** we divide values in between the calculation by 1000, so no value exceeds the FP16 upper value limit.
