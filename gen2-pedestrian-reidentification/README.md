@@ -2,10 +2,16 @@
 
 # Pedestrian reidentification
 
-This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pipeline Builder.
+This demo first runs person detection model, then runs reidentification model on the cropped person frame, which provides
+256 FP16 vector. This vector is then compared with other (people) vectors to re-identify the person. Comparison is done on the device as well, using custom cosinus similarity model. All these processes are entirely run on the device itself (2 Script nodes are used for business logic), and only results and frames are sent back to the host.
+
+There is a ~1 second delay between frames are bounding boxes, that's because we run person reidentification followed by multiple cosinus similarity processes on the device, before sending bounding box of reidentified person back to the host.
 
 Original OpenVINO demo, on which this example was made, is [here](https://docs.openvinotoolkit.org/2020.1/_demos_pedestrian_tracker_demo_README.html).
-Models used: [person_detection_retail_0013](https://docs.openvino.ai/latest/omz_models_model_person_detection_retail_0013.html) and [person_reidentification_retail_0031](https://docs.openvino.ai/2020.1/_models_intel_person_reidentification_retail_0031_description_person_reidentification_retail_0031.html)
+Models used:
+- [person_detection_retail_0013](https://docs.openvino.ai/latest/omz_models_model_person_detection_retail_0013.html)
+- [person_reidentification_retail_0031](https://docs.openvino.ai/2020.1/_models_intel_person_reidentification_retail_0031_description_person_reidentification_retail_0031.html)
+- Custom [cosinus similarity](https://github.com/luxonis/depthai-experiments/tree/master/gen2-custom-models/generate_model/pytorch_cos_dist.py) model implemented with PyTorch
 
 ## Demo
 
@@ -13,34 +19,13 @@ Models used: [person_detection_retail_0013](https://docs.openvino.ai/latest/omz_
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
+Install requirements
+```
+python3 -m pip install -r requirements.txt
+```
 
 ## Usage
 
 ```
-main.py [-h] [-nd] [-cam] [-vid VIDEO] [-w WIDTH] [-lq]
-```
-
-Optional arguments:
- - `-h, --help` Show this help message and exit
- - `-nd, --no-debug` Prevent debug output
- - `-cam, --camera` Use DepthAI RGB camera for inference (conflicts with -vid)
- - `-vid VIDEO, --video VIDEO` Path to video file to be used for inference (conflicts with -cam)
- - `-w WIDTH, --width WIDTH` Visualization width
-
-
-To use with a video file, run the script with the following arguments
-
-```
-python3 main.py -vid input.mp4
-```
-
-To use with DepthAI 4K RGB camera, use instead
-
-```
-python3 main.py -cam
+python3 main.py
 ```

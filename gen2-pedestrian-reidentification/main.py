@@ -57,10 +57,6 @@ image_manip_script.outputs['manip_cfg'].link(manip_crop.inputConfig)
 manip_crop.initialConfig.setResize(48, 96)
 manip_crop.setWaitForConfigInput(True)
 
-# crop_xout = p.createXLinkOut()
-# crop_xout.setStreamName("crop")
-# manip_crop.out.link(crop_xout.input)
-
 # Second NN that detcts emotions from the cropped 64x64 face
 reid_nn = p.createNeuralNetwork()
 reid_nn.setBlobPath("models/person-reidentification-retail-0031_96x48.blob")
@@ -87,7 +83,6 @@ reid_script.outputs['out'].link(result_xout.input)
 with dai.Device(p) as device:
     videoQ = device.getOutputQueue(name="video")
     outQ = device.getOutputQueue(name="out")
-    # cropQ = device.getOutputQueue(name="crop")
     results = {}
     text = TextHelper()
     while True:
@@ -101,9 +96,6 @@ with dai.Device(p) as device:
                 'bbox': dict['bb'],
                 'cnt': dict['cnt'],
             }
-
-        # if cropQ.has():
-        #     cv2.imshow("crop", cropQ.get().getCvFrame())
 
         for id, obj in results.items():
             # print(id, obj)
