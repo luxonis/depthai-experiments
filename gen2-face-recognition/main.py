@@ -1,4 +1,48 @@
 # coding=utf-8
+
+'''
+This demo consists of a pipeline that performs face recognition on the camera input with little
+host side processing (almost all on device using script node)
+
+The pipeline, in general, does the following (not all nodes are described):
+1) In ImageManip node resizes the camera preview output and feeds them to a face detection NN.
+1) A face detection NN generates an ImgDetections from frames and sends them to the script node.
+2) The ImgDections contains a list of all faces detected.  For each detection, which consists
+   of a bounding box, the script node creates an ImageManipConfig to crop out the faces, 
+   resize them, and change the output format.  This is sent to an ImageManip node. Note: one
+   configuration per face is sent (and there may be more than one face detected per image).
+3) An ImageManip node performs the crop/resize/format change and sends each face to a headpose
+   estimator NN.
+4) The headpose estimator NN calculates the headpose and sends them to the script node.
+5) The script node reads (only) the "rotation" value from the headpose estimate and calculates
+   a rotated rectangle for cropping that will work better with the face recognition node.  
+   The script creates an ImangeManipConfig with this rotated rectangle and sends to an
+   ImageManip node.
+6) An ImageManip node performs the crop and resize and sends each face to a face recognition NN.
+4) The face recognition NN generates features based upon the face image sent.
+
+The pipeline outputs (xlinks) the camera preview output, the face detections, the rotated 
+rectangle values, and the face recognition features.
+
+Its important to note that there is a 1:N relationship between face detections and the latter
+outputs of the pipeline.  For each face detection (i.e. ImgDetection) with N number of faces
+detected, there are N number of rotated rectangle values and face recognition features.  
+
+This pipeline works because all node inputs are blocking and therefore, remain can remain in sync.
+However, if the host does not process all of the output queues fast enough, its possible that
+a node's output queue overruns and something will be dropped.  When this happens, the pipeline
+can become out of sync and recognitions may not line up with their rotated rectangles.
+
+This demo was tested on an OAK-D with a 5 FPS and two people in the database.  At a FPS of 10, there
+were errors in the recognition and its suspected that one output queue might have overflowed.
+
+An option is to create threads where one thread reads the output from the pipeline and stores it in
+a Queue.  The second thread reads this Queue and outputs to the display.  This way you may miss
+a recognition that that queue overflows because the frame rate is fast, but you don't overrun the
+output queue of a node and lose sync (if this is what is really happening).
+
+
+''' 
 import os
 from datetime import timedelta, datetime
 import argparse
@@ -136,6 +180,7 @@ def create_pipeline():
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+    cam.setFps(5)
 
     host_face_out = pipeline.create(dai.node.XLinkOut)
     host_face_out.setStreamName('frame')
@@ -163,6 +208,11 @@ def create_pipeline():
     script = pipeline.create(dai.node.Script)
 
     face_det_nn.out.link(script.inputs['face_det_in'])
+    
+    face_detections_out = pipeline.create(dai.node.XLinkOut)
+    face_detections_out.setStreamName('detections')
+    face_det_nn.out.link(face_detections_out.input)
+
     # We are only interested in timestamp, so we can sync depth frames with NN output
     face_det_nn.passthrough.link(script.inputs['face_pass'])
 
@@ -183,6 +233,7 @@ def create_pipeline():
 
     print("Creating Head pose estimation NN")
     headpose_manip = pipeline.create(dai.node.ImageManip)
+    headpose_manip.setWaitForConfigInput(True) # needed to maintain sync
     headpose_manip.initialConfig.setResize(60, 60)
 
     script.outputs['manip_cfg'].link(headpose_manip.inputConfig)
@@ -202,6 +253,7 @@ def create_pipeline():
     print("Creating face recognition ImageManip/NN")
 
     face_rec_manip = pipeline.create(dai.node.ImageManip)
+    face_rec_manip.setWaitForConfigInput(True) # needed to maintain sync
     face_rec_manip.initialConfig.setResize(112, 112)
 
     script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
@@ -236,11 +288,12 @@ def create_pipeline():
 
 
 with dai.Device(create_pipeline()) as device:
-    frameQ = device.getOutputQueue("frame", 4, False)
-    recCfgQ = device.getOutputQueue("face_rec_cfg_out", 4, False)
-    arcQ = device.getOutputQueue("arc_out", 4, False)
+    frameQ = device.getOutputQueue("frame", 15, False)
+    recCfgQ = device.getOutputQueue("face_rec_cfg_out", 15, False)
+    arcQ = device.getOutputQueue("arc_out", 15, False)
+    detQ = device.getOutputQueue("detections", 15, False)
     if DISPLAY_FACE:
-        faceQ = device.getOutputQueue("face", 4, False)
+        faceQ = device.getOutputQueue("face", 15, False)
 
     facerec = FaceRecognition(databases, args.name)
     sync = HostSync()
@@ -249,35 +302,40 @@ with dai.Device(create_pipeline()) as device:
     frameArr = []
     frame = None
     results = {}
-
+    frameDelay = 0 #Note: was 6.  See comment below
     while True:
         frameIn = frameQ.tryGet()
         if frameIn is not None:
             frameArr.append(frameIn.getCvFrame())
-            # Inference time for face detection, head pose estimation and face recognition
-            # takes about ~200ms, that's why we are delaying frames intentionally.
-            if 6 < len(frameArr):
+            # The original version of this demo delayed the video ouput to sync the detections
+            # with the video (head pose estimation and face recognition takes about ~200ms).
+            # However, the frame rate was slowed down to avoid what I suspect are drops in the
+            # output queue (which I believe lead to sync issues).
+            # At the current frame rate (5 fps), 0 frame delay appears to work well enough.
+            if frameDelay < len(frameArr):
                 frame = frameArr.pop(0)
 
-        cfg = recCfgQ.tryGet()
-        if cfg is not None:
-            rr = cfg.getRaw().cropConfig.cropRotatedRect
-            arcIn = arcQ.get()
-            h, w = VIDEO_SIZE
-            center = (int(rr.center.x * w), int(rr.center.y * h))
-            size = (int(rr.size.width * w), int(rr.size.height * h))
-            rotatedRect = (center, size, rr.angle)
-            points = np.int0(cv2.boxPoints(rotatedRect))
-            # draw_detections(frame, face_in.detections)
-            features = np.array(arcIn.getFirstLayerFp16())
-            # print('New features')
-            conf, name = facerec.new_recognition(features)
-            results[name] = {
-                'conf': conf,
-                'coords': center,
-                'points': points,
-                'ts': time.time()
-            }
+        inDet = detQ.tryGet()
+        if inDet is not None:
+            for det in inDet.detections:
+                cfg = recCfgQ.get()
+                arcIn = arcQ.get()
+                rr = cfg.getRaw().cropConfig.cropRotatedRect
+                h, w = VIDEO_SIZE
+                center = (int(rr.center.x * w), int(rr.center.y * h))
+                size = (int(rr.size.width * w), int(rr.size.height * h))
+                rotatedRect = (center, size, rr.angle)
+                points = np.int0(cv2.boxPoints(rotatedRect))
+                # draw_detections(frame, face_in.detections)
+                features = np.array(arcIn.getFirstLayerFp16())
+                # print('New features')
+                conf, name = facerec.new_recognition(features)
+                results[name] = {
+                    'conf': conf,
+                    'coords': center,
+                    'points': points,
+                    'ts': time.time()
+                }
 
         if frame is not None:
             for name, result in results.items():

@@ -5,20 +5,13 @@ l = [] # List of images
 # So the correct frame will be the first in the list
 # For this experiment this function is redundant, since everything
 # runs in blocking mode, so no frames will get lost
-def remove_prev_frames(seq):
-    if len(l) == 0:
-        return
-    for rm, frame in enumerate(l):
-        if frame.getSequenceNum() == seq:
-            # node.warn(f"List len {len(l)} Frame with same seq num: {rm},seq {seq}")
-            break
-    for i in range(rm):
-        l.pop(0)
-
 def find_frame(seq):
     for frame in l:
         if frame.getSequenceNum() == seq:
-            return frame
+            return(frame)
+            break
+    return None
+
 def correct_bb(bb):
     if bb.xmin < 0: bb.xmin = 0.0
     if bb.ymin < 0: bb.ymin = 0.0
@@ -40,12 +33,13 @@ while True:
         # node.warn(f"New detection start")
         passthrough = node.io['face_pass'].get()
         seq = passthrough.getSequenceNum()
-        # node.warn(f"New detection {seq}")
+        #node.warn(f"New detection {seq}")
         if len(l) == 0:
             continue
 
         img = find_frame(seq) # Matching frame is the first in the list
         if img is None:
+            node.warn(f"Frame not found")
             continue
 
         for det in face_dets.detections:
@@ -70,10 +64,10 @@ while True:
         correct_bb(bb)
 
         # remove_prev_frame(seq)
-        remove_prev_frames(seq)
-        if len(l) == 0:
-            continue
-        img = l.pop(0) # Matching frame is the first in the list
+        img = find_frame(seq)
+        if img is None:
+          node.warn(f"Frame not found.  Sync problem will occur")
+          continue
         # node.warn('HP' + str(img))
         # node.warn('bb' + str(bb))
         cfg = ImageManipConfig()
