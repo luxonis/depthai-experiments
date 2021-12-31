@@ -195,7 +195,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     fps = FPSHandler()
     sync = HostSync()
     disp_frame = None
-    disp_multiplier = 255 / stereo.getMaxDisparity()
+    disp_multiplier = 255 / stereo.initialConfig.getMaxDisparity()
     print("Max disp_frame: {}".format(stereo.getMaxDisparity()))
     frame = None
     frame_back = None
