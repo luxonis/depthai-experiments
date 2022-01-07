@@ -34,27 +34,14 @@ manipRight.initialConfig.setResize(300, 300)
 manipRight.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 right.out.link(manipRight.inputImage)
 
-script = p.create(dai.node.Script)
-camRgb.preview.link(script.inputs['color'])
-manipLeft.out.link(script.inputs['left'])
-manipRight.out.link(script.inputs['right'])
-script.setScript("""
-while True:
-    left = node.io['left'].get().getData()
-    right = node.io['right'].get().getData()
-    color = node.io['color'].get().getData()
-    nndata = NNData(810000) # Three images of with 3x300x300 size
-    nndata.setLayer("img1", left)
-    nndata.setLayer("img2", color)
-    nndata.setLayer("img3", right)
-    node.io['out'].send(nndata)
-""")
-
 # NN that detects faces in the image
 nn = p.createNeuralNetwork()
 nn.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
 nn.setNumInferenceThreads(2)
-script.outputs['out'].link(nn.input)
+
+manipLeft.out.link(nn.inputs['img1'])
+camRgb.preview.link(nn.inputs['img2'])
+manipRight.out.link(nn.inputs['img3'])
 
 # Send bouding box from the NN to the host via XLink
 nn_xout = p.createXLinkOut()
