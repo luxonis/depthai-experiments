@@ -17,6 +17,7 @@ The graph editor is a slightly modified version of [NodeGraphQt](https://github.
 
 ### Navigation
 - Press **Tab** to create new nodes
+- **Right Click** To save/load pipeline graphs
 - You can find a full list of controls in the [NodeGraphQt Documentation](https://jchanvfx.github.io/NodeGraphQt/api/html/examples/ex_overview.html) 
 
 ## Parser
