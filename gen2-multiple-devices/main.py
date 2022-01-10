@@ -29,6 +29,16 @@ def getPipeline(device_type):
 
 q_rgb_list = []
 
+# On a local network, this should return the MAC address and some other info
+def get_arp_table(ip):
+    import os, subprocess
+    cmd = ''
+    if os.name == 'posix': 
+        cmd = f'arp -a | grep {ip}'
+    if os.name == 'nt': 
+        cmd = f'arp -a | findstr {ip}'
+    return subprocess.check_output(cmd, shell=True).decode('ascii').rstrip()
+
 # https://docs.python.org/3/library/contextlib.html#contextlib.ExitStack
 with contextlib.ExitStack() as stack:
     device_infos = dai.Device.getAllAvailableDevices()
@@ -36,6 +46,22 @@ with contextlib.ExitStack() as stack:
         raise RuntimeError("No devices found!")
     else:
         print("Found", len(device_infos), "devices")
+
+    for i, di in enumerate(device_infos):
+        print(i, di.getMxId(), di.state.name, di.desc.protocol.name)
+        if di.state == dai.XLinkDeviceState.X_LINK_BOOTLOADER:
+            with dai.DeviceBootloader(di) as bl:
+                cfg = bl.readConfig()
+                if di.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+                    print("    USB speed:", cfg.getUsbMaxSpeed())
+                    print("    timeout  :", cfg.getUsbTimeout())
+                if di.desc.protocol == dai.XLinkProtocol.X_LINK_TCP_IP:
+                    print("    MAC      :", cfg.getMacAddress())
+                    print("    IPv4     :", cfg.getIPv4())
+                    print("    IPv4 mask:", cfg.getIPv4Mask())
+                    print("    timeout  :", cfg.getNetworkTimeout())
+                    ip = di.getMxId()
+                    print("    ARP: ", get_arp_table(ip))
 
     for device_info in device_infos:
         # Note: the pipeline isn't set here, as we don't know yet what device it is.
