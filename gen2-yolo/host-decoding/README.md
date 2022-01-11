@@ -33,6 +33,6 @@ python3 main.py [options]
 Options:
 
 * -cam, --cam_input: Select camera input source for inference. Available options: left, right, rgb (default).
-* -nn, --nn_model: Select model path for inference. Default: *models/deeplab_v3_plus_mnv2_decoder_256_openvino_2021.4.blob*
+* -nn, --nn_model: Select model path for inference. Default: *models/yolov5s_sku_openvino_2021.4_6shave.blob*
 * -conf, --confidence_thresh: Set the confidence threshold. Default: 0.3.
 * -iou, --iou_thresh: Set the NMS IoU threshold. Default: 0.4.

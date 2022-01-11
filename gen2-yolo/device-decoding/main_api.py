@@ -17,9 +17,9 @@ import blobconverter
 # parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model", help="Provide model name or model path for inference",
-                    default='models/yolo_v3_tiny_openvino_2021.3_6shave.blob', type=str)
+                    default='yolov4_tiny_coco_416x416', type=str)
 parser.add_argument("-c", "--config", help="Provide config path for inference",
-                    default='yolo-tiny.json', type=str)
+                    default='json/yolov4-tiny.json', type=str)
 args = parser.parse_args()
 
 # parse config
