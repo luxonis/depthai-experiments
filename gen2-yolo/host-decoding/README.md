@@ -23,6 +23,10 @@ See the example of a model pretrained on SKU-110K dataset in action:
    ```
    python3 -m pip install -r requirements.txt
    ```
+3. Download models
+   ```
+   python3 download.py
+   ```
 
 ## Usage
 
