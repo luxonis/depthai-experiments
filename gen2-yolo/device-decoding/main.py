@@ -46,8 +46,6 @@ with dai.Device(pm.pipeline) as device:
     nnData = []
 
     while True:
-        # count FPS
-        fpsHandler.tick("color")
 
         # parse outputs
         pv.prepareFrames()
@@ -55,6 +53,8 @@ with dai.Device(pm.pipeline) as device:
 
         if inNn is not None:
             nnData = nm.decode(inNn)
+            # count FPS
+            fpsHandler.tick("color")
 
         nm.draw(pv, nnData)
         pv.showFrames()

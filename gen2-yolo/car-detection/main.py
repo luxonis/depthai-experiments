@@ -48,6 +48,7 @@ with dai.Device(pm.pipeline) as device:
         if inNn is not None:
             # count FPS
             fpsHandler.tick("color")
+
             nnData = nm.decode(inNn)
 
         nm.draw(pv, nnData)
