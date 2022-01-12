@@ -24,10 +24,12 @@ extended = False  # Closer-in minimum depth, disparity range is doubled
 subpixel = True  # Better accuracy for longer distance, fractional disparity 32-levels
 LRcheckthresh = 5
 confidenceThreshold = 200
-stride = 4  # increase this if your computer can't handle deprojecting all the depth pixels into 3d
+speckle_range = 60
+# be careful, there are combinations of these parameters that result in an empty pointcloud
+stride = 2  # increase this if your computer can't handle deprojecting all the depth pixels into 3d
+downsample_pcl = True # voxelize pointcloud to speed up visualization
 min_depth = 400  # mm
 max_depth = 15000  # mm
-speckle_range = 60
 
 # Select camera resolution
 res = {"height": 480, "width": 640,
@@ -50,9 +52,9 @@ def configureDepthPostProcessing(stereoDepthNode):
     config.postProcessing.thresholdFilter.minRange = min_depth  # mm
     config.postProcessing.thresholdFilter.maxRange = max_depth  # mm
     config.postProcessing.decimationFilter.decimationFactor = 1
-    # config.censusTransform.enableMeanMode = True
-    # config.costMatching.linearEquationParameters.alpha = 0
-    # config.costMatching.linearEquationParameters.beta = 2
+    config.censusTransform.enableMeanMode = True
+    config.costMatching.linearEquationParameters.alpha = 0
+    config.costMatching.linearEquationParameters.beta = 2
     stereoDepthNode.initialConfig.set(config)
     stereoDepthNode.setLeftRightCheck(lrcheck)
     stereoDepthNode.setExtendedDisparity(extended)
@@ -123,5 +125,5 @@ if __name__ == "__main__":
                     break
                 # visualize pointcloud
                 pcl_converter.depth_to_projection(
-                    pcl_frames[0], stride=stride, downsample=True)
+                    pcl_frames[0], stride=stride, downsample=downsample_pcl)
             pcl_converter.visualize_pcd()

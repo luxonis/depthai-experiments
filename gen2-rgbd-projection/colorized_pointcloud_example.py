@@ -20,7 +20,8 @@ except ImportError as e:
 
 # visualization parameter
 # instead of showing pointcloud output of alignment, show a cv window of alignment depth blended with rgb image
-debug_alignment = True
+debug_alignment = False
+downsample_pcl = False
 
 # StereoDepth config options.
 lrcheck = True  # Better handling for occlusions
@@ -29,7 +30,7 @@ subpixel = True  # True  # Better accuracy for longer distance, fractional dispa
 LRcheckthresh = 5
 confidenceThreshold = 200
 min_depth = 400  # mm
-max_depth = 1500  # mm
+max_depth = 20000  # mm
 speckle_range = 60
 align_on_host = True
 
@@ -58,9 +59,9 @@ def configureDepthPostProcessing(stereoDepthNode):
     config.postProcessing.thresholdFilter.minRange = min_depth  # mm
     config.postProcessing.thresholdFilter.maxRange = max_depth  # mm
     config.postProcessing.decimationFilter.decimationFactor = 1
-    # config.censusTransform.enableMeanMode = True
-    # config.costMatching.linearEquationParameters.alpha = 0
-    # config.costMatching.linearEquationParameters.beta = 2
+    config.censusTransform.enableMeanMode = True
+    config.costMatching.linearEquationParameters.alpha = 0
+    config.costMatching.linearEquationParameters.beta = 2
     stereoDepthNode.initialConfig.set(config)
     stereoDepthNode.setLeftRightCheck(lrcheck)
     stereoDepthNode.setExtendedDisparity(extended)
@@ -259,5 +260,5 @@ if __name__ == "__main__":
                 if cv2.waitKey(1) == "q":
                     break
             else:
-                pcl_converter.rgbd_to_projection(*pcl_frames, downsample=True)
+                pcl_converter.rgbd_to_projection(*pcl_frames, downsample=downsample_pcl)
                 pcl_converter.visualize_pcd()
