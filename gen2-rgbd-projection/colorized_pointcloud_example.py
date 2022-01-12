@@ -21,7 +21,7 @@ except ImportError as e:
 # visualization parameter
 # instead of showing pointcloud output of alignment, show a cv window of alignment depth blended with rgb image
 debug_alignment = False
-downsample_pcl = False
+downsample_pcl = True
 
 # StereoDepth config options.
 lrcheck = True  # Better handling for occlusions

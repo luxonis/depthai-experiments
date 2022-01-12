@@ -27,13 +27,14 @@ class PointCloudVisualizer():
             self.pcl = o3d.geometry.PointCloud.create_from_depth_image(depth_o3d, self.pinhole_camera_intrinsic, stride=stride)
         else:
             pcd = o3d.geometry.PointCloud.create_from_depth_image(depth_o3d, self.pinhole_camera_intrinsic, stride=stride)
-            if downsample:
-                pcd = pcd.voxel_down_sample(voxel_size=0.01)
             # Remove noise
-            pcd = pcd.remove_statistical_outlier(30, 0.1)[0]
+            # if downsample:
+            #     pcd = pcd.voxel_down_sample(voxel_size=0.05)
+            pcd = pcd.remove_statistical_outlier(100, 0.1)[0]
             self.pcl.points = pcd.points
         # Rotate the pointcloud such that it is in the world coordinate frame (easier to visualize)
         self.pcl.rotate(self.R_camera_to_world, center=np.array([0,0,0],dtype=np.float64))
+
         return self.pcl
 
     def rgbd_to_projection(self, depth_map, rgb, downsample=False):
@@ -44,8 +45,6 @@ class PointCloudVisualizer():
             self.pcl = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
         else:
             pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
-            if downsample:
-                pcd = pcd.voxel_down_sample(voxel_size=0.01)
             # Remove noise
             pcd = pcd.remove_statistical_outlier(30, 0.1)[0]
 
@@ -54,6 +53,8 @@ class PointCloudVisualizer():
 
         # Rotate the pointcloud such that it is in the world coordinate frame  (easier to visualize)
         self.pcl.rotate(self.R_camera_to_world, center=np.array([0,0,0],dtype=np.float64))
+        if downsample:
+            self.pcl.voxel_down_sample(voxel_size=0.05)
         return self.pcl
 
     def visualize_pcd(self):
