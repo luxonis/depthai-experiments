@@ -5,18 +5,21 @@ import cv2
 import depthai as dai
 import numpy as np
 
-try:
-    from projector_3d import PointCloudVisualizer
-except ImportError as e:
-    raise ImportError(
-        f"\033[1;5;31mError occured when importing PCL projector: {e}")
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--align-depth', dest='align_depth', action='store_true')
-parser.set_defaults(align_depth=False)
+parser.add_argument('--no-pcl', dest='no_pcl', action='store_true')
+parser.set_defaults(align_depth=False, no_pcl=False)
+
 args = parser.parse_args()
 align_depth = args.align_depth
+no_pcl = args.no_pcl
+
+if not no_pcl:
+    try:
+        from projector_3d import PointCloudVisualizer
+    except ImportError as e:
+        raise ImportError(
+            f"\033[1;5;31mError occured when importing PCL projector: {e}")
 
 ############################################################################
 # USER CONFIGURABLE PARAMETERS (also see configureDepthPostProcessing())
@@ -190,6 +193,7 @@ def quantizeDisparityFrame(frame, max_disparity):
 if __name__ == "__main__":
     print("Initialize pipeline")
     print("Align Depth: {}".format(align_depth))
+    print("Visualize Pointcloud: {}".format(not no_pcl))
     pipeline, streams, max_disparity = create_rgbd_pipeline()
 
     # Connect to device and start pipeline
@@ -224,9 +228,11 @@ if __name__ == "__main__":
         else:
             # setup cv window
             cv2.namedWindow("Depth Image")
-        # setup pcl converter
-        pcl_converter = PointCloudVisualizer(
-            rgb_intrinsic, res["width"], res["height"])
+
+        if not no_pcl:
+            # setup pcl converter
+            pcl_converter = PointCloudVisualizer(
+                rgb_intrinsic, res["width"], res["height"])
 
         # setup bookkeeping variables
         pcl_frames = [None, None]  # depth frame, color frame
@@ -285,16 +291,16 @@ if __name__ == "__main__":
                     0.4 * pcl_frames[1].astype(float) / 255
                 blended_image = (255 * blended_image.astype(float) /
                                  blended_image.max()).astype(np.uint8)
-                cv2.imshow("RGBD Alignment", blended_image)
-                if cv2.waitKey(1) == "q":
-                    break
-                pcl_converter.rgbd_to_projection(*pcl_frames, downsample=downsample_pcl)
-                pcl_converter.visualize_pcd()
+                cv2.imshow("RGBD Alignment", blended_image)                
+                if not no_pcl:
+                    pcl_converter.rgbd_to_projection(*pcl_frames, downsample=downsample_pcl)
+                    pcl_converter.visualize_pcd()
             else:
                 quantized_depth_image = quantizeDisparityFrame(pcl_frames[0], max_disparity)
                 cv2.imshow("Depth Image", quantized_depth_image)
-                if cv2.waitKey(1) == "q":
-                    break
-                pcl_converter.depth_to_projection(pcl_frames[0], stride=stride, downsample=downsample_pcl)
-                pcl_converter.visualize_pcd()
+                if not no_pcl:
+                    pcl_converter.depth_to_projection(pcl_frames[0], stride=stride, downsample=downsample_pcl)
+                    pcl_converter.visualize_pcd()
+            if cv2.waitKey(1) == "q":
+                break
 
