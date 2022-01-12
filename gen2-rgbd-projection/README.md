@@ -10,4 +10,4 @@ PS: This example works only on open3D supported platforms.
 ### Running Example As-Is:
 `python3 pointcloud_example.py` - Runs depth image and pointcloud visualization (no color)
 
-`python3 colorized_pointcloud_example.py` - Runs colized pointcloud visualization
+`python3 colorized_pointcloud_example.py` - Runs colorized pointcloud visualization
