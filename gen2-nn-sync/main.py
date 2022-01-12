@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import queue
-from pathlib import Path
-
 import blobconverter
 import cv2
 import depthai as dai
@@ -22,11 +20,11 @@ cam_rgb.setInterleaved(False)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6)))
+detection_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
 cam_rgb.preview.link(detection_nn.input)
 
 landmarks_nn = pipeline.createNeuralNetwork()
-landmarks_nn.setBlobPath(str(blobconverter.from_zoo(name="landmarks-regression-retail-0009", shaves=6)))
+landmarks_nn.setBlobPath(blobconverter.from_zoo(name="landmarks-regression-retail-0009", shaves=6))
 
 # Create outputs
 xin_rgb = pipeline.createXLinkIn()

@@ -28,7 +28,7 @@ camRgb.video.link(xoutFrames.input)
 # Define a neural network that will make predictions based on the source frames
 nn = pipeline.createMobileNetDetectionNetwork()
 nn.setConfidenceThreshold(0.5)
-nn.setBlobPath(str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6)))
+nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
 camRgb.preview.link(nn.input)
 
 passthroughOut = pipeline.createXLinkOut()

@@ -47,7 +47,7 @@ def populate_pipeline(p, name, resolution):
     # NN that detects faces in the image
     face_nn = p.create(dai.node.MobileNetDetectionNetwork)
     face_nn.setConfidenceThreshold(0.2)
-    face_nn.setBlobPath(str(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version=openvinoVersion)))
+    face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version=openvinoVersion))
     face_manip.out.link(face_nn.input)
 
     # Send mono frames to the host via XLink
@@ -102,7 +102,7 @@ while True:
 
     # Second NN that detcts landmarks from the cropped 48x48 face
     landmarks_nn = p.createNeuralNetwork()
-    landmarks_nn.setBlobPath(str(blobconverter.from_zoo("landmarks-regression-retail-0009", shaves=6, version=openvinoVersion)))
+    landmarks_nn.setBlobPath(blobconverter.from_zoo("landmarks-regression-retail-0009", shaves=6, version=openvinoVersion))
     manip_crop.out.link(landmarks_nn.input)
 
     landmarks_nn_xout = p.createXLinkOut()

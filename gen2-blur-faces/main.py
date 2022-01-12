@@ -41,17 +41,17 @@ def create_pipeline():
     print("Creating Face Detection Neural Network...")
     face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(str(blobconverter.from_zoo(
+    face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",
         shaves=6,
         version='2021.3'
-    )))
+    ))
     # Link Face ImageManip -> Face detection NN node
     cam.preview.link(face_det_nn.input)
 
     objectTracker = pipeline.createObjectTracker()
     objectTracker.setDetectionLabelsToTrack([1])  # track only person
-    # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
+    # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
     objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
     # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
     objectTracker.setTrackerIdAssigmentPolicy(dai.TrackerIdAssigmentPolicy.SMALLEST_ID)

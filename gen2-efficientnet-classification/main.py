@@ -37,7 +37,7 @@ pipeline = dai.Pipeline()
 # NeuralNetwork
 print("Creating Neural Network...")
 detection_nn = pipeline.createNeuralNetwork()
-detection_nn.setBlobPath(str(blobconverter.from_zoo(name="efficientnet-b0")))
+detection_nn.setBlobPath(blobconverter.from_zoo(name="efficientnet-b0"))
 
 if camera:
     print("Creating Color Camera...")

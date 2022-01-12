@@ -45,7 +45,7 @@ colorCam.video.link(cam_xout.input)
 # ---------------------------------------
 
 nn = pipeline.createNeuralNetwork()
-nn.setBlobPath(str(blobconverter.from_zoo(name="east_text_detection_256x256",zoo_type="depthai",shaves=6, version=version)))
+nn.setBlobPath(blobconverter.from_zoo(name="east_text_detection_256x256",zoo_type="depthai",shaves=6, version=version))
 nn.setNumPoolFrames(1)
 colorCam.preview.link(nn.input)
 
@@ -79,7 +79,7 @@ manip_xout = pipeline.createXLinkOut()
 manip_xout.setStreamName('manip_out')
 
 nn2 = pipeline.createNeuralNetwork()
-nn2.setBlobPath(str(blobconverter.from_zoo(name="text-recognition-0012", shaves=6, version=version)))
+nn2.setBlobPath(blobconverter.from_zoo(name="text-recognition-0012", shaves=6, version=version))
 nn2.setNumInferenceThreads(2)
 manip.out.link(nn2.input)
 manip.out.link(manip_xout.input)

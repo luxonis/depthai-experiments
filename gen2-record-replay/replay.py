@@ -30,7 +30,7 @@ nn.setBoundingBoxScaleFactor(0.3)
 nn.setDepthLowerThreshold(100)
 nn.setDepthUpperThreshold(5000)
 
-nn.setBlobPath(str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6)))
+nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
 nn.setConfidenceThreshold(0.5)
 nn.input.setBlocking(False)
 

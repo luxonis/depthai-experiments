@@ -24,7 +24,7 @@ parser.add_argument('-s', '--sync', action="store_true",
 args = parser.parse_args()
 
 if args.model is None:
-    args.model = str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=7))
+    args.model = blobconverter.from_zoo(name="mobilenet-ssd", shaves=7)
 
 # Create pipeline
 pipeline = dai.Pipeline()
@@ -66,7 +66,7 @@ nn.out.link(nnOut.input)
 # Create and configure the object tracker
 objectTracker = pipeline.createObjectTracker()
 # objectTracker.setDetectionLabelsToTrack([0])  # track only person
-# possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
+# possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
 objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
 # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
 objectTracker.setTrackerIdAssigmentPolicy(
