@@ -8,6 +8,6 @@ Note: `python3 install_requirements.py` also tries to install libs from requirem
 PS: This example works only on open3D supported platforms.
 
 ### Running Example As-Is:
-`python3 pointcloud_example.py` - Runs depth image and pointcloud visualization (no color)
+`python3 main.py --align-depth` - Runs colorized pointcloud visualization
 
-`python3 colorized_pointcloud_example.py` - Runs colorized pointcloud visualization
+`python3 main.py` - Runs depth image and pointcloud visualization (no color)
