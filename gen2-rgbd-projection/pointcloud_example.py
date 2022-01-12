@@ -38,13 +38,16 @@ res = {"height": 480, "width": 640,
 
 def configureDepthPostProcessing(stereoDepthNode):
     """
-    In-place post-processing configuration for a stereo depth node
+    The best combo of filters is application specific. Hard to say there is a one size fits all.
+    They also are not free. Even though they happen on device, you pay a penalty in fps.
     """
     stereoDepthNode.initialConfig.setConfidenceThreshold(confidenceThreshold)
     stereoDepthNode.initialConfig.setLeftRightCheckThreshold(LRcheckthresh)
+    # stereoDepthNode.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_5x5)
+    # stereoDepthNode.initialConfig.setBilateralFilterSigma(16)
     config = stereoDepthNode.initialConfig.get()
-    config.postProcessing.speckleFilter.enable = True
-    config.postProcessing.speckleFilter.speckleRange = speckle_range
+    # config.postProcessing.speckleFilter.enable = True
+    # config.postProcessing.speckleFilter.speckleRange = speckle_range
     # config.postProcessing.temporalFilter.enable = True
     # config.postProcessing.spatialFilter.enable = True
     # config.postProcessing.spatialFilter.holeFillingRadius = 2
