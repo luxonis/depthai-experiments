@@ -207,12 +207,16 @@ if __name__ == "__main__":
             dai.CameraBoardSocket.RIGHT, res["width"], res["height"]))
         right_distortion = np.array(
             calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
-        rgb_orig_intrinsic = np.array(calibData.getCameraIntrinsics(
-            dai.CameraBoardSocket.RGB, 1920, 1080))
+        _, rgb_default_width, rgb_default_height = calibData.getDefaultIntrinsics(dai.CameraBoardSocket.RGB)
+        rgb_orig_intrinsic = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB))
+        # update camera intrinsics based on new image size
+        rgb_intrinsic = rgb_orig_intrinsic.copy()
+        width_scaling = res["width"] / rgb_default_width
+        height_scaling = res["height"] / rgb_default_height
+        rgb_intrinsic[0, :] *= width_scaling
+        rgb_intrinsic[1, :] *= height_scaling
         rgb_distortion = np.array(
             calibData.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
-        rgb_intrinsic = cv2.getOptimalNewCameraMatrix(
-            rgb_orig_intrinsic, rgb_distortion, (1920, 1080), 0, (res["width"], res["height"]))[0]
         right_to_rgb_extrinsic = np.array(calibData.getCameraExtrinsics(
             dai.CameraBoardSocket.RIGHT, dai.CameraBoardSocket.RGB))
 
@@ -220,7 +224,8 @@ if __name__ == "__main__":
         # This seems unneeded but was in the old examples
         # right_rotation = np.array(calibData.getStereoRightRectificationRotation())
         # right_homography = np.matmul(np.matmul(left_intrinsic, right_rotation), np.linalg.inv(right_intrinsic))
-        # inverse_right_intrinsic = np.matmul(np.linalg.inv(right_intrinsic), np.linalg.inv(right_homography))
+        # inverse_right_intrinsic = np.linalg.inv(np.matmul(right_intrinsic, right_rotation))
+        # right_intrinsic = np.matmul(right_intrinsic, right_rotation)
 
         if align_depth:
             # setup cv window
