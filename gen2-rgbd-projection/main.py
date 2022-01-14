@@ -4,7 +4,6 @@ import argparse
 import cv2
 import depthai as dai
 import numpy as np
-from scipy.interpolate import interp2d
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--align-depth', dest='align_depth', action='store_true')
@@ -31,7 +30,7 @@ downsample_pcl = True  # downsample the pointcloud before operating on it and vi
 
 # StereoDepth config options.
 # whether or not to align the depth image on host (As opposed to on device), only matters if align_depth = True
-align_on_host = True
+align_on_host = False
 lrcheck = True  # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled
 subpixel = True  # True  # Better accuracy for longer distance, fractional disparity 32-levels
@@ -146,11 +145,7 @@ def pixel_coord_np(width, height):
     return np.vstack((x.flatten(), y.flatten(), np.ones_like(x.flatten())))
 
 
-# global variables are gross, but this is an experiment so...
-pixel_coords = pixel_coord_np(res["width"], res["height"]).astype(float)
-
-
-def alignDepthToRGB(depth_image, inverse_depth_intrinsic, rgb_intrinsic, depth_to_rgb_extrinsic, rgb_width, rgb_height):
+def alignDepthToRGB(depth_image, pixel_coords, inverse_depth_intrinsic, rgb_intrinsic, depth_to_rgb_extrinsic, rgb_width, rgb_height):
     """
     Align the depth image with the color image. 
     """
@@ -261,6 +256,7 @@ if __name__ == "__main__":
         pcl_frames = [None, None]  # depth frame, color frame
         queue_list = [device.getOutputQueue(
             stream, maxSize=8, blocking=False) for stream in streams]
+        pixel_coords = pixel_coord_np(res["width"], res["height"]).astype(float)
 
         # main stream loop
         print("Begin streaming at resolution: {} x {}".format(
@@ -294,7 +290,7 @@ if __name__ == "__main__":
                             pcl_frames[i] = np.array(
                                 pcl_frames[i] * depth_scale).astype(np.uint16)  # convert back from cm to mm
                             # Approach 2: Use slow but easy to interpert function
-                            # pcl_frames[i] = alignDepthToRGB(depth_frame, inverse_rectified_right_intrinsic, rgb_intrinsic, right_to_rgb_extrinsic, res["width"], res["height"])
+                            # pcl_frames[i] = alignDepthToRGB(depth_frame, pixel_coords, inverse_rectified_right_intrinsic, rgb_intrinsic, right_to_rgb_extrinsic, res["width"], res["height"])
                     else:
                         pcl_frames[i] = depth_frame
 
