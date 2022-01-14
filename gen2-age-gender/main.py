@@ -192,11 +192,14 @@ with dai.Device() as device:
                     bbox = result["bbox"]
                     cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
                     y = (bbox[1] + bbox[3]) // 2
-                    cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-                    cv2.putText(debug_frame, result["gender"], (bbox[0], y + 20), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+                    cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
+                    cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
+                    cv2.putText(debug_frame, result["gender"], (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
+                    cv2.putText(debug_frame, result["gender"], (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
                     # You could also get result["3d"].x and result["3d"].y coordinates
                     coords = "Z: {:.2f} m".format(result["3d"].z/1000)
-                    cv2.putText(debug_frame, coords, (bbox[0], y + 45), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255))
+                    cv2.putText(debug_frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
+                    cv2.putText(debug_frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
 
                 aspect_ratio = frame.shape[1] / frame.shape[0]
                 cv2.imshow("Camera_view", debug_frame)
