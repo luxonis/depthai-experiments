@@ -221,11 +221,13 @@ if __name__ == "__main__":
             dai.CameraBoardSocket.RIGHT, dai.CameraBoardSocket.RGB))
 
         inverse_right_intrinsic = np.linalg.inv(right_intrinsic)
-        # This seems unneeded but was in the old examples
+
+        # This is SHOULD be needed because the depth image is made from the rectified right camera image not the right camera image, 
+        # but it does not seem to work properly
         # right_rotation = np.array(calibData.getStereoRightRectificationRotation())
-        # right_homography = np.matmul(np.matmul(left_intrinsic, right_rotation), np.linalg.inv(right_intrinsic))
-        # inverse_right_intrinsic = np.linalg.inv(np.matmul(right_intrinsic, right_rotation))
-        # right_intrinsic = np.matmul(right_intrinsic, right_rotation)
+        # right_homography = np.dot(np.dot(left_intrinsic, right_rotation), np.linalg.inv(right_intrinsic))
+        # inverse_rectified_right_intrinsic = np.dot(np.linalg.inv(right_intrinsic), np.linalg.inv(right_homography))
+        # rectified_right_intrinsic = np.linalg.inv(inverse_rectified_right_intrinsic)
 
         if align_depth:
             # setup cv window
@@ -236,8 +238,12 @@ if __name__ == "__main__":
 
         if not no_pcl:
             # setup pcl converter
-            pcl_converter = PointCloudVisualizer(
-                rgb_intrinsic, res["width"], res["height"])
+            if align_depth:
+                pcl_converter = PointCloudVisualizer(
+                    rgb_intrinsic, res["width"], res["height"])
+            else:
+                pcl_converter = PointCloudVisualizer(
+                    right_intrinsic, res["width"], res["height"])
 
         # setup bookkeeping variables
         pcl_frames = [None, None]  # depth frame, color frame
@@ -266,15 +272,15 @@ if __name__ == "__main__":
                                 depth_frame, (res["width"], res["height"]), cv2.INTER_NEAREST)
                         else:
                             # Approach 1: Use opencv's register depth method
-                            depth_scale = 10.0  # extrinsic is in cm, but depth in mm so convert
-                            depth_dilation = True
-                            scaled_depth_frame = depth_frame.astype(float) / depth_scale
-                            pcl_frames[i] = cv2.rgbd.registerDepth(
-                                right_intrinsic, rgb_intrinsic, rgb_distortion, right_to_rgb_extrinsic, scaled_depth_frame, (res["width"], res["height"]), depth_dilation)
-                            pcl_frames[i] = np.array(
-                                pcl_frames[i] * depth_scale).astype(np.uint16)  # convert back from cm to mm
+                            # depth_scale = 10.0  # extrinsic is in cm, but depth in mm so convert
+                            # depth_dilation = True
+                            # scaled_depth_frame = depth_frame.astype(float) / depth_scale
+                            # pcl_frames[i] = cv2.rgbd.registerDepth(
+                            #     rectified_right_intrinsic, rgb_intrinsic, rgb_distortion, right_to_rgb_extrinsic, scaled_depth_frame, (res["width"], res["height"]), depth_dilation)
+                            # pcl_frames[i] = np.array(
+                            #     pcl_frames[i] * depth_scale).astype(np.uint16)  # convert back from cm to mm
                             # Approach 2: Use slow but easy to interpert function
-                            # pcl_frames[i] = alignDepthToRGB(depth_frame, inverse_right_intrinsic, rgb_intrinsic, right_to_rgb_extrinsic, res["width"], res["height"])
+                            pcl_frames[i] = alignDepthToRGB(depth_frame, inverse_right_intrinsic, rgb_intrinsic, right_to_rgb_extrinsic, res["width"], res["height"])
                     else:
                         pcl_frames[i] = depth_frame
 
