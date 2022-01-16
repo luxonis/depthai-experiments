@@ -13,7 +13,7 @@ class EffectRenderer2D:
         self.src_points = self.src_points[self.filter_points]
 
         self.subdiv = cv2.Subdiv2D((0, 0, self.effect_image.shape[1], self.effect_image.shape[0]))
-        self.subdiv.insert(list(self.src_points))
+        self.subdiv.insert(self.src_points.tolist())
 
         self.triangles = np.array([(self.src_points == value).all(axis=1).nonzero()
                               for element in self.subdiv.getTriangleList()
@@ -34,7 +34,7 @@ class EffectRenderer2D:
         """
 
         # create empty overlay
-        overlay = np.zeros((target_image.shape[1], target_image.shape[0], 4), np.uint8)
+        overlay = np.zeros((target_image.shape[0], target_image.shape[1], 4), np.uint8)
 
         for idx_tri in self.triangles:
             src_tri = self.src_points[idx_tri]

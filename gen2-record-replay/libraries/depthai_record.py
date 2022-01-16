@@ -213,7 +213,7 @@ class Record():
             if "right" in self.save:
                 stream_out("right", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['right'].out)
 
-        if "disparity" or "depth" in self.save:
+        if "disparity" in self.save or "depth" in self.save:
             nodes['stereo'] = pipeline.createStereoDepth()
             nodes['stereo'].initialConfig.setConfidenceThreshold(255)
             nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
