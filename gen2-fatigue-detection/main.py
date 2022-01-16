@@ -3,14 +3,14 @@ import cv2
 import depthai as dai
 import face_landmarks
 
-openvinoVersion = "2020.3"
+openvinoVersion = "2020.4"
 p = dai.Pipeline()
 
 cam = p.create(dai.node.ColorCamera)
-cam.setIspScale(2,3)
+# cam.setIspScale(2,3)
 cam.setInterleaved(False)
-cam.setVideoSize(720,720)
-cam.setPreviewSize(720,720)
+cam.setVideoSize(1080,1080)
+cam.setPreviewSize(1080,1080)
 
 # Send color frames to the host via XLink
 cam_xout = p.create(dai.node.XLinkOut)
@@ -55,18 +55,22 @@ while True:
     frame = node.io['frame'].get()
     face_dets = node.io['nn_in'].get().detections
 
-    # node.warn(f"Faces detected: {len(face_dets)}")
-    for det in face_dets:
-        enlrage_roi(det)
-        limit_roi(det)
-        # node.warn(f"Detection rect: {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
-        cfg = ImageManipConfig()
-        cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
-        cfg.setResize(160, 160)
-        cfg.setKeepAspectRatio(False)
-        node.io['manip_cfg'].send(cfg)
-        node.io['manip_img'].send(frame)
-        # node.warn(f"1 from nn_in: {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
+    # No faces found
+    if len(face_dets) == 0: continue
+
+    # Take the first detected face, since this demo isn't multiple-face fatigue detection
+    det = face_dets[0]
+    enlrage_roi(det)
+    limit_roi(det)
+
+    # node.warn(f"Detection rect: {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
+    cfg = ImageManipConfig()
+    cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
+    cfg.setResize(160, 160)
+    cfg.setKeepAspectRatio(False)
+    node.io['manip_cfg'].send(cfg)
+    node.io['manip_img'].send(frame)
+    # node.warn(f"1 from nn_in: {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
 """)
 
 # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
@@ -79,8 +83,12 @@ manip_crop.setWaitForConfigInput(True)
 
 # Second NN that detcts emotions from the cropped 64x64 face
 landmarks_nn = p.createNeuralNetwork()
-# landmarks_nn.setBlobPath(blobconverter.from_zoo(name="facial_landmarks_68_160x160", zoo_type="depthai", version=openvinoVersion))
-landmarks_nn.setBlobPath("models/face_landmark_160x160_openvino_2020_1_4shave.blob")
+landmarks_nn.setBlobPath(blobconverter.from_zoo(
+    name="facial_landmarks_68_160x160",
+    shaves=6,
+    zoo_type="depthai",
+    version=openvinoVersion
+    ))
 manip_crop.out.link(landmarks_nn.input)
 
 landmarks_nn_xout = p.createXLinkOut()
@@ -97,6 +105,7 @@ with dai.Device(p) as device:
 
     while True:
         frame = videoQ.get().getCvFrame()
+        frame = cv2.resize(frame, (720,720))
 
         if nnQ.has():
             dets = faceDetQ.get().detections
