@@ -1,68 +1,58 @@
-import argparse
-import queue
 import time
-from pathlib import Path
 import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
 from imutils.video import FPS
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
-parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
-parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
-args = parser.parse_args()
-
-if not args.camera and not args.video:
-    raise RuntimeError("No source selected. Please use either \"-cam\" to use RGB camera as a source or \"-vid <path>\" to run on video")
-
-debug = not args.no_debug
-
 def frame_norm(frame, bbox):
     normVals = np.full(len(bbox), frame.shape[0])
     normVals[::2] = frame.shape[1]
     return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
-def to_planar(arr, shape = None):
-    if shape is not None: arr = cv2.resize(arr, shape)
-    return arr.transpose(2, 0, 1).flatten()
-
-def crop_to_square(frame):
-    height = frame.shape[0]
-    width  = frame.shape[1]
-    delta = int((width-height) / 2)
-    return frame[0:height, delta:width-delta]
-
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = dai.Pipeline()
 
-    if args.camera:
-        # ColorCamera
-        print("Creating Color Camera...")
-        cam = pipeline.create(dai.node.ColorCamera)
-        cam.setPreviewSize(1080, 1080)
-        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        cam.setInterleaved(False)
-        cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-        cam_xout = pipeline.createXLinkOut()
-        cam_xout.setStreamName("cam_out")
-        cam.preview.link(cam_xout.input)
+    print("Creating Color Camera...")
+    cam = pipeline.create(dai.node.ColorCamera)
+    cam.setPreviewSize(1080, 1080)
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam.setInterleaved(False)
+    cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+    cam_xout = pipeline.createXLinkOut()
+    cam_xout.setStreamName("cam_out")
+    cam.preview.link(cam_xout.input)
 
     # ImageManip that will crop the frame before sending it to the Face detection NN node
     face_det_manip = pipeline.create(dai.node.ImageManip)
     face_det_manip.initialConfig.setResize(300, 300)
     face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
 
+    monoLeft = pipeline.create(dai.node.MonoCamera)
+    monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+    monoRight = pipeline.create(dai.node.MonoCamera)
+    monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+
+    stereo = pipeline.create(dai.node.StereoDepth)
+    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    monoLeft.out.link(stereo.left)
+    monoRight.out.link(stereo.right)
+
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(
-        name="face-detection-retail-0004",
-        shaves=6 if args.camera else 8
-    ))
+    face_det_nn.setBoundingBoxScaleFactor(0.8)
+    face_det_nn.setDepthLowerThreshold(100)
+    face_det_nn.setDepthUpperThreshold(5000)
+    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+
+    cam.preview.link(face_det_manip.inputImage)
+    stereo.depth.link(face_det_nn.inputDepth)
+
     # Link Face ImageManip -> Face detection NN node
     face_det_manip.out.link(face_det_nn.input)
 
@@ -119,23 +109,13 @@ while True:
             node.io['manip_img'].send(img)
             node.io['manip_cfg'].send(cfg)
 """)
+    cam.preview.link(image_manip_script.inputs['preview'])
 
     age_gender_manip = pipeline.create(dai.node.ImageManip)
     age_gender_manip.initialConfig.setResize(62, 62)
     age_gender_manip.setWaitForConfigInput(False)
     image_manip_script.outputs['manip_cfg'].link(age_gender_manip.inputConfig)
     image_manip_script.outputs['manip_img'].link(age_gender_manip.inputImage)
-
-    if args.camera:
-        # Use 1080x1080 full image for both NNs
-        cam.preview.link(face_det_manip.inputImage)
-        cam.preview.link(image_manip_script.inputs['preview'])
-    else:
-        detection_in = pipeline.create(dai.node.XLinkIn)
-        detection_in.setStreamName("detection_in")
-
-        detection_in.out.link(face_det_manip.inputImage)
-        detection_in.out.link(image_manip_script.inputs['preview'])
 
     face_cropped_xout = pipeline.create(dai.node.XLinkOut)
     face_cropped_xout.setStreamName("face_cropped")
@@ -144,10 +124,7 @@ while True:
     # Age/Gender second stange NN
     print("Creating Age Gender Neural Network...")
     age_gender_nn = pipeline.create(dai.node.NeuralNetwork)
-    age_gender_nn.setBlobPath(blobconverter.from_zoo(
-        name="age-gender-recognition-retail-0013",
-        shaves=6 if args.camera else 8
-    ))
+    age_gender_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=6))
     age_gender_manip.out.link(age_gender_nn.input)
 
     age_gender_nn_xout = pipeline.create(dai.node.XLinkOut)
@@ -163,11 +140,7 @@ with dai.Device() as device:
 
     print("Starting pipeline...")
     device.startPipeline(create_pipeline())
-    if args.camera:
-        cam_out = device.getOutputQueue("cam_out", 4, False)
-    else:
-        detection_in = device.getInputQueue("detection_in")
-
+    cam_out = device.getOutputQueue("cam_out", 4, False)
     face_q = device.getOutputQueue("face_det_out", 4, False)
     face_cropped_q = device.getOutputQueue("face_cropped", 4, False)
     age_gender_q = device.getOutputQueue("age_gender_out", 4, False)
@@ -175,39 +148,17 @@ with dai.Device() as device:
     detections = []
     results = []
 
-    if args.video:
-        cap = cv2.VideoCapture(str(Path(args.video).resolve().absolute()))
-
     fps = FPS()
     fps.start()
 
-    def should_run():
-        return cap.isOpened() if args.video else True
-
-    def get_frame():
-        if args.video:
-            return cap.read()
-        else:
-            return True, cam_out.get().getCvFrame()
-
     try:
-        while should_run():
-            read_correctly, frame = get_frame()
-
-            if not read_correctly:
-                break
-
-            if frame is not None:
-                fps.update()
-                debug_frame = frame.copy()
-
-                if not args.camera:
-                    nn_data = dai.NNData()
-                    nn_data.setLayer("input", to_planar(crop_to_square(frame)))
-                    detection_in.send(nn_data)
+        while True:
+            frame = cam_out.get().getCvFrame()
+            fps.update()
+            debug_frame = frame.copy()
 
             face_cropped_in = face_cropped_q.tryGet()
-            if debug and face_cropped_in is not None:
+            if face_cropped_in is not None:
                 cv2.imshow("cropped", face_cropped_in.getCvFrame())
 
             det_in = face_q.tryGet()
@@ -227,6 +178,7 @@ with dai.Device() as device:
                         results.pop(0)
                     results.append({
                         "bbox": bbox,
+                        "3d": detection.spatialCoordinates,
                         "gender": gender_str,
                         "age": age,
                         "ts": time.time()
@@ -235,13 +187,19 @@ with dai.Device() as device:
             # Dispaly results for 0.2 seconds after the inference
             results = list(filter(lambda result: time.time() - result["ts"] < 0.2, results))
 
-            if debug and frame is not None:
+            if frame is not None:
                 for result in results:
                     bbox = result["bbox"]
                     cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
                     y = (bbox[1] + bbox[3]) // 2
-                    cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
-                    cv2.putText(debug_frame, result["gender"], (bbox[0], y + 20), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 255, 255))
+                    cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
+                    cv2.putText(debug_frame, str(result["age"]), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
+                    cv2.putText(debug_frame, result["gender"], (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
+                    cv2.putText(debug_frame, result["gender"], (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
+                    # You could also get result["3d"].x and result["3d"].y coordinates
+                    coords = "Z: {:.2f} m".format(result["3d"].z/1000)
+                    cv2.putText(debug_frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
+                    cv2.putText(debug_frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
 
                 aspect_ratio = frame.shape[1] / frame.shape[0]
                 cv2.imshow("Camera_view", debug_frame)
@@ -253,5 +211,3 @@ with dai.Device() as device:
 
 fps.stop()
 print("FPS: {:.2f}".format(fps.fps()))
-if args.video:
-    cap.release()
