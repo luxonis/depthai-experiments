@@ -161,7 +161,7 @@ class Record():
             nodes[name].setBoardSocket(socket)
             nodes[name].setFps(self.fps)
 
-        def stream_out(name, size, fps, out, noEnc=False):
+        def stream_out(name, fps, out, noEnc=False):
             # Create XLinkOutputs for the stream
             xout = pipeline.createXLinkOut()
             xout.setStreamName(name)
@@ -171,7 +171,7 @@ class Record():
 
             encoder = pipeline.createVideoEncoder()
             profile = dai.VideoEncoderProperties.Profile.H265_MAIN if self.quality == EncodingQuality.LOW else dai.VideoEncoderProperties.Profile.MJPEG
-            encoder.setDefaultProfilePreset(size, fps, profile)
+            encoder.setDefaultProfilePreset(fps, profile)
 
             if self.quality == EncodingQuality.BEST:
                 encoder.setLossless(True)
@@ -196,24 +196,23 @@ class Record():
 
             if self.preview:
                 nodes['color'].setPreviewSize(640, 360)
-                stream_out("preview", None, None, nodes['color'].preview, noEnc=True)
+                stream_out("preview", None, nodes['color'].preview, noEnc=True)
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
-            stream_out("color", nodes['color'].getVideoSize(), nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
+            stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
 
-        if "left" or "disparity" or "depth" in self.save:
+        if True in (el in ["left" or "disparity" or "depth"] for el in self.save):
             create_mono("left")
             if "left" in self.save:
-                stream_out("left", nodes['left'].getResolutionSize(), nodes['left'].getFps(), nodes['left'].out)
+                stream_out("left", nodes['left'].getFps(), nodes['left'].out)
 
-        if "right" or "disparity" or "depth" in self.save:
-            # Create mono cameras
+        if True in (el in ["right" or "disparity" or "depth"] for el in self.save):
             create_mono("right")
             if "right" in self.save:
-                stream_out("right", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['right'].out)
+                stream_out("right", nodes['right'].getFps(), nodes['right'].out)
 
-        if "disparity" in self.save or "depth" in self.save:
+        if True in (el in ["disparity" or "depth"] for el in self.save):
             nodes['stereo'] = pipeline.createStereoDepth()
             nodes['stereo'].initialConfig.setConfidenceThreshold(255)
             nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
@@ -235,9 +234,9 @@ class Record():
             nodes['right'].out.link(nodes['stereo'].right)
 
             if "disparity" in self.save:
-                stream_out("disparity", nodes['right'].getResolutionSize(), nodes['right'].getFps(), nodes['stereo'].disparity)
+                stream_out("disparity", nodes['right'].getFps(), nodes['stereo'].disparity)
             if "depth" in self.save:
-                stream_out('depth', None, None, nodes['stereo'].depth, noEnc=True)
+                stream_out('depth', None, nodes['stereo'].depth, noEnc=True)
 
         self.nodes = nodes
         self.pipeline = pipeline
