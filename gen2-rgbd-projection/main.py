@@ -4,6 +4,7 @@ import argparse
 import cv2
 import depthai as dai
 import numpy as np
+import utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--align-depth', dest='align_depth', action='store_true')
@@ -24,13 +25,17 @@ if not no_pcl:
 ############################################################################
 # USER CONFIGURABLE PARAMETERS (also see configureDepthPostProcessing())
 
+# Select color and depth image resolution you want (Not all cameras support all resolutions)
+rgb_resolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+depth_resolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
+
 # parameters to speed up visualization
 stride = 4  # skip points in the depth image when projecting to 3d pointcloud, only matters if align_depth == False
 downsample_pcl = True  # downsample the pointcloud before operating on it and visualizing
 
 # StereoDepth config options.
 # whether or not to align the depth image on host (As opposed to on device), only matters if align_depth = True
-align_on_host = False
+align_on_host = True
 lrcheck = True  # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled
 subpixel = True  # True  # Better accuracy for longer distance, fractional disparity 32-levels
@@ -44,13 +49,6 @@ speckle_range = 60
 if (not lrcheck and not align_on_host) and align_depth:
     print("Warning: Cannot align on device without lr check!")
     align_on_host = True
-
-# Select camera resolution (oak-d-lite only supports THE_480_P  and THE_400_P depth)
-# res = {"height": 400, "width": 640,
-#        "THE_P": dai.MonoCameraProperties.SensorResolution.THE_400_P}
-res = {"height": 480, "width": 640,
-       "THE_P": dai.MonoCameraProperties.SensorResolution.THE_480_P}
-# res = {"height": 720, "width": 1080, "THE_P": dai.MonoCameraProperties.SensorResolution.THE_720_P}
 
 
 def configureDepthPostProcessing(stereoDepthNode):
@@ -100,7 +98,7 @@ def create_rgbd_pipeline():
     rgbOut.setStreamName("rgb")
 
     # Configure Camera Properties
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    camRgb.setResolution(rgb_resolution)
     camRgb.setInterleaved(False)
     camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
     # Fixing focus to value used during calibration may improve alignment with depth.
@@ -109,7 +107,7 @@ def create_rgbd_pipeline():
     # lensPos = device.readCalibration().getLensPosition(dai.CameraBoardSocket.RGB)
     # camRgb.initialControl.setManualFocus(lensPos)
 
-    mono_camera_resolution = res["THE_P"]
+    mono_camera_resolution = depth_resolution
     left.setResolution(mono_camera_resolution)
     left.setBoardSocket(dai.CameraBoardSocket.LEFT)
     right.setResolution(mono_camera_resolution)
@@ -128,113 +126,45 @@ def create_rgbd_pipeline():
 
     # Book-keeping
     streams = [depthOut.getStreamName(), rgbOut.getStreamName()]
-    max_disparity = stereo.initialConfig.getMaxDisparity()
+    rgb_image_size = (camRgb.getResolutionWidth(), camRgb.getResolutionHeight())
+    depth_image_size = (right.getResolutionWidth(), right.getResolutionHeight())
 
-    return pipeline, streams, max_disparity
-
-
-def pixel_coord_np(width, height):
-    """
-    Pixel in homogenous coordinate
-    Returns:
-        Pixel coordinate:       [3, width * height]
-    """
-    x = np.linspace(0, width - 1, width).astype(int)
-    y = np.linspace(0, height - 1, height).astype(int)
-    [x, y] = np.meshgrid(x, y)
-    return np.vstack((x.flatten(), y.flatten(), np.ones_like(x.flatten())))
-
-
-def alignDepthToRGB(depth_image, pixel_coords, inverse_depth_intrinsic, rgb_intrinsic, depth_to_rgb_extrinsic, rgb_width, rgb_height):
-    """
-    Align the depth image with the color image. 
-    """
-    depth_scale = 10.0
-
-    # depth to 3d coordinates [x, y, z]
-    cam_coords = np.dot(inverse_depth_intrinsic, pixel_coords) * \
-        depth_image.flatten().astype(float) / depth_scale
-
-    # move the depth image 3d coordinates to the rgb camera  location
-    cam_coords_homogeneous = np.vstack(
-        (cam_coords, np.ones((1, cam_coords.shape[1]))))
-    depth_points_homogeneous = np.dot(
-        depth_to_rgb_extrinsic, cam_coords_homogeneous)
-
-    # project the 3d depth points onto the rgb image plane
-    rgb_frame_ref_cloud = depth_points_homogeneous[:3, :]
-    rgb_frame_ref_cloud_normalized = rgb_frame_ref_cloud / \
-        rgb_frame_ref_cloud[2, :]
-    rgb_image_pts = np.matmul(rgb_intrinsic, rgb_frame_ref_cloud_normalized)
-    rgb_image_pts = rgb_image_pts.astype(np.int16)
-    u_v_z = np.vstack((rgb_image_pts, rgb_frame_ref_cloud[2, :]))
-    lft = np.logical_and(0 <= u_v_z[0], u_v_z[0] < rgb_width)
-    rgt = np.logical_and(0 <= u_v_z[1], u_v_z[1] < rgb_height)
-    idx_bool = np.logical_and(lft, rgt)
-    u_v_z_sampled = u_v_z[:, np.where(idx_bool)]
-    y_idx = u_v_z_sampled[1].astype(int)
-    x_idx = u_v_z_sampled[0].astype(int)
-
-    # place the valid aligned points into a new depth image
-    aligned_depth_image = np.full((rgb_height, rgb_width), 0, dtype=np.uint16)
-    aligned_depth_image[y_idx, x_idx] = u_v_z_sampled[3]*depth_scale
-    return aligned_depth_image
-
-
-def quantizeDisparityFrame(frame, max_disparity):
-    """"
-    Further quantize the depth image for nice visualization
-    """
-    color_levels = 16
-    disp = (frame.astype(float).copy() *
-            (color_levels / max_disparity)).astype(np.uint8)
-    disp = (255 * disp.astype(float) / color_levels).astype(np.uint8)
-    disp = cv2.applyColorMap(disp, cv2.COLORMAP_JET)
-    return disp
+    return pipeline, streams, rgb_image_size, depth_image_size
 
 
 if __name__ == "__main__":
     print("Initialize pipeline")
     print("Align Depth: {}".format(align_depth))
+    print("Align on Host: {}".format(align_on_host))
     print("Visualize Pointcloud: {}".format(not no_pcl))
-    pipeline, streams, max_disparity = create_rgbd_pipeline()
+    pipeline, streams, rgb_image_size, depth_image_size = create_rgbd_pipeline()
 
     # Connect to device and start pipeline
     print("Opening device")
     with dai.Device(pipeline) as device:
         # get the camera calibration info
         calibData = device.readCalibration()
-        left_intrinsic = np.array(calibData.getCameraIntrinsics(
-            dai.CameraBoardSocket.LEFT, res["width"], res["height"]))
-        right_intrinsic = np.array(calibData.getCameraIntrinsics(
-            dai.CameraBoardSocket.RIGHT, res["width"], res["height"]))
-        right_distortion = np.array(
-            calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
-        _, rgb_default_width, rgb_default_height = calibData.getDefaultIntrinsics(
-            dai.CameraBoardSocket.RGB)
-        rgb_orig_intrinsic = np.array(
-            calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB))
+        # RIGHT CAMERA INFO
+        right_intrinsic = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, *depth_image_size))
+        right_distortion = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
+        # This is needed because the depth image is made from the rectified right camera image, not the right camera image
+        # (although in practice, I did not see a big difference)
+        right_rotation = np.array(calibData.getStereoRightRectificationRotation())
+        right_homography = np.matmul(np.matmul(right_intrinsic, right_rotation), np.linalg.inv(right_intrinsic))
+        inverse_rectified_right_intrinsic = np.matmul(np.linalg.inv(right_intrinsic), np.linalg.inv(right_homography))
+        rectified_right_intrinsic = np.linalg.inv(inverse_rectified_right_intrinsic)
+        # COLOR CAMERA INFO
+        _, rgb_default_width, rgb_default_height = calibData.getDefaultIntrinsics(dai.CameraBoardSocket.RGB)
+        rgb_orig_intrinsic = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB))
         # update camera intrinsics based on new image size
         rgb_intrinsic = rgb_orig_intrinsic.copy()
-        width_scaling = res["width"] / rgb_default_width
-        height_scaling = res["height"] / rgb_default_height
+        width_scaling = depth_image_size[0] / rgb_default_width
+        height_scaling = depth_image_size[1] / rgb_default_height
         rgb_intrinsic[0, :] *= width_scaling
         rgb_intrinsic[1, :] *= height_scaling
-        rgb_distortion = np.array(
-            calibData.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
-        right_to_rgb_extrinsic = np.array(calibData.getCameraExtrinsics(
-            dai.CameraBoardSocket.RIGHT, dai.CameraBoardSocket.RGB))
-
-        # This is techinically needed because the depth image is made from the rectified right camera image, not the right camera image
-        # (although in practice, I did not see a big difference)
-        right_rotation = np.array(
-            calibData.getStereoRightRectificationRotation())
-        right_homography = np.matmul(
-            np.matmul(right_intrinsic, right_rotation), np.linalg.inv(right_intrinsic))
-        inverse_rectified_right_intrinsic = np.matmul(
-            np.linalg.inv(right_intrinsic), np.linalg.inv(right_homography))
-        rectified_right_intrinsic = np.linalg.inv(
-            inverse_rectified_right_intrinsic)
+        rgb_distortion = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
+        # RIGHT --> RGB CAMERA INFO
+        right_to_rgb_extrinsic = np.array(calibData.getCameraExtrinsics(dai.CameraBoardSocket.RIGHT, dai.CameraBoardSocket.RGB))
 
         if align_depth:
             # setup cv window
@@ -246,51 +176,52 @@ if __name__ == "__main__":
         if not no_pcl:
             # setup pcl converter
             if align_depth:
-                pcl_converter = PointCloudVisualizer(
-                    rgb_intrinsic, res["width"], res["height"])
+                pcl_converter = PointCloudVisualizer(rgb_intrinsic, *depth_image_size)
             else:
-                pcl_converter = PointCloudVisualizer(
-                    rectified_right_intrinsic, res["width"], res["height"])
+                pcl_converter = PointCloudVisualizer(rectified_right_intrinsic, *depth_image_size)
 
         # setup bookkeeping variables
         pcl_frames = [None, None]  # depth frame, color frame
-        queue_list = [device.getOutputQueue(
-            stream, maxSize=8, blocking=False) for stream in streams]
-        pixel_coords = pixel_coord_np(res["width"], res["height"]).astype(float)
+        queue_list = [device.getOutputQueue(stream, maxSize=8, blocking=False) for stream in streams]
+        pixel_coords = utils.pixel_coord_np(*depth_image_size).astype(float)
 
         # main stream loop
-        print("Begin streaming at resolution: {} x {}".format(
-            res["width"], res["height"]))
+        print("Begin streaming at resolution: {} x {}".format(*depth_image_size))
         while True:
             for i, queue in enumerate(queue_list):
                 name = queue.getName()
                 image = queue.get()
                 if streams[i] == "rgb":
                     data, w, h = image.getData(), image.getWidth(), image.getHeight()
-                    yuv = np.array(data).reshape(
-                        (h * 3 // 2, w)).astype(np.uint8)
+                    assert (w == rgb_image_size[0] and h == rgb_image_size[1]), \
+                        "Rgb image does not match user-specified resolution! " \
+                            "Please ensure the rgb_resolution you set is supported by this device."
+                    yuv = np.array(data).reshape((h * 3 // 2, w)).astype(np.uint8)
                     # pcl_frames[i] = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
                     pcl_frames[i] = cv2.cvtColor(yuv, cv2.COLOR_YUV2RGB_NV12)
-                    pcl_frames[i] = cv2.resize(
-                        pcl_frames[i], (res["width"], res["height"]), cv2.INTER_CUBIC)
+                    pcl_frames[i] = cv2.resize(pcl_frames[i], depth_image_size, cv2.INTER_CUBIC)
                 else:
                     depth_frame = np.array(image.getFrame())
+                    h,w = depth_frame.shape
+                    if (align_on_host and align_depth) or (not align_depth):
+                        assert (w == depth_image_size[0] and h == depth_image_size[1]), \
+                            "Depth image does not match user-specified resolution! " \
+                                "Please ensure the depth_resolution you set is supported by this device."
                     if align_depth:
                         if not align_on_host:
-                            pcl_frames[i] = cv2.resize(
-                                depth_frame, (res["width"], res["height"]), cv2.INTER_NEAREST)
+                            pcl_frames[i] = cv2.resize(depth_frame, depth_image_size, cv2.INTER_NEAREST)
                         else:
                             # Approach 1: Use opencv's register depth method
                             depth_scale = 10.0  # extrinsic is in cm, but depth in mm so convert
                             depth_dilation = True
-                            scaled_depth_frame = depth_frame.astype(
-                                float) / depth_scale
+                            scaled_depth_frame = depth_frame.astype(float) / depth_scale
                             pcl_frames[i] = cv2.rgbd.registerDepth(
-                                rectified_right_intrinsic, rgb_intrinsic, rgb_distortion, right_to_rgb_extrinsic, scaled_depth_frame, (res["width"], res["height"]), depth_dilation)
-                            pcl_frames[i] = np.array(
-                                pcl_frames[i] * depth_scale).astype(np.uint16)  # convert back from cm to mm
+                                rectified_right_intrinsic, rgb_intrinsic, rgb_distortion, \
+                                right_to_rgb_extrinsic, scaled_depth_frame, depth_image_size, \
+                                depth_dilation)
+                            pcl_frames[i] = np.array(pcl_frames[i] * depth_scale).astype(np.uint16)  # convert back from cm to mm
                             # Approach 2: Use slow but easy to interpert function
-                            # pcl_frames[i] = alignDepthToRGB(depth_frame, pixel_coords, inverse_rectified_right_intrinsic, rgb_intrinsic, right_to_rgb_extrinsic, res["width"], res["height"])
+                            # pcl_frames[i] = utils.alignDepthToRGB(depth_frame, pixel_coords, inverse_rectified_right_intrinsic, rgb_intrinsic, right_to_rgb_extrinsic, *depth_image_size)
                     else:
                         pcl_frames[i] = depth_frame
 
@@ -302,29 +233,18 @@ if __name__ == "__main__":
                 continue
 
             if align_depth:
-                # Convert nonzero depth into red pixels in 3-channel image
-                depth_three_channel = np.zeros_like(pcl_frames[1])
-                depth_three_channel[:, :, 2] = (
-                    255 * pcl_frames[0].astype(float) / max_disparity).astype(np.uint8)
-                cond = depth_three_channel[:, :, 2] > 0
-                depth_three_channel[cond, 2] = 255
-                # Blend aligned depth + rgb image
-                blended_image = 0.6 * depth_three_channel.astype(float) / 255 + \
-                    0.4 * pcl_frames[1].astype(float) / 255
-                blended_image = (255 * blended_image.astype(float) /
-                                 blended_image.max()).astype(np.uint8)
+                # Convert nonzero depth into red pixels in 3-channel image for visualization purposes
+                blended_image = utils.overlayDepthFrame(rgb_frame=pcl_frames[1], depth_frame=pcl_frames[0], rgb_alpha=0.4)
                 cv2.imshow("RGBD Alignment", blended_image)
                 if not no_pcl:
-                    pcl_converter.rgbd_to_projection(
-                        *pcl_frames, downsample=downsample_pcl)
+                    pcl_converter.rgbd_to_projection(*pcl_frames, downsample=downsample_pcl)
                     pcl_converter.visualize_pcd()
             else:
-                quantized_depth_image = quantizeDisparityFrame(
-                    pcl_frames[0], max_disparity)
+                # depth_scale_factor was selected by some trial and error
+                quantized_depth_image = utils.quantizeDepthFrame(pcl_frames[0], depth_scale_factor=5000)
                 cv2.imshow("Depth Image", quantized_depth_image)
                 if not no_pcl:
-                    pcl_converter.depth_to_projection(
-                        pcl_frames[0], stride=stride, downsample=downsample_pcl)
+                    pcl_converter.depth_to_projection(pcl_frames[0], stride=stride, downsample=downsample_pcl)
                     pcl_converter.visualize_pcd()
             if cv2.waitKey(1) == "q":
                 break
