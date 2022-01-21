@@ -202,17 +202,17 @@ class Record():
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
             stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
 
-        if True in (el in ["left" or "disparity" or "depth"] for el in self.save):
+        if True in (el in ["left", "disparity", "depth"] for el in self.save):
             create_mono("left")
             if "left" in self.save:
                 stream_out("left", nodes['left'].getFps(), nodes['left'].out)
 
-        if True in (el in ["right" or "disparity" or "depth"] for el in self.save):
+        if True in (el in ["right", "disparity", "depth"] for el in self.save):
             create_mono("right")
             if "right" in self.save:
                 stream_out("right", nodes['right'].getFps(), nodes['right'].out)
 
-        if True in (el in ["disparity" or "depth"] for el in self.save):
+        if True in (el in ["disparity", "depth"] for el in self.save):
             nodes['stereo'] = pipeline.createStereoDepth()
             nodes['stereo'].initialConfig.setConfidenceThreshold(255)
             nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
