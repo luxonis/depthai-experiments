@@ -10,11 +10,14 @@ https://user-images.githubusercontent.com/26127866/147658296-23be4621-d37a-4fd6-
 
 1. If it's your first project with OAK, follow this [first steps guide](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#first-steps-with-depthai).
 
-2. Clone repository. Install requirements.
+2. Clone repository. Install requirements. Download model.
 ```bash
 git clone https://github.com/tomek-l/oak-roboflow-integration.git
 cd oak-roboflow-integration
 pip3 install -r requirements.txt --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+cd models/
+bash download.sh
+cd ..
 ```
 
 3. Setup Roboflow account
