@@ -45,9 +45,10 @@ def make_pipeline():
     camRgb = pipeline.create(dai.node.ColorCamera)
     camRgb.setPreviewSize(300, 300)
     camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
-    camRgb.setPreviewKeepAspectRatio(False)
     camRgb.setInterleaved(False)
     camRgb.setFps(60)
+    camRgb.setVideoSize(1920, 1080)
+    camRgb.setPreviewKeepAspectRatio(False)
 
     # Detector
     nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
@@ -64,10 +65,17 @@ def make_pipeline():
     nnOut = pipeline.create(dai.node.XLinkOut)
     nnOut.setStreamName("nn")
 
+    # Hi-Res NV12 output
+    xoutVideo = pipeline.create(dai.node.XLinkOut)
+    xoutVideo.setStreamName("nv12")
+    xoutVideo.input.setBlocking(False)
+    xoutVideo.input.setQueueSize(1)
+
     # Link elements
     nn.passthrough.link(xoutRgb.input)
     camRgb.preview.link(nn.input)  # RGB buffer
     nn.out.link(nnOut.input)
+    camRgb.video.link(xoutVideo.input) # NV12 to xoutVideo
 
     return pipeline
 
@@ -77,6 +85,12 @@ def parse_cmd_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--api_key", help="Roboflow API key")
     parser.add_argument("--dataset", help="Roboflow dataset ID")
+    parser.add_argument(
+        "--hires_uploads",
+        help="Upload a larger-size image to roboflow instead of the 300x300 NN input image",
+        default=False,
+        type=bool,
+    )
     parser.add_argument(
         "--autoupload_threshold",
         help="Upload only the bounding boxex above certain threshold. Threshold of 0.5 set by default.",
@@ -217,6 +231,7 @@ if __name__ == "__main__":
     with dai.Device(pipeline) as device:
 
         queue_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        queue_nv12 = device.getOutputQueue(name="nv12", maxSize=4, blocking=False)
         queue_dets = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
 
         print("Press 'enter' to upload annotated image to Roboflow. Press 'q' to exit.")
@@ -227,7 +242,8 @@ if __name__ == "__main__":
             cnt += 1
 
             rgb_msg = queue_rgb.get()  # instance of depthai.ImgFrame
-            det_msg = queue_dets.get()  # instance of depthai.ImgDetections.getSequenceNum
+            det_msg = queue_dets.get()  # instance of depthai.ImgDetections
+            nv12_msg = queue_nv12.get() # TODO: sync this guy
 
             # Obtain sequence numbers to sync frames
             rgb_seq = rgb_msg.getSequenceNum()
@@ -237,6 +253,7 @@ if __name__ == "__main__":
 
             # Get frame and dets
             frame = rgb_msg.getCvFrame()  # np.ndarray / BGR CV Mat
+            frame_hires = nv12_msg.getCvFrame()
             dets = det_msg.detections  # list of depthai.ImgDetection
 
             # Put (object, seq_n) tuples in a queue
@@ -248,6 +265,7 @@ if __name__ == "__main__":
             # Display results
             frame_with_boxes = overlay_boxes(frame, dets)
             cv2.imshow("Roboflow Demo", frame_with_boxes)
+            cv2.imshow("Hi-Res Image", frame_hires)
 
             # Time from last upload in seconds
             dt = time.monotonic() - last_upload_ts
