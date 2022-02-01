@@ -47,8 +47,7 @@ def make_pipeline():
     camRgb.setPreviewSize(300, 300)
     camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
     camRgb.setInterleaved(False)
-    camRgb.setFps(60)
-    camRgb.setVideoSize(1920, 1080)
+    camRgb.setFps(30)
     camRgb.setPreviewKeepAspectRatio(False)
 
     # Detector
@@ -58,9 +57,11 @@ def make_pipeline():
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
 
-    # Image output
+    # 300x300 RGB image output
     xoutRgb = pipeline.create(dai.node.XLinkOut)
     xoutRgb.setStreamName("rgb")
+    xoutRgb.input.setBlocking(False)
+    xoutRgb.input.setQueueSize(1)
 
     # Detection output
     nnOut = pipeline.create(dai.node.XLinkOut)
@@ -103,6 +104,12 @@ def parse_cmd_args():
         help="Auto-upload images every `autoupload_interval` seconds. Infinite interval (no auto-upload) set by default.",
         default=float("inf"),
         type=float,
+    )
+    parser.add_argument(
+        "--upload_res",
+        help="Resolution of uploaded images in WxH format. 300x300 by default.",
+        default="300x300",
+        type=str,
     )
     config = parser.parse_args()
 
@@ -177,11 +184,11 @@ def upload_all(uploader, frame: np.ndarray, labels: list, bboxes: list, fname: s
     )
 
 
-def get_last_synced_pair(rgb_deque, dets_deque):
+def get_last_synced_pair(img_deque, dets_deque):
     # Returns (frame, dets) with the highest available seq_n or (None, None) if no mach found.
 
-    # rgb_deque sorted by seq_n
-    rgb_deque_s = sorted(rgb_deque, key=lambda x: x[1], reverse=True)
+    # img_deque sorted by seq_n
+    img_deque_s = sorted(img_deque, key=lambda x: x[1], reverse=True)
 
     # Dict mapping seq_n: dets
     seq2dets = {seq_n: det for (det, seq_n) in dets_deque}
@@ -209,9 +216,15 @@ if __name__ == "__main__":
     # Parse config
     config = parse_cmd_args()
 
+    # Constant params
+    DEV_QUEUE_SIZE = 5
+    SYNC_QUEUE_SIZE = 20  # Sync queue should be larger than device queue
     UPLOAD_THR = config.autoupload_threshold
     DATASET = config.dataset
     API_KEY = config.api_key
+
+    # Parse resolution '300x300' -> 300, 300
+    W, H = map(int, config.upload_res.split("x"))
 
     # Initialize variables
     frame = None
@@ -220,8 +233,8 @@ if __name__ == "__main__":
     WHITE = (255, 255, 255)
 
     # Deques for detections and frames. Used for syncing frame<->detections pairs.
-    rgb_deque = deque(maxlen=10)
-    det_deque = deque(maxlen=10)
+    img_deque = deque(maxlen=SYNC_QUEUE_SIZE)
+    det_deque = deque(maxlen=SYNC_QUEUE_SIZE)
 
     # Wrapper around Roboflow upload/annotate API
     uploader = RoboflowUploader(dataset_name=DATASET, api_key=API_KEY)
@@ -235,42 +248,50 @@ if __name__ == "__main__":
 
     with dai.Device(pipeline) as device:
 
-        queue_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-        queue_nv12 = device.getOutputQueue(name="nv12", maxSize=4, blocking=False)
-        queue_dets = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
+        # For 300x300 resolution -> use the RGB input
+        # For any other resolution -> use NV12 input
+        queue_frames = device.getOutputQueue(
+            name="rgb" if config.upload_res == "300x300" else "nv12",
+            maxSize=DEV_QUEUE_SIZE,
+            blocking=False,
+        )
+        queue_dets = device.getOutputQueue(
+            name="nn", maxSize=DEV_QUEUE_SIZE, blocking=False
+        )
 
         print("Press 'enter' to upload annotated image to Roboflow. Press 'q' to exit.")
 
-        cnt = 0
         while True:
 
-            cnt += 1
-
-            rgb_msg = queue_rgb.get()  # instance of depthai.ImgFrame
+            img_msg = queue_frames.get()  # instance of depthai.ImgFrame
             det_msg = queue_dets.get()  # instance of depthai.ImgDetections
-            nv12_msg = queue_nv12.get()  # TODO: sync this guy
 
             # Obtain sequence numbers to sync frames
-            rgb_seq = rgb_msg.getSequenceNum()
+            img_seq = img_msg.getSequenceNum()
             det_seq = det_msg.getSequenceNum()
 
-            print(f"Inter {cnt}  RGB seq: {rgb_seq} Det seq {det_seq}")
-
             # Get frame and dets
-            frame = rgb_msg.getCvFrame()  # np.ndarray / BGR CV Mat
-            frame_hires = nv12_msg.getCvFrame()
+            frame = img_msg.getCvFrame()  # np.ndarray / BGR CV Mat
             dets = det_msg.detections  # list of depthai.ImgDetection
 
             # Put (object, seq_n) tuples in a queue
-            rgb_deque.append((frame_hires, rgb_seq))
+            img_deque.append((frame, img_seq))
             det_deque.append((dets, det_seq))
 
-            frame, dets = get_last_synced_pair(rgb_deque, det_deque)
+            # Get synced pairs
+            frame, dets = get_last_synced_pair(img_deque, det_deque)
+
+            if frame is None:
+                continue
+
+            # Resize to desired upload resolution
+            frame = cv2.resize(frame, (W, H))
+
+            print(frame.shape)
 
             # Display results
             frame_with_boxes = overlay_boxes(frame, dets)
             cv2.imshow("Roboflow Demo", frame_with_boxes)
-            cv2.resizeWindow("Roboflow Demo", 1280, 720)  # Downscale
 
             # Time from last upload in seconds
             dt = time.monotonic() - last_upload_ts
@@ -279,8 +300,6 @@ if __name__ == "__main__":
             key = cv2.waitKey(1)
 
             # Decide which frame to upload and obtain its shape (H, W, C)
-            frame_to_upload = frame
-            H, W, C = frame_to_upload.shape
 
             if key == ord("q"):
                 # q pressed
@@ -292,7 +311,7 @@ if __name__ == "__main__":
                 executor.submit(
                     upload_all,
                     uploader,
-                    frame_to_upload,
+                    frame,
                     labels,
                     bboxes,
                     int(1000 * time.time()),
@@ -308,13 +327,15 @@ if __name__ == "__main__":
                     executor.submit(
                         upload_all,
                         uploader,
-                        frame_to_upload,
+                        frame,
                         labels,
                         bboxes,
                         int(1000 * time.time()),
                     )
                     last_upload_ts = time.monotonic()
                 else:
-                    pass
+                    print(
+                        f"INFO: Auto-uploading grabbed frame with {len(bboxes)} annotations!"
+                    )
                     # No detections. Could add a debug message here:
                     # print(f"DEBUG: No detections with confidence above {UPLOAD_THR}. Not uploading!")
