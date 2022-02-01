@@ -35,3 +35,8 @@ python3 main.py --dataset oak-dataset --api_key vkIkZac3CXvp0RZ31B3f
 ```shell
 python3 main.py --dataset oak-dataset --api_key vkIkZac3CXvp0RZ31B3f --autoupload_threshold 0.6 --autoupload_interval 0.5
 ```
+
+6. Experiment with `--upload_res` parameter. It allows for uploading annotated images in custom reosolution, which can be useful to create dataset with high-resolution images. For example, to upload in `2028x1520` do:
+```
+python3 main.py --dataset oak-dataset --api_key vkIkZac3CXvp0RZ31B3f --autoupload_threshold 0.6 --autoupload_interval 0.5 --upload_res 2028x1520
+```
