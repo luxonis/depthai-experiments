@@ -3,16 +3,16 @@ Creates VOC-style annotation strings
 """
 
 
-def make_voc_annotations(cls_names, bboxes):
+def make_voc_annotations(cls_names, bboxes, img_w=300, img_h=300):
 
-    HEADER = """
+    HEADER = f"""
     <annotation>
         <source>
             <database>auto-generated from OAK camera</database>
         </source>
         <size>
-            <width>300</width>
-            <height>300</height>
+            <width>{img_w}</width>
+            <height>{img_h}</height>
             <depth>3</depth>
         </size>
     """

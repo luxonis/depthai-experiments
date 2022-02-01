@@ -37,6 +37,7 @@ LABELS = [
     "tvmonitor",
 ]
 
+
 def make_pipeline():
     # Pipeline
     pipeline = dai.Pipeline()
@@ -75,7 +76,7 @@ def make_pipeline():
     nn.passthrough.link(xoutRgb.input)
     camRgb.preview.link(nn.input)  # RGB buffer
     nn.out.link(nnOut.input)
-    camRgb.video.link(xoutVideo.input) # NV12 to xoutVideo
+    camRgb.video.link(xoutVideo.input)  # NV12 to xoutVideo
 
     return pipeline
 
@@ -108,12 +109,13 @@ def parse_cmd_args():
     return config
 
 
-def parse_dets(detections, confidence_thr=0.8):
+def parse_dets(detections, image_shape, confidence_thr=0.8):
 
+    X, Y = image_shape
     labels = [LABELS[d.label] for d in detections if d.confidence > confidence_thr]
 
     bboxes = [
-        [300 * d.xmin, 300 * d.ymin, 300 * d.xmax, 300 * d.ymax]
+        [X * d.xmin, Y * d.ymin, X * d.xmax, Y * d.ymax]
         for d in detections
         if d.confidence > confidence_thr
     ]
@@ -169,7 +171,10 @@ def upload_all(uploader, frame: np.ndarray, labels: list, bboxes: list, fname: s
     img_id = uploader.upload_image(frame, fname)
 
     # Annotate the image we just uploaded
-    uploader.upload_annotation(img_id, fname=fname, labels=labels, bboxes=bboxes)
+    H, W, C = frame.shape
+    uploader.upload_annotation(
+        img_id, fname=fname, labels=labels, bboxes=bboxes, img_w=W, img_h=H
+    )
 
 
 def get_last_synced_pair(rgb_deque, dets_deque):
@@ -236,14 +241,14 @@ if __name__ == "__main__":
 
         print("Press 'enter' to upload annotated image to Roboflow. Press 'q' to exit.")
 
-        cnt = 0 
+        cnt = 0
         while True:
 
             cnt += 1
 
             rgb_msg = queue_rgb.get()  # instance of depthai.ImgFrame
             det_msg = queue_dets.get()  # instance of depthai.ImgDetections
-            nv12_msg = queue_nv12.get() # TODO: sync this guy
+            nv12_msg = queue_nv12.get()  # TODO: sync this guy
 
             # Obtain sequence numbers to sync frames
             rgb_seq = rgb_msg.getSequenceNum()
@@ -257,7 +262,7 @@ if __name__ == "__main__":
             dets = det_msg.detections  # list of depthai.ImgDetection
 
             # Put (object, seq_n) tuples in a queue
-            rgb_deque.append((frame, rgb_seq))
+            rgb_deque.append((frame_hires, rgb_seq))
             det_deque.append((dets, det_seq))
 
             frame, dets = get_last_synced_pair(rgb_deque, det_deque)
@@ -265,7 +270,7 @@ if __name__ == "__main__":
             # Display results
             frame_with_boxes = overlay_boxes(frame, dets)
             cv2.imshow("Roboflow Demo", frame_with_boxes)
-            cv2.imshow("Hi-Res Image", frame_hires)
+            cv2.resizeWindow("Roboflow Demo", 1280, 720)  # Downscale
 
             # Time from last upload in seconds
             dt = time.monotonic() - last_upload_ts
@@ -273,19 +278,28 @@ if __name__ == "__main__":
             # Handle user input
             key = cv2.waitKey(1)
 
+            # Decide which frame to upload and obtain its shape (H, W, C)
+            frame_to_upload = frame
+            H, W, C = frame_to_upload.shape
+
             if key == ord("q"):
                 # q pressed
                 exit()
             elif key == 13:
                 # If enter is pressed, upload all dets without thresholding
-                labels, bboxes = parse_dets(dets, confidence_thr=0.0)
+                labels, bboxes = parse_dets(dets, (W, H), confidence_thr=0.0)
                 print("INFO: Enter pressed. Uploading grabbed frame!")
                 executor.submit(
-                    upload_all, uploader, frame, labels, bboxes, int(1000 * time.time())
+                    upload_all,
+                    uploader,
+                    frame_to_upload,
+                    labels,
+                    bboxes,
+                    int(1000 * time.time()),
                 )
             elif dt > config.autoupload_interval:
                 # Auto-upload annotations with confidence above UPLOAD_THR every `autoupload_interval` seconds
-                labels, bboxes = parse_dets(dets, confidence_thr=UPLOAD_THR)
+                labels, bboxes = parse_dets(dets, (W, H), confidence_thr=UPLOAD_THR)
 
                 if len(bboxes) > 0:
                     print(
@@ -294,7 +308,7 @@ if __name__ == "__main__":
                     executor.submit(
                         upload_all,
                         uploader,
-                        frame,
+                        frame_to_upload,
                         labels,
                         bboxes,
                         int(1000 * time.time()),

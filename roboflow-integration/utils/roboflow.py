@@ -66,13 +66,13 @@ class RoboflowUploader:
         return img_id
 
     def upload_annotation(
-        self, image_id, fname, labels: List[str], bboxes: List[List[int]]
+        self, image_id, fname, labels: List[str], bboxes: List[List[int]], img_w=300, img_h=300
     ):
         # Uploads a VOC annotation string for given `image_id`
         # The annotation will be stored under `fname.xml`
         # Returns `True` if upload succeeded, `False` otherwise
 
-        annotation_str = make_voc_annotations(labels, bboxes)
+        annotation_str = make_voc_annotations(labels, bboxes, img_w, img_h)
 
         upload_url = "".join(
             [
