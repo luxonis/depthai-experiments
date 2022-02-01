@@ -197,7 +197,7 @@ def get_last_synced_pair(img_deque, dets_deque):
     seq2frames_dets = OrderedDict(
         (
             (seq_n, (frame, seq2dets.get(seq_n)))
-            for frame, seq_n in rgb_deque_s
+            for frame, seq_n in img_deque_s
             if seq2dets.get(seq_n) is not None
         )
     )
@@ -281,13 +281,11 @@ if __name__ == "__main__":
             # Get synced pairs
             frame, dets = get_last_synced_pair(img_deque, det_deque)
 
-            if frame is None:
+            if frame is None or dets is None:
                 continue
 
             # Resize to desired upload resolution
             frame = cv2.resize(frame, (W, H))
-
-            print(frame.shape)
 
             # Display results
             frame_with_boxes = overlay_boxes(frame, dets)
