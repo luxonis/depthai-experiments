@@ -49,9 +49,10 @@ class HostSpatialsCalc:
             'y': int((ymax + ymin) / 2)
         }
 
-        mid = int(depthFrame.shape[0] / 2) # middle of the depth img
-        bb_x_pos = centroid['x'] - mid
-        bb_y_pos = centroid['y'] - mid
+        midW = int(depthFrame.shape[1] / 2) # middle of the depth img width
+        midH = int(depthFrame.shape[0] / 2) # middle of the depth img height
+        bb_x_pos = centroid['x'] - midW
+        bb_y_pos = centroid['y'] - midH
 
         angle_x = self._calc_angle(depthFrame, bb_x_pos)
         angle_y = self._calc_angle(depthFrame, bb_y_pos)
