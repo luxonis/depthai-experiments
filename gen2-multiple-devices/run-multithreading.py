@@ -38,7 +38,7 @@ def worker(dev_info, id):
         while alive:
             for q in qlist:
                 pkt = q.get()
-                tnow = time.monotonic()
+                tnow = dai.Clock.now().total_seconds()
                 name = q.getName()
                 tstamp = pkt.getTimestamp().total_seconds()
                 seqnum = pkt.getSequenceNum()
