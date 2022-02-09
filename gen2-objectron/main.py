@@ -137,12 +137,6 @@ def create_pipeline():
 
     return pipeline
 
-
-# --------------- Label Map ------------------
-
-label_map = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
-
 # --------------- Main ---------------
 
 if __name__ == "__main__":
