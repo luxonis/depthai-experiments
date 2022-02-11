@@ -22,29 +22,6 @@ def create_pipeline():
     pipeline = dai.Pipeline()
     pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
-    # Creating left/right mono cameras for StereoDepth
-    left = pipeline.createMonoCamera()
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-    left.setFps(30)
-
-    right = pipeline.createMonoCamera()
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-    right.setFps(30)
-
-    # Create StereoDepth node that will produce the depth map
-    stereo = pipeline.createStereoDepth()
-    stereo.initialConfig.setConfidenceThreshold(255)
-    stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-
-    # DepthAlign
-    stereo.setLeftRightCheck(True)
-    stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-
-    left.out.link(stereo.left)
-    right.out.link(stereo.right)
-
     # Create a camera
     cam = pipeline.createColorCamera()
     cam.setIspScale(1, 3)
@@ -62,14 +39,10 @@ def create_pipeline():
     manip_det.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 
     # Mobilenet parameters
-    nn_det = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+    nn_det = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn_det.setBlobPath(MOBILENET_DETECTOR_PATH)
     nn_det.setConfidenceThreshold(0.5)
     nn_det.setNumInferenceThreads(2)
-    nn_det.setBoundingBoxScaleFactor(0.5)
-    # Min/Max threshold. Values out of range will be set to 0 (invalid)
-    nn_det.setDepthLowerThreshold(100)
-    nn_det.setDepthUpperThreshold(5000)
 
     # Connect Camera to Manip
     cam.preview.link(manip_det.inputImage)
@@ -79,16 +52,11 @@ def create_pipeline():
     cam_xout.setStreamName("cam")
     cam.preview.link(cam_xout.input)
 
-    depth_xout = pipeline.createXLinkOut()
-    depth_xout.setStreamName("depth")
-    stereo.depth.link(depth_xout.input)
-
     nn_det_xout = pipeline.createXLinkOut()
     nn_det_xout.setStreamName("nn_det")
     nn_det.out.link(nn_det_xout.input)
 
     manip_det.out.link(nn_det.input)
-    stereo.depth.link(nn_det.inputDepth)
 
     # ScriptNode - take the output of the detector, postprocess, and send info to ImageManip for resizing
     # the input to the pose NN
@@ -156,8 +124,6 @@ if __name__ == "__main__":
         q_pose_frame = device.getOutputQueue("nn_pose_frame", 16, False)
         q_cfg = device.getOutputQueue("cfg_out", 16, False)
 
-        q_depth = device.getOutputQueue("depth", 8, False)
-
         fps = FPSHandler(maxTicks=2)
 
         frame = None
@@ -167,14 +133,6 @@ if __name__ == "__main__":
             in_frame = q_cam.tryGet()
             if in_frame is None:
                 continue
-
-            in_depth = q_depth.tryGet()
-            if in_depth is not None:
-                depth_frame = in_depth.getCvFrame()
-                depth_frame_color = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                depth_frame_color = cv2.equalizeHist(depth_frame_color)
-                depth_frame_color = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET)
-                cv2.imshow("depth", depth_frame_color)
 
             frame = in_frame.getCvFrame()
 
@@ -245,7 +203,7 @@ if __name__ == "__main__":
                 boxes = pose_map.get(seq_id)
                 if boxes is not None:
                     for box in boxes:
-                        draw_box(frame_synced, box, detection.spatialCoordinates.z)
+                        draw_box(frame_synced, box)
 
                 for map_key in list(filter(lambda item: item <= seq_id, frame_seq_map.keys())):
                     del frame_seq_map[map_key]
