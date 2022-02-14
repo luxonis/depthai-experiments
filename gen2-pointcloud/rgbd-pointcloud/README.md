@@ -1,4 +1,4 @@
-## RGBd projection Demo
+## RGB-D projection Demo
 This example shows how to align depth to rgb camera frame and project depth points into 3d on OAK-D-Lite
 
 ### Install Dependencies:
@@ -16,6 +16,6 @@ open3D is not supported by all platforms, but is required for pointcloud visuali
 
 
 ## TODO:
-- Add gray image information to the image. 
+- Add gray image information to the image.
 - Fix z-axis
 - Make it work with OAK-D. Currently works with OAK-D-Lite only.
