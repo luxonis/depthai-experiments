@@ -5,14 +5,14 @@
     "build": "./node_modules/.bin/webpack"
   },
   "dependencies": {
-    "@babel/cli": "7.5.5",
-    "@babel/core": "7.5.5",
-    "@babel/plugin-proposal-class-properties": "7.5.5",
-    "@babel/plugin-transform-runtime": "7.5.5",
-    "@babel/preset-env": "7.5.5",
-    "@babel/runtime": "7.5.5",
-    "babel-loader": "8.0.6",
-    "webpack": "4.39.1",
-    "webpack-cli": "3.3.6"
+    "@babel/cli": "^7.17.3",
+    "@babel/core": "7.17.4",
+    "@babel/plugin-proposal-class-properties": "7.16.7",
+    "@babel/plugin-transform-runtime": "7.17.0",
+    "@babel/preset-env": "7.16.11",
+    "@babel/runtime": "7.17.2",
+    "babel-loader": "8.2.3",
+    "webpack": "5.69.1",
+    "webpack-cli": "^4.9.2"
   }
 }
