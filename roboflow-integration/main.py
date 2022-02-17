@@ -1,18 +1,17 @@
 import time
-import json
 import argparse
 
-from pathlib import Path
 from collections import deque, OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
 
 from utils.roboflow import RoboflowUploader
 
-BLOB_PATH = "models/mobilenet-ssd_openvino_2021.4_5shave.blob"
+BLOB_PATH = blobconverter.from_zoo(name="mobilenet-ssd", shaves=5)
 LABELS = [
     "background",
     "aeroplane",
