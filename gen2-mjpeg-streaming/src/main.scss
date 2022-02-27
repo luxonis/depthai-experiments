@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;500;700&display=swap');
 
 @mixin rowBG {
-  background: rgba(48, 29, 48, 0.47);
+  background: rgba(28, 18, 28, 0.77);
   box-shadow: 0 0 19px -8px rgb(255, 255, 255);
 }
 
@@ -85,7 +85,7 @@
     position: absolute;
     bottom: 0;
     justify-content: space-around;
-    padding: 25px;
+    padding: 10px;
     @include rowBG;
     z-index: 1010;
 
@@ -97,7 +97,7 @@
     span {
       color: white;
       font-weight: 400;
-      font-size: 26px;
+      font-size: 14px;
       line-height: 16px;
     }
 
