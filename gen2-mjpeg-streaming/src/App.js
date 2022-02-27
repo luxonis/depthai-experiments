@@ -9,6 +9,8 @@ import {
   FolderOutlined,
 } from '@ant-design/icons';
 import recordIcon from "./svg/recording.svg"
+import {useDispatch, useSelector} from "react-redux";
+import {sendConfig, sendDynamicConfig, updateConfig} from "./store";
 
 const text = <span>Description</span>;
 
@@ -27,6 +29,11 @@ const menu = (
 );
 
 function App() {
+  const config = useSelector((state) => state.app.config)
+  const dispatch = useDispatch()
+
+  const update = data => dispatch(sendConfig(data))
+  const updateDyn = data => dispatch(sendDynamicConfig(data))
 
   const [value, setValue] = React.useState(1);
 
@@ -37,7 +44,7 @@ function App() {
 
   return (
     <div className="App">
-      <img className="stream" src="" alt=""/>
+      <img className="stream" src="/stream" alt=""/>
       <div className="bottomRow">
         <Button size="large" type="text" ghost icon={<FolderOutlined/>}>
           <Tooltip placement="bottomLeft" title={text}>Change Path</Tooltip>
@@ -53,11 +60,13 @@ function App() {
             right
           </Tooltip></Radio>
         </Radio.Group>
-        <Button size="large" type="text" ghost icon={<CameraOutlined/>}>
-          <Tooltip placement="bottomLeft" title={text}>
-            Take Photo
-          </Tooltip>
-        </Button>
+        <a href="/still" download="photo.jpg">
+          <Button size="large" type="text" ghost icon={<CameraOutlined/>}>
+            <Tooltip placement="bottomLeft" title={text}>
+              Take Photo
+            </Tooltip>
+          </Button>
+        </a>
         <Button size="large" type="text" ghost icon={<img src={recordIcon} alt=""/>}>
           <Tooltip placement="bottomLeft" title={text}>Start Recording</Tooltip>
         </Button>
@@ -71,32 +80,32 @@ function App() {
             <Tooltip placement="bottomLeft" title={text}>
               exp
             </Tooltip>
-            <Button icon={<LeftOutlined/>} ghost="true"></Button>
-            <Input size="small" placeholder="10000"/>
-            <Button icon={<RightOutlined/>} ghost="true"></Button>
+            <Button icon={<LeftOutlined/>} ghost="true" onClick={() => update({values: {exp: config.values.exp - 500, iso: config.values.iso}})}/>
+            <Input size="small" value={config.values.exp} onChange={exp => updateDyn({values: {exp, iso: config.values.iso}})}/>
+            <Button icon={<RightOutlined/>} ghost="true" onClick={() => update({values: {exp: config.values.exp + 500, iso: config.values.iso}})}/>
           </li>
           <Divider type="vertical"/>
           <li>
             <Tooltip placement="bottomLeft" title={text}>
               iso
             </Tooltip>
-            <Button icon={<LeftOutlined/>} ghost="true"></Button>
-            <Input size="small" placeholder="400"/>
-            <Button icon={<RightOutlined/>} ghost="true"></Button>
+            <Button icon={<LeftOutlined/>} ghost="true" onClick={() => update({values: {exp: config.values.exp, iso: config.values.iso - 100}})}/>
+            <Input size="small" value={config.values.iso} onChange={iso => updateDyn({values: {exp: config.values.exp, iso}})}/>
+            <Button icon={<RightOutlined/>} ghost="true" onClick={() => update({values: {exp: config.values.exp, iso: config.values.iso + 100}})}/>
           </li>
           <li>
             <Tooltip placement="bottomLeft" title={text}>
               wb
             </Tooltip>
-            <Button icon={<LeftOutlined/>} ghost="true"></Button>
-            <Input size="small" placeholder="5600"/>
-            <Button icon={<RightOutlined/>} ghost="true"></Button>
+            <Button icon={<LeftOutlined/>} ghost="true" onClick={() => update({values: {wb: config.values.wb - 400}})}/>
+            <Input size="small" value={config.values.wb} onChange={wb => updateDyn({values: {wb}})}/>
+            <Button icon={<RightOutlined/>} ghost="true" onClick={() => update({values: {wb: config.values.wb + 400}})}/>
           </li>
           <li>
             <Tooltip placement="bottomLeft" title={text}>f</Tooltip>
-            <Button icon={<LeftOutlined/>} ghost="true"></Button>
-            <Input size="small" placeholder="F2.8"/>
-            <Button icon={<RightOutlined/>} ghost="true"></Button>
+            <Button icon={<LeftOutlined/>} ghost="true" onClick={() => update({values: {focus: config.values.focus - 3}})}/>
+            <Input size="small" value={config.values.focus} onChange={focus => updateDyn({values: {focus}})}/>
+            <Button icon={<RightOutlined/>} ghost="true" onClick={() => update({values: {focus: config.values.focus + 3}})}/>
           </li>
         </ul>
       </div>

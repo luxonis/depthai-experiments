@@ -2,6 +2,7 @@
 import asyncio
 import threading
 import time
+from io import BytesIO
 from pathlib import Path
 
 import aiohttp
@@ -25,6 +26,7 @@ class HttpHandler:
         self.loop = loop
         self.app = web.Application(middlewares=[self.static_serve])
         self.app.add_routes([
+            web.get('/still', self.still),
             web.get('/stream', self.stream),
             web.post('/update', self.update),
         ])
@@ -50,6 +52,18 @@ class HttpHandler:
 
     def close(self):
         self.loop.run_until_complete(self.runner.cleanup())
+
+    async def still(self, request):
+        if self.instance.stillQueue is None:
+            return web.HTTPBadRequest(reason="output queue not initialized")
+
+        savedPath = Path(__file__).parent / "saved"
+        savedPath.mkdir(exist_ok=True)
+        self.instance.pm.captureStill()
+        stillPacket = self.instance.stillQueue.get()
+        buffer = cv2.imencode(".jpg", stillPacket.getCvFrame())[1]
+        buffer = BytesIO(buffer)
+        return web.Response(body=buffer.getvalue(), content_type='image/jpeg')
 
     async def update(self, request):
         data = await request.json()
@@ -90,8 +104,8 @@ class HttpHandler:
             while True:
                 if self.datatosend is not None:
                     with MultipartWriter('image/jpeg', boundary=boundary) as mpwriter:
-                        mpwriter.append(str(self.datatosend), {
-                            'Content-Type': 'image/jpeg'
+                        mpwriter.append(bytes(self.datatosend), {
+                            'Content-Type': 'image/jpeg',
                         })
                         await mpwriter.write(response, close_boundary=False)
                     await response.drain()
@@ -109,6 +123,9 @@ class WebApp:
         self.selectedPreview = "color"
         self.thread = None
         self.pm = None
+        self.device = None
+        self.previewQueue = None
+        self.stillQueue = None
 
     def shouldRun(self):
         return self.running
@@ -121,19 +138,12 @@ class WebApp:
         self.pm.createColorCam(xout=True, xoutStill=True)
 
         with dai.Device(self.pm.pipeline) as device:
-            previewQueue = device.getOutputQueue(self.pm.nodes.xoutRgb.getStreamName())
-            stillQueue = device.getOutputQueue(self.pm.nodes.xoutRgbStill.getStreamName())
-            savedPath = Path(__file__).parent / "saved"
+            self.pm.createDefaultQueues(device)
+            self.previewQueue = device.getOutputQueue(self.pm.nodes.xoutRgb.getStreamName())
+            self.stillQueue = device.getOutputQueue(self.pm.nodes.xoutRgbStill.getStreamName())
 
             while self.shouldRun():
-                previewPacket = previewQueue.tryGet()
-                if previewPacket is not None:
-                    self.webserver.datatosend = previewPacket.getData()
-                stillPacket = stillQueue.tryGet()
-                if stillPacket is not None:
-                    savedPath.mkdir(exist_ok=True)
-                    cv2.imwrite(str(savedPath / f"saved-{time.monotonic()}.jpg"), stillPacket.getCvFrame())
-                time.sleep(1)
+                self.webserver.datatosend = self.previewQueue.get().getData()
 
     def start(self):
         self.running = True
