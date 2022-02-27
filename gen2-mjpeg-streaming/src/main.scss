@@ -13,10 +13,18 @@
 }
 
 .App {
-  background-image: url("./img/white-bg.jpg");
-  background-size: cover;
-  background-position: center center;
   height: 100vh;
+  position: relative;
+
+  .stream {
+    background-image: url("./img/white-bg.jpg");
+    background-size: cover;
+    background-position: center center;
+    position: absolute;
+    height: 100vh;
+    width: 100vw;
+    z-index: -1000;
+  }
 
 
   .upperRow {
@@ -25,6 +33,7 @@
     justify-content: space-between;
     padding: 15px 25px 5px 25px;
     @include rowBG;
+    z-index: 1010;
 
     .ant-input {
       background: none;
@@ -78,6 +87,7 @@
     justify-content: space-around;
     padding: 25px;
     @include rowBG;
+    z-index: 1010;
 
     div {
       display: flex;

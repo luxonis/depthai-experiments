@@ -37,6 +37,7 @@ function App() {
 
   return (
     <div className="App">
+      <img className="stream" src="" alt=""/>
       <div className="upperRow">
         <Dropdown overlay={menu} placement="bottomLeft" arrow>
           <Button>Auto</Button>
@@ -48,37 +49,29 @@ function App() {
             <Radio value={3}>R</Radio>
           </Radio.Group>
           <li>
-            <div>
               <span>EXP</span>
               <Button icon={<LeftOutlined/>} ghost="true"></Button>
               <Input size="small" placeholder="10000"/>
               <Button icon={<RightOutlined/>} ghost="true"></Button>
-            </div>
           </li>
           <Divider type="vertical" />
           <li>
-            <div>
               <span>ISO</span>
               <Button icon={<LeftOutlined/>} ghost="true"></Button>
               <Input size="small" placeholder="400"/>
               <Button icon={<RightOutlined/>} ghost="true"></Button>
-            </div>
           </li>
           <li>
-            <div>
               <span>WB</span>
               <Button icon={<LeftOutlined/>} ghost="true"></Button>
               <Input size="small" placeholder="5600"/>
               <Button icon={<RightOutlined/>} ghost="true"></Button>
-            </div>
           </li>
           <li>
-            <div>
               <span>F</span>
               <Button icon={<LeftOutlined/>} ghost="true"></Button>
               <Input size="small" placeholder="F2.8"/>
               <Button icon={<RightOutlined/>} ghost="true"></Button>
-            </div>
           </li>
         </ul>
         <Tooltip placement="bottomLeft" title={text}>
