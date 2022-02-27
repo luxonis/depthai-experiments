@@ -1,240 +1,172 @@
-import json
-import socketserver
+# This Python file uses the following encoding: utf-8
+import asyncio
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from io import BytesIO
 from pathlib import Path
-import sys
-from socketserver import ThreadingMixIn
-from time import sleep
-import depthai as dai
-import numpy as np
+
+import aiohttp
 import cv2
-from PIL import Image
-import blobconverter
+import depthai as dai
+from aiohttp import web, MultipartWriter
+from depthai_sdk import PipelineManager
 
-HTTP_SERVER_PORT = 8090
+host = "localhost"
+port = 9001
 
-class TCPServerRequest(socketserver.BaseRequestHandler):
-    def handle(self):
-        # Handle is called each time a client is connected
-        # When OpenDataCam connects, do not return - instead keep the connection open and keep streaming data
-        # First send HTTP header
-        header = 'HTTP/1.0 200 OK\r\nServer: Mozarella/2.2\r\nAccept-Range: bytes\r\nConnection: close\r\nMax-Age: 0\r\nExpires: 0\r\nCache-Control: no-cache, private\r\nPragma: no-cache\r\nContent-Type: application/json\r\n\r\n'
-        self.request.send(header.encode())
-        while True:
-            sleep(0.1)
-            if hasattr(self.server, 'datatosend'):
-                self.request.send(self.server.datatosend.encode() + "\r\n".encode())
+class HttpHandler:
+    static_path = Path(__file__).parent / "build"
+    site = None
+    loop = None
+    datatosend = None
+    app = None
 
+    def __init__(self, instance, loop):
+        self.instance = instance
+        self.loop = loop
+        self.app = web.Application(middlewares=[self.static_serve])
+        self.app.add_routes([
+            web.get('/stream', self.stream),
+            web.post('/update', self.update),
+        ])
 
-# HTTPServer MJPEG
-class VideoStreamHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
-        self.end_headers()
-        while True:
-            sleep(0.1)
-            if hasattr(self.server, 'frametosend'):
-                image = Image.fromarray(cv2.cvtColor(self.server.frametosend, cv2.COLOR_BGR2RGB))
-                stream_file = BytesIO()
-                image.save(stream_file, 'JPEG')
-                self.wfile.write("--jpgboundary".encode())
+    @web.middleware
+    async def static_serve(self, request, handler):
+        relative_file_path = Path(request.path).relative_to('/')  # remove root '/'
+        file_path = self.static_path / relative_file_path  # rebase into static dir
+        if not file_path.exists():
+            return await handler(request)
+        if file_path.is_dir():
+            file_path /= 'index.html'
+            if not file_path.exists():
+                return web.FileResponse(Path(__file__).parent / "404.html")
+        return web.FileResponse(file_path)
 
-                self.send_header('Content-type', 'image/jpeg')
-                self.send_header('Content-length', str(stream_file.getbuffer().nbytes))
-                self.end_headers()
-                image.save(self.wfile, 'JPEG')
+    def run(self):
+        self.runner = web.AppRunner(self.app)
+        self.loop.run_until_complete(self.runner.setup())
+        self.site = aiohttp.web.TCPSite(self.runner, host, port)
+        self.loop.run_until_complete(self.site.start())
+        self.loop.run_forever()
 
+    def close(self):
+        self.loop.run_until_complete(self.runner.cleanup())
 
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """Handle requests in a separate thread."""
-    pass
+    async def update(self, request):
+        data = await request.json()
+        if data.get('capture', '') == "true":
+            self.instance.pm.captureStill()
+        if data.get('autofocus', '') == "trigger":
+            self.instance.pm.triggerAutoFocus()
+        if 'autofocus' in data:
+            if hasattr(dai.CameraControl.AutoFocusMode, data['autofocus']):
+                self.instance.pm.updateColorCamConfig(autofocus=getattr(dai.CameraControl.AutoFocusMode, data['autofocus']))
+            else:
+                return web.HTTPBadRequest(reason=f"Parameter 'autofocus' contains non existing value \"{data['autofocus']}\". Check dai.CameraControl.AutoFocusMode for available values")
+        if data.get('autoexposure', '') == "true":
+            self.instance.pm.triggerAutoExposure()
+        if data.get('autowhitebalance', '') == "true":
+            print("Auto white-balance enable")
+            self.instance.pm.triggerAutoWhiteBalance()
 
+        self.instance.pm.updateColorCamConfig(
+            focus=data['focus'] if 'focus' in data else None,
+            exposure=data['expiso'][0] if 'expiso' in data else None,
+            sensitivity=data['expiso'][1] if 'expiso' in data else None,
+            whitebalance=data['whitebalance'] if 'whitebalance' in data else None,
+            saturation=data['saturation'] if 'saturation' in data else None,
+            brightness=data['brightness'] if 'brightness' in data else None,
+            contrast=data['contrast'] if 'contrast' in data else None,
+            sharpness=data['sharpness'] if 'sharpness' in data else None,
+        )
+        return web.Response()
 
-# start TCP data server
-server_TCP = socketserver.TCPServer(('localhost', 8070), TCPServerRequest)
-th = threading.Thread(target=server_TCP.serve_forever)
-th.daemon = True
-th.start()
-
-
-# start MJPEG HTTP Server
-server_HTTP = ThreadedHTTPServer(('localhost', HTTP_SERVER_PORT), VideoStreamHandler)
-th2 = threading.Thread(target=server_HTTP.serve_forever)
-th2.daemon = True
-th2.start()
-
-
-
-# MobilenetSSD label texts
-labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
-
-syncNN = True
-
-def create_pipeline(depth):
-    # Start defining a pipeline
-    pipeline = dai.Pipeline()
-    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
-    # Define a source - color camera
-    colorCam = pipeline.createColorCamera()
-    if depth:
-        mobilenet = pipeline.createMobileNetSpatialDetectionNetwork()
-        monoLeft = pipeline.createMonoCamera()
-        monoRight = pipeline.createMonoCamera()
-        stereo = pipeline.createStereoDepth()
-    else:
-        mobilenet = pipeline.createMobileNetDetectionNetwork()
-
-    colorCam.setPreviewSize(300, 300)
-    colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    colorCam.setInterleaved(False)
-    colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-
-    mobilenet.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.2"))
-    mobilenet.setConfidenceThreshold(0.5)
-    mobilenet.input.setBlocking(False)
-
-    if depth:
-        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-
-        # Setting node configs
-        stereo.initialConfig.setConfidenceThreshold(255)
-        stereo.depth.link(mobilenet.inputDepth)
-
-        mobilenet.setBoundingBoxScaleFactor(0.5)
-        mobilenet.setDepthLowerThreshold(100)
-        mobilenet.setDepthUpperThreshold(5000)
-
-        monoLeft.out.link(stereo.left)
-        monoRight.out.link(stereo.right)
-
-    xoutRgb = pipeline.createXLinkOut()
-    xoutRgb.setStreamName("rgb")
-    colorCam.preview.link(mobilenet.input)
-    if syncNN:
-        mobilenet.passthrough.link(xoutRgb.input)
-    else:
-        colorCam.preview.link(xoutRgb.input)
+    async def stream(self, request):
+        boundary = 'boundarydonotcross'
+        response = web.StreamResponse(status=200, reason='OK', headers={
+            'Content-Type': 'multipart/x-mixed-replace; boundary=--{}'.format(boundary),
+        })
+        try:
+            await response.prepare(request)
+            while True:
+                if self.datatosend is not None:
+                    with MultipartWriter('image/jpeg', boundary=boundary) as mpwriter:
+                        mpwriter.append(str(self.datatosend), {
+                            'Content-Type': 'image/jpeg'
+                        })
+                        await mpwriter.write(response, close_boundary=False)
+                    await response.drain()
+        except ConnectionResetError:
+            print("Client connection closed")
+        finally:
+            return response
 
 
-    xoutNN = pipeline.createXLinkOut()
-    xoutNN.setStreamName("detections")
-    mobilenet.out.link(xoutNN.input)
+class WebApp:
+    def __init__(self):
+        super().__init__()
+        self.running = False
+        self.webserver = None
+        self.selectedPreview = "color"
+        self.thread = None
+        self.pm = None
 
-    if depth:
-        xoutBoundingBoxDepthMapping = pipeline.createXLinkOut()
-        xoutBoundingBoxDepthMapping.setStreamName("boundingBoxDepthMapping")
-        mobilenet.boundingBoxMapping.link(xoutBoundingBoxDepthMapping.input)
+    def shouldRun(self):
+        return self.running
 
-        xoutDepth = pipeline.createXLinkOut()
-        xoutDepth.setStreamName("depth")
-        mobilenet.passthroughDepth.link(xoutDepth.input)
+    def updatePreview(self, selected):
+        self.selectedPreview = selected
 
-    return pipeline
+    def runDemo(self):
+        self.pm = PipelineManager(lowBandwidth=True)
+        self.pm.createColorCam(xout=True, xoutStill=True)
 
-# Pipeline is defined, now we can connect to the device
-with dai.Device(dai.OpenVINO.Version.VERSION_2021_2) as device:
-    cams = device.getConnectedCameras()
-    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+        with dai.Device(self.pm.pipeline) as device:
+            previewQueue = device.getOutputQueue(self.pm.nodes.xoutRgb.getStreamName())
+            stillQueue = device.getOutputQueue(self.pm.nodes.xoutRgbStill.getStreamName())
+            savedPath = Path(__file__).parent / "saved"
 
-    # Start pipeline
-    device.startPipeline(create_pipeline(depth_enabled))
+            while self.shouldRun():
+                previewPacket = previewQueue.tryGet()
+                if previewPacket is not None:
+                    self.webserver.datatosend = previewPacket.getData()
+                stillPacket = stillQueue.tryGet()
+                if stillPacket is not None:
+                    savedPath.mkdir(exist_ok=True)
+                    cv2.imwrite(str(savedPath / f"saved-{time.monotonic()}.jpg"), stillPacket.getCvFrame())
+                time.sleep(1)
 
-    print(f"DepthAI is up & running. Navigate to 'localhost:{str(HTTP_SERVER_PORT)}' with Chrome to see the mjpeg stream")
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self.runDemo)
+        self.thread.daemon = True
+        self.thread.start()
 
-    # Output queues will be used to get the rgb frames and nn data from the outputs defined above
-    previewQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-    detectionNNQueue = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
-    if depth_enabled:
-        xoutBoundingBoxDepthMapping = device.getOutputQueue(name="boundingBoxDepthMapping", maxSize=4, blocking=False)
-        depthQueue = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+        if self.webserver is None:
+            loop = asyncio.get_event_loop()
+            self.webserver = HttpHandler(self, loop)
+            print("Server started http://{}:{}".format(host, port))
 
-    frame = None
-    detections = []
-
-    startTime = time.monotonic()
-    counter = 0
-    fps = 0
-    color = (255, 255, 255)
-
-    while True:
-        inPreview = previewQueue.get()
-        frame = inPreview.getCvFrame()
-
-        inNN = detectionNNQueue.get()
-        detections = inNN.detections
-
-        counter+=1
-        current_time = time.monotonic()
-        if (current_time - startTime) > 1 :
-            fps = counter / (current_time - startTime)
-            counter = 0
-            startTime = current_time
-
-        if depth_enabled:
-            depth = depthQueue.get()
-            depthFrame = depth.getFrame()
-
-            depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            depthFrameColor = cv2.equalizeHist(depthFrameColor)
-            depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
-            if len(detections) != 0:
-                boundingBoxMapping = xoutBoundingBoxDepthMapping.get()
-                roiDatas = boundingBoxMapping.getConfigData()
-
-                for roiData in roiDatas:
-                    roi = roiData.roi
-                    roi = roi.denormalize(depthFrameColor.shape[1], depthFrameColor.shape[0])
-                    topLeft = roi.topLeft()
-                    bottomRight = roi.bottomRight()
-                    xmin = int(topLeft.x)
-                    ymin = int(topLeft.y)
-                    xmax = int(bottomRight.x)
-                    ymax = int(bottomRight.y)
-
-                    cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
-
-        # If the frame is available, draw bounding boxes on it and show the frame
-        height = frame.shape[0]
-        width  = frame.shape[1]
-        for detection in detections:
-            # Denormalize bounding box
-            x1 = int(detection.xmin * width)
-            x2 = int(detection.xmax * width)
-            y1 = int(detection.ymin * height)
-            y2 = int(detection.ymax * height)
             try:
-                label = labelMap[detection.label]
-            except:
-                label = detection.label
-            cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            if depth_enabled:
-                cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                self.webserver.run()
+            except KeyboardInterrupt:
+                pass
 
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-            server_TCP.datatosend = str(label) + "," + f"{int(detection.confidence * 100)}%"
-
-
-        cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
-        if depth_enabled:
-            new_width = int(depthFrameColor.shape[1] * (frame.shape[0] / depthFrameColor.shape[0]))
-            stacked = np.hstack([frame, cv2.resize(depthFrameColor, (new_width, frame.shape[0]))])
-            cv2.imshow("stacked", stacked)
-            server_HTTP.frametosend = stacked
+            self.webserver.close()
         else:
-            cv2.imshow("frame", frame)
-            server_HTTP.frametosend = frame
+            self.webserver.frametosend = None
+
+    def stop(self):
+        self.running = False
+        self.thread.join()
+
+    def restartDemo(self):
+        self.stop()
+        self.start()
 
 
-        if cv2.waitKey(1) == ord('q'):
-            break
+if __name__ == "__main__":
+    repo_root = Path(__file__).parent.resolve().absolute()
+    import subprocess
+    subprocess.check_call(["yarn"], cwd=repo_root)
+    subprocess.check_call(["yarn", "build"], cwd=repo_root)
+    WebApp().start()

@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;500;700&display=swap');
+
+@mixin rowBG {
+  background: rgba(48, 29, 48, 0.47);
+  box-shadow: 0 0 19px -8px rgb(255, 255, 255);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.App {
+  background-image: url("./img/white-bg.jpg");
+  background-size: cover;
+  background-position: center center;
+  height: 100vh;
+
+
+  .upperRow {
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 25px 5px 25px;
+    @include rowBG;
+
+    .ant-input {
+      background: none;
+      color: white;
+      max-width: 60px;
+      text-align: center;
+      border: none;
+    }
+
+    .autoButton {
+      background: #FFFFFF;
+      border-radius: 8px;
+      color: black;
+    }
+
+    .cameraSettings_features {
+      display: flex;
+      align-items: center;
+
+      .ant-radio-wrapper {
+          color: white !important;
+      }
+
+      div {
+        margin: 0 5px;
+      }
+
+      .ant-btn {
+        border: none;
+        background: none;
+      }
+
+      svg {
+        fill: white;
+      }
+    }
+
+    li {
+      list-style: none;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+  }
+
+  .bottomRow {
+    width: 100%;
+    display: flex;
+    position: absolute;
+    bottom: 0;
+    justify-content: space-around;
+    padding: 25px;
+    @include rowBG;
+
+    div {
+      display: flex;
+      align-items: center;
+    }
+
+    span {
+      color: white;
+      font-weight: 400;
+      font-size: 26px;
+      line-height: 16px;
+    }
+
+    img {
+      width: 32px;
+      margin-right: 10px;
+    }
+
+    .recordStatus {
+      font-size: 25px;
+      color: white;
+      margin-left: 10px;
+    }
+  }
+}
