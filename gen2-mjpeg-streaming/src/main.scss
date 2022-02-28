@@ -1,8 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;500;700&display=swap');
 
 @mixin rowBG {
-  background: rgba(28, 18, 28, 0.77);
+  background: rgba(255, 255, 255, 0.8);
   box-shadow: 0 0 19px -8px rgb(255, 255, 255);
+}
+
+@mixin colorWhite {
+  color: #474747;
 }
 
 * {
@@ -16,6 +20,28 @@
   height: 100vh;
   position: relative;
 
+  ul {
+    margin-bottom: 0em !important;
+  }
+
+  .cameraBox {
+    display: flex;
+    align-items: center;
+
+    .cameraHeading {
+      margin-right: 15px;
+    }
+  }
+
+  .cameraSwitch {
+    border: 1px solid #d0d0d0;
+    border-radius: 15px;
+    width: 140px;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+  }
+
   .stream {
     position: absolute;
     height: 100vh;
@@ -25,19 +51,24 @@
 
 
   .upperRow {
-    color: white;
+    @include colorWhite;;
     display: flex;
-    justify-content: space-between;
-    padding: 15px 25px 5px 25px;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 20px;
     @include rowBG;
     z-index: 1010;
 
     .ant-input {
       background: none;
-      color: white;
+      @include colorWhite;;
       max-width: 60px;
       text-align: center;
       border: none;
+    }
+
+    span.ant-radio + * {
+      padding-right: 0;
     }
 
     .autoButton {
@@ -46,12 +77,25 @@
       color: black;
     }
 
+    .ant-radio-wrapper {
+      @include colorWhite;
+      margin-right: 0 !important;
+    }
+
     .cameraSettings_features {
       display: flex;
       align-items: center;
 
-      .ant-radio-wrapper {
-          color: white !important;
+      li {
+        margin: 0 10px;
+
+        .autoIcon {
+          margin-rigt: 25px;
+        }
+      }
+
+      .autoIcon {
+        margin-right: 5px;
       }
 
       div {
@@ -64,7 +108,7 @@
       }
 
       svg {
-        fill: white;
+        fill: #727272;
       }
     }
 
@@ -92,7 +136,7 @@
     }
 
     span {
-      color: white;
+      @include colorWhite;;
       font-weight: 400;
       font-size: 14px;
       line-height: 16px;
@@ -105,7 +149,7 @@
 
     .recordStatus {
       font-size: 25px;
-      color: white;
+      @include colorWhite;;
       margin-left: 10px;
     }
   }
