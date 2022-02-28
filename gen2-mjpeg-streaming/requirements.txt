@@ -1,4 +1,4 @@
-Pillow==9.0.0
+depthai==2.15.0.0
 opencv-python==4.5.1.48
-depthai==2.13.3.0
-blobconverter==1.2.8
+aiohttp==3.8.1
+depthai_sdk==1.1.7
