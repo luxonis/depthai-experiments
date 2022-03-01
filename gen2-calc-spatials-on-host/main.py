@@ -11,9 +11,9 @@ import math
 pipeline = dai.Pipeline()
 
 # Define sources and outputs
-monoLeft = pipeline.create(dai.node.MonoCamera)
-monoRight = pipeline.create(dai.node.MonoCamera)
-stereo = pipeline.create(dai.node.StereoDepth)
+monoLeft = pipeline.createMonoCamera()
+monoRight = pipeline.createMonoCamera()
+stereo = pipeline.createStereoDepth()
 
 # Properties
 monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
@@ -29,11 +29,11 @@ stereo.setSubpixel(False)
 monoLeft.out.link(stereo.left)
 monoRight.out.link(stereo.right)
 
-xoutDepth = pipeline.create(dai.node.XLinkOut)
+xoutDepth = pipeline.createXLinkOut()
 xoutDepth.setStreamName("depth")
 stereo.depth.link(xoutDepth.input)
 
-xoutDepth = pipeline.create(dai.node.XLinkOut)
+xoutDepth = pipeline.createXLinkOut()
 xoutDepth.setStreamName("disp")
 stereo.disparity.link(xoutDepth.input)
 

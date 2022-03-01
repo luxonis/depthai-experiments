@@ -13,33 +13,33 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 pipeline = dai.Pipeline()
 
 # Define source and output
-camRgb = pipeline.create(dai.node.ColorCamera)
+camRgb = pipeline.createColorCamera()
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
 camRgb.setInterleaved(False)
 camRgb.setIspScale(1,5) # 4032x3040 -> 812x608
 
-xoutIsp = pipeline.create(dai.node.XLinkOut)
+xoutIsp = pipeline.createXLinkOut()
 xoutIsp.setStreamName("isp")
 camRgb.isp.link(xoutIsp.input)
 
 # Use ImageManip to resize to 300x300 and convert YUV420 -> RGB
-manip = pipeline.create(dai.node.ImageManip)
+manip = pipeline.createImageManip()
 manip.setMaxOutputFrameSize(270000) # 300x300x3
 manip.initialConfig.setResizeThumbnail(300, 300)
 manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p) # needed for NN
 camRgb.isp.link(manip.inputImage)
 
 # NN to demonstrate how to run inference on full FOV frames
-nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+nn = pipeline.createMobileNetDetectionNetwork()
 nn.setConfidenceThreshold(0.5)
 nn.setBlobPath(str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6)))
 manip.out.link(nn.input)
 
-xoutNn = pipeline.create(dai.node.XLinkOut)
+xoutNn = pipeline.createXLinkOut()
 xoutNn.setStreamName("nn")
 nn.out.link(xoutNn.input)
 
-xoutRgb = pipeline.create(dai.node.XLinkOut)
+xoutRgb = pipeline.createXLinkOut()
 xoutRgb.setStreamName("rgb")
 nn.passthrough.link(xoutRgb.input)
 

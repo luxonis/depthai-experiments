@@ -19,30 +19,30 @@ openvinoVersion = "2021.3"
 p = dai.Pipeline()
 p.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_3)
 
-cam = p.create(dai.node.ColorCamera)
+cam = p.createColorCamera()
 cam.setIspScale(2,3)
 cam.setInterleaved(False)
 cam.setVideoSize(720,720)
 cam.setPreviewSize(720,720)
 
 # Send color frames to the host via XLink
-cam_xout = p.create(dai.node.XLinkOut)
+cam_xout = p.createXLinkOut()
 cam_xout.setStreamName("video")
 cam.video.link(cam_xout.input)
 
 # Crop 720x720 -> 300x300
-face_det_manip = p.create(dai.node.ImageManip)
+face_det_manip = p.createImageManip()
 face_det_manip.initialConfig.setResize(300, 300)
 cam.preview.link(face_det_manip.inputImage)
 
 # NN that detects faces in the image
-face_nn = p.create(dai.node.MobileNetDetectionNetwork)
+face_nn = p.createMobileNetDetectionNetwork()
 face_nn.setConfidenceThreshold(0.3)
 face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version=openvinoVersion))
 face_det_manip.out.link(face_nn.input)
 
 # Send ImageManipConfig to host so it can visualize the landmarks
-config_xout = p.create(dai.node.XLinkOut)
+config_xout = p.createXLinkOut()
 config_xout.setStreamName("face_det")
 face_nn.out.link(config_xout.input)
 
@@ -78,7 +78,7 @@ while True:
 
 # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
 # face that was detected by the face-detection NN.
-manip_crop = p.create(dai.node.ImageManip)
+manip_crop = p.createImageManip()
 image_manip_script.outputs['manip_img'].link(manip_crop.inputImage)
 image_manip_script.outputs['manip_cfg'].link(manip_crop.inputConfig)
 manip_crop.initialConfig.setResize(64, 64)

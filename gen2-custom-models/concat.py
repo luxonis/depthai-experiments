@@ -12,23 +12,23 @@ camRgb.setPreviewSize(SHAPE, SHAPE)
 camRgb.setInterleaved(False)
 camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-left = p.create(dai.node.MonoCamera)
+left = p.createMonoCamera()
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 
 # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
-manipLeft = p.create(dai.node.ImageManip)
+manipLeft = p.createImageManip()
 manipLeft.initialConfig.setResize(300, 300)
 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
 manipLeft.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 left.out.link(manipLeft.inputImage)
 
-right = p.create(dai.node.MonoCamera)
+right = p.createMonoCamera()
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 
 # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
-manipRight = p.create(dai.node.ImageManip)
+manipRight = p.createImageManip()
 manipRight.initialConfig.setResize(300, 300)
 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
 manipRight.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)

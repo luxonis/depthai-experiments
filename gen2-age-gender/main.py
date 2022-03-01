@@ -15,7 +15,7 @@ def create_pipeline():
     pipeline = dai.Pipeline()
 
     print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera)
+    cam = pipeline.createColorCamera()
     cam.setPreviewSize(1080, 1080)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
@@ -25,25 +25,25 @@ def create_pipeline():
     cam.preview.link(cam_xout.input)
 
     # ImageManip that will crop the frame before sending it to the Face detection NN node
-    face_det_manip = pipeline.create(dai.node.ImageManip)
+    face_det_manip = pipeline.createImageManip()
     face_det_manip.initialConfig.setResize(300, 300)
     face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
 
-    monoLeft = pipeline.create(dai.node.MonoCamera)
+    monoLeft = pipeline.createMonoCamera()
     monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-    monoRight = pipeline.create(dai.node.MonoCamera)
+    monoRight = pipeline.createMonoCamera()
     monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    stereo = pipeline.create(dai.node.StereoDepth)
+    stereo = pipeline.createStereoDepth()
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     monoLeft.out.link(stereo.left)
     monoRight.out.link(stereo.right)
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+    face_det_nn = pipeline.createMobileNetSpatialDetectionNetwork()
     face_det_nn.setConfidenceThreshold(0.5)
     face_det_nn.setBoundingBoxScaleFactor(0.8)
     face_det_nn.setDepthLowerThreshold(100)
@@ -57,7 +57,7 @@ def create_pipeline():
     face_det_manip.out.link(face_det_nn.input)
 
     # Send face detections to the host (for bounding boxes)
-    face_det_xout = pipeline.create(dai.node.XLinkOut)
+    face_det_xout = pipeline.createXLinkOut()
     face_det_xout.setStreamName("face_det_out")
     face_det_nn.out.link(face_det_xout.input)
 
@@ -111,23 +111,23 @@ while True:
 """)
     cam.preview.link(image_manip_script.inputs['preview'])
 
-    age_gender_manip = pipeline.create(dai.node.ImageManip)
+    age_gender_manip = pipeline.createImageManip()
     age_gender_manip.initialConfig.setResize(62, 62)
     age_gender_manip.setWaitForConfigInput(False)
     image_manip_script.outputs['manip_cfg'].link(age_gender_manip.inputConfig)
     image_manip_script.outputs['manip_img'].link(age_gender_manip.inputImage)
 
-    face_cropped_xout = pipeline.create(dai.node.XLinkOut)
+    face_cropped_xout = pipeline.createXLinkOut()
     face_cropped_xout.setStreamName("face_cropped")
     age_gender_manip.out.link(face_cropped_xout.input)
 
     # Age/Gender second stange NN
     print("Creating Age Gender Neural Network...")
-    age_gender_nn = pipeline.create(dai.node.NeuralNetwork)
+    age_gender_nn = pipeline.createNeuralNetwork()
     age_gender_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=6))
     age_gender_manip.out.link(age_gender_nn.input)
 
-    age_gender_nn_xout = pipeline.create(dai.node.XLinkOut)
+    age_gender_nn_xout = pipeline.createXLinkOut()
     age_gender_nn_xout.setStreamName("age_gender_out")
     age_gender_nn.out.link(age_gender_nn_xout.input)
 

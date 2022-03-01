@@ -27,7 +27,7 @@ def create_pipeline():
 
     # ColorCamera
     print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera)
+    cam = pipeline.createColorCamera()
     cam.setPreviewSize(300, 300)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setVideoSize(1080,1080)
@@ -39,7 +39,7 @@ def create_pipeline():
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    face_det_nn = pipeline.createMobileNetDetectionNetwork()
     face_det_nn.setConfidenceThreshold(0.5)
     face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",
@@ -62,11 +62,11 @@ def create_pipeline():
     face_det_nn.out.link(objectTracker.inputDetections)
     # Send face detections to the host (for bounding boxes)
 
-    pass_xout = pipeline.create(dai.node.XLinkOut)
+    pass_xout = pipeline.createXLinkOut()
     pass_xout.setStreamName("pass_out")
     objectTracker.passthroughTrackerFrame.link(pass_xout.input)
 
-    tracklets_xout = pipeline.create(dai.node.XLinkOut)
+    tracklets_xout = pipeline.createXLinkOut()
     tracklets_xout.setStreamName("tracklets")
     objectTracker.out.link(tracklets_xout.input)
     print("Pipeline created.")

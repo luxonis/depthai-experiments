@@ -129,7 +129,7 @@ def create_pipeline():
     openvino_version = '2021.2'
 
     print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera)
+    cam = pipeline.createColorCamera()
     # For ImageManip rotate you need input frame of multiple of 16
     cam.setPreviewSize(1072, 1072)
     cam.setVideoSize(VIDEO_SIZE)
@@ -137,18 +137,18 @@ def create_pipeline():
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 
-    host_face_out = pipeline.create(dai.node.XLinkOut)
+    host_face_out = pipeline.createXLinkOut()
     host_face_out.setStreamName('frame')
     cam.video.link(host_face_out.input)
 
     # ImageManip that will crop the frame before sending it to the Face detection NN node
-    face_det_manip = pipeline.create(dai.node.ImageManip)
+    face_det_manip = pipeline.createImageManip()
     face_det_manip.initialConfig.setResize(300, 300)
     face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    face_det_nn = pipeline.createMobileNetDetectionNetwork()
     face_det_nn.setConfidenceThreshold(0.5)
     face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",
@@ -174,7 +174,7 @@ def create_pipeline():
     # cam.preview can only have 4 frames in the pool before it will
     # wait (freeze). Copying frames and setting ImageManip pool size to
     # higher number will fix this issue.
-    copy_manip = pipeline.create(dai.node.ImageManip)
+    copy_manip = pipeline.createImageManip()
     cam.preview.link(copy_manip.inputImage)
     copy_manip.setNumFramesPool(20)
     copy_manip.setMaxOutputFrameSize(1072*1072*3)
@@ -183,13 +183,13 @@ def create_pipeline():
     copy_manip.out.link(script.inputs['preview'])
 
     print("Creating Head pose estimation NN")
-    headpose_manip = pipeline.create(dai.node.ImageManip)
+    headpose_manip = pipeline.createImageManip()
     headpose_manip.initialConfig.setResize(60, 60)
 
     script.outputs['manip_cfg'].link(headpose_manip.inputConfig)
     script.outputs['manip_img'].link(headpose_manip.inputImage)
 
-    headpose_nn = pipeline.create(dai.node.NeuralNetwork)
+    headpose_nn = pipeline.createNeuralNetwork()
     headpose_nn.setBlobPath(blobconverter.from_zoo(
         name="head-pose-estimation-adas-0001",
         shaves=6,
@@ -202,23 +202,23 @@ def create_pipeline():
 
     print("Creating face recognition ImageManip/NN")
 
-    face_rec_manip = pipeline.create(dai.node.ImageManip)
+    face_rec_manip = pipeline.createImageManip()
     face_rec_manip.initialConfig.setResize(112, 112)
 
     script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
     script.outputs['manip2_img'].link(face_rec_manip.inputImage)
 
-    face_rec_cfg_out = pipeline.create(dai.node.XLinkOut)
+    face_rec_cfg_out = pipeline.createXLinkOut()
     face_rec_cfg_out.setStreamName('face_rec_cfg_out')
     script.outputs['manip2_cfg'].link(face_rec_cfg_out.input)
 
     # Only send metadata for the host-side sync
-    # pass2_out = pipeline.create(dai.node.XLinkOut)
+    # pass2_out = pipeline.createXLinkOut()
     # pass2_out.setStreamName('pass2')
     # pass2_out.setMetadataOnly(True)
     # script.outputs['manip2_img'].link(pass2_out.input)
 
-    face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
+    face_rec_nn = pipeline.createNeuralNetwork()
     # Removed from OMZ, so we can't use blobconverter for downloading, see here:
     # https://github.com/openvinotoolkit/open_model_zoo/issues/2448#issuecomment-851435301
     face_rec_nn.setBlobPath("models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob")
@@ -229,7 +229,7 @@ def create_pipeline():
         xout_face.setStreamName('face')
         face_rec_manip.out.link(xout_face.input)
 
-    arc_out = pipeline.create(dai.node.XLinkOut)
+    arc_out = pipeline.createXLinkOut()
     arc_out.setStreamName('arc_out')
     face_rec_nn.out.link(arc_out.input)
 

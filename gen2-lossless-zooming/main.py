@@ -79,7 +79,7 @@ while True:
     {"cfg.setFrameType(ImgFrame.Type.NV12)" if MJPEG else ""}
     node.io['cfg'].send(cfg)
 """)
-crop_manip = pipeline.create(dai.node.ImageManip)
+crop_manip = pipeline.createImageManip()
 crop_manip.setMaxOutputFrameSize(3110400)
 crop_manip.initialConfig.setResize(1920, 1080)
 if MJPEG:
@@ -90,7 +90,7 @@ cam.isp.link(crop_manip.inputImage)
 xout = pipeline.createXLinkOut()
 xout.setStreamName('1080P')
 if MJPEG:
-    videoEnc = pipeline.create(dai.node.VideoEncoder)
+    videoEnc = pipeline.createVideoEncoder()
     videoEnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
     crop_manip.out.link(videoEnc.input)
     # Link

@@ -32,26 +32,26 @@ resolution = dai.MonoCameraProperties.SensorResolution.THE_720_P
 resolution_num = int(re.findall("\d+", str(resolution))[0])
 
 def populate_pipeline(p, name, resolution):
-    cam = p.create(dai.node.MonoCamera)
+    cam = p.createMonoCamera()
     socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
     cam.setBoardSocket(socket)
     cam.setResolution(resolution)
 
     # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
-    face_manip = p.create(dai.node.ImageManip)
+    face_manip = p.createImageManip()
     face_manip.initialConfig.setResize(300, 300)
     # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
     face_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
     cam.out.link(face_manip.inputImage)
 
     # NN that detects faces in the image
-    face_nn = p.create(dai.node.MobileNetDetectionNetwork)
+    face_nn = p.createMobileNetDetectionNetwork()
     face_nn.setConfidenceThreshold(0.2)
     face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version=openvinoVersion))
     face_manip.out.link(face_nn.input)
 
     # Send mono frames to the host via XLink
-    cam_xout = p.create(dai.node.XLinkOut)
+    cam_xout = p.createXLinkOut()
     cam_xout.setStreamName("mono_" + name)
     face_nn.passthrough.link(cam_xout.input)
 
@@ -85,14 +85,14 @@ while True:
 
     # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
     # face that was detected by the face-detection NN.
-    manip_crop = p.create(dai.node.ImageManip)
+    manip_crop = p.createImageManip()
     face_nn.passthrough.link(manip_crop.inputImage)
     image_manip_script.outputs['to_manip'].link(manip_crop.inputConfig)
     manip_crop.initialConfig.setResize(48, 48)
     manip_crop.setWaitForConfigInput(False)
 
     # Send ImageManipConfig to host so it can visualize the landmarks
-    config_xout = p.create(dai.node.XLinkOut)
+    config_xout = p.createXLinkOut()
     config_xout.setStreamName("config_" + name)
     image_manip_script.outputs['to_manip'].link(config_xout.input)
 

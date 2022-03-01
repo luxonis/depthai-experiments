@@ -42,7 +42,7 @@ def make_pipeline():
     pipeline = dai.Pipeline()
 
     # Camera
-    camRgb = pipeline.create(dai.node.ColorCamera)
+    camRgb = pipeline.createColorCamera()
     camRgb.setPreviewSize(300, 300)
     camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
     camRgb.setInterleaved(False)
@@ -50,24 +50,24 @@ def make_pipeline():
     camRgb.setPreviewKeepAspectRatio(False)
 
     # Detector
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    nn = pipeline.createMobileNetDetectionNetwork()
     nn.setConfidenceThreshold(0.5)
     nn.setBlobPath(BLOB_PATH)
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
 
     # 300x300 RGB image output
-    xoutRgb = pipeline.create(dai.node.XLinkOut)
+    xoutRgb = pipeline.createXLinkOut()
     xoutRgb.setStreamName("rgb")
     xoutRgb.input.setBlocking(False)
     xoutRgb.input.setQueueSize(1)
 
     # Detection output
-    nnOut = pipeline.create(dai.node.XLinkOut)
+    nnOut = pipeline.createXLinkOut()
     nnOut.setStreamName("nn")
 
     # Hi-Res NV12 output
-    xoutVideo = pipeline.create(dai.node.XLinkOut)
+    xoutVideo = pipeline.createXLinkOut()
     xoutVideo.setStreamName("nv12")
     xoutVideo.input.setBlocking(False)
     xoutVideo.input.setQueueSize(1)
