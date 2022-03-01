@@ -1,4 +1,4 @@
 opencv-python==4.5.1.48
 imutils==0.5.4
-# Needs to be 2.7.2.0 since required openvino version is 2020.1
-depthai==2.7.2.0
+blobconverter==1.2.9
+depthai==2.15.0.0
