@@ -4,6 +4,7 @@ import threading
 import signal
 from pathlib import Path
 
+import blobconverter
 import cv2
 import depthai
 import numpy as np
@@ -29,7 +30,6 @@ elif args.camera is False and args.video is None:
 
 def draw_3d_axis(image, head_pose, origin, size=50):
     # From https://github.com/openvinotoolkit/open_model_zoo/blob/b1ff98b64a6222cf6b5f3838dc0271422250de95/demos/gaze_estimation_demo/cpp/src/results_marker.cpp#L50
-    
     origin_x,origin_y = origin
     yaw,pitch, roll = np.array(head_pose)*np.pi / 180
 
@@ -100,7 +100,6 @@ def padded_point(point, padding, frame_shape=None):
 def create_pipeline():
     print("Creating pipeline...")
     pipeline = depthai.Pipeline()
-    pipeline.setOpenVINOVersion(depthai.OpenVINO.VERSION_2020_1)
 
     if camera:
         print("Creating Color Camera...")
@@ -118,7 +117,7 @@ def create_pipeline():
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
     face_nn = pipeline.create(dai.node.NeuralNetwork)
-    face_nn.setBlobPath(str(Path("models/face-detection-retail-0004/face-detection-retail-0004_openvino_2020.1_4shave.blob").resolve().absolute()))
+    face_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=4))
 
     if camera:
         cam.preview.link(face_nn.input)
@@ -130,13 +129,11 @@ def create_pipeline():
     face_nn_xout = pipeline.create(dai.node.XLinkOut)
     face_nn_xout.setStreamName("face_nn")
     face_nn.out.link(face_nn_xout.input)
-    
+
     # NeuralNetwork
     print("Creating Landmarks Detection Neural Network...")
     land_nn = pipeline.create(dai.node.NeuralNetwork)
-    land_nn.setBlobPath(
-        str(Path("models/landmarks-regression-retail-0009/landmarks-regression-retail-0009_openvino_2020.1_4shave.blob").resolve().absolute())
-    )
+    land_nn.setBlobPath(blobconverter.from_zoo(name="landmarks-regression-retail-0009", shaves=4))
     land_nn_xin = pipeline.create(dai.node.XLinkIn)
     land_nn_xin.setStreamName("landmark_in")
     land_nn_xin.out.link(land_nn.input)
@@ -147,9 +144,7 @@ def create_pipeline():
     # NeuralNetwork
     print("Creating Head Pose Neural Network...")
     pose_nn = pipeline.create(dai.node.NeuralNetwork)
-    pose_nn.setBlobPath(
-        str(Path("models/head-pose-estimation-adas-0001/head-pose-estimation-adas-0001_openvino_2020.1_4shave.blob").resolve().absolute())
-    )
+    pose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=4))
     pose_nn_xin = pipeline.create(dai.node.XLinkIn)
     pose_nn_xin.setStreamName("pose_in")
     pose_nn_xin.out.link(pose_nn.input)
@@ -160,9 +155,10 @@ def create_pipeline():
     # NeuralNetwork
     print("Creating Gaze Estimation Neural Network...")
     gaze_nn = pipeline.create(dai.node.NeuralNetwork)
-    gaze_nn.setBlobPath(
-        str(Path("models/gaze-estimation-adas-0002/gaze-estimation-adas-0002_openvino_2020.1_4shave.blob").resolve().absolute())
+    path = blobconverter.from_zoo("gaze-estimation-adas-0002", shaves=4,
+        compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8'],
     )
+    gaze_nn.setBlobPath(path)
     gaze_nn_xin = pipeline.create(dai.node.XLinkIn)
     gaze_nn_xin.setStreamName("gaze_in")
     gaze_nn_xin.out.link(gaze_nn.input)
