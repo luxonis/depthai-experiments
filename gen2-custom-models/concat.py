@@ -7,35 +7,35 @@ SHAPE = 300
 p = dai.Pipeline()
 p.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
-camRgb = p.createColorCamera()
+camRgb = p.create(dai.node.ColorCamera)
 camRgb.setPreviewSize(SHAPE, SHAPE)
 camRgb.setInterleaved(False)
 camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-left = p.createMonoCamera()
+left = p.create(dai.node.MonoCamera)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 
 # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
-manipLeft = p.createImageManip()
+manipLeft = p.create(dai.node.ImageManip)
 manipLeft.initialConfig.setResize(300, 300)
 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
 manipLeft.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 left.out.link(manipLeft.inputImage)
 
-right = p.createMonoCamera()
+right = p.create(dai.node.MonoCamera)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 
 # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
-manipRight = p.createImageManip()
+manipRight = p.create(dai.node.ImageManip)
 manipRight.initialConfig.setResize(300, 300)
 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
 manipRight.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 right.out.link(manipRight.inputImage)
 
 # NN that detects faces in the image
-nn = p.createNeuralNetwork()
+nn = p.create(dai.node.NeuralNetwork)
 nn.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
 nn.setNumInferenceThreads(2)
 
@@ -44,7 +44,7 @@ camRgb.preview.link(nn.inputs['img2'])
 manipRight.out.link(nn.inputs['img3'])
 
 # Send bouding box from the NN to the host via XLink
-nn_xout = p.createXLinkOut()
+nn_xout = p.create(dai.node.XLinkOut)
 nn_xout.setStreamName("nn")
 nn.out.link(nn_xout.input)
 

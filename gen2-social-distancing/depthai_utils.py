@@ -18,15 +18,15 @@ class DepthAI:
         #pipeline.setOpenVINOVersion(dai.OpenVINO.Version.VERSION_2021_2)
 
         # Define sources and outputs
-        camRgb = pipeline.createColorCamera()
-        spatialDetectionNetwork = pipeline.createMobileNetSpatialDetectionNetwork()
-        monoLeft = pipeline.createMonoCamera()
-        monoRight = pipeline.createMonoCamera()
-        stereo = pipeline.createStereoDepth()
+        camRgb = pipeline.create(dai.node.ColorCamera)
+        spatialDetectionNetwork = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+        monoLeft = pipeline.create(dai.node.MonoCamera)
+        monoRight = pipeline.create(dai.node.MonoCamera)
+        stereo = pipeline.create(dai.node.StereoDepth)
 
-        xoutRgb = pipeline.createXLinkOut()
+        xoutRgb = pipeline.create(dai.node.XLinkOut)
         camRgb.preview.link(xoutRgb.input)
-        xoutNN = pipeline.createXLinkOut()
+        xoutNN = pipeline.create(dai.node.XLinkOut)
 
         xoutRgb.setStreamName("rgb")
         xoutNN.setStreamName("detections")

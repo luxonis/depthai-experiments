@@ -47,37 +47,37 @@ def create_pipeline():
 
     # ColorCamera
     print("Creating Color Camera...")
-    cam = pipeline.createColorCamera()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(300, 300)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setVideoSize(1080,1080)
     cam.setInterleaved(False)
 
-    controlIn = pipeline.createXLinkIn()
+    controlIn = pipeline.create(dai.node.XLinkIn)
     controlIn.setStreamName('control')
     controlIn.out.link(cam.inputControl)
 
-    left = pipeline.createMonoCamera()
+    left = pipeline.create(dai.node.MonoCamera)
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-    right = pipeline.createMonoCamera()
+    right = pipeline.create(dai.node.MonoCamera)
     right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    stereo = pipeline.createStereoDepth()
+    stereo = pipeline.create(dai.node.StereoDepth)
     stereo.initialConfig.setConfidenceThreshold(240)
     stereo.setExtendedDisparity(True)
     left.out.link(stereo.left)
     right.out.link(stereo.right)
 
-    cam_xout = pipeline.createXLinkOut()
+    cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("frame")
     cam.video.link(cam_xout.input)
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.createMobileNetSpatialDetectionNetwork()
+    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.4)
     face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",
@@ -92,20 +92,20 @@ def create_pipeline():
     cam.preview.link(face_det_nn.input)
     stereo.depth.link(face_det_nn.inputDepth)
 
-    pass_xout = pipeline.createXLinkOut()
+    pass_xout = pipeline.create(dai.node.XLinkOut)
     pass_xout.setStreamName("pass_out")
     face_det_nn.passthrough.link(pass_xout.input)
 
-    nn_xout = pipeline.createXLinkOut()
+    nn_xout = pipeline.create(dai.node.XLinkOut)
     nn_xout.setStreamName("nn_out")
     face_det_nn.out.link(nn_xout.input)
 
     if DEBUG:
-        bb_xout = pipeline.createXLinkOut()
+        bb_xout = pipeline.create(dai.node.XLinkOut)
         bb_xout.setStreamName('bb')
         face_det_nn.boundingBoxMapping.link(bb_xout.input)
 
-        pass_xout = pipeline.createXLinkOut()
+        pass_xout = pipeline.create(dai.node.XLinkOut)
         pass_xout.setStreamName('pass')
         face_det_nn.passthroughDepth.link(pass_xout.input)
     print("Pipeline created.")

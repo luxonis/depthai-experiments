@@ -10,12 +10,12 @@ import argparse
 pipeline = dai.Pipeline()
 
 # Create color camera
-camRgb = pipeline.createColorCamera()
+camRgb = pipeline.create(dai.node.ColorCamera)
 camRgb.setPreviewSize(300, 300)
 camRgb.setInterleaved(False)
 
 # Define a neural network that will make predictions based on the source frames
-nn = pipeline.createMobileNetDetectionNetwork()
+nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 nn.setConfidenceThreshold(0.5)
 nn.setBlobPath("mobilenet-ssd_openvino_2021.2_6shave.blob")
 nn.setNumInferenceThreads(2)
@@ -23,32 +23,32 @@ nn.input.setBlocking(False)
 camRgb.preview.link(nn.input)
 
 # Send mobilenet detections to the host (via XLink) and to MCU (via SPI)
-nnOut = pipeline.createXLinkOut()
+nnOut = pipeline.create(dai.node.XLinkOut)
 nnOut.setStreamName("nn")
 nn.out.link(nnOut.input)
 
-nnSpi = pipeline.createSPIOut()
+nnSpi = pipeline.create(dai.node.SPIOut)
 nnSpi.setStreamName("nn")
 nnSpi.setBusId(0)
 nn.out.link(nnSpi.input)
 
 # Create mono cameras for StereoDepth
-left = pipeline.createMonoCamera()
+left = pipeline.create(dai.node.MonoCamera)
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-right = pipeline.createMonoCamera()
+right = pipeline.create(dai.node.MonoCamera)
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # StereoDepth
-stereo = pipeline.createStereoDepth()
+stereo = pipeline.create(dai.node.StereoDepth)
 stereo.setConfidenceThreshold(245)
 
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
-spatialLocationCalculator = pipeline.createSpatialLocationCalculator()
+spatialLocationCalculator = pipeline.create(dai.node.SpatialLocationCalculator)
 spatialLocationCalculator.setWaitForConfigInput(False)
 
 # Link StereoDepth to spatialLocationCalculator
@@ -64,16 +64,16 @@ config.roi = dai.Rect(topLeft, bottomRight)
 spatialLocationCalculator.initialConfig.addROI(config)
 
 # Send depth frames to the host
-xoutDepth = pipeline.createXLinkOut()
+xoutDepth = pipeline.create(dai.node.XLinkOut)
 xoutDepth.setStreamName("depth")
 spatialLocationCalculator.passthroughDepth.link(xoutDepth.input)
 
 # Send spatialLocationCalculator data to the host through the XLink
-xoutSpatialData = pipeline.createXLinkOut()
+xoutSpatialData = pipeline.create(dai.node.XLinkOut)
 xoutSpatialData.setStreamName("spatialData")
 spatialLocationCalculator.out.link(xoutSpatialData.input)
 # Send spatialLocationCalculator data through the SPI
-spiOutSpatialData = pipeline.createSPIOut()
+spiOutSpatialData = pipeline.create(dai.node.SPIOut)
 spiOutSpatialData.setStreamName("spatialData")
 spiOutSpatialData.setBusId(0)
 spatialLocationCalculator.out.link(spiOutSpatialData.input)

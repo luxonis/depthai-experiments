@@ -10,7 +10,7 @@ def getPipeline(device_type):
     pipeline = dai.Pipeline()
 
     # Define a source - color camera
-    cam_rgb = pipeline.createColorCamera()
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
     # For the demo, just set a larger RGB preview size for OAK-D
     if device_type.startswith("OAK-D"):
         cam_rgb.setPreviewSize(600, 300)
@@ -21,7 +21,7 @@ def getPipeline(device_type):
     cam_rgb.setInterleaved(False)
 
     # Create output
-    xout_rgb = pipeline.createXLinkOut()
+    xout_rgb = pipeline.create(dai.node.XLinkOut)
     xout_rgb.setStreamName("rgb")
     cam_rgb.preview.link(xout_rgb.input)
 

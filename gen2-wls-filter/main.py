@@ -14,16 +14,16 @@ pipeline = dai.Pipeline()
 lrcheck = False   # Better handling for occlusions
 
 # Define a source - mono (grayscale) cameras
-left = pipeline.createMonoCamera()
+left = pipeline.create(dai.node.MonoCamera)
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-right = pipeline.createMonoCamera()
+right = pipeline.create(dai.node.MonoCamera)
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
-stereo = pipeline.createStereoDepth()
+stereo = pipeline.create(dai.node.StereoDepth)
 stereo.initialConfig.setConfidenceThreshold(255)
 stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout from rectification (black stripe on the edges)
 stereo.setLeftRightCheck(lrcheck)
@@ -32,11 +32,11 @@ left.out.link(stereo.left)
 right.out.link(stereo.right)
 
 # Create outputs
-xoutDisparity = pipeline.createXLinkOut()
+xoutDisparity = pipeline.create(dai.node.XLinkOut)
 xoutDisparity.setStreamName("depth")
 stereo.disparity.link(xoutDisparity.input)
 
-xoutRectifiedRight = pipeline.createXLinkOut()
+xoutRectifiedRight = pipeline.create(dai.node.XLinkOut)
 xoutRectifiedRight.setStreamName("rectifiedRight")
 stereo.rectifiedRight.link(xoutRectifiedRight.input)
 

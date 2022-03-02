@@ -86,15 +86,15 @@ def create_rgbd_pipeline():
     pipeline = dai.Pipeline()
 
     # Define sources
-    camRgb = pipeline.createColorCamera()
-    left = pipeline.createMonoCamera()
-    right = pipeline.createMonoCamera()
-    stereo = pipeline.createStereoDepth()
+    camRgb = pipeline.create(dai.node.ColorCamera)
+    left = pipeline.create(dai.node.MonoCamera)
+    right = pipeline.create(dai.node.MonoCamera)
+    stereo = pipeline.create(dai.node.StereoDepth)
 
     # Define outputs
-    depthOut = pipeline.createXLinkOut()
+    depthOut = pipeline.create(dai.node.XLinkOut)
     depthOut.setStreamName("depth")
-    rgbOut = pipeline.createXLinkOut()
+    rgbOut = pipeline.create(dai.node.XLinkOut)
     rgbOut.setStreamName("rgb")
 
     # Configure Camera Properties

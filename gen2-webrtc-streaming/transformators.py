@@ -61,8 +61,8 @@ class DepthAIVideoTransformTrack(VideoTransformTrack):
         self.frame[:] = (0, 0, 0)
         self.detections = []
         self.pipeline = dai.Pipeline()
-        self.camRgb = self.pipeline.createColorCamera()
-        self.xoutRgb = self.pipeline.createXLinkOut()
+        self.camRgb = self.pipeline.create(dai.node.ColorCamera)
+        self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
 
         self.xoutRgb.setStreamName("rgb")
 
@@ -75,12 +75,12 @@ class DepthAIVideoTransformTrack(VideoTransformTrack):
         self.camRgb.preview.link(self.xoutRgb.input)
         self.nn = None
         if options.nn != "":
-            self.nn = self.pipeline.createMobileNetDetectionNetwork()
+            self.nn = self.pipeline.create(dai.node.MobileNetDetectionNetwork)
             self.nn.setConfidenceThreshold(0.5)
             self.nn.setBlobPath(blobconverter.from_zoo(options.nn, shaves=6))
             self.nn.setNumInferenceThreads(2)
             self.nn.input.setBlocking(False)
-            self.nnOut = self.pipeline.createXLinkOut()
+            self.nnOut = self.pipeline.create(dai.node.XLinkOut)
             self.nnOut.setStreamName("nn")
             self.camRgb.preview.link(self.nn.input)
             self.nn.out.link(self.nnOut.input)
@@ -136,10 +136,10 @@ class DepthAIDepthVideoTransformTrack(VideoTransformTrack):
     def create_pipeline(self, options):
         self.pipeline = dai.Pipeline()
 
-        self.monoLeft = self.pipeline.createMonoCamera()
-        self.monoRight = self.pipeline.createMonoCamera()
-        self.depth = self.pipeline.createStereoDepth()
-        self.xoutDepth = self.pipeline.createXLinkOut()
+        self.monoLeft = self.pipeline.create(dai.node.MonoCamera)
+        self.monoRight = self.pipeline.create(dai.node.MonoCamera)
+        self.depth = self.pipeline.create(dai.node.StereoDepth)
+        self.xoutDepth = self.pipeline.create(dai.node.XLinkOut)
         self.xoutDepth.setStreamName("disparity")
 
         # Properties

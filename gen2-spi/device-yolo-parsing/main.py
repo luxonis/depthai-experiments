@@ -16,7 +16,7 @@ def create_spi_demo_pipeline(nnPath):
     pipeline = dai.Pipeline()
 
     # testing YOLO DetectionNetwork 
-    detectionNetwork = pipeline.createYoloDetectionNetwork()
+    detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
     detectionNetwork.setConfidenceThreshold(0.5)
     detectionNetwork.setBlobPath(nnPath)
     detectionNetwork.setNumClasses(80)
@@ -34,12 +34,12 @@ def create_spi_demo_pipeline(nnPath):
 
 
 #    # testing MobileNet DetectionNetwork
-#    detectionNetwork = pipeline.createMobileNetDetectionNetwork()
+#    detectionNetwork = pipeline.create(dai.node.MobileNetDetectionNetwork)
 #    detectionNetwork.setConfidenceThreshold(0.5)
 #    detectionNetwork.setBlobPath(nnPath)
 
     # set up color camera and link to NN node
-    colorCam = pipeline.createColorCamera()
+    colorCam = pipeline.create(dai.node.ColorCamera)
     colorCam.setPreviewSize(416, 416)
 #    colorCam.setPreviewSize(300, 300)
     colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -50,7 +50,7 @@ def create_spi_demo_pipeline(nnPath):
 
 
     # set up SPI out node
-    spiOut = pipeline.createSPIOut()
+    spiOut = pipeline.create(dai.node.SPIOut)
     spiOut.setStreamName("spimetaout")
     spiOut.setBusId(0)
     detectionNetwork.out.link(spiOut.input)

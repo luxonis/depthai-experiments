@@ -58,17 +58,17 @@ if __name__ == "__main__":
 
     pipeline = dai.Pipeline()
 
-    colorCam = pipeline.createColorCamera()
+    colorCam = pipeline.create(dai.node.ColorCamera)
     colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     colorCam.setInterleaved(False)
     colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
     colorCam.setFps(10)
 
-    videnc = pipeline.createVideoEncoder()
+    videnc = pipeline.create(dai.node.VideoEncoder)
     videnc.setDefaultProfilePreset(10, dai.VideoEncoderProperties.Profile.H265_MAIN)
     colorCam.video.link(videnc.input)
 
-    veOut = pipeline.createXLinkOut()
+    veOut = pipeline.create(dai.node.XLinkOut)
     veOut.setStreamName("encoded")
     videnc.bitstream.link(veOut.input)
 

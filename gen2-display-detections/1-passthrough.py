@@ -13,23 +13,23 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 # Create pipeline
 pipeline = dai.Pipeline()
 
-camRgb = pipeline.createColorCamera()
+camRgb = pipeline.create(dai.node.ColorCamera)
 camRgb.setPreviewSize(300, 300)
 camRgb.setInterleaved(False)
 camRgb.setFps(40)
 
 # Define a neural network that will make predictions based on the source frames
-nn = pipeline.createMobileNetDetectionNetwork()
+nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 nn.setConfidenceThreshold(0.5)
 nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
 camRgb.preview.link(nn.input)
 
 # Send passthrough frames to the host, so frames are in sync with bounding boxes
-passthroughOut = pipeline.createXLinkOut()
+passthroughOut = pipeline.create(dai.node.XLinkOut)
 passthroughOut.setStreamName("pass")
 nn.passthrough.link(passthroughOut.input)
 
-nnOut = pipeline.createXLinkOut()
+nnOut = pipeline.create(dai.node.XLinkOut)
 nnOut.setStreamName("nn")
 nn.out.link(nnOut.input)
 

@@ -30,7 +30,7 @@ if args.model is None:
 pipeline = dai.Pipeline()
 
 # Define a neural network that will make predictions based on the source frames
-nn = pipeline.createMobileNetDetectionNetwork()
+nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 nn.setConfidenceThreshold(0.5)
 nn.setBlobPath(args.model)
 nn.setNumInferenceThreads(2)
@@ -40,31 +40,31 @@ nn.input.setBlocking(False)
 if args.video_path != '':
     # Create XLinkIn object as conduit for sending input video file frames
     # to the neural network
-    xinFrame = pipeline.createXLinkIn()
+    xinFrame = pipeline.create(dai.node.XLinkIn)
     xinFrame.setStreamName("inFrame")
     # Connect (link) the video stream from the input queue to the
     # neural network input
     xinFrame.out.link(nn.input)
 else:
     # Create color camera node.
-    cam = pipeline.createColorCamera()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(300, 300)
     cam.setInterleaved(False)
     # Connect (link) the camera preview output to the neural network input
     cam.preview.link(nn.input)
 
     # Create XLinkOut object as conduit for passing camera frames to the host
-    xoutFrame = pipeline.createXLinkOut()
+    xoutFrame = pipeline.create(dai.node.XLinkOut)
     xoutFrame.setStreamName("outFrame")
     cam.preview.link(xoutFrame.input)
 
 # Create neural network output (inference) stream
-nnOut = pipeline.createXLinkOut()
+nnOut = pipeline.create(dai.node.XLinkOut)
 nnOut.setStreamName("nn")
 nn.out.link(nnOut.input)
 
 # Create and configure the object tracker
-objectTracker = pipeline.createObjectTracker()
+objectTracker = pipeline.create(dai.node.ObjectTracker)
 # objectTracker.setDetectionLabelsToTrack([0])  # track only person
 # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
 objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
@@ -78,7 +78,7 @@ nn.passthrough.link(objectTracker.inputDetectionFrame)
 nn.out.link(objectTracker.inputDetections)
 
 # Send tracklets to the host
-trackerOut = pipeline.createXLinkOut()
+trackerOut = pipeline.create(dai.node.XLinkOut)
 trackerOut.setStreamName("tracklets")
 objectTracker.out.link(trackerOut.input)
 

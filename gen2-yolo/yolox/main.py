@@ -146,29 +146,29 @@ class FPSHandler:
     def fps(self):
         return self.frame_cnt / (self.timestamp - self.start)
 
-camera = p.createColorCamera()
+camera = p.create(dai.node.ColorCamera)
 camera.setPreviewSize(SHAPE, SHAPE)
 camera.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 camera.setInterleaved(False)
 camera.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-nn = p.createNeuralNetwork()
+nn = p.create(dai.node.NeuralNetwork)
 nn.setBlobPath(str(Path("yolox_tiny.blob").resolve().absolute()))
 nn.setNumInferenceThreads(2)
 nn.input.setBlocking(True)
 
 # Send camera frames to the host
-camera_xout = p.createXLinkOut()
+camera_xout = p.create(dai.node.XLinkOut)
 camera_xout.setStreamName("camera")
 camera.preview.link(camera_xout.input)
 
 # Send converted frames from the host to the NN
-nn_xin = p.createXLinkIn()
+nn_xin = p.create(dai.node.XLinkIn)
 nn_xin.setStreamName("nnInput")
 nn_xin.out.link(nn.input)
 
 # Send bounding boxes from the NN to the host via XLink
-nn_xout = p.createXLinkOut()
+nn_xout = p.create(dai.node.XLinkOut)
 nn_xout.setStreamName("nn")
 nn.out.link(nn_xout.input)
 
