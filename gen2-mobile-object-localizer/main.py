@@ -55,20 +55,20 @@ pipeline = dai.Pipeline()
 pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 # Define a neural network that will make predictions based on the source frames
-detection_nn = pipeline.createNeuralNetwork()
+detection_nn = pipeline.create(dai.node.NeuralNetwork)
 detection_nn.setBlobPath(NN_PATH)
 detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 
 # Color camera
-cam = pipeline.createColorCamera()
+cam = pipeline.create(dai.node.ColorCamera)
 cam.setPreviewSize(PREVIEW_WIDTH, PREVIEW_HEIGHT)
 cam.setInterleaved(False)
 cam.setFps(40)
 
 # Create manip
-manip = pipeline.createImageManip()
+manip = pipeline.create(dai.node.ImageManip)
 manip.initialConfig.setResize(NN_WIDTH, NN_HEIGHT)
 manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
 manip.initialConfig.setKeepAspectRatio(False)
@@ -78,17 +78,17 @@ cam.preview.link(manip.inputImage)
 manip.out.link(detection_nn.input)
 
 # Create outputs
-xout_rgb = pipeline.createXLinkOut()
+xout_rgb = pipeline.create(dai.node.XLinkOut)
 xout_rgb.setStreamName("cam")
 xout_rgb.input.setBlocking(False)
 cam.preview.link(xout_rgb.input)
 
-xout_nn = pipeline.createXLinkOut()
+xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 xout_nn.input.setBlocking(False)
 detection_nn.out.link(xout_nn.input)
 
-xout_manip = pipeline.createXLinkOut()
+xout_manip = pipeline.create(dai.node.XLinkOut)
 xout_manip.setStreamName("manip")
 xout_manip.input.setBlocking(False)
 manip.out.link(xout_manip.input)

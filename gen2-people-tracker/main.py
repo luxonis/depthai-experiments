@@ -45,13 +45,13 @@ class TextHelper:
 pipeline = dai.Pipeline()
 
 # Create and configure the detection network
-detectionNetwork = pipeline.createMobileNetDetectionNetwork()
+detectionNetwork = pipeline.create(dai.node.MobileNetDetectionNetwork)
 detectionNetwork.setBlobPath(str(Path(nnPath).resolve().absolute()))
 detectionNetwork.setConfidenceThreshold(0.5)
 
 if VIDEO:
     # Configure XLinkIn - we will send video through it
-    videoIn = pipeline.createXLinkIn()
+    videoIn = pipeline.create(dai.node.XLinkIn)
     videoIn.setStreamName("video_in")
 
     # NOTE: video must be of size 544x320. We will resize this on the
@@ -62,7 +62,7 @@ if VIDEO:
 
 else:
     # Create and configure the color camera
-    colorCam = pipeline.createColorCamera()
+    colorCam = pipeline.create(dai.node.ColorCamera)
     colorCam.setPreviewSize(544, 320)
     colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     colorCam.setInterleaved(False)
@@ -71,7 +71,7 @@ else:
     colorCam.preview.link(detectionNetwork.input)
 
 # Create and configure the object tracker
-objectTracker = pipeline.createObjectTracker()
+objectTracker = pipeline.create(dai.node.ObjectTracker)
 objectTracker.setDetectionLabelsToTrack([1])  # Track people
 # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
 objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
@@ -93,18 +93,18 @@ with open("script.py", "r") as f:
     script.setScript(s)
 
 # Send tracklets to the host
-trackerOut = pipeline.createXLinkOut()
+trackerOut = pipeline.create(dai.node.XLinkOut)
 trackerOut.setStreamName("out")
 script.outputs['out'].link(trackerOut.input)
 
 # Send send RGB preview frames to the host
-xlinkOut = pipeline.createXLinkOut()
+xlinkOut = pipeline.create(dai.node.XLinkOut)
 xlinkOut.setStreamName("preview")
 objectTracker.passthroughTrackerFrame.link(xlinkOut.input)
 
 if args.spi:
     # Send tracklets via SPI to the MCU
-    spiOut = pipeline.createSPIOut()
+    spiOut = pipeline.create(dai.node.SPIOut)
     spiOut.setStreamName("tracklets")
     spiOut.setBusId(0)
     objectTracker.out.link(spiOut.input)

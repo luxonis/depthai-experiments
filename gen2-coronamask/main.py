@@ -27,13 +27,13 @@ def create_pipeline():
     pipeline = dai.Pipeline()
 
     # Define a source - color camera
-    camRgb = pipeline.createColorCamera()
+    camRgb = pipeline.create(dai.node.ColorCamera)
     camRgb.setPreviewSize(300, 300)
     camRgb.setInterleaved(False)
     camRgb.setFps(40)
 
     # Define a neural network that will make predictions based on the source frames
-    nn = pipeline.createMobileNetDetectionNetwork()
+    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn.setConfidenceThreshold(0.5)
     nn.setBlobPath(str(Path("models/model.blob").resolve().absolute()))
     nn.setNumInferenceThreads(2)
@@ -42,16 +42,16 @@ def create_pipeline():
     if args.camera:
         camRgb.preview.link(nn.input)
     else:
-        detection_in = pipeline.createXLinkIn()
+        detection_in = pipeline.create(dai.node.XLinkIn)
         detection_in.setStreamName("detection_in")
         detection_in.out.link(nn.input)
 
     # Create outputs
-    xoutRgb = pipeline.createXLinkOut()
+    xoutRgb = pipeline.create(dai.node.XLinkOut)
     xoutRgb.setStreamName("rgb")
     camRgb.preview.link(xoutRgb.input)
 
-    nnOut = pipeline.createXLinkOut()
+    nnOut = pipeline.create(dai.node.XLinkOut)
     nnOut.setStreamName("nn")
     nn.out.link(nnOut.input)
 

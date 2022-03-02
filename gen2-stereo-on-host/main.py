@@ -59,10 +59,10 @@ class StereoSGBM:
 pipeline = dai.Pipeline()
 
 # Define sources and outputs
-monoLeft = pipeline.createMonoCamera()
-monoRight = pipeline.createMonoCamera()
-xoutLeft = pipeline.createXLinkOut()
-xoutRight = pipeline.createXLinkOut()
+monoLeft = pipeline.create(dai.node.MonoCamera)
+monoRight = pipeline.create(dai.node.MonoCamera)
+xoutLeft = pipeline.create(dai.node.XLinkOut)
+xoutRight = pipeline.create(dai.node.XLinkOut)
 
 xoutLeft.setStreamName('left')
 xoutRight.setStreamName('right')

@@ -20,7 +20,7 @@ def create_pipeline():
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-    cam_xout = pipeline.createXLinkOut()
+    cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("cam_out")
     cam.preview.link(cam_xout.input)
 

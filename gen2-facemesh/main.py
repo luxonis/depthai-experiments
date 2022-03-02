@@ -34,14 +34,14 @@ pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 
 # Color camera
-cam = pipeline.createColorCamera()
+cam = pipeline.create(dai.node.ColorCamera)
 cam.setPreviewSize(PREVIEW_WIDTH, PREVIEW_HEIGHT)
 cam.setInterleaved(False)
 cam.setFps(30)
 
 
 # Neural Network for Landmark detection
-nn = pipeline.createNeuralNetwork()
+nn = pipeline.create(dai.node.NeuralNetwork)
 nn.setBlobPath(NN_PATH)
 nn.setNumPoolFrames(4)
 nn.input.setBlocking(False)
@@ -49,22 +49,22 @@ nn.setNumInferenceThreads(2)
 
 
 # Image Manip
-manip = pipeline.createImageManip()
+manip = pipeline.create(dai.node.ImageManip)
 manip.initialConfig.setResizeThumbnail(NN_WIDTH, NN_HEIGHT)
 manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
 
 
 # Create outputs
 
-xin_rgb = pipeline.createXLinkIn()
+xin_rgb = pipeline.create(dai.node.XLinkIn)
 xin_rgb.setStreamName("xin")
 
 
-xout_rgb = pipeline.createXLinkOut()
+xout_rgb = pipeline.create(dai.node.XLinkOut)
 xout_rgb.setStreamName("cam")
 xout_rgb.input.setBlocking(False)
 
-xout_nn = pipeline.createXLinkOut()
+xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 xout_nn.input.setBlocking(False)
 

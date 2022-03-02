@@ -7,21 +7,21 @@ SHAPE = 300
 p = dai.Pipeline()
 p.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
-camRgb = p.createColorCamera()
+camRgb = p.create(dai.node.ColorCamera)
 camRgb.setPreviewSize(SHAPE, SHAPE)
 camRgb.setInterleaved(False)
 
 # NN that detects faces in the image
-nn = p.createNeuralNetwork()
+nn = p.create(dai.node.NeuralNetwork)
 nn.setBlobPath("models/edge_simplified_openvino_2021.4_6shave.blob")
 camRgb.preview.link(nn.input)
 
 # Send bouding box from the NN to the host via XLink
-nn_xout = p.createXLinkOut()
+nn_xout = p.create(dai.node.XLinkOut)
 nn_xout.setStreamName("nn")
 nn.out.link(nn_xout.input)
 
-rgb_xout = p.createXLinkOut()
+rgb_xout = p.create(dai.node.XLinkOut)
 rgb_xout.setStreamName("rgb")
 camRgb.preview.link(rgb_xout.input)
 

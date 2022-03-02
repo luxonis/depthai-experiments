@@ -85,11 +85,11 @@ manip_crop.initialConfig.setResize(64, 64)
 manip_crop.setWaitForConfigInput(True)
 
 # Second NN that detcts emotions from the cropped 64x64 face
-landmarks_nn = p.createNeuralNetwork()
+landmarks_nn = p.create(dai.node.NeuralNetwork)
 landmarks_nn.setBlobPath(blobconverter.from_zoo("emotions-recognition-retail-0003", shaves=6, version=openvinoVersion))
 manip_crop.out.link(landmarks_nn.input)
 
-landmarks_nn_xout = p.createXLinkOut()
+landmarks_nn_xout = p.create(dai.node.XLinkOut)
 landmarks_nn_xout.setStreamName("emotions")
 landmarks_nn.out.link(landmarks_nn_xout.input)
 

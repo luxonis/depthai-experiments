@@ -96,16 +96,16 @@ while True:
     config_xout.setStreamName("config_" + name)
     image_manip_script.outputs['to_manip'].link(config_xout.input)
 
-    crop_xout = p.createXLinkOut()
+    crop_xout = p.create(dai.node.XLinkOut)
     crop_xout.setStreamName("crop_" + name)
     manip_crop.out.link(crop_xout.input)
 
     # Second NN that detcts landmarks from the cropped 48x48 face
-    landmarks_nn = p.createNeuralNetwork()
+    landmarks_nn = p.create(dai.node.NeuralNetwork)
     landmarks_nn.setBlobPath(blobconverter.from_zoo("landmarks-regression-retail-0009", shaves=6, version=openvinoVersion))
     manip_crop.out.link(landmarks_nn.input)
 
-    landmarks_nn_xout = p.createXLinkOut()
+    landmarks_nn_xout = p.create(dai.node.XLinkOut)
     landmarks_nn_xout.setStreamName("landmarks_" + name)
     landmarks_nn.out.link(landmarks_nn_xout.input)
 

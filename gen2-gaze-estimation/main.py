@@ -103,66 +103,66 @@ def create_pipeline():
 
     if camera:
         print("Creating Color Camera...")
-        cam = pipeline.createColorCamera()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(300, 300)
         cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
         cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
 
-        cam_xout = pipeline.createXLinkOut()
+        cam_xout = pipeline.create(dai.node.XLinkOut)
         cam_xout.setStreamName("cam_out")
         cam.preview.link(cam_xout.input)
 
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_nn = pipeline.createNeuralNetwork()
+    face_nn = pipeline.create(dai.node.NeuralNetwork)
     face_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=4))
 
     if camera:
         cam.preview.link(face_nn.input)
     else:
-        face_in = pipeline.createXLinkIn()
+        face_in = pipeline.create(dai.node.XLinkIn)
         face_in.setStreamName("face_in")
         face_in.out.link(face_nn.input)
 
-    face_nn_xout = pipeline.createXLinkOut()
+    face_nn_xout = pipeline.create(dai.node.XLinkOut)
     face_nn_xout.setStreamName("face_nn")
     face_nn.out.link(face_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Landmarks Detection Neural Network...")
-    land_nn = pipeline.createNeuralNetwork()
+    land_nn = pipeline.create(dai.node.NeuralNetwork)
     land_nn.setBlobPath(blobconverter.from_zoo(name="landmarks-regression-retail-0009", shaves=4))
-    land_nn_xin = pipeline.createXLinkIn()
+    land_nn_xin = pipeline.create(dai.node.XLinkIn)
     land_nn_xin.setStreamName("landmark_in")
     land_nn_xin.out.link(land_nn.input)
-    land_nn_xout = pipeline.createXLinkOut()
+    land_nn_xout = pipeline.create(dai.node.XLinkOut)
     land_nn_xout.setStreamName("landmark_nn")
     land_nn.out.link(land_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Head Pose Neural Network...")
-    pose_nn = pipeline.createNeuralNetwork()
+    pose_nn = pipeline.create(dai.node.NeuralNetwork)
     pose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=4))
-    pose_nn_xin = pipeline.createXLinkIn()
+    pose_nn_xin = pipeline.create(dai.node.XLinkIn)
     pose_nn_xin.setStreamName("pose_in")
     pose_nn_xin.out.link(pose_nn.input)
-    pose_nn_xout = pipeline.createXLinkOut()
+    pose_nn_xout = pipeline.create(dai.node.XLinkOut)
     pose_nn_xout.setStreamName("pose_nn")
     pose_nn.out.link(pose_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Gaze Estimation Neural Network...")
-    gaze_nn = pipeline.createNeuralNetwork()
+    gaze_nn = pipeline.create(dai.node.NeuralNetwork)
     path = blobconverter.from_zoo("gaze-estimation-adas-0002", shaves=4,
         compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8'],
     )
     gaze_nn.setBlobPath(path)
-    gaze_nn_xin = pipeline.createXLinkIn()
+    gaze_nn_xin = pipeline.create(dai.node.XLinkIn)
     gaze_nn_xin.setStreamName("gaze_in")
     gaze_nn_xin.out.link(gaze_nn.input)
-    gaze_nn_xout = pipeline.createXLinkOut()
+    gaze_nn_xout = pipeline.create(dai.node.XLinkOut)
     gaze_nn_xout.setStreamName("gaze_nn")
     gaze_nn.out.link(gaze_nn_xout.input)
 

@@ -61,15 +61,15 @@ def create_stereo_depth_pipeline(from_camera=True):
     print("Creating Stereo Depth pipeline: ", end='')
     pipeline = dai.Pipeline()
 
-    cam_left      = pipeline.createMonoCamera()
-    cam_right     = pipeline.createMonoCamera()
-    stereo            = pipeline.createStereoDepth()
-#    xout_left         = pipeline.createXLinkOut()
-#    xout_right        = pipeline.createXLinkOut()
-    xout_depth        = pipeline.createXLinkOut()
-#    xout_disparity    = pipeline.createXLinkOut()
-#    xout_rectif_left  = pipeline.createXLinkOut()
-#    xout_rectif_right = pipeline.createXLinkOut()
+    cam_left      = pipeline.create(dai.node.MonoCamera)
+    cam_right     = pipeline.create(dai.node.MonoCamera)
+    stereo            = pipeline.create(dai.node.StereoDepth)
+#    xout_left         = pipeline.create(dai.node.XLinkOut)
+#    xout_right        = pipeline.create(dai.node.XLinkOut)
+    xout_depth        = pipeline.create(dai.node.XLinkOut)
+#    xout_disparity    = pipeline.create(dai.node.XLinkOut)
+#    xout_rectif_left  = pipeline.create(dai.node.XLinkOut)
+#    xout_rectif_right = pipeline.create(dai.node.XLinkOut)
 
 
     cam_left .setCamId(1)
@@ -121,12 +121,12 @@ def create_stereo_depth_pipeline(from_camera=True):
 
     streams = ['depth']
     if test_manip:
-#        manipMono      = pipeline.createImageManip()
-#        manipMonoAsRgb = pipeline.createImageManip()
-#        manipDisp      = pipeline.createImageManip()
-        manipDepth     = pipeline.createImageManip()
+#        manipMono      = pipeline.create(dai.node.ImageManip)
+#        manipMonoAsRgb = pipeline.create(dai.node.ImageManip)
+#        manipDisp      = pipeline.create(dai.node.ImageManip)
+        manipDepth     = pipeline.create(dai.node.ImageManip)
         #---------------------------------------------------
-        spioutManipDepth    = pipeline.createSPIOut()
+        spioutManipDepth    = pipeline.create(dai.node.SPIOut)
         #---------------------------------------------------
 
 #        manipMono     .setCropRect(0.0, 0.4, 1.0, 0.6)
@@ -135,10 +135,10 @@ def create_stereo_depth_pipeline(from_camera=True):
         manipDepth    .setCropRect(0.8, 0.8, 1.0, 1.0)
 #        manipMonoAsRgb.setFrameType(dai.RawImgFrame.Type.RGB888p)
 
-#        xManipMono      = pipeline.createXLinkOut()
-#        xManipMonoAsRgb = pipeline.createXLinkOut()
-#        xManipDisp      = pipeline.createXLinkOut()
-        xManipDepth     = pipeline.createXLinkOut()
+#        xManipMono      = pipeline.create(dai.node.XLinkOut)
+#        xManipMonoAsRgb = pipeline.create(dai.node.XLinkOut)
+#        xManipDisp      = pipeline.create(dai.node.XLinkOut)
+        xManipDepth     = pipeline.create(dai.node.XLinkOut)
         #---------------------------------------------------
         spioutManipDepth.setStreamName("spipreview");
         spioutManipDepth.setBusId(0);

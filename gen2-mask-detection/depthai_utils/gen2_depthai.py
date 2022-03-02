@@ -19,12 +19,12 @@ class DepthAI:
         self.pipeline = depthai.Pipeline()
         if self.camera:
             print("Creating Color Camera...")
-            self.cam = self.pipeline.createColorCamera()
+            self.cam = self.pipeline.create(dai.node.ColorCamera)
             self.cam.setPreviewSize(self._cam_size[0],self._cam_size[1])
             self.cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
             self.cam.setInterleaved(False)
             self.cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
-            cam_xout = self.pipeline.createXLinkOut()
+            cam_xout = self.pipeline.create(dai.node.XLinkOut)
             cam_xout.setStreamName("cam_out")
             self.cam.preview.link(cam_xout.input)
         
@@ -35,37 +35,37 @@ class DepthAI:
     
     def create_models(self, model_path,model_name,first_model=False):
         print(f"Start creating{model_path}Neural Networks")
-        model_nn = self.pipeline.createNeuralNetwork()
+        model_nn = self.pipeline.create(dai.node.NeuralNetwork)
         model_nn.setBlobPath(str(Path(model_path).resolve().absolute()))
         if first_model and self.camera:
             self.cam.preview.link(model_nn.input)
         else:
-            model_in = self.pipeline.createXLinkIn()
+            model_in = self.pipeline.create(dai.node.XLinkIn)
             model_in.setStreamName(f"{model_name}_in")
             model_in.out.link(model_nn.input)
-        model_nn_xout = self.pipeline.createXLinkOut()
+        model_nn_xout = self.pipeline.create(dai.node.XLinkOut)
         model_nn_xout.setStreamName(f"{model_name}_nn")
         model_nn.out.link(model_nn_xout.input)
 
     def create_mobilenet_nn(self,model_path,model_name,first_model=False,conf=0.5):
         print(f"Start creating{model_path}Neural Networks")
-        model_nn = self.pipeline.createMobileNetDetectionNetwork()
+        model_nn = self.pipeline.create(dai.node.MobileNetDetectionNetwork)
         model_nn.setBlobPath(str(Path(model_path).resolve().absolute()))
         model_nn.setConfidenceThreshold(conf)
         model_nn.input.setBlocking(False)
         if first_model and self.camera:
             self.cam.preview.link(model_nn.input)
         else:
-            model_in = self.pipeline.createXLinkIn()
+            model_in = self.pipeline.create(dai.node.XLinkIn)
             model_in.setStreamName(f"{model_name}_in")
             model_in.out.link(model_nn.input)
-        model_nn_xout = self.pipeline.createXLinkOut()
+        model_nn_xout = self.pipeline.create(dai.node.XLinkOut)
         model_nn_xout.setStreamName(f"{model_name}_nn")
         model_nn.out.link(model_nn_xout.input)
     
     def create_yolo_nn(self,model_path,model_name,first_model=False):
         print(f"Start creating{model_path}Neural Networks")
-        model_nn = self.pipeline.createYoloDetectionNetwork()
+        model_nn = self.pipeline.create(dai.node.YoloDetectionNetwork)
         model_nn.setBlobPath(str(Path(model_path).resolve().absolute()))
         model_nn.setConfidenceThreshold(conf)
         model_nn.input.setBlocking(False)
@@ -73,10 +73,10 @@ class DepthAI:
             if self.camera:
                 self.cam.preview.link(model_nn.input)
         else:
-            model_in = self.pipeline.createXLinkIn()
+            model_in = self.pipeline.create(dai.node.XLinkIn)
             model_in.setStreamName(f"{model_name}_in")
             model_in.out.link(model_nn.input)
-        model_nn_xout = self.pipeline.createXLinkOut()
+        model_nn_xout = self.pipeline.create(dai.node.XLinkOut)
         model_nn_xout.setStreamName(f"{model_name}_nn")
         model_nn.out.link(model_nn_xout.input)
 

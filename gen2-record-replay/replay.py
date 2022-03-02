@@ -25,7 +25,7 @@ replay.set_resize_color((300, 300))
 # the color frame to the desired aspect ratio (in our case 300x300)
 replay.keep_aspect_ratio(True)
 
-nn = pipeline.createMobileNetSpatialDetectionNetwork()
+nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
 nn.setBoundingBoxScaleFactor(0.3)
 nn.setDepthLowerThreshold(100)
 nn.setDepthUpperThreshold(5000)
@@ -38,19 +38,19 @@ nn.input.setBlocking(False)
 nodes.color.out.link(nn.input)
 nodes.stereo.depth.link(nn.inputDepth)
 
-detOut = pipeline.createXLinkOut()
+detOut = pipeline.create(dai.node.XLinkOut)
 detOut.setStreamName("det_out")
 nn.out.link(detOut.input)
 
-depthOut = pipeline.createXLinkOut()
+depthOut = pipeline.create(dai.node.XLinkOut)
 depthOut.setStreamName("depth_out")
 nodes.stereo.disparity.link(depthOut.input)
 
-right_s_out = pipeline.createXLinkOut()
+right_s_out = pipeline.create(dai.node.XLinkOut)
 right_s_out.setStreamName("rightS")
 nodes.stereo.syncedRight.link(right_s_out.input)
 
-left_s_out = pipeline.createXLinkOut()
+left_s_out = pipeline.create(dai.node.XLinkOut)
 left_s_out.setStreamName("leftS")
 nodes.stereo.syncedLeft.link(left_s_out.input)
 

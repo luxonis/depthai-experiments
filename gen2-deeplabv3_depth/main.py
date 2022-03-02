@@ -102,7 +102,7 @@ pipeline = dai.Pipeline()
 
 pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
 
-cam = pipeline.createColorCamera()
+cam = pipeline.create(dai.node.ColorCamera)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 # Color cam: 1920x1080
 # Mono cam: 640x400
@@ -116,23 +116,23 @@ cam.setPreviewSize(nn_shape, nn_shape)
 cam.setInterleaved(False)
 
 # NN output linked to XLinkOut
-isp_xout = pipeline.createXLinkOut()
+isp_xout = pipeline.create(dai.node.XLinkOut)
 isp_xout.setStreamName("cam")
 cam.isp.link(isp_xout.input)
 
 # Define a neural network that will make predictions based on the source frames
-detection_nn = pipeline.createNeuralNetwork()
+detection_nn = pipeline.create(dai.node.NeuralNetwork)
 detection_nn.setBlobPath(nn_path)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 cam.preview.link(detection_nn.input)
 
 # NN output linked to XLinkOut
-xout_nn = pipeline.createXLinkOut()
+xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
-xout_passthrough = pipeline.createXLinkOut()
+xout_passthrough = pipeline.create(dai.node.XLinkOut)
 xout_passthrough.setStreamName("pass")
 # Only send metadata, we are only interested in timestamp, so we can sync
 # depth frames with NN output
@@ -140,16 +140,16 @@ xout_passthrough.setMetadataOnly(True)
 detection_nn.passthrough.link(xout_passthrough.input)
 
 # Left mono camera
-left = pipeline.createMonoCamera()
+left = pipeline.create(dai.node.MonoCamera)
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 # Right mono camera
-right = pipeline.createMonoCamera()
+right = pipeline.create(dai.node.MonoCamera)
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
-stereo = pipeline.createStereoDepth()
+stereo = pipeline.create(dai.node.StereoDepth)
 stereo.initialConfig.setConfidenceThreshold(245)
 stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
 # stereo.initialConfig.setBilateralFilterSigma(64000)
@@ -160,7 +160,7 @@ left.out.link(stereo.left)
 right.out.link(stereo.right)
 
 # Create depth output
-xout_disp = pipeline.createXLinkOut()
+xout_disp = pipeline.create(dai.node.XLinkOut)
 xout_disp.setStreamName("disparity")
 stereo.disparity.link(xout_disp.input)
 

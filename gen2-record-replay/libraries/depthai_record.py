@@ -155,7 +155,7 @@ class Record():
         nodes = {}
 
         def create_mono(name):
-            nodes[name] = pipeline.createMonoCamera()
+            nodes[name] = pipeline.create(dai.node.MonoCamera)
             nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
@@ -163,13 +163,13 @@ class Record():
 
         def stream_out(name, fps, out, noEnc=False):
             # Create XLinkOutputs for the stream
-            xout = pipeline.createXLinkOut()
+            xout = pipeline.create(dai.node.XLinkOut)
             xout.setStreamName(name)
             if noEnc:
                 out.link(xout.input)
                 return
 
-            encoder = pipeline.createVideoEncoder()
+            encoder = pipeline.create(dai.node.VideoEncoder)
             profile = dai.VideoEncoderProperties.Profile.H265_MAIN if self.quality == EncodingQuality.LOW else dai.VideoEncoderProperties.Profile.MJPEG
             encoder.setDefaultProfilePreset(fps, profile)
 
@@ -186,7 +186,7 @@ class Record():
             encoder.bitstream.link(xout.input)
 
         if "color" in self.save:
-            nodes['color'] = pipeline.createColorCamera()
+            nodes['color'] = pipeline.create(dai.node.ColorCamera)
             nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
             # RealSense Viewer expects RGB color order
             nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
@@ -213,7 +213,7 @@ class Record():
                 stream_out("right", nodes['right'].getFps(), nodes['right'].out)
 
         if True in (el in ["disparity", "depth"] for el in self.save):
-            nodes['stereo'] = pipeline.createStereoDepth()
+            nodes['stereo'] = pipeline.create(dai.node.StereoDepth)
             nodes['stereo'].initialConfig.setConfidenceThreshold(255)
             nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
             # TODO: configurable

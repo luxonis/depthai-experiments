@@ -22,7 +22,7 @@ class FPSHandler:
     def fps(self):
         return self.frame_cnt / (self.timestamp - self.start)
 
-camRgb = p.createColorCamera()
+camRgb = p.create(dai.node.ColorCamera)
 camRgb.setPreviewSize(SHAPE, SHAPE)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 camRgb.setInterleaved(False)
@@ -30,17 +30,17 @@ camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 camRgb.setFp16(True) # Model requires FP16 input
 
 # NN that detects faces in the image
-nn = p.createNeuralNetwork()
+nn = p.create(dai.node.NeuralNetwork)
 nn.setBlobPath(str(Path("models/efficientdet_lite0_2021.3_6shaves.blob").resolve().absolute()))
 nn.setNumInferenceThreads(2)
 camRgb.preview.link(nn.input)
 
 # Send bouding box from the NN to the host via XLink
-nn_xout = p.createXLinkOut()
+nn_xout = p.create(dai.node.XLinkOut)
 nn_xout.setStreamName("nn")
 nn.out.link(nn_xout.input)
 # Send rgb frames to the host
-rgb_xout = p.createXLinkOut()
+rgb_xout = p.create(dai.node.XLinkOut)
 rgb_xout.setStreamName("rgb")
 nn.passthrough.link(rgb_xout.input)
 

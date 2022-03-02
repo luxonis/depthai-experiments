@@ -103,14 +103,14 @@ pipeline = dai.Pipeline()
 pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 # Create Manip for image resizing and NN for count inference
-manip = pipeline.createImageManip()
-detection_nn = pipeline.createNeuralNetwork()
+manip = pipeline.create(dai.node.ImageManip)
+detection_nn = pipeline.create(dai.node.NeuralNetwork)
 
 # Create output links, and in link for video
-manipOut = pipeline.createXLinkOut()
-xinFrame = pipeline.createXLinkIn()
-xlinkOut = pipeline.createXLinkOut()
-nnOut = pipeline.createXLinkOut()
+manipOut = pipeline.create(dai.node.XLinkOut)
+xinFrame = pipeline.create(dai.node.XLinkIn)
+xlinkOut = pipeline.create(dai.node.XLinkOut)
+nnOut = pipeline.create(dai.node.XLinkOut)
 
 manipOut.setStreamName("manip")
 xinFrame.setStreamName("inFrame")

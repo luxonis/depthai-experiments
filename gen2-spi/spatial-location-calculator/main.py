@@ -26,24 +26,24 @@ if spiOut:
 pipeline = dai.Pipeline()
 
 # Define a source - two mono (grayscale) cameras
-monoLeft = pipeline.createMonoCamera()
-monoRight = pipeline.createMonoCamera()
-stereo = pipeline.createStereoDepth()
-spatialLocationCalculator = pipeline.createSpatialLocationCalculator()
+monoLeft = pipeline.create(dai.node.MonoCamera)
+monoRight = pipeline.create(dai.node.MonoCamera)
+stereo = pipeline.create(dai.node.StereoDepth)
+spatialLocationCalculator = pipeline.create(dai.node.SpatialLocationCalculator)
 
 # Create output
 if(showDepth):
-    xoutDepth = pipeline.createXLinkOut()
+    xoutDepth = pipeline.create(dai.node.XLinkOut)
     xoutDepth.setStreamName("depth")
     spatialLocationCalculator.passthroughDepth.link(xoutDepth.input)
 
 if spiOut:
-    spiOutSpatialData = pipeline.createSPIOut()
+    spiOutSpatialData = pipeline.create(dai.node.SPIOut)
     spiOutSpatialData.setStreamName("spimetaout")
     spiOutSpatialData.setBusId(0)
     spatialLocationCalculator.out.link(spiOutSpatialData.input)
 else:
-    xoutSpatialData = pipeline.createXLinkOut()
+    xoutSpatialData = pipeline.create(dai.node.XLinkOut)
     xoutSpatialData.setStreamName("spatialData")
     spatialLocationCalculator.out.link(xoutSpatialData.input)
 

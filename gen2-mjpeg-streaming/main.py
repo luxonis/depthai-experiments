@@ -80,14 +80,14 @@ def create_pipeline(depth):
     pipeline = dai.Pipeline()
     pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
     # Define a source - color camera
-    colorCam = pipeline.createColorCamera()
+    colorCam = pipeline.create(dai.node.ColorCamera)
     if depth:
-        mobilenet = pipeline.createMobileNetSpatialDetectionNetwork()
-        monoLeft = pipeline.createMonoCamera()
-        monoRight = pipeline.createMonoCamera()
-        stereo = pipeline.createStereoDepth()
+        mobilenet = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+        monoLeft = pipeline.create(dai.node.MonoCamera)
+        monoRight = pipeline.create(dai.node.MonoCamera)
+        stereo = pipeline.create(dai.node.StereoDepth)
     else:
-        mobilenet = pipeline.createMobileNetDetectionNetwork()
+        mobilenet = pipeline.create(dai.node.MobileNetDetectionNetwork)
 
     colorCam.setPreviewSize(300, 300)
     colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -115,7 +115,7 @@ def create_pipeline(depth):
         monoLeft.out.link(stereo.left)
         monoRight.out.link(stereo.right)
 
-    xoutRgb = pipeline.createXLinkOut()
+    xoutRgb = pipeline.create(dai.node.XLinkOut)
     xoutRgb.setStreamName("rgb")
     colorCam.preview.link(mobilenet.input)
     if syncNN:
@@ -124,16 +124,16 @@ def create_pipeline(depth):
         colorCam.preview.link(xoutRgb.input)
 
 
-    xoutNN = pipeline.createXLinkOut()
+    xoutNN = pipeline.create(dai.node.XLinkOut)
     xoutNN.setStreamName("detections")
     mobilenet.out.link(xoutNN.input)
 
     if depth:
-        xoutBoundingBoxDepthMapping = pipeline.createXLinkOut()
+        xoutBoundingBoxDepthMapping = pipeline.create(dai.node.XLinkOut)
         xoutBoundingBoxDepthMapping.setStreamName("boundingBoxDepthMapping")
         mobilenet.boundingBoxMapping.link(xoutBoundingBoxDepthMapping.input)
 
-        xoutDepth = pipeline.createXLinkOut()
+        xoutDepth = pipeline.create(dai.node.XLinkOut)
         xoutDepth.setStreamName("depth")
         mobilenet.passthroughDepth.link(xoutDepth.input)
 

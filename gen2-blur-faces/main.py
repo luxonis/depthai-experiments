@@ -33,7 +33,7 @@ def create_pipeline():
     cam.setVideoSize(1080,1080)
     cam.setInterleaved(False)
 
-    cam_xout = pipeline.createXLinkOut()
+    cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("frame")
     cam.video.link(cam_xout.input)
 
@@ -49,7 +49,7 @@ def create_pipeline():
     # Link Face ImageManip -> Face detection NN node
     cam.preview.link(face_det_nn.input)
 
-    objectTracker = pipeline.createObjectTracker()
+    objectTracker = pipeline.create(dai.node.ObjectTracker)
     objectTracker.setDetectionLabelsToTrack([1])  # track only person
     # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
     objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)

@@ -16,11 +16,11 @@ def create_spi_demo_pipeline(nnPath):
     pipeline = dai.Pipeline()
 
     # set up NN node
-    nn1 = pipeline.createNeuralNetwork()
+    nn1 = pipeline.create(dai.node.NeuralNetwork)
     nn1.setBlobPath(nnPath)
 
     # set up color camera and link to NN node
-    colorCam = pipeline.createColorCamera()
+    colorCam = pipeline.create(dai.node.ColorCamera)
     colorCam.setPreviewSize(300, 300)
     colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     colorCam.setInterleaved(False)
@@ -29,7 +29,7 @@ def create_spi_demo_pipeline(nnPath):
     colorCam.preview.link(nn1.input)
 
     # set up SPI out node and link to nn1
-    spiOut = pipeline.createSPIOut()
+    spiOut = pipeline.create(dai.node.SPIOut)
     spiOut.setStreamName("spimetaout")
     spiOut.setBusId(0)
     nn1.out.link(spiOut.input)

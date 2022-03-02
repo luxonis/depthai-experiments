@@ -14,24 +14,24 @@ def getPipeline():
     pipeline = dai.Pipeline()
 
     # Define a source - color camera
-    cam_rgb = pipeline.createColorCamera()
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
     # For the demo, just set a larger RGB preview size for OAK-D
     cam_rgb.setPreviewSize(300, 300)
     cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setInterleaved(False)
 
-    detector = pipeline.createMobileNetDetectionNetwork()
+    detector = pipeline.create(dai.node.MobileNetDetectionNetwork)
     detector.setConfidenceThreshold(0.5)
     detector.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
     cam_rgb.preview.link(detector.input)
 
     # Create output
-    xout_rgb = pipeline.createXLinkOut()
+    xout_rgb = pipeline.create(dai.node.XLinkOut)
     xout_rgb.setStreamName("rgb")
     detector.passthrough.link(xout_rgb.input)
 
-    xout_nn = pipeline.createXLinkOut()
+    xout_nn = pipeline.create(dai.node.XLinkOut)
     xout_nn.setStreamName("nn")
     detector.out.link(xout_nn.input)
 

@@ -36,15 +36,15 @@ pipeline = dai.Pipeline()
 cam = {}
 xout = {}
 for c in cam_list:
-    xout[c] = pipeline.createXLinkOut()
+    xout[c] = pipeline.create(dai.node.XLinkOut)
     xout[c].setStreamName(c)
     if c == 'rgb':
-        cam[c] = pipeline.createColorCamera()
+        cam[c] = pipeline.create(dai.node.ColorCamera)
         cam[c].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam[c].setIspScale(720, 1080)  # 1920x1080 -> 1280x720
         cam[c].isp.link(xout[c].input)
     else:
-        cam[c] = pipeline.createMonoCamera()
+        cam[c] = pipeline.create(dai.node.MonoCamera)
         cam[c].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
         cam[c].out.link(xout[c].input)
     cam[c].setBoardSocket(cam_socket_opts[c])

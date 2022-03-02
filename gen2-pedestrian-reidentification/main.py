@@ -49,12 +49,12 @@ def create_pipeline():
     if camera:
         # ColorCamera
         print("Creating Color Camera...")
-        cam = pipeline.createColorCamera()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(544, 320)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
         cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-        cam_xout = pipeline.createXLinkOut()
+        cam_xout = pipeline.create(dai.node.XLinkOut)
         cam_xout.setStreamName("cam_out")
         # Link video output to host for higher resolution
         if hq:
@@ -64,7 +64,7 @@ def create_pipeline():
 
     # NeuralNetwork
     print("Creating Person Detection Neural Network...")
-    detection_nn = pipeline.createMobileNetDetectionNetwork()
+    detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     detection_nn.setBlobPath(str(Path("models/person-detection-retail-0013_openvino_2020.1_4shave.blob").resolve().absolute()))
     # Confidence
     detection_nn.setConfidenceThreshold(0.7)
@@ -74,10 +74,10 @@ def create_pipeline():
     detection_nn.input.setQueueSize(1)
     detection_nn.input.setBlocking(False)
 
-    detection_nn_xout = pipeline.createXLinkOut()
+    detection_nn_xout = pipeline.create(dai.node.XLinkOut)
     detection_nn_xout.setStreamName("detection_nn")
 
-    detection_nn_passthrough = pipeline.createXLinkOut()
+    detection_nn_passthrough = pipeline.create(dai.node.XLinkOut)
     detection_nn_passthrough.setStreamName("detection_passthrough")
     detection_nn_passthrough.setMetadataOnly(True)
 
@@ -85,7 +85,7 @@ def create_pipeline():
         print('linked cam.preview to detection_nn.input')
         cam.preview.link(detection_nn.input)
     else:
-        detection_in = pipeline.createXLinkIn()
+        detection_in = pipeline.create(dai.node.XLinkIn)
         detection_in.setStreamName("detection_in")
         detection_in.out.link(detection_nn.input)
 
@@ -95,15 +95,15 @@ def create_pipeline():
 
     # NeuralNetwork
     print("Creating Person Reidentification Neural Network...")
-    reid_in = pipeline.createXLinkIn()
+    reid_in = pipeline.create(dai.node.XLinkIn)
     reid_in.setStreamName("reid_in")
-    reid_nn = pipeline.createNeuralNetwork()
+    reid_nn = pipeline.create(dai.node.NeuralNetwork)
     reid_nn.setBlobPath(str(Path("models/person-reidentification-retail-0031_openvino_2020.1_4shave.blob").resolve().absolute()))
     
     # Decrease threads for reidentification
     reid_nn.setNumInferenceThreads(1)
     
-    reid_nn_xout = pipeline.createXLinkOut()
+    reid_nn_xout = pipeline.create(dai.node.XLinkOut)
     reid_nn_xout.setStreamName("reid_nn")
     reid_in.out.link(reid_nn.input)
     reid_nn.out.link(reid_nn_xout.input)

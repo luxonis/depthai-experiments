@@ -30,18 +30,18 @@ if len(sys.argv) > 1:
 pipeline = dai.Pipeline()
 
 # Define a source - color camera
-colorCam = pipeline.createColorCamera()
-spatialDetectionNetwork = pipeline.createMobileNetSpatialDetectionNetwork()
-monoLeft = pipeline.createMonoCamera()
-monoRight = pipeline.createMonoCamera()
-stereo = pipeline.createStereoDepth()
+colorCam = pipeline.create(dai.node.ColorCamera)
+spatialDetectionNetwork = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+monoLeft = pipeline.create(dai.node.MonoCamera)
+monoRight = pipeline.create(dai.node.MonoCamera)
+stereo = pipeline.create(dai.node.StereoDepth)
 
 
 if(not spiOut):
-    xoutRgb = pipeline.createXLinkOut()
-    xoutNN = pipeline.createXLinkOut()
-    xoutBoundingBoxDepthMapping = pipeline.createXLinkOut()
-    xoutDepth = pipeline.createXLinkOut()
+    xoutRgb = pipeline.create(dai.node.XLinkOut)
+    xoutNN = pipeline.create(dai.node.XLinkOut)
+    xoutBoundingBoxDepthMapping = pipeline.create(dai.node.XLinkOut)
+    xoutDepth = pipeline.create(dai.node.XLinkOut)
 
     xoutRgb.setStreamName("rgb")
     xoutNN.setStreamName("detections")
@@ -49,7 +49,7 @@ if(not spiOut):
     xoutDepth.setStreamName("depth")
 
 else:
-    spiOutSpatialNN = pipeline.createSPIOut()
+    spiOutSpatialNN = pipeline.create(dai.node.SPIOut)
     spiOutSpatialNN.setStreamName("spimetaout")
     spiOutSpatialNN.setBusId(0)
 

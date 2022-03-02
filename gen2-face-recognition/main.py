@@ -225,7 +225,7 @@ def create_pipeline():
     face_rec_manip.out.link(face_rec_nn.input)
 
     if DISPLAY_FACE:
-        xout_face = pipeline.createXLinkOut()
+        xout_face = pipeline.create(dai.node.XLinkOut)
         xout_face.setStreamName('face')
         face_rec_manip.out.link(xout_face.input)
 

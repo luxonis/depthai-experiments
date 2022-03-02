@@ -36,29 +36,29 @@ pipeline = dai.Pipeline()
 
 # NeuralNetwork
 print("Creating Neural Network...")
-detection_nn = pipeline.createNeuralNetwork()
+detection_nn = pipeline.create(dai.node.NeuralNetwork)
 detection_nn.setBlobPath(blobconverter.from_zoo(name="efficientnet-b0"))
 
 if camera:
     print("Creating Color Camera...")
-    cam_rgb = pipeline.createColorCamera()
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
     cam_rgb.setPreviewSize(224,224)
     cam_rgb.setInterleaved(False)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
     cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
-    cam_xout = pipeline.createXLinkOut()
+    cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("rgb")
     cam_rgb.preview.link(cam_xout.input)
     cam_rgb.preview.link(detection_nn.input)
 else:
-    face_in = pipeline.createXLinkIn()
+    face_in = pipeline.create(dai.node.XLinkIn)
     face_in.setStreamName("in_nn")
     face_in.out.link(detection_nn.input)
 
 # Create outputs
-xout_nn = pipeline.createXLinkOut()
+xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 

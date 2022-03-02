@@ -24,7 +24,7 @@ nodes.stereo.setSubpixel(False)
 
 def stream_out(name, size, fps, out):
     # Create XLinkOutputs for the stream
-    xout = pipeline.createXLinkOut()
+    xout = pipeline.create(dai.node.XLinkOut)
     xout.setStreamName(name)
     out.link(xout.input)
 

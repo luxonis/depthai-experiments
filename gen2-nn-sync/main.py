@@ -14,33 +14,33 @@ def to_planar(arr: np.ndarray, shape: tuple) -> list:
 pipeline = dai.Pipeline()
 
 # Define a source - color camera
-cam_rgb = pipeline.createColorCamera()
+cam_rgb = pipeline.create(dai.node.ColorCamera)
 cam_rgb.setPreviewSize(300, 300)
 cam_rgb.setInterleaved(False)
 
 # Define a neural network that will make predictions based on the source frames
-detection_nn = pipeline.createNeuralNetwork()
+detection_nn = pipeline.create(dai.node.NeuralNetwork)
 detection_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
 cam_rgb.preview.link(detection_nn.input)
 
-landmarks_nn = pipeline.createNeuralNetwork()
+landmarks_nn = pipeline.create(dai.node.NeuralNetwork)
 landmarks_nn.setBlobPath(blobconverter.from_zoo(name="landmarks-regression-retail-0009", shaves=6))
 
 # Create outputs
-xin_rgb = pipeline.createXLinkIn()
+xin_rgb = pipeline.create(dai.node.XLinkIn)
 xin_rgb.setStreamName("land_in")
 xin_rgb.out.link(landmarks_nn.input)
 
 # Create outputs
-xout_frame = pipeline.createXLinkOut()
+xout_frame = pipeline.create(dai.node.XLinkOut)
 xout_frame.setStreamName("det_frame")
 cam_rgb.preview.link(xout_frame.input)
 
-xout_det = pipeline.createXLinkOut()
+xout_det = pipeline.create(dai.node.XLinkOut)
 xout_det.setStreamName("det_nn")
 detection_nn.out.link(xout_det.input)
 
-xout_land = pipeline.createXLinkOut()
+xout_land = pipeline.create(dai.node.XLinkOut)
 xout_land.setStreamName("land_nn")
 landmarks_nn.out.link(xout_land.input)
 

@@ -24,7 +24,7 @@ pipeline = dai.Pipeline()
 version = "2021.2"
 pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
 
-colorCam = pipeline.createColorCamera()
+colorCam = pipeline.create(dai.node.ColorCamera)
 colorCam.setPreviewSize(256, 256)
 colorCam.setVideoSize(1024, 1024) # 4 times larger in both axis
 colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -32,11 +32,11 @@ colorCam.setInterleaved(False)
 colorCam.setBoardSocket(dai.CameraBoardSocket.RGB)
 colorCam.setFps(10)
 
-controlIn = pipeline.createXLinkIn()
+controlIn = pipeline.create(dai.node.XLinkIn)
 controlIn.setStreamName('control')
 controlIn.out.link(colorCam.inputControl)
 
-cam_xout = pipeline.createXLinkOut()
+cam_xout = pipeline.create(dai.node.XLinkOut)
 cam_xout.setStreamName('video')
 colorCam.video.link(cam_xout.input)
 
@@ -44,19 +44,19 @@ colorCam.video.link(cam_xout.input)
 # 1st stage NN - text-detection
 # ---------------------------------------
 
-nn = pipeline.createNeuralNetwork()
+nn = pipeline.create(dai.node.NeuralNetwork)
 nn.setBlobPath(blobconverter.from_zoo(name="east_text_detection_256x256",zoo_type="depthai",shaves=6, version=version))
 nn.setNumPoolFrames(1)
 colorCam.preview.link(nn.input)
 
-det_passthrough_xout = pipeline.createXLinkOut()
+det_passthrough_xout = pipeline.create(dai.node.XLinkOut)
 det_passthrough_xout.setStreamName('det_passthrough')
 # Only send metadata, we are only interested in timestamp, so we can sync
 # depth frames with NN output
 det_passthrough_xout.setMetadataOnly(True)
 nn.passthrough.link(det_passthrough_xout.input)
 
-nn_xout = pipeline.createXLinkOut()
+nn_xout = pipeline.create(dai.node.XLinkOut)
 nn_xout.setStreamName('detections')
 nn.out.link(nn_xout.input)
 
@@ -64,27 +64,27 @@ nn.out.link(nn_xout.input)
 # 2nd stage NN - text-recognition-0012
 # ---------------------------------------
 
-manip = pipeline.createImageManip()
+manip = pipeline.create(dai.node.ImageManip)
 manip.setWaitForConfigInput(True)
 
-manip_img = pipeline.createXLinkIn()
+manip_img = pipeline.create(dai.node.XLinkIn)
 manip_img.setStreamName('manip_img')
 manip_img.out.link(manip.inputImage)
 
-manip_cfg = pipeline.createXLinkIn()
+manip_cfg = pipeline.create(dai.node.XLinkIn)
 manip_cfg.setStreamName('manip_cfg')
 manip_cfg.out.link(manip.inputConfig)
 
-manip_xout = pipeline.createXLinkOut()
+manip_xout = pipeline.create(dai.node.XLinkOut)
 manip_xout.setStreamName('manip_out')
 
-nn2 = pipeline.createNeuralNetwork()
+nn2 = pipeline.create(dai.node.NeuralNetwork)
 nn2.setBlobPath(blobconverter.from_zoo(name="text-recognition-0012", shaves=6, version=version))
 nn2.setNumInferenceThreads(2)
 manip.out.link(nn2.input)
 manip.out.link(manip_xout.input)
 
-nn2_xout = pipeline.createXLinkOut()
+nn2_xout = pipeline.create(dai.node.XLinkOut)
 nn2_xout.setStreamName("recognitions")
 nn2.out.link(nn2_xout.input)
 
