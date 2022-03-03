@@ -19,6 +19,8 @@ camRgb.setInterleaved(False)
 camRgb.setIspScale(1,5) # 4056x3040 -> 812x608
 camRgb.setPreviewSize(812, 608)
 camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+# Slightly lower FPS to avoid lag, as ISP takes more resources at 12MP
+camRgb.setFps(25)
 
 xoutIsp = pipeline.create(dai.node.XLinkOut)
 xoutIsp.setStreamName("isp")
