@@ -44,4 +44,4 @@ To use with DepthAI 4K RGB camera, use instead
 
 ```
 python3 main.py -cam
-``` 
+```

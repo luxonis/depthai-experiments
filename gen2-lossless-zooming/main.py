@@ -12,7 +12,7 @@ SCENE_SIZE = (1920, 1080)
 pipeline = dai.Pipeline()
 
 # Define a source - color camera
-cam = pipeline.createColorCamera()
+cam = pipeline.create(dai.node.ColorCamera)
 cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
 # Squash whole 4K frame into 300x300
@@ -22,7 +22,7 @@ cam.setInterleaved(False)
 cam.initialControl.setManualFocus(130)
 
 # Create MobileNet detection network
-mobilenet = pipeline.createMobileNetDetectionNetwork()
+mobilenet = pipeline.create(dai.node.MobileNetDetectionNetwork)
 mobilenet.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
 mobilenet.setConfidenceThreshold(0.7)
 cam.preview.link(mobilenet.input)
@@ -87,7 +87,7 @@ if MJPEG:
 script.outputs['cfg'].link(crop_manip.inputConfig)
 cam.isp.link(crop_manip.inputImage)
 
-xout = pipeline.createXLinkOut()
+xout = pipeline.create(dai.node.XLinkOut)
 xout.setStreamName('1080P')
 if MJPEG:
     videoEnc = pipeline.create(dai.node.VideoEncoder)
@@ -98,7 +98,7 @@ if MJPEG:
 else:
     crop_manip.out.link(xout.input)
 
-xoutFull = pipeline.createXLinkOut()
+xoutFull = pipeline.create(dai.node.XLinkOut)
 xoutFull.setStreamName('full')
 cam.preview.link(xoutFull.input)
 

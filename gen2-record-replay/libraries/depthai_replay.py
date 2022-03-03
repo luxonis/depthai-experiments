@@ -92,27 +92,27 @@ class Replay:
         nodes = types.SimpleNamespace()
 
         if 'color' in self.cap:
-            nodes.color = pipeline.createXLinkIn()
+            nodes.color = pipeline.create(dai.node.XLinkIn)
             nodes.color.setMaxDataSize(self.get_max_size('color'))
             nodes.color.setStreamName("color_in")
 
         if mono:
-            nodes.left = pipeline.createXLinkIn()
+            nodes.left = pipeline.create(dai.node.XLinkIn)
             nodes.left.setStreamName("left_in")
             nodes.left.setMaxDataSize(self.get_max_size('left'))
 
-            nodes.right = pipeline.createXLinkIn()
+            nodes.right = pipeline.create(dai.node.XLinkIn)
             nodes.right.setStreamName("right_in")
             nodes.right.setMaxDataSize(self.get_max_size('right'))
 
-            nodes.stereo = pipeline.createStereoDepth()
+            nodes.stereo = pipeline.create(dai.node.StereoDepth)
             nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
 
         if depth:
-            nodes.depth = pipeline.createXLinkIn()
+            nodes.depth = pipeline.create(dai.node.XLinkIn)
             nodes.depth.setStreamName("depth_in")
 
         return pipeline, nodes

@@ -53,31 +53,31 @@ def create_pipeline():
     cam.setVideoSize(1080,1080)
     cam.setInterleaved(False)
 
-    controlIn = pipeline.createXLinkIn()
+    controlIn = pipeline.create(dai.node.XLinkIn)
     controlIn.setStreamName('control')
     controlIn.out.link(cam.inputControl)
 
-    left = pipeline.createMonoCamera()
+    left = pipeline.create(dai.node.MonoCamera)
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-    right = pipeline.createMonoCamera()
+    right = pipeline.create(dai.node.MonoCamera)
     right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    stereo = pipeline.createStereoDepth()
+    stereo = pipeline.create(dai.node.StereoDepth)
     stereo.initialConfig.setConfidenceThreshold(240)
     stereo.setExtendedDisparity(True)
     left.out.link(stereo.left)
     right.out.link(stereo.right)
 
-    cam_xout = pipeline.createXLinkOut()
+    cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("frame")
     cam.video.link(cam_xout.input)
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.createMobileNetSpatialDetectionNetwork()
+    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.4)
     face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",

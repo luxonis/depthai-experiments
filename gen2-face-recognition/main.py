@@ -161,6 +161,7 @@ def create_pipeline():
     # Script node will take the output from the face detection NN as an input and set ImageManipConfig
     # to the 'age_gender_manip' to crop the initial frame
     script = pipeline.create(dai.node.Script)
+    script.setProcessor(dai.ProcessorType.LEON_CSS)
 
     face_det_nn.out.link(script.inputs['face_det_in'])
     # We are only interested in timestamp, so we can sync depth frames with NN output
@@ -224,7 +225,7 @@ def create_pipeline():
     face_rec_manip.out.link(face_rec_nn.input)
 
     if DISPLAY_FACE:
-        xout_face = pipeline.createXLinkOut()
+        xout_face = pipeline.create(dai.node.XLinkOut)
         xout_face.setStreamName('face')
         face_rec_manip.out.link(xout_face.input)
 

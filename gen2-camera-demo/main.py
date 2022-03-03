@@ -65,9 +65,9 @@ def create_rgb_cam_pipeline():
     print("Creating pipeline: RGB CAM -> XLINK OUT")
     pipeline = dai.Pipeline()
 
-    cam          = pipeline.createColorCamera()
-    xout_preview = pipeline.createXLinkOut()
-    xout_video   = pipeline.createXLinkOut()
+    cam          = pipeline.create(dai.node.ColorCamera)
+    xout_preview = pipeline.create(dai.node.XLinkOut)
+    xout_video   = pipeline.create(dai.node.XLinkOut)
 
     cam.setPreviewSize(540, 540)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -88,10 +88,10 @@ def create_mono_cam_pipeline():
     print("Creating pipeline: MONO CAMS -> XLINK OUT")
     pipeline = dai.Pipeline()
 
-    cam_left   = pipeline.createMonoCamera()
-    cam_right  = pipeline.createMonoCamera()
-    xout_left  = pipeline.createXLinkOut()
-    xout_right = pipeline.createXLinkOut()
+    cam_left   = pipeline.create(dai.node.MonoCamera)
+    cam_right  = pipeline.create(dai.node.MonoCamera)
+    xout_left  = pipeline.create(dai.node.XLinkOut)
+    xout_right = pipeline.create(dai.node.XLinkOut)
 
     cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
     cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
@@ -118,18 +118,18 @@ def create_stereo_depth_pipeline(from_camera=True):
     pipeline = dai.Pipeline()
 
     if from_camera:
-        cam_left      = pipeline.createMonoCamera()
-        cam_right     = pipeline.createMonoCamera()
+        cam_left      = pipeline.create(dai.node.MonoCamera)
+        cam_right     = pipeline.create(dai.node.MonoCamera)
     else:
-        cam_left      = pipeline.createXLinkIn()
-        cam_right     = pipeline.createXLinkIn()
-    stereo            = pipeline.createStereoDepth()
-    xout_left         = pipeline.createXLinkOut()
-    xout_right        = pipeline.createXLinkOut()
-    xout_depth        = pipeline.createXLinkOut()
-    xout_disparity    = pipeline.createXLinkOut()
-    xout_rectif_left  = pipeline.createXLinkOut()
-    xout_rectif_right = pipeline.createXLinkOut()
+        cam_left      = pipeline.create(dai.node.XLinkIn)
+        cam_right     = pipeline.create(dai.node.XLinkIn)
+    stereo            = pipeline.create(dai.node.StereoDepth)
+    xout_left         = pipeline.create(dai.node.XLinkOut)
+    xout_right        = pipeline.create(dai.node.XLinkOut)
+    xout_depth        = pipeline.create(dai.node.XLinkOut)
+    xout_disparity    = pipeline.create(dai.node.XLinkOut)
+    xout_rectif_left  = pipeline.create(dai.node.XLinkOut)
+    xout_rectif_right = pipeline.create(dai.node.XLinkOut)
 
     if from_camera:
         cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)

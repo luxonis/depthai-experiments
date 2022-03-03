@@ -96,7 +96,7 @@ pipeline = dai.Pipeline()
 if args.camera_tuning:
     pipeline.setCameraTuningBlobPath(str(args.camera_tuning))
 
-cam = pipeline.createColorCamera()
+cam = pipeline.create(dai.node.ColorCamera)
 cam.setResolution(rgb_res)
 # Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
 if args.lens_position >= 0:
@@ -107,17 +107,17 @@ if args.rotate:
     cam.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
 # Camera control input
-control = pipeline.createXLinkIn()
+control = pipeline.create(dai.node.XLinkIn)
 control.setStreamName('control')
 control.out.link(cam.inputControl)
 
 if 'isp' in streams:
-    xout_isp = pipeline.createXLinkOut()
+    xout_isp = pipeline.create(dai.node.XLinkOut)
     xout_isp.setStreamName('isp')
     cam.isp.link(xout_isp.input)
 
 if 'raw' in streams:
-    xout_raw = pipeline.createXLinkOut()
+    xout_raw = pipeline.create(dai.node.XLinkOut)
     xout_raw.setStreamName('raw')
     cam.raw.link(xout_raw.input)
 

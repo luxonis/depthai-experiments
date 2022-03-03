@@ -14,9 +14,9 @@ def create_spi_demo_pipeline():
     print("COLOR CAM -> ENCODER -> SPI OUT")
     pipeline = dai.Pipeline()
 
-    cam_color         = pipeline.createColorCamera()
-    spiout_preview    = pipeline.createSPIOut()
-    videnc            = pipeline.createVideoEncoder()
+    cam_color         = pipeline.create(dai.node.ColorCamera)
+    spiout_preview    = pipeline.create(dai.node.SPIOut)
+    videnc            = pipeline.create(dai.node.VideoEncoder)
 
     # set up color camera and link to NN node
     cam_color.setPreviewSize(300, 300);

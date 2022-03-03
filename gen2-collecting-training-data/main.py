@@ -46,31 +46,31 @@ dest.mkdir(parents=True, exist_ok=True)
 def create_pipeline(depth_enabled=True):
     pipeline = dai.Pipeline()
 
-    rgb = pipeline.createColorCamera()
+    rgb = pipeline.create(dai.node.ColorCamera)
     rgb.setPreviewSize(300, 300)
     rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
     rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     rgb.setInterleaved(False)
     rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
-    controlIn = pipeline.createXLinkIn()
+    controlIn = pipeline.create(dai.node.XLinkIn)
     controlIn.setStreamName('control')
     controlIn.out.link(rgb.inputControl)
 
-    rgbOut = pipeline.createXLinkOut()
+    rgbOut = pipeline.create(dai.node.XLinkOut)
     rgbOut.setStreamName("color")
     rgb.preview.link(rgbOut.input)
 
     if depth_enabled:
-        left = pipeline.createMonoCamera()
+        left = pipeline.create(dai.node.MonoCamera)
         left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-        right = pipeline.createMonoCamera()
+        right = pipeline.create(dai.node.MonoCamera)
         right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-        depth = pipeline.createStereoDepth()
+        depth = pipeline.create(dai.node.StereoDepth)
         depth.initialConfig.setConfidenceThreshold(255)
         median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
         depth.initialConfig.setMedianFilter(median)
@@ -82,13 +82,13 @@ def create_pipeline(depth_enabled=True):
         right.out.link(depth.right)
 
         # Create output
-        leftOut = pipeline.createXLinkOut()
+        leftOut = pipeline.create(dai.node.XLinkOut)
         leftOut.setStreamName("left")
         left.out.link(leftOut.input)
-        rightOut = pipeline.createXLinkOut()
+        rightOut = pipeline.create(dai.node.XLinkOut)
         rightOut.setStreamName("right")
         right.out.link(rightOut.input)
-        depthOut = pipeline.createXLinkOut()
+        depthOut = pipeline.create(dai.node.XLinkOut)
         depthOut.setStreamName("disparity")
         depth.disparity.link(depthOut.input)
 

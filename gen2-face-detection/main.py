@@ -46,30 +46,30 @@ pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
 
 
 # Define a neural network that will detect faces
-detection_nn = pipeline.createNeuralNetwork()
+detection_nn = pipeline.create(dai.node.NeuralNetwork)
 detection_nn.setBlobPath(nn_path)
 detection_nn.setNumPoolFrames(4)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 
 # Define camera
-cam = pipeline.createColorCamera()
+cam = pipeline.create(dai.node.ColorCamera)
 cam.setPreviewSize(VIDEO_WIDTH, VIDEO_HEIGHT)
 cam.setInterleaved(False)
 cam.setFps(40)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
 # Define manip
-manip = pipeline.createImageManip()
+manip = pipeline.create(dai.node.ImageManip)
 manip.initialConfig.setResize(NN_WIDTH, NN_HEIGHT)
 manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 manip.setWaitForConfigInput(False)
 
 # Create outputs
-xout_cam = pipeline.createXLinkOut()
+xout_cam = pipeline.create(dai.node.XLinkOut)
 xout_cam.setStreamName("cam")
 
-xout_nn = pipeline.createXLinkOut()
+xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 
 

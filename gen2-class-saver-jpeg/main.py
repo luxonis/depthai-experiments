@@ -14,22 +14,22 @@ pipeline = dai.Pipeline()
 
 
 # Define a source - color camera
-cam_rgb = pipeline.createColorCamera()
+cam_rgb = pipeline.create(dai.node.ColorCamera)
 cam_rgb.setPreviewSize(300, 300)
 cam_rgb.setInterleaved(False)
 
 # Define a neural network that will make predictions based on the source frames
-detection_nn = pipeline.createMobileNetDetectionNetwork()
+detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 detection_nn.setConfidenceThreshold(0.5)
 detection_nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=13))
 cam_rgb.preview.link(detection_nn.input)
 
 # Create outputs
-xout_rgb = pipeline.createXLinkOut()
+xout_rgb = pipeline.create(dai.node.XLinkOut)
 xout_rgb.setStreamName("rgb")
 cam_rgb.preview.link(xout_rgb.input)
 
-xout_nn = pipeline.createXLinkOut()
+xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 

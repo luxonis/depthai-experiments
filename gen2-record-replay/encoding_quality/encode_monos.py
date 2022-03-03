@@ -16,10 +16,10 @@ pipeline, nodes = replay.init_pipeline()
 
 def stream_out(name, size, fps, out):
     # Create XLinkOutputs for the stream
-    xout = pipeline.createXLinkOut()
+    xout = pipeline.create(dai.node.XLinkOut)
     xout.setStreamName(name)
 
-    enc = pipeline.createVideoEncoder()
+    enc = pipeline.create(dai.node.VideoEncoder)
     enc.setDefaultProfilePreset(size, fps, dai.VideoEncoderProperties.Profile.MJPEG)
     # enc.setBitrateKbps(100000)
     # enc.setLossless(True)

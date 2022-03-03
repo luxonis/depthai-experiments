@@ -20,7 +20,7 @@ def create_pipeline():
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-    cam_xout = pipeline.createXLinkOut()
+    cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("cam_out")
     cam.preview.link(cam_xout.input)
 
@@ -82,7 +82,12 @@ def remove_prev_frame(seq):
             break
     for i in range(rm):
         l.pop(0)
-
+def correct_bb(bb):
+    if bb.xmin < 0: bb.xmin = 0.0
+    if bb.ymin < 0: bb.ymin = 0.0
+    if bb.xmax > 1: bb.xmax = 0.999
+    if bb.ymax > 1: bb.ymax = 0.999
+    return bb
 while True:
     preview = node.io['preview'].tryGet()
     if preview is not None:
@@ -103,6 +108,7 @@ while True:
 
         for det in face_dets.detections:
             cfg = ImageManipConfig()
+            correct_bb(det)
             cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
             cfg.setResize(62, 62)
             cfg.setKeepAspectRatio(False)
