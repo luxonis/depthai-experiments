@@ -16,18 +16,21 @@ pipeline = dai.Pipeline()
 camRgb = pipeline.create(dai.node.ColorCamera)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
 camRgb.setInterleaved(False)
-camRgb.setIspScale(1,5) # 4032x3040 -> 812x608
+camRgb.setIspScale(1,5) # 4056x3040 -> 812x608
+camRgb.setPreviewSize(812, 608)
+camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+# Slightly lower FPS to avoid lag, as ISP takes more resources at 12MP
+camRgb.setFps(25)
 
 xoutIsp = pipeline.create(dai.node.XLinkOut)
 xoutIsp.setStreamName("isp")
 camRgb.isp.link(xoutIsp.input)
 
-# Use ImageManip to resize to 300x300 and convert YUV420 -> RGB
+# Use ImageManip to resize to 300x300 with letterboxing
 manip = pipeline.create(dai.node.ImageManip)
 manip.setMaxOutputFrameSize(270000) # 300x300x3
 manip.initialConfig.setResizeThumbnail(300, 300)
-manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p) # needed for NN
-camRgb.isp.link(manip.inputImage)
+camRgb.preview.link(manip.inputImage)
 
 # NN to demonstrate how to run inference on full FOV frames
 nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
