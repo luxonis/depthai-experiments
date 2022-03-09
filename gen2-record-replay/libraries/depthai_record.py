@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
-from pathlib import Path
-from multiprocessing import Queue
-from threading import Thread
-import depthai as dai
+import base64
+import json
+import math
+import struct
+import time
 from enum import Enum
-import cv2
+from multiprocessing import Queue
+from pathlib import Path
+from threading import Thread
+
+import depthai as dai
+import numpy as np
+from mcap.mcap0.writer import Writer
+
 
 class EncodingQuality(Enum):
-    BEST = 1 # Lossless MJPEG
-    HIGH = 2 # MJPEG Quality=97 (default)
-    MEDIUM = 3 # MJPEG Quality=93
-    LOW = 4 # H265 BitrateKbps=10000
+    BEST = 1  # Lossless MJPEG
+    HIGH = 2  # MJPEG Quality=97 (default)
+    MEDIUM = 3  # MJPEG Quality=93
+    LOW = 4  # H265 BitrateKbps=10000
 
 
-class Record():
-    def __init__(self, path: Path, device) -> None:
+class Record:
+    def __init__(self, path: Path, device, mcap) -> None:
         self.save = ['color', 'left', 'right']
         self.fps = 30
         self.timelapse = -1
@@ -31,11 +39,14 @@ class Record():
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
         self.convert_mp4 = False
+        self.mcap = mcap
 
     def run(self):
         files = {}
+        mcaps = {}
+
         def create_video_file(name):
-            if name == 'depth': # or (name=='color' and 'depth' in self.save):
+            if name == 'depth':  # or (name=='color' and 'depth' in self.save):
                 files[name] = self.depthAiBag
             else:
                 ext = 'h265' if self.quality == EncodingQuality.LOW else 'mjpeg'
@@ -43,7 +54,12 @@ class Record():
             # if name == "color": fourcc = "I420"
             # elif name == "depth": fourcc = "Y16 " # 16-bit uncompressed greyscale image
             # else : fourcc = "GREY" #Simple, single Y plane for monochrome images.
-            # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
+            # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name],
+            # isColor=name=="color")
+
+        def create_mcap_file(name):
+            mcaps[name] = Mcap(str(self.path / f"{name}"))
+            mcaps[name].imageInit()
 
         while True:
             try:
@@ -51,23 +67,35 @@ class Record():
                 if frames is None:
                     break
                 for name in frames:
-                    if name not in files: # File wasn't created yet
-                        create_video_file(name)
+                    if not self.mcap:
+                        if name not in files:  # File wasn't created yet
+                            create_video_file(name)
+                        # if self.rotate != -1:  # Doesn't work atm
+                        # frames[name] = cv2.rotate(frames[name], self.rotate)
 
-                    # if self.rotate != -1: # Doesn't work atm
-                    #     frames[name] = cv2.rotate(frames[name], self.rotate)
+                        files[name].write(frames[name])
 
-                    files[name].write(frames[name])
-                    # frames[name].tofile(files[name])
+                        # frames[name].tofile(files[name])
+
+                    else:
+                        if name not in mcaps:  # File wasn't created yet
+                            create_mcap_file(name)
+
+                        mcaps[name].imageSave(frames[name])
+
             except KeyboardInterrupt:
                 break
         # Close all files - Can't use ExitStack with VideoWriter
-        for name in files:
-            files[name].close()
+        if not self.mcap:
+            for name in files:
+                files[name].close()
+        else:
+            for name in mcaps:
+                mcaps[name].close()
         print('Exiting store frame thread')
 
     def start(self):
-        if not self.stereo: # If device doesn't have stereo camera pair
+        if not self.stereo:  # If device doesn't have stereo camera pair
             if "left" in self.save: self.save.remove("left")
             if "right" in self.save: self.save.remove("right")
             if "disparity" in self.save: self.save.remove("disparity")
@@ -84,7 +112,7 @@ class Record():
             from libraries.depthai_rosbags import DepthAiBags
             res = ['depth']
             # If rotate 90 degrees
-            if self.rotate in [0,2]: res = (res[1], res[0])
+            if self.rotate in [0, 2]: res = (res[1], res[0])
             self.depthAiBag = DepthAiBags(self.path, self.device, self.get_sizes(), rgb='color' in self.save)
 
         self.frame_q = Queue(20)
@@ -102,7 +130,6 @@ class Record():
                 'name': stream,
                 'mxid': self.mxid
             })
-
 
     def set_fps(self, fps):
         self.fps = fps
@@ -122,6 +149,7 @@ class Record():
     - cv2.ROTATE_180 (1)
     - cv2.ROTATE_90_COUNTERCLOCKWISE (2)
     '''
+
     def set_rotate(self, angle):
         raise Exception("Rotating not yet supported!")
         # Currently RealSense Viewer throws error "memory access violation". Debug.
@@ -191,7 +219,7 @@ class Record():
             # RealSense Viewer expects RGB color order
             nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
             nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-            nodes['color'].setIspScale(1,2) # 1080P
+            nodes['color'].setIspScale(1, 2)  # 1080P
             nodes['color'].setFps(self.fps)
 
             if self.preview:
@@ -200,7 +228,7 @@ class Record():
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
-            stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
+            stream_out("color", nodes['color'].getFps(), nodes['color'].video)  # , noEnc='depth' in self.save)
 
         if True in (el in ["left", "disparity", "depth"] for el in self.save):
             create_mono("left")
@@ -221,7 +249,7 @@ class Record():
             nodes['stereo'].setExtendedDisparity(False)
 
             if "disparity" not in self.save and "depth" in self.save:
-                nodes['stereo'].setSubpixel(True) # For better depth visualization
+                nodes['stereo'].setSubpixel(True)  # For better depth visualization
 
             # if "depth" and "color" in self.save: # RGB depth alignment
             #     nodes['color'].setIspScale(1,3) # 4k -> 720P
@@ -242,3 +270,193 @@ class Record():
         self.pipeline = pipeline
         return pipeline, nodes
 
+
+class Mcap:
+
+    # when initialising send in path (folder most likely: "./recordings/-name-") without .mcap at the end
+    def __init__(self, path):
+        self.fileName = path + ".mcap"
+        self.stream = open(self.fileName, "wb")
+        self.writer = Writer(self.stream)
+        self.writer.start(profile="x-custom", library="my-writer-v1")
+        self.channel_id = None
+
+    def imageInit(self):
+        # create schema for the type of message that will be sent over to foxglove
+        # for more details on how the schema must look like visit:
+        # http://docs.ros.org/en/noetic/api/sensor_msgs/html/index-msg.html
+        schema_id = self.writer.register_schema(
+            name="ros.sensor_msgs.CompressedImage",
+            encoding="jsonschema",
+            data=json.dumps(
+                {
+                    "type": "object",
+                    "properties": {
+                        "header": {
+                            "type": "object",
+                            "properties": {
+                                "stamp": {
+                                    "type": "object",
+                                    "properties": {
+                                        "sec": {"type": "integer"},
+                                        "nsec": {"type": "integer"},
+                                    },
+                                },
+                            },
+                        },
+                        "format": {"type": "string"},
+                        "data": {"type": "string", "contentEncoding": "base64"},
+                    },
+                },
+            ).encode()
+        )
+
+        # create and register channel
+        self.channel_id = self.writer.register_channel(
+            schema_id=schema_id,
+            topic="image",
+            message_encoding="json",
+        )
+
+    def pointCloudInit(self):
+        # create schema for the type of message that will be sent over to foxglove
+        # for more details on how the schema must look like visit:
+        # http://docs.ros.org/en/noetic/api/sensor_msgs/html/index-msg.html
+        schema_id = self.writer.register_schema(
+            "ros.sensor_msgs.PointCloud2",
+            "jsonschema",
+            data=json.dumps(
+                {
+                    "type": "object",
+                    "properties": {
+                        "header": {
+                            "type": "object",
+                            "properties": {
+                                "seq": {"type": "integer"},
+                                "stamp": {
+                                    "type": "object",
+                                    "properties": {
+                                        "sec": {"type": "integer"},
+                                        "nsec": {"type": "integer"},
+                                    },
+                                },
+                                "frame_id": {"type": "string"}
+                            },
+                        },
+                        "height": {"type": "integer"},
+                        "width": {"type": "integer"},
+                        "fields": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "offset": {"type": "integer"},
+                                    "datatype": {"type": "integer"},
+                                    "count": {"type": "integer"}
+                                }
+                            },
+                        },
+                        "is_bigendian": {"type": "boolean"},
+                        "point_step": {"type": "integer"},
+                        "row_step": {"type": "integer"},
+                        "data": {"type": "string", "contentEncoding": "base64"},
+                        "is_dense": {"type": "boolean"}
+                    },
+                },
+            ).encode("utf8")
+        )
+
+        # create and register channel
+        self.channel_id = self.writer.register_channel(
+            schema_id=schema_id,
+            topic="pointClouds",
+            message_encoding="json",
+        )
+
+    # send in image read with "cv2.getCvFrame"
+    def imageSave(self, img):
+        # convert cv2 image to .jpg format
+        # is_success, im_buf_arr = cv2.imencode(".jpg", img)
+
+        # read from .jpeg format to buffer of bytes
+        # byte_im = im_buf_arr.tobytes()
+        byte_im = img.tobytes()
+
+        # data must be encoded in base64
+        data = base64.b64encode(byte_im).decode("ascii")
+
+        tmpTime = time.time_ns()
+        sec = math.trunc(tmpTime / 1e9)
+        nsec = tmpTime - sec
+
+        self.writer.add_message(
+            channel_id=self.channel_id,
+            log_time=tmpTime,
+            data=json.dumps(
+                {
+                    "header": {"stamp": {"sec": sec, "nsec": nsec}},
+                    "format": "jpeg",
+                    "data": data,
+                }
+            ).encode("utf8"),
+            publish_time=tmpTime,
+        )
+
+    # send in point cloud object read with
+    # "o3d.io.read_point_cloud" or
+    # "o3d.geometry.PointCloud.create_from_depth_image"
+    # seq is just a sequence number that will be incremented in main  program (int from 0 to number at end of recording)
+    def pointCloudSave(self, pcd, seq):
+        points = np.asarray(pcd.points)
+
+        # points must be read to a buffer and then encoded with base64
+        buf = bytes()
+        for point in points:
+            buf += struct.pack('f', float(point[0]))
+            buf += struct.pack('f', float(point[1]))
+            buf += struct.pack('f', float(point[2]))
+
+        data = base64.b64encode(buf).decode("ascii")
+
+        tmpTime = time.time_ns()
+        sec = math.trunc(tmpTime / 1e9)
+        nsec = tmpTime - sec
+
+        self.writer.add_message(
+            channel_id=self.channel_id,
+            log_time=time.time_ns(),
+            data=json.dumps(
+                {
+                    "header": {
+                        "seq": seq,
+                        "stamp": {"sec": sec, "nsec": nsec},
+                        "frame_id": "front"
+                    },
+                    "height": 1,
+                    "width": len(pcd),
+                    "fields": [{"name": "x", "offset": 0, "datatype": 7, "count": 1},
+                               {"name": "y", "offset": 4, "datatype": 7, "count": 1},
+                               {"name": "z", "offset": 8, "datatype": 7, "count": 1}],
+                    "is_bigendian": False,
+                    "point_step": 12,
+                    "row_step": 12 * len(pcd),
+                    "data": data,
+                    "is_dense": True
+                }
+            ).encode("utf8"),
+            publish_time=time.time_ns(),
+        )
+
+    def imuInit(self):
+        # TODO create imu support
+        return
+
+    def imuSave(self):
+        # TODO create imu support
+        return
+
+    def close(self):
+        # end writer and close opened file
+        self.writer.finish()
+        self.stream.close()

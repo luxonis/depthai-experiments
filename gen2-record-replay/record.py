@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 import argparse
-import depthai as dai
-from datetime import timedelta
 import contextlib
 import math
 import time
+from datetime import timedelta
 from pathlib import Path
+
 import cv2
+import depthai as dai
 
 # DepthAI Record library
 from libraries.depthai_record import EncodingQuality, Record
 
-_save_choices = ("color", "left", "right", "disparity", "depth") # TODO: depth/IMU/ToF...
+_save_choices = ("color", "left", "right", "disparity", "depth")  # TODO: depth/IMU/ToF...
 _quality_choices = ("BEST", "HIGH", "MEDIUM", "LOW")
 
 parser = argparse.ArgumentParser()
@@ -27,10 +28,12 @@ parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
 parser.add_argument('-tl', '--timelapse', type=int, default=-1,
                     help='Number of seconds between frames for timelapse recording. Default: timelapse disabled')
 parser.add_argument('-d', '--display', action="store_true", help="Display color preview")
+parser.add_argument('-mcap', '--mcap', action="store_true", help="Mcap file format")
 
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
 save_path = Path.cwd() / args.path
+
 
 # Host side timestamp frame sync across multiple devices
 def check_sync(queues, timestamp):
@@ -51,6 +54,7 @@ def check_sync(queues, timestamp):
     else:
         return False
 
+
 def run_record():
     # Record from all available devices
     with contextlib.ExitStack() as stack:
@@ -69,7 +73,7 @@ def run_record():
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
             # Create recording object for this device
-            recording = Record(save_path, device)
+            recording = Record(save_path, device, args.mcap)
             # Set recording configuration
             # TODO: add support for specifying resolution
             recording.set_fps(args.fps)
@@ -99,7 +103,7 @@ def run_record():
                             # Timelapse
                             if 0 < args.timelapse: timelapse = time.time()
                             if args.frame_cnt == frame_counter: raise KeyboardInterrupt
-                            frame_counter+=1
+                            frame_counter += 1
 
                             for recording in recordings:
                                 frames = {}
@@ -118,8 +122,9 @@ def run_record():
 
         for recording in recordings:
             recording.frame_q.put(None)
-            recording.process.join() # Terminate the process
+            recording.process.join()  # Terminate the process
         print("All recordings have stopped. Exiting program")
+
 
 if __name__ == '__main__':
     run_record()
