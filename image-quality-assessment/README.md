@@ -11,7 +11,7 @@ The model outputs 4 quality classes
 
 ## Demo
 
-![Image quality classification](demo.gif)
+![Image quality classification](https://i.imgur.com/mqSkcN7.gif)
 
 ## Pre-requisites
 
