@@ -4,7 +4,7 @@ import cv2
 import depthai as dai
 import numpy as np
 import models.kornia_depth_to_3d
-
+import torch
 try:
     from projector_device import PointCloudVisualizer
 except ImportError as e:
@@ -42,13 +42,13 @@ def configureDepthPostProcessing(stereoDepthNode):
     config = stereoDepthNode.initialConfig.get()
     config.postProcessing.speckleFilter.enable = True
     config.postProcessing.speckleFilter.speckleRange = 60
-    # config.postProcessing.temporalFilter.enable = True
-    # config.postProcessing.spatialFilter.enable = True
-    # config.postProcessing.spatialFilter.holeFillingRadius = 2
-    # config.postProcessing.spatialFilter.numIterations = 1
-    config.postProcessing.thresholdFilter.minRange = 400  # mm
+    config.postProcessing.temporalFilter.enable = True
+
+    config.postProcessing.spatialFilter.holeFillingRadius = 2
+    config.postProcessing.spatialFilter.numIterations = 1
+    config.postProcessing.thresholdFilter.minRange = 700  # mm
     config.postProcessing.thresholdFilter.maxRange = 4000  # mm
-    config.postProcessing.decimationFilter.decimationFactor = 1
+    # config.postProcessing.decimationFilter.decimationFactor = 1
     config.censusTransform.enableMeanMode = True
     config.costMatching.linearEquationParameters.alpha = 0
     config.costMatching.linearEquationParameters.beta = 2
@@ -90,7 +90,15 @@ right.out.link(stereo.right)
 
 # Depth -> PointCloud
 nn = pipeline.createNeuralNetwork()
-stereo.depth.link(nn.input)
+stereo.depth.link(nn.inputs["depth"])
+# nn.inputs["depth"].setWaitForMessage(False)
+# nn.inputs["depth"].setWaitForMessage(True)
+
+calib_in = pipeline.createXLinkIn()
+calib_in.setStreamName("calib_in")
+calib_in.out.link(nn.inputs["matrix"])
+# Only send calibration data once, and always reuse the message
+nn.inputs["matrix"].setReusePreviousMessage(True)
 
 pointsOut = pipeline.createXLinkOut()
 pointsOut.setStreamName("pcl")
@@ -101,13 +109,27 @@ if __name__ == "__main__":
     # Connect to device and start pipeline
     print("Opening device")
     with dai.Device() as device:
+        # device.setIrLaserDotProjectorBrightness(400)
         device.setLogLevel(dai.LogLevel.ERR)
 
-        mxid = device.getMxId()
-        calibData = device.readCalibration()
-        blobPath = models.kornia_depth_to_3d.getPath(mxid, resolution, calibData)
+        blobPath = models.kornia_depth_to_3d.getPath(resolution)
         nn.setBlobPath(blobPath)
         device.startPipeline(pipeline)
+
+        # baseline in mm
+        calibData = device.readCalibration()
+        M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT,
+            dai.Size2f(resolution[0], resolution[1]),
+        )
+
+        print(torch.Tensor([M_right]))
+
+        # self.camera_matrix = torch.Tensor([M_right])
+        matrix = np.array([M_right], dtype=np.float16).flatten()
+        print(matrix)
+        buff = dai.NNData()
+        buff.setLayer("matrix", matrix)
+        device.getInputQueue("calib_in").send(buff)
 
         pcl_converter = PointCloudVisualizer()
         queue = device.getOutputQueue("pcl", maxSize=8, blocking=False)
@@ -120,7 +142,8 @@ if __name__ == "__main__":
                 cv2.imshow("color", inRgb.getCvFrame())
 
             pcl_data = np.array(queue.get().getData()).view(np.float16).reshape(1, 3, resolution[1], resolution[0])
-            pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
+            # print(pcl_data)
+            pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64)
             pcl_converter.visualize_pcl(pcl_data, downsample=downsample_pcl)
 
             if cv2.waitKey(1) == "q":
