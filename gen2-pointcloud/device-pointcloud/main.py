@@ -125,10 +125,10 @@ if __name__ == "__main__":
         print(torch.Tensor([M_right]))
 
         # self.camera_matrix = torch.Tensor([M_right])
-        matrix = np.array([M_right], dtype=np.float16).flatten()
-        print(matrix)
-        buff = dai.NNData()
-        buff.setLayer("matrix", matrix)
+        matrix = np.array([M_right]).flatten().astype(np.int16).view(np.int8)
+        print("matrix", matrix)
+        buff = dai.Buffer()
+        buff.setData(matrix)
         device.getInputQueue("calib_in").send(buff)
 
         pcl_converter = PointCloudVisualizer()
@@ -141,9 +141,12 @@ if __name__ == "__main__":
             if inRgb is not None:
                 cv2.imshow("color", inRgb.getCvFrame())
 
-            pcl_data = np.array(queue.get().getData()).view(np.float16).reshape(1, 3, resolution[1], resolution[0])
+            in_nn = queue.get()
+            [print(f"Layer name: {l.name}, Type: {l.dataType}, Dimensions: {l.dims}") for l in in_nn.getAllLayers()]
+            print(in_nn.getLayerFp16("cameramatrix"))
+            pcl_data = np.array(in_nn.getLayerFp16("out")).reshape(1, 3, resolution[1], resolution[0])
             # print(pcl_data)
-            pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64)
+            pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
             pcl_converter.visualize_pcl(pcl_data, downsample=downsample_pcl)
 
             if cv2.waitKey(1) == "q":

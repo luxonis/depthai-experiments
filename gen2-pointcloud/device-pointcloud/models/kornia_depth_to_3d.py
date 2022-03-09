@@ -10,11 +10,18 @@ from kornia.geometry.depth import depth_to_3d
 import os
 
 class Model(nn.Module):
-    def forward(self, cam_matrix, depth):
+    def forward(self, matrix, depth):
         # TODO: once U16 -> FP16 is supported, use that.
-        depthFP16 = 0.256 * depth[:,:,:,1::2] + depth[:,:,:,::2] / 1000
-        matrix = torch.reshape(cam_matrix, (1,3,3)).float()
-        return depth_to_3d(depthFP16, matrix, normalize_points=False)
+        depthFP16 = 256.0 * depth[:,:,:,1::2] + depth[:,:,:,::2]
+        print("depthFP16", depthFP16)
+
+        # TODO: Use FP16 camera matrix
+        matrixFP16 = 256.0 * matrix[1::2] + matrix[::2]
+        print("a", matrixFP16)
+        cam_matrix = torch.reshape(matrixFP16, (1,3,3))
+        print("b", cam_matrix)
+        matrix_ret = matrixFP16 * 1
+        return depth_to_3d(depthFP16, cam_matrix, normalize_points=False), matrix_ret
 
 def getPath(resolution):
     (width, heigth) = resolution
@@ -35,13 +42,15 @@ def getPath(resolution):
     shape = (1, 1, heigth, width * 2)
     model = Model()
     X = torch.ones(shape, dtype=torch.float16)
-    camMatrix = torch.ones((1,9), dtype=torch.float16)
+    camMatrix = torch.ones((18), dtype=torch.float16)
+    model.forward(camMatrix, X)
 
     torch.onnx.export(
         model,
         (camMatrix, X),
         onnx_path,
         input_names = ['matrix', 'depth'], # Optional
+        output_names = ['out', 'cameramatrix'], # Optional
         opset_version=12,
         do_constant_folding=True,
     )
@@ -61,7 +70,7 @@ def getPath(resolution):
         use_cache=False,
         output_dir="out",
         optimizer_params=[],
-        compile_params=['-iop matrix:FP16,depth:U8'],
+        compile_params=['-iop matrix:U8,depth:U8'],
     )
 
     os.rename(blob_path, return_path)
