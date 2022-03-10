@@ -4,7 +4,7 @@ import cv2
 import depthai as dai
 import numpy as np
 import models.kornia_depth_to_3d
-import torch
+
 try:
     from projector_device import PointCloudVisualizer
 except ImportError as e:
@@ -14,12 +14,14 @@ except ImportError as e:
 ############################################################################
 # USER CONFIGURABLE PARAMETERS (also see configureDepthPostProcessing())
 
+COLOR = True # Stream & display color frames
+
 # Depth resolution
-resolution = (640,400)
+resolution = (640,400) # 19 FPS (without visualization)
 # Other options:
 # resolution = (640,480) # OAK-D-Lite
-# resolution = (1280, 720)
-# resolution = (1280, 800)
+# resolution = (1280, 720) # 5.5 FPS (without visualization)
+# resolution = (1280, 800) # 5 FPS (without visualization)
 
 # parameters to speed up visualization
 downsample_pcl = True  # downsample the pointcloud before operating on it and visualizing
@@ -67,12 +69,13 @@ def get_resolution(width):
 pipeline = dai.Pipeline()
 pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
-camRgb = pipeline.createColorCamera()
-camRgb.setIspScale(1,3)
+if COLOR:
+    camRgb = pipeline.createColorCamera()
+    camRgb.setIspScale(1,3)
 
-rgbOut = pipeline.createXLinkOut()
-rgbOut.setStreamName("rgb")
-camRgb.isp.link(rgbOut.input)
+    rgbOut = pipeline.createXLinkOut()
+    rgbOut.setStreamName("rgb")
+    camRgb.isp.link(rgbOut.input)
 
 # Configure Camera Properties
 left = pipeline.createMonoCamera()
@@ -109,43 +112,33 @@ if __name__ == "__main__":
     # Connect to device and start pipeline
     print("Opening device")
     with dai.Device() as device:
-        # device.setIrLaserDotProjectorBrightness(400)
         device.setLogLevel(dai.LogLevel.ERR)
 
         blobPath = models.kornia_depth_to_3d.getPath(resolution)
         nn.setBlobPath(blobPath)
         device.startPipeline(pipeline)
 
-        # baseline in mm
         calibData = device.readCalibration()
         M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT,
             dai.Size2f(resolution[0], resolution[1]),
         )
-
-        print(torch.Tensor([M_right]))
-
-        # self.camera_matrix = torch.Tensor([M_right])
-        matrix = np.array([M_right]).flatten().astype(np.int16).view(np.int8)
-        print("matrix", matrix)
+        # Get calibration data and send it to the device, to the pointcloud generation model (NeuralNetwork node)
+        matrix = np.array([M_right], dtype=np.float16).view(np.int8)
         buff = dai.Buffer()
         buff.setData(matrix)
         device.getInputQueue("calib_in").send(buff)
 
         pcl_converter = PointCloudVisualizer()
         queue = device.getOutputQueue("pcl", maxSize=8, blocking=False)
-        qRgb = device.getOutputQueue("rgb", maxSize=1, blocking=False)
+        if COLOR:
+            qRgb = device.getOutputQueue("rgb", maxSize=1, blocking=False)
 
         # main stream loop
         while True:
-            inRgb = qRgb.tryGet()
-            if inRgb is not None:
-                cv2.imshow("color", inRgb.getCvFrame())
+            if COLOR and qRgb.has():
+                cv2.imshow("color", qRgb.get().getCvFrame())
 
-            in_nn = queue.get()
-            [print(f"Layer name: {l.name}, Type: {l.dataType}, Dimensions: {l.dims}") for l in in_nn.getAllLayers()]
-            print(in_nn.getLayerFp16("cameramatrix"))
-            pcl_data = np.array(in_nn.getLayerFp16("out")).reshape(1, 3, resolution[1], resolution[0])
-            # print(pcl_data)
+            pcl_data = np.array(queue.get().getFirstLayerFp16()).reshape(1, 3, resolution[1], resolution[0])
             pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
             pcl_converter.visualize_pcl(pcl_data, downsample=downsample_pcl)
 
