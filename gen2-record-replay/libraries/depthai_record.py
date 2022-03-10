@@ -207,12 +207,12 @@ class Record():
         if True in (el in ["left", "disparity", "depth"] for el in self.save):
             create_mono("left")
             if "left" in self.save:
-                stream_out("left", nodes['left'].getFps(), nodes['left'].isp.out)
+                stream_out("left", nodes['left'].getFps(), nodes['left'].isp)
 
         if True in (el in ["right", "disparity", "depth"] for el in self.save):
             create_mono("right")
             if "right" in self.save:
-                stream_out("right", nodes['right'].getFps(), nodes['right'].isp.out)
+                stream_out("right", nodes['right'].getFps(), nodes['right'].isp)
 
         if True in (el in ["disparity", "depth"] for el in self.save):
             nodes['stereo'] = pipeline.create(dai.node.StereoDepth)
