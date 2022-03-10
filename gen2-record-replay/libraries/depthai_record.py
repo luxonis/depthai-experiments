@@ -155,11 +155,13 @@ class Record():
         nodes = {}
 
         def create_mono(name):
-            nodes[name] = pipeline.create(dai.node.MonoCamera)
-            nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+            nodes[name] = pipeline.create(dai.node.ColorCamera)
+            nodes[name].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
             nodes[name].setFps(self.fps)
+            nodes[name].setIspScale(2,3) # 1080P
+
 
         def stream_out(name, fps, out, noEnc=False):
             # Create XLinkOutputs for the stream
@@ -230,8 +232,8 @@ class Record():
             #     nodes['color'].initialControl.setManualFocus(130)
             #     nodes['stereo'].setDepthAlign(dai.CameraBoardSocket.RGB)
 
-            nodes['left'].out.link(nodes['stereo'].left)
-            nodes['right'].out.link(nodes['stereo'].right)
+            nodes['left'].isp.link(nodes['stereo'].left)
+            nodes['right'].isp.link(nodes['stereo'].right)
 
             if "disparity" in self.save:
                 stream_out("disparity", nodes['right'].getFps(), nodes['stereo'].disparity)
