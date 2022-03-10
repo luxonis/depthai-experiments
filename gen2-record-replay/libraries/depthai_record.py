@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-import base64
-import json
-import math
-import struct
-import time
 from enum import Enum
 from multiprocessing import Queue
 from pathlib import Path
@@ -11,8 +6,6 @@ from threading import Thread
 
 from depthai_mcap import DepthAiMcap
 import depthai as dai
-import numpy as np
-from mcap.mcap0.writer import Writer
 
 
 class EncodingQuality(Enum):

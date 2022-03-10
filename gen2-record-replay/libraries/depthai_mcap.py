@@ -121,10 +121,10 @@ class DepthAiMcap:
     # send in image read with "cv2.getCvFrame"
     def imageSave(self, img, name):
         # convert cv2 image to .jpg format
-        is_success, im_buf_arr = cv2.imencode(".jpg", img)
+        # is_success, im_buf_arr = cv2.imencode(".jpg", img)
 
         # read from .jpeg format to buffer of bytes
-        byte_im = im_buf_arr.tobytes()
+        byte_im = img.tobytes()
 
         # data must be encoded in base64
         data = base64.b64encode(byte_im).decode("ascii")
