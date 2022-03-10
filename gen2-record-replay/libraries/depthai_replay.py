@@ -22,6 +22,8 @@ class Replay:
             if not '.' in file: continue # Folder
             name, extension = file.split('.')
             if name in file_types and extension in extensions:
+                print("name------------------")
+                print(name)
                 self.cap[name] = cv2.VideoCapture(str(self.path / file))
 
         if len(self.cap) == 0:
