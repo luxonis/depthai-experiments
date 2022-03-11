@@ -11,13 +11,14 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
+parser.add_argument('-lr', '--lrMode', default=False, action='store_true', help="Enable LeftRight check mode for stereo")
+parser.add_argument('-sp', '--subpixelMode', default=False, action='store_true',  help="Enable subpixel mode for stereo")
 args = parser.parse_args()
 
 # Create Replay object
-replay = Replay(args.path)
+replay = Replay(args.path, args.lrMode, args.subpixelMode)
 # Initialize the pipeline. This will create required XLinkIn's and connect them together
 pipeline, nodes = replay.init_pipeline()
-print('-----xx')
 # Resize color frames prior to sending them to the device
 replay.set_resize_color((300, 300))
 

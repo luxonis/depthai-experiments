@@ -5,9 +5,11 @@ import types
 import depthai as dai
 
 class Replay:
-    def __init__(self, path):
+    def __init__(self, path, lrMode, subpixelMode):
         self.path = Path(path).resolve().absolute()
 
+        self.lrMode = lrMode
+        self.subpixelMode = subpixelMode
         self.cap = {} # VideoCapture objects
         self.size = {} # Frame sizes
         self.lastFrame = {} # Last frame sent to the device
@@ -107,6 +109,9 @@ class Replay:
 
             nodes.stereo = pipeline.create(dai.node.StereoDepth)
             nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
+            nodes.stereo.setLeftRightCheck(self.lrMode)
+            nodes.stereo.setSubpixel(self.subpixelMode)
+            nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
