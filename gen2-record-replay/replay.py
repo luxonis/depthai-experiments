@@ -65,11 +65,8 @@ with dai.Device(pipeline) as device:
     disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
-    count = 0
     while replay.send_frames():
         # rgbFrame = replay.lastFrame['color']x``
-        count += 1
-        print (count)
         # if mono:
         cv2.imshow("left", leftS_Q.get().getCvFrame())
         cv2.imshow("right", rightS_Q.get().getCvFrame())
