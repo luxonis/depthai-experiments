@@ -5,7 +5,7 @@ depthai==2.13.3.0.dev0+c0d306db16bd76a98ca9b96297e21668c3176277
 idna==3.3
 numpy==1.21.5
 opencv-python==4.5.5.62
-Pillow==9.0.0
+Pillow==9.0.1
 requests==2.26.0
 urllib3==1.26.7
 blobconverter==1.2.8
