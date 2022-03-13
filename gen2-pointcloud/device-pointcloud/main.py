@@ -15,7 +15,7 @@ except ImportError as e:
 ############################################################################
 # USER CONFIGURABLE PARAMETERS (also see configureDepthPostProcessing())
 
-COLOR = False # Stream & display color frames
+COLOR = True # Stream & display color frames
 
 # Depth resolution
 resolution = (640,400) # 24 FPS (without visualization)
@@ -136,7 +136,7 @@ xyz_in.setMaxDataSize(6144000)
 xyz_in.setStreamName("xyz_in")
 xyz_in.out.link(nn.inputs["xyz"])
 
-# Only send calibration data once, and always reuse the message
+# Only send xyz data once, and always reuse the message
 nn.inputs["xyz"].setReusePreviousMessage(True)
 
 pointsOut = pipeline.createXLinkOut()
@@ -153,9 +153,9 @@ if __name__ == "__main__":
         M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT,
             dai.Size2f(resolution[0], resolution[1]),
         )
-        xyz = create_xyz(resolution[0], resolution[1], np.array(M_right).reshape(3,3))
 
-        # Get calibration data and send it to the device, to the pointcloud generation model (NeuralNetwork node)
+        # Creater xyz data and send it to the device - to the pointcloud generation model (NeuralNetwork node)
+        xyz = create_xyz(resolution[0], resolution[1], np.array(M_right).reshape(3,3))
         matrix = np.array([xyz], dtype=np.float16).view(np.int8)
         buff = dai.Buffer()
         buff.setData(matrix)

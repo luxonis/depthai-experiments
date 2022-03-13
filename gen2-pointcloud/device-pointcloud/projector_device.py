@@ -16,7 +16,7 @@ class PointCloudVisualizer():
         pcd.points = o3d.utility.Vector3dVector(pcl_data)
         pcd.remove_non_finite_points()
         if downsample:
-            pcd = pcd.voxel_down_sample(voxel_size=0.02)
+            pcd = pcd.voxel_down_sample(voxel_size=0.03)
         # Remove noise
         # pcd = pcd.remove_statistical_outlier(30, 0.1)[0]
         if self.pcl is None:
