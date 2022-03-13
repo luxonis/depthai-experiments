@@ -3,7 +3,8 @@
 import cv2
 import depthai as dai
 import numpy as np
-import models.kornia_depth_to_3d
+from pathlib import Path
+import os
 
 try:
     from projector_device import PointCloudVisualizer
@@ -14,14 +15,10 @@ except ImportError as e:
 ############################################################################
 # USER CONFIGURABLE PARAMETERS (also see configureDepthPostProcessing())
 
-COLOR = True # Stream & display color frames
+COLOR = False # Stream & display color frames
 
 # Depth resolution
-resolution = (640,400) # 19 FPS (without visualization)
-# Other options:
-# resolution = (640,480) # OAK-D-Lite
-# resolution = (1280, 720) # 5.5 FPS (without visualization)
-# resolution = (1280, 800) # 5 FPS (without visualization)
+resolution = (640,400) # 24 FPS (without visualization)
 
 # parameters to speed up visualization
 downsample_pcl = True  # downsample the pointcloud before operating on it and visualizing
@@ -31,6 +28,45 @@ downsample_pcl = True  # downsample the pointcloud before operating on it and vi
 lrcheck = True  # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled
 subpixel = True  # True  # Better accuracy for longer distance, fractional disparity 32-levels
+
+def create_xyz(width, height, camera_matrix):
+    xs = np.linspace(0, width - 1, width, dtype=np.float32)
+    ys = np.linspace(0, height - 1, height, dtype=np.float32)
+
+    # generate grid by stacking coordinates
+    base_grid = np.stack(np.meshgrid(xs, ys)) # WxHx2
+    points_2d = base_grid.transpose(1, 2, 0) # 1xHxWx2
+
+    # unpack coordinates
+    u_coord: np.array = points_2d[..., 0]
+    v_coord: np.array = points_2d[..., 1]
+
+    # unpack intrinsics
+    fx: np.array = camera_matrix[0, 0]
+    fy: np.array = camera_matrix[1, 1]
+    cx: np.array = camera_matrix[0, 2]
+    cy: np.array = camera_matrix[1, 2]
+
+    # projective
+    x_coord: np.array = (u_coord - cx) / fx
+    y_coord: np.array = (v_coord - cy) / fy
+
+    xyz = np.stack([x_coord, y_coord], axis=-1)
+    return np.pad(xyz, ((0,0),(0,0),(0,1)), "constant", constant_values=1.0)
+
+def getPath(resolution):
+    (width, heigth) = resolution
+    path = Path("models", "out")
+    path.mkdir(parents=True, exist_ok=True)
+    name = f"pointcloud_{width}x{heigth}"
+
+    return_path = str(path / (name + '.blob'))
+    if os.path.exists(return_path):
+        return return_path
+
+    # Model doesn't exist, create it
+    import models.kornia_depth_to_3d
+    return models.kornia_depth_to_3d.createBlob(resolution, path, name)
 
 def configureDepthPostProcessing(stereoDepthNode):
     """
@@ -67,7 +103,6 @@ def get_resolution(width):
     else: return dai.MonoCameraProperties.SensorResolution.THE_400_P
 
 pipeline = dai.Pipeline()
-pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
 if COLOR:
     camRgb = pipeline.createColorCamera()
@@ -93,15 +128,16 @@ right.out.link(stereo.right)
 
 # Depth -> PointCloud
 nn = pipeline.createNeuralNetwork()
+nn.setBlobPath(getPath(resolution))
 stereo.depth.link(nn.inputs["depth"])
-# nn.inputs["depth"].setWaitForMessage(False)
-# nn.inputs["depth"].setWaitForMessage(True)
 
-calib_in = pipeline.createXLinkIn()
-calib_in.setStreamName("calib_in")
-calib_in.out.link(nn.inputs["matrix"])
+xyz_in = pipeline.createXLinkIn()
+xyz_in.setMaxDataSize(6144000)
+xyz_in.setStreamName("xyz_in")
+xyz_in.out.link(nn.inputs["xyz"])
+
 # Only send calibration data once, and always reuse the message
-nn.inputs["matrix"].setReusePreviousMessage(True)
+nn.inputs["xyz"].setReusePreviousMessage(True)
 
 pointsOut = pipeline.createXLinkOut()
 pointsOut.setStreamName("pcl")
@@ -109,24 +145,21 @@ nn.out.link(pointsOut.input)
 
 
 if __name__ == "__main__":
-    # Connect to device and start pipeline
     print("Opening device")
-    with dai.Device() as device:
-        device.setLogLevel(dai.LogLevel.ERR)
-
-        blobPath = models.kornia_depth_to_3d.getPath(resolution)
-        nn.setBlobPath(blobPath)
-        device.startPipeline(pipeline)
+    with dai.Device(pipeline) as device:
+        # device.setLogLevel(dai.LogLevel.ERR)
 
         calibData = device.readCalibration()
         M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT,
             dai.Size2f(resolution[0], resolution[1]),
         )
+        xyz = create_xyz(resolution[0], resolution[1], np.array(M_right).reshape(3,3))
+
         # Get calibration data and send it to the device, to the pointcloud generation model (NeuralNetwork node)
-        matrix = np.array([M_right], dtype=np.float16).view(np.int8)
+        matrix = np.array([xyz], dtype=np.float16).view(np.int8)
         buff = dai.Buffer()
         buff.setData(matrix)
-        device.getInputQueue("calib_in").send(buff)
+        device.getInputQueue("xyz_in").send(buff)
 
         pcl_converter = PointCloudVisualizer()
         queue = device.getOutputQueue("pcl", maxSize=8, blocking=False)
