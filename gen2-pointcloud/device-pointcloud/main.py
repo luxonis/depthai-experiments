@@ -65,8 +65,8 @@ def getPath(resolution):
         return return_path
 
     # Model doesn't exist, create it
-    import models.kornia_depth_to_3d
-    return models.kornia_depth_to_3d.createBlob(resolution, path, name)
+    import models.depth_to_3d
+    return models.depth_to_3d.createBlob(resolution, path, name)
 
 def configureDepthPostProcessing(stereoDepthNode):
     """
