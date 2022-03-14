@@ -103,66 +103,66 @@ def create_pipeline():
 
     if camera:
         print("Creating Color Camera...")
-        cam = pipeline.create(dai.node.ColorCamera)
+        cam = pipeline.create(depthai.node.ColorCamera)
         cam.setPreviewSize(300, 300)
         cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
         cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
 
-        cam_xout = pipeline.create(dai.node.XLinkOut)
+        cam_xout = pipeline.create(depthai.node.XLinkOut)
         cam_xout.setStreamName("cam_out")
         cam.preview.link(cam_xout.input)
 
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_nn = pipeline.create(dai.node.NeuralNetwork)
+    face_nn = pipeline.create(depthai.node.NeuralNetwork)
     face_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=4))
 
     if camera:
         cam.preview.link(face_nn.input)
     else:
-        face_in = pipeline.create(dai.node.XLinkIn)
+        face_in = pipeline.create(depthai.node.XLinkIn)
         face_in.setStreamName("face_in")
         face_in.out.link(face_nn.input)
 
-    face_nn_xout = pipeline.create(dai.node.XLinkOut)
+    face_nn_xout = pipeline.create(depthai.node.XLinkOut)
     face_nn_xout.setStreamName("face_nn")
     face_nn.out.link(face_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Landmarks Detection Neural Network...")
-    land_nn = pipeline.create(dai.node.NeuralNetwork)
+    land_nn = pipeline.create(depthai.node.NeuralNetwork)
     land_nn.setBlobPath(blobconverter.from_zoo(name="landmarks-regression-retail-0009", shaves=4))
-    land_nn_xin = pipeline.create(dai.node.XLinkIn)
+    land_nn_xin = pipeline.create(depthai.node.XLinkIn)
     land_nn_xin.setStreamName("landmark_in")
     land_nn_xin.out.link(land_nn.input)
-    land_nn_xout = pipeline.create(dai.node.XLinkOut)
+    land_nn_xout = pipeline.create(depthai.node.XLinkOut)
     land_nn_xout.setStreamName("landmark_nn")
     land_nn.out.link(land_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Head Pose Neural Network...")
-    pose_nn = pipeline.create(dai.node.NeuralNetwork)
+    pose_nn = pipeline.create(depthai.node.NeuralNetwork)
     pose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=4))
-    pose_nn_xin = pipeline.create(dai.node.XLinkIn)
+    pose_nn_xin = pipeline.create(depthai.node.XLinkIn)
     pose_nn_xin.setStreamName("pose_in")
     pose_nn_xin.out.link(pose_nn.input)
-    pose_nn_xout = pipeline.create(dai.node.XLinkOut)
+    pose_nn_xout = pipeline.create(depthai.node.XLinkOut)
     pose_nn_xout.setStreamName("pose_nn")
     pose_nn.out.link(pose_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Gaze Estimation Neural Network...")
-    gaze_nn = pipeline.create(dai.node.NeuralNetwork)
+    gaze_nn = pipeline.create(depthai.node.NeuralNetwork)
     path = blobconverter.from_zoo("gaze-estimation-adas-0002", shaves=4,
         compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8'],
     )
     gaze_nn.setBlobPath(path)
-    gaze_nn_xin = pipeline.create(dai.node.XLinkIn)
+    gaze_nn_xin = pipeline.create(depthai.node.XLinkIn)
     gaze_nn_xin.setStreamName("gaze_in")
     gaze_nn_xin.out.link(gaze_nn.input)
-    gaze_nn_xout = pipeline.create(dai.node.XLinkOut)
+    gaze_nn_xout = pipeline.create(depthai.node.XLinkOut)
     gaze_nn_xout.setStreamName("gaze_nn")
     gaze_nn.out.link(gaze_nn_xout.input)
 
@@ -344,18 +344,18 @@ class Main:
                     le_y = (self.left_bbox[1] + self.left_bbox[3]) // 2
 
                     x, y = (self.gaze * 100).astype(int)[:2]
-                    
+
                     if args.lazer:
                         beam_img = np.zeros(self.debug_frame.shape, np.uint8)
                         for t in range(10)[::-2]:
                             cv2.line(beam_img, (re_x, re_y), ((re_x + x*100), (re_y - y*100)), (0, 0, 255-t*10), t*2)
                             cv2.line(beam_img, (le_x, le_y), ((le_x + x*100), (le_y - y*100)), (0, 0, 255-t*10), t*2)
                         self.debug_frame |= beam_img
-                        
+
                     else:
                         cv2.arrowedLine(self.debug_frame, (le_x, le_y), (le_x + x, le_y - y), (255, 0, 255), 3)
                         cv2.arrowedLine(self.debug_frame, (re_x, re_y), (re_x + x, re_y - y), (255, 0, 255), 3)
-                
+
                 if not args.lazer:
                     for raw_bbox in self.bboxes:
                         bbox = frame_norm(self.frame, raw_bbox)
@@ -368,7 +368,7 @@ class Main:
                         cv2.rectangle(self.debug_frame, (self.right_bbox[0], self.right_bbox[1]), (self.right_bbox[2], self.right_bbox[3]), (245, 10, 10), 2)
                     if self.pose is not None and self.nose is not None:
                         draw_3d_axis(self.debug_frame, self.pose, self.nose)
-    
+
                 if camera:
                     cv2.imshow("Camera view", self.debug_frame)
                 else:

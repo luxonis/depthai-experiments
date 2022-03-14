@@ -51,7 +51,7 @@ cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
 device.send_camera_control(cam_c, cmd_set_focus, '135')
 
 # sleep(2)
-pixel_coords = pixel_coord_np(1280, 720) 
+pixel_coords = pixel_coord_np(1280, 720)
 
 if pipeline is None:
     raise RuntimeError("Error creating a pipeline!")
@@ -89,7 +89,7 @@ while True:
             color = cvt_to_bgr(packet)
             scale_width = req_resolution[1]/color.shape[1]
             dest_res = (int(color.shape[1] * scale_width), int(color.shape[0] * scale_width)) ## opencv format dimensions
-            
+
             color = cv2.resize(
                 color, dest_res, interpolation=cv2.INTER_CUBIC) # can change interpolation if needed to reduce computations
 
@@ -124,7 +124,7 @@ while True:
             cam_coords = np.dot(inter_conv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
             del temp
 
-            cam_coords_2 = np.vstack((cam_coords, np.ones_like(cam_coords[0]))) 
+            cam_coords_2 = np.vstack((cam_coords, np.ones_like(cam_coords[0])))
             rgb_frame_ref_cloud = np.matmul(extrensics, cam_coords_2)
 
             # rgb_frame_ref_cloud = np.asarray(pcd.points).transpose()
@@ -135,7 +135,7 @@ while True:
             rgb_image_pts = np.matmul(M_RGB, rgb_frame_ref_cloud_normalized)
 
             depth_rgb = np.full((720, 1280),  65535, dtype=np.uint16)
-            rgb_image_pts = rgb_image_pts.astype(np.int16)            
+            rgb_image_pts = rgb_image_pts.astype(np.int16)
             u_v_z = np.vstack((rgb_image_pts, rgb_frame_ref_cloud[2, :]))
 
 
@@ -153,32 +153,32 @@ while True:
 
             # print('creating image')
             cv2.imshow('rgb_depth', depth_rgb)
-            
+
             depth_rgb[depth_rgb == 0] = 65535
 
             im_color = (65535 // depth_rgb).astype(np.uint8)
             # colorize depth map, comment out code below to obtain grayscale
             im_color = cv2.applyColorMap(im_color, cv2.COLORMAP_HOT)
-            
+
             added_image = cv2.addWeighted(color,0.6,im_color,0.3,0)
             cv2.imshow('RGBD overlay ', added_image)
 
-    
+
     if cv2.waitKey(1) == ord("q"):
         break
 
 
-# 1. change 1080 shape. 
-# 2. crop the intrinisc matrix approprietly 
+# 1. change 1080 shape.
+# 2. crop the intrinisc matrix approprietly
 # 3. change depth in rectified right using homography to place it back in right frame and then rotate and translate it to rgb
-# 4. how to handle this scenario when undistorted using mesh ? should I add distortions back ? 
-# 5. What would be the best way to illuminate the lights properly to avoid reflections or bad calibration (Does vicalib overcomes this issue or is it universal for that too) 
-# 6. Do we need calib to be in 4K ? I am thinking of doing it only for 1080 
-# 7. Any suggestions on best way to handle in when using camera with auto focus ? 
+# 4. how to handle this scenario when undistorted using mesh ? should I add distortions back ?
+# 5. What would be the best way to illuminate the lights properly to avoid reflections or bad calibration (Does vicalib overcomes this issue or is it universal for that too)
+# 6. Do we need calib to be in 4K ? I am thinking of doing it only for 1080
+# 7. Any suggestions on best way to handle in when using camera with auto focus ?
 # currently I have set it to a specific distance that helps in better focusing the calibration board with current setting
-# we can create api to return the homography to place the depth from rectified right to rgb a.k.a center of the 1098OBC 
-# or we can internally use wrap engine to do that before returning (extra load on Mx) 
-# Cropping issue - center crop or bottom crop 
+# we can create api to return the homography to place the depth from rectified right to rgb a.k.a center of the 1098OBC
+# or we can internally use wrap engine to do that before returning (extra load on Mx)
+# Cropping issue - center crop or bottom crop
 # ANother option is we can just find homography between right and rgb
 
 if pcl_converter is not None:

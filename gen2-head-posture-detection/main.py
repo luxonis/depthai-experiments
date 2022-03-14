@@ -71,12 +71,12 @@ def create_pipeline():
     pipeline = depthai.Pipeline()
     if camera:
         print("Creating Color Camera...")
-        cam = pipeline.create(dai.node.ColorCamera)
+        cam = pipeline.create(depthai.node.ColorCamera)
         cam.setPreviewSize(300,300)
         cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
         cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
-        cam_xout = pipeline.create(dai.node.XLinkOut)
+        cam_xout = pipeline.create(depthai.node.XLinkOut)
         cam_xout.setStreamName("cam_out")
         cam.preview.link(cam_xout.input)
         first_models(cam,pipeline,"models/face-detection-retail-0004_openvino_2020_1_4shave.blob","face")
@@ -87,20 +87,20 @@ def create_pipeline():
 
 def first_models(cam,pipeline,model_path,name):
     print(f"Start creating{model_path}Neural Networks")
-    model_nn = pipeline.create(dai.node.NeuralNetwork)
+    model_nn = pipeline.create(depthai.node.NeuralNetwork)
     model_nn.setBlobPath(str(Path(model_path).resolve().absolute()))
     cam.preview.link(model_nn.input)
-    model_nn_xout = pipeline.create(dai.node.XLinkOut)
+    model_nn_xout = pipeline.create(depthai.node.XLinkOut)
     model_nn_xout.setStreamName(f"{name}_nn")
     model_nn.out.link(model_nn_xout.input)
 
 def models(pipeline,model_path,name):
     print(f"Start creating{model_path}Neural Networks")
-    model_in = pipeline.create(dai.node.XLinkIn)
+    model_in = pipeline.create(depthai.node.XLinkIn)
     model_in.setStreamName(f"{name}_in")
-    model_nn = pipeline.create(dai.node.NeuralNetwork)
+    model_nn = pipeline.create(depthai.node.NeuralNetwork)
     model_nn.setBlobPath(str(Path(model_path).resolve().absolute()))
-    model_nn_xout = pipeline.create(dai.node.XLinkOut)
+    model_nn_xout = pipeline.create(depthai.node.XLinkOut)
     model_nn_xout.setStreamName(f"{name}_nn")
     model_in.out.link(model_nn.input)
     model_nn.out.link(model_nn_xout.input)
@@ -188,7 +188,7 @@ class Main:
                     return False, None
             else:
                 return read_correctly, new_frame
-    
+
     def run(self):
         self.threads = [
             threading.Thread(target=self.run_face, daemon=True),
@@ -242,8 +242,8 @@ class Main:
                             yaw > 0 Turn right < 0 Turn left
                             roll > 0 Tilt right, < 0 Tilt left
                             """
-                            cv2.putText(self.debug_frame,"pitch:{:.2f}, yaw:{:.2f}, roll:{:.2f}".format(pitch,yaw,roll),(face_bbox[0]-30,face_bbox[1]-30),cv2.FONT_HERSHEY_COMPLEX,0.45,(255,0,0))  
-                            
+                            cv2.putText(self.debug_frame,"pitch:{:.2f}, yaw:{:.2f}, roll:{:.2f}".format(pitch,yaw,roll),(face_bbox[0]-30,face_bbox[1]-30),cv2.FONT_HERSHEY_COMPLEX,0.45,(255,0,0))
+
                             hand_attitude = np.array([abs(pitch),abs(yaw),abs(roll)])
                             max_index = np.argmax(hand_attitude)
                             if max_index == 0:
