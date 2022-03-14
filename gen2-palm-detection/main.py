@@ -100,7 +100,7 @@ class DepthAI:
         if self.camera:
             # ColorCamera
             print("Creating Color Camera...")
-            self.cam = self.pipeline.create(dai.node.ColorCamera)
+            self.cam = self.pipeline.create(depthai.node.ColorCamera)
             self.cam.setPreviewSize(self._cam_size[1], self._cam_size[0])
             self.cam.setResolution(
                 depthai.ColorCameraProperties.SensorResolution.THE_1080_P
@@ -109,7 +109,7 @@ class DepthAI:
             self.cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
             self.cam.setColorOrder(depthai.ColorCameraProperties.ColorOrder.BGR)
 
-            self.cam_xout = self.pipeline.create(dai.node.XLinkOut)
+            self.cam_xout = self.pipeline.create(depthai.node.XLinkOut)
             self.cam_xout.setStreamName("preview")
             self.cam.preview.link(self.cam_xout.input)
 
@@ -130,18 +130,18 @@ class DepthAI:
         """
         # NeuralNetwork
         print(f"Creating {model_path} Neural Network...")
-        model_nn = self.pipeline.create(dai.node.NeuralNetwork)
+        model_nn = self.pipeline.create(depthai.node.NeuralNetwork)
         model_nn.setBlobPath(str(Path(f"{model_path}").resolve().absolute()))
         model_nn.input.setBlocking(False)
         if first and self.camera:
             print("linked cam.preview to model_nn.input")
             self.cam.preview.link(model_nn.input)
         else:
-            model_in = self.pipeline.create(dai.node.XLinkIn)
+            model_in = self.pipeline.create(depthai.node.XLinkIn)
             model_in.setStreamName(f"{model_name}_in")
             model_in.out.link(model_nn.input)
 
-        model_nn_xout = self.pipeline.create(dai.node.XLinkOut)
+        model_nn_xout = self.pipeline.create(depthai.node.XLinkOut)
         model_nn_xout.setStreamName(f"{model_name}_nn")
         model_nn.out.link(model_nn_xout.input)
 

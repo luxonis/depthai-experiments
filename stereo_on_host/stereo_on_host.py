@@ -5,9 +5,6 @@ import glob
 import depthai
 
 
-
-
-
 class StereoSGBM:
     def __init__(self, baseline, H_right, H_left = np.identity(3, dtype=np.float32)):
         self.max_disparity = 96
@@ -26,7 +23,6 @@ class StereoSGBM:
         #         continue
         #     z_m = (self.focal_lenght * self.baseline) / i;
         #     self.lut.append(min(65535.0, z_m * 1000.0)) # m -> mm
-        
 
 
     def rectification(self, left_img, right_img):
@@ -35,7 +31,7 @@ class StereoSGBM:
                                     cv2.INTER_CUBIC +
                                     cv2.WARP_FILL_OUTLIERS +
                                     cv2.WARP_INVERSE_MAP)
-        
+
         img_r = cv2.warpPerspective(right_img, self.H2, right_img.shape[::-1],
                                     cv2.INTER_CUBIC +
                                     cv2.WARP_FILL_OUTLIERS +
@@ -56,7 +52,7 @@ class StereoSGBM:
 
         self.disparity = self.stereoProcessor.compute(left_img_rect, right_img_rect)
         cv2.filterSpeckles(self.disparity, 0, 60, self.max_disparity)
-        
+
         _, self.disparity = cv2.threshold(self.disparity, 0, self.max_disparity * 16, cv2.THRESH_TOZERO)
         disparity_scaled = (self.disparity / 16.).astype(np.uint8)
         # frame = cv2.applyColorMap(disparity_scaled, cv2.COLORMAP_HOT)
@@ -72,15 +68,3 @@ class StereoSGBM:
 
 
         key = cv2.waitKey(1)
-
-
-        
-
-        
-
-
-
-
-
-
-

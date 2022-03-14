@@ -55,7 +55,7 @@ cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
 device.send_camera_control(cam_c, cmd_set_focus, '135')
 
 # sleep(2)
-pixel_coords = pixel_coord_np(1280, 720) 
+pixel_coords = pixel_coord_np(1280, 720)
 
 if pipeline is None:
     raise RuntimeError("Error creating a pipeline!")
@@ -94,7 +94,7 @@ while True:
             color = cvt_to_bgr(packet)
             scale_width = req_resolution[1]/color.shape[1]
             dest_res = (int(color.shape[1] * scale_width), int(color.shape[0] * scale_width)) ## opencv format dimensions
-            
+
             color = cv2.resize(
                 color, dest_res, interpolation=cv2.INTER_CUBIC) # can change interpolation if needed to reduce computations
 
@@ -124,7 +124,7 @@ while True:
             cam_coords = np.dot(inter_conv, pixel_coords) * temp.flatten() * 0.1 # [x, y, z]
             del temp
 
-            cam_coords[:, cam_coords[2] > 1500] = float('inf') 
+            cam_coords[:, cam_coords[2] > 1500] = float('inf')
             o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Debug)
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(cam_coords.transpose())
@@ -135,7 +135,7 @@ while True:
             print(rgb_frame_ref_cloud.shape)
             rgb_frame_ref_cloud_normalized = rgb_frame_ref_cloud / rgb_frame_ref_cloud[2,:]
             rgb_image_pts = np.matmul(M_RGB, rgb_frame_ref_cloud_normalized)
-            rgb_image_pts = rgb_image_pts.astype(np.int16)            
+            rgb_image_pts = rgb_image_pts.astype(np.int16)
 
             u_v_z = np.vstack((rgb_image_pts, rgb_frame_ref_cloud[2, :]))
             lft = np.logical_and(0 <= u_v_z[0], u_v_z[0] < 1280)
@@ -154,7 +154,7 @@ while True:
             pcd = pcl_converter.rgbd_to_projection(depth_rgb, frame_rgb)
             pcl_converter.visualize_pcd()
 
-    
+
     if cv2.waitKey(1) == ord("q"):
         break
 

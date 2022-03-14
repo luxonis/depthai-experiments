@@ -59,7 +59,7 @@ M_rgb = np.matmul(m_scale, M_rgb)
 R1, R2, P1, P2, Q, _, _ = cv2.stereoRectify(M_right, d_right, M_rgb, d_rgb,(1280,720), R_r_rgb, T_r_rgb)
 
 H_left = np.matmul(np.matmul(M_right, R1), np.linalg.inv(M_rgb))
-H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))           
+H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))
 
 stereo_obj = StereoSGBM(3.25, H_right, H_left)
 
@@ -68,7 +68,7 @@ gray_rgb = None
 
 while True:
     data_packets = pipeline.get_available_data_packets(True)
-    
+
     for packet in data_packets:
         if packet.stream_name == "color":
             color = cvt_to_bgr(packet)
@@ -82,7 +82,7 @@ while True:
             # left, right = stereo_obj.rectification(gray_rgb, right)
             if right is not None and gray_rgb is not None:
                 stereo_obj.create_disparity_map(gray_rgb, right)
-                
+
 
 
 
@@ -91,7 +91,7 @@ while True:
 #     left_images_paths = glob.glob("stereo_on_host/dataset/left" + '/left*.png')
 #     right_images_paths = glob.glob("stereo_on_host/dataset/right" + '/right*.png')
 #     H_right = np.array([[1.012611746788025, -0.009315459989011288, -16.0528621673584],
-#                         [0.017922570928931236, 1.0018900632858276, -16.368852615356445], 
+#                         [0.017922570928931236, 1.0018900632858276, -16.368852615356445],
 #                         [1.9619521481217816e-05, 2.267290710733505e-06, 0.9867464303970337]])
 
 #     # H_left = np.array([[1.0085175037384033, 0.02535983733832836, -24.814842224121094],
@@ -100,7 +100,7 @@ while True:
 #     left_images_paths.sort()
 #     right_images_paths.sort()
 #     print(left_images_paths)
-#     stereo_process = StereoSGBM(7.5, H_right) # baselienght and right homography. 
+#     stereo_process = StereoSGBM(7.5, H_right) # baselienght and right homography.
 
 #     for left_img_path, right_img_path in zip(left_images_paths, right_images_paths):
 #         stereo_process.create_disparity_map(left_img_path, right_img_path)
