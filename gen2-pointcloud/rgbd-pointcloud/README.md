@@ -4,7 +4,7 @@ This example shows how to align depth to rgb camera frame and project depth map 
 
 ## Demo
 
-![img](https://user-images.githubusercontent.com/18037362/158274860-efae7bda-88d1-43be-8d50-6b63e023f964.png)
+![img](https://user-images.githubusercontent.com/18037362/158277114-f1676487-e214-4872-a1b3-aa14131b666b.png)
 
 ## Install project requirements
 
