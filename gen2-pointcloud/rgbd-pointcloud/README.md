@@ -1,21 +1,26 @@
 ## RGB-D projection Demo
-This example shows how to align depth to rgb camera frame and project depth points into 3d on OAK-D-Lite
 
-### Install Dependencies:
-`python3 install_requirements.py`
+This example shows how to align depth to rgb camera frame and project depth map into 3D pointcloud. You can also choose to skip rgb-depth alignment and colorize the pointcloud with right mono frame.
 
-Note: `python3 install_requirements.py` also tries to install open3D which is required for this example.
+## Demo
+
+![img](https://user-images.githubusercontent.com/18037362/158274860-efae7bda-88d1-43be-8d50-6b63e023f964.png)
+
+## Install project requirements
+
+```
+python3 -m pip install -r requirements.txt
+```
+Note: Running the command above also tries to install open3D which is required for this example.
 open3D is not supported by all platforms, but is required for pointcloud visualization.
 
-### Running Example As-Is:
-`python3 main.py --align-depth` - Runs rgbd image and pointcloud visualization
+## Run this example
 
-`python3 main.py` - Runs depth image and pointcloud visualization (no color)
+```
+python3 main.py
+```
 
-`python3 main.py --no-pcl` - Runs example without pointcloud (e.g. if you cannot install open3d)
 
 
 ## TODO:
-- Add gray image information to the image.
 - Fix z-axis
-- Make it work with OAK-D. Currently works with OAK-D-Lite only.
