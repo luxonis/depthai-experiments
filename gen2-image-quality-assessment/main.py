@@ -3,8 +3,8 @@ import cv2
 import depthai as dai
 import numpy as np
 import argparse
-import time
 import blobconverter
+from depthai_sdk import FPSHandler
 
 '''
 Image quality assessment classifier demo running on device on RGB camera.
@@ -34,18 +34,6 @@ N_CLASS_FRAMES_THRESHOLD = 10
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
-
-class Timer:
-
-    def __init__(self):
-        self._prev = None
-        self.elapsed = None
-
-    def __enter__(self):
-        self._prev = time.perf_counter()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.elapsed = time.perf_counter() - self._prev
 
 class ClassSmoothFilter:
 
@@ -130,28 +118,29 @@ with dai.Device(pipeline) as device:
 
         return classes[detected_class], classes_prob
 
-    timer = Timer()
     fps = 0
+    fps_handler = FPSHandler()
 
     while True:
 
-        with timer:
-            detected_class, classes_prob = get_frame(qNn.get())
+        detected_class, classes_prob = get_frame(qNn.get())
 
-            # update filter to smooth class changes
-            class_filter.update(classes_prob=classes_prob)
-            detected_class = class_filter.current_class
+        # update filter to smooth class changes
+        class_filter.update(classes_prob=classes_prob)
+        detected_class = class_filter.current_class
 
-            rgb_frame = qCam.get().getCvFrame()
-            image = cv2.putText(rgb_frame, f"{detected_class} : FPS {fps:.2f}", (20, 20), font, fontScale, color, thickness, cv2.LINE_AA)
+        rgb_frame = qCam.get().getCvFrame()
 
-            image = cv2.putText(image, " : ".join([class_name for class_name in classes.values()]), (20, 40), font, 0.3, color, thickness, cv2.LINE_AA)
-            image = cv2.putText(image, " : ".join([f"{class_prob:.2f}" for class_prob in classes_prob]), (20, 55), font, 0.3, color, thickness, cv2.LINE_AA)
+        fps_handler.tick("nn")
+        fps = fps_handler.tickFps("nn")
 
-            cv2.imshow("Classification", image)
+        image = cv2.putText(rgb_frame, f"{detected_class} : FPS {fps:.2f}", (20, 20), font, fontScale, color, thickness, cv2.LINE_AA)
 
-            if cv2.waitKey(1) == ord('q'):
-                break
-            
-        fps = 1 / timer.elapsed
+        image = cv2.putText(image, " : ".join([class_name for class_name in classes.values()]), (20, 40), font, 0.3, color, thickness, cv2.LINE_AA)
+        image = cv2.putText(image, " : ".join([f"{class_prob:.2f}" for class_prob in classes_prob]), (20, 55), font, 0.3, color, thickness, cv2.LINE_AA)
+
+        cv2.imshow("Classification", image)
+
+        if cv2.waitKey(1) == ord('q'):
+            break
         
