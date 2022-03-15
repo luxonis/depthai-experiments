@@ -11,7 +11,7 @@ The model outputs 4 quality classes
 
 ## Demo
 
-![demo-gif](https://i.imgur.com/mqSkcN7.gif)
+![demo-gif](https://i.imgur.com/LcKM0tK.gif)
 
 ## Pre-requisites
 
