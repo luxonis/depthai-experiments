@@ -130,7 +130,7 @@ class Record():
     # Which streams to save to the disk (on the host)
     def set_save_streams(self, save_streams):
         self.save = save_streams
-        print('save', self.save)
+        print('save', self.save, 'to', self.path)
 
     def get_sizes(self):
         dict = {}
