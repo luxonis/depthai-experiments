@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 parser.add_argument('-lr', '--lrMode', default=False, action='store_true', help="Enable LeftRight check mode for stereo")
 parser.add_argument('-sp', '--subpixelMode', default=False, action='store_true',  help="Enable subpixel mode for stereo")
+parser.add_argument('-rect', '--rectified', default=False, action='store_true', help="Show rectified left and right streams")
 args = parser.parse_args()
 
 # Create Replay object
@@ -55,6 +56,15 @@ left_s_out = pipeline.create(dai.node.XLinkOut)
 left_s_out.setStreamName("leftS")
 nodes.stereo.syncedLeft.link(left_s_out.input)
 
+if args.rectified:
+    rect_l_out = pipeline.create(dai.node.XLinkOut)
+    rect_l_out.setStreamName("rectifiedLeft")
+    nodes.stereo.rectifiedLeft.link(rect_l_out.input)
+
+    rect_r_out = pipeline.create(dai.node.XLinkOut)
+    rect_r_out.setStreamName("rectifiedRight")
+    nodes.stereo.rectifiedRight.link(rect_r_out.input)
+
 with dai.Device(pipeline) as device:
     replay.create_queues(device)
 
@@ -62,6 +72,9 @@ with dai.Device(pipeline) as device:
     # detQ = device.getOutputQueue(name="det_out", maxSize=4, blocking=False)
     rightS_Q = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
     leftS_Q = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
+    if args.rectified:
+        rectL_Q = device.getOutputQueue(name="rectifiedLeft", maxSize=4, blocking=False)
+        rectR_Q = device.getOutputQueue(name="rectifiedRight", maxSize=4, blocking=False)
 
     disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
@@ -71,6 +84,9 @@ with dai.Device(pipeline) as device:
         # if mono:
         cv2.imshow("left", leftS_Q.get().getCvFrame())
         cv2.imshow("right", rightS_Q.get().getCvFrame())
+        if args.rectified:
+            cv2.imshow(rectL_Q.getName(), rectL_Q.get().getCvFrame())
+            cv2.imshow(rectR_Q.getName(), rectR_Q.get().getCvFrame())
 
         depthFrame = depthQ.get().getFrame()
         depthFrameColor = (depthFrame*disparityMultiplier).astype(np.uint8)
