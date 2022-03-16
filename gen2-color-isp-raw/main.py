@@ -38,7 +38,7 @@ For the 'Select control: ...' options, use these keys to modify the value:
 '''
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k', '12mp'},
+parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k', '12mp', '13mp'},
                     help="Select RGB resolution. Default: %(default)s")
 parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
@@ -88,6 +88,7 @@ rgb_res_opts = {
     '1080': dai.ColorCameraProperties.SensorResolution.THE_1080_P,
     '4k'  : dai.ColorCameraProperties.SensorResolution.THE_4_K,
     '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+    '13mp': dai.ColorCameraProperties.SensorResolution.THE_13_MP,
 }
 rgb_res = rgb_res_opts.get(args.resolution)
 
