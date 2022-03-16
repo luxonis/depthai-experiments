@@ -112,6 +112,8 @@ class Replay:
             nodes.stereo.setLeftRightCheck(self.lrMode)
             nodes.stereo.setSubpixel(self.subpixelMode)
             nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
+            # black instead of pixel replication for missing frame data at the edges
+            nodes.stereo.setRectifyEdgeFillColor(0)
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
