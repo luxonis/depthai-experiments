@@ -100,8 +100,10 @@ if args.camera_tuning:
 cam = pipeline.create(dai.node.ColorCamera)
 cam.setResolution(rgb_res)
 # Optional, set manual focus. 255: macro (8cm), about 120..130: infinity
+focus_name = 'af'
 if args.lens_position >= 0:
     cam.initialControl.setManualFocus(args.lens_position)
+    focus_name = 'f' + str(args.lens_position)
 cam.setIspScale(1, args.isp_downscale)
 cam.setFps(args.fps)  # Default: 30
 if args.rotate:
@@ -137,10 +139,10 @@ controlQueue = device.getInputQueue('control')
 # Manual exposure/focus set step, configurable
 EXP_STEP = 500  # us
 ISO_STEP = 50
-LENS_STEP = 3
+LENS_STEP = 1
 
 # Defaults and limits for manual focus/exposure controls
-lens_pos = 150
+lens_pos = 130
 lens_min = 0
 lens_max = 255
 
@@ -211,6 +213,7 @@ while True:
         payload = data.getData()
         capture_file_info_str = ('capture_' + name
                                  + '_' + str(width) + 'x' + str(height)
+                                 + '_' + focus_name
                                  + '_' + str(data.getSequenceNum())
                                 )
         if name == 'isp':
@@ -255,11 +258,13 @@ while True:
         ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
         ctrl.setAutoFocusTrigger()
         controlQueue.send(ctrl)
+        focus_name = 'af'
     elif key == ord('f'):
         print("Autofocus enable, continuous")
         ctrl = dai.CameraControl()
         ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO)
         controlQueue.send(ctrl)
+        focus_name = 'af'
     elif key == ord('e'):
         print("Autoexposure enable")
         ctrl = dai.CameraControl()
@@ -273,6 +278,7 @@ while True:
         ctrl = dai.CameraControl()
         ctrl.setManualFocus(lens_pos)
         controlQueue.send(ctrl)
+        focus_name = 'f' + str(lens_pos)
     elif key in [ord('i'), ord('o'), ord('k'), ord('l')]:
         if key == ord('i'): exp_time -= EXP_STEP
         if key == ord('o'): exp_time += EXP_STEP
