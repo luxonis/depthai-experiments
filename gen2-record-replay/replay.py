@@ -13,11 +13,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 parser.add_argument('-lr', '--lrMode', default=False, action='store_true', help="Enable LeftRight check mode for stereo")
 parser.add_argument('-sp', '--subpixelMode', default=False, action='store_true',  help="Enable subpixel mode for stereo")
+parser.add_argument('-ext', '--extendedMode', default=False, action='store_true',  help="Enable extended disparity mode for stereo")
 parser.add_argument('-rect', '--rectified', default=False, action='store_true', help="Show rectified left and right streams")
 args = parser.parse_args()
 
 # Create Replay object
-replay = Replay(args.path, args.lrMode, args.subpixelMode)
+replay = Replay(args.path, args.lrMode, args.subpixelMode, args.extendedMode)
 # Initialize the pipeline. This will create required XLinkIn's and connect them together
 pipeline, nodes = replay.init_pipeline()
 # Resize color frames prior to sending them to the device

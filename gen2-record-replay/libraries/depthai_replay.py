@@ -5,11 +5,12 @@ import types
 import depthai as dai
 
 class Replay:
-    def __init__(self, path, lrMode, subpixelMode):
+    def __init__(self, path, lrMode, subpixelMode, extendedMode):
         self.path = Path(path).resolve().absolute()
 
         self.lrMode = lrMode
         self.subpixelMode = subpixelMode
+        self.extendedMode = extendedMode
         self.cap = {} # VideoCapture objects
         self.size = {} # Frame sizes
         self.lastFrame = {} # Last frame sent to the device
@@ -111,6 +112,7 @@ class Replay:
             nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
             nodes.stereo.setLeftRightCheck(self.lrMode)
             nodes.stereo.setSubpixel(self.subpixelMode)
+            nodes.stereo.setExtendedDisparity(self.extendedMode)
             nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
             # black instead of pixel replication for missing frame data at the edges
             nodes.stereo.setRectifyEdgeFillColor(0)
