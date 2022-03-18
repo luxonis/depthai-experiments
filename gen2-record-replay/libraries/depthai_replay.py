@@ -3,6 +3,88 @@ import os
 import cv2
 import types
 import depthai as dai
+import numpy as np
+
+def getMesh(calibData, resolution):
+    M1 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.LEFT, resolution[0], resolution[1]))
+    d1 = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.LEFT))
+    R1 = np.array(calibData.getStereoLeftRectificationRotation())
+    M2 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, resolution[0], resolution[1]))
+    d2 = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
+    R2 = np.array(calibData.getStereoRightRectificationRotation())
+    tranformation = np.array(calibData.getCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RIGHT))
+    R = tranformation[:3, :3]
+    T = tranformation[:3, 3]
+
+    debug = False
+    if debug: 
+        print('printing transformation matrix')
+        print(tranformation)
+
+        print(R)
+        print('printing Tranlsation vec')
+
+        print(T)
+        print('Printing old R1 and R2')
+        print(R1)
+        print(R2)
+
+    R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
+                                                                M1,
+                                                                d1,
+                                                                M2,
+                                                                d2,
+                                                                resolution, R, T)
+
+    print('Printing new R1 and R2')
+    print(R1)
+    print(R2)
+    mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, P1, resolution, cv2.CV_32FC1)
+    mapXR, mapYR = cv2.initUndistortRectifyMap(M2, d2, R2, P2, resolution, cv2.CV_32FC1)
+
+    meshCellSize = 16
+    meshLeft = []
+    meshRight = []
+
+    for y in range(mapXL.shape[0] + 1):
+        if y % meshCellSize == 0:
+            rowLeft = []
+            rowRight = []
+            for x in range(mapXL.shape[1] + 1):
+                if x % meshCellSize == 0:
+                    if y == mapXL.shape[0] and x == mapXL.shape[1]:
+                        rowLeft.append(mapYL[y - 1, x - 1])
+                        rowLeft.append(mapXL[y - 1, x - 1])
+                        rowRight.append(mapYR[y - 1, x - 1])
+                        rowRight.append(mapXR[y - 1, x - 1])
+                    elif y == mapXL.shape[0]:
+                        rowLeft.append(mapYL[y - 1, x])
+                        rowLeft.append(mapXL[y - 1, x])
+                        rowRight.append(mapYR[y - 1, x])
+                        rowRight.append(mapXR[y - 1, x])
+                    elif x == mapXL.shape[1]:
+                        rowLeft.append(mapYL[y, x - 1])
+                        rowLeft.append(mapXL[y, x - 1])
+                        rowRight.append(mapYR[y, x - 1])
+                        rowRight.append(mapXR[y, x - 1])
+                    else:
+                        rowLeft.append(mapYL[y, x])
+                        rowLeft.append(mapXL[y, x])
+                        rowRight.append(mapYR[y, x])
+                        rowRight.append(mapXR[y, x])
+            if (mapXL.shape[1] % meshCellSize) % 2 != 0:
+                rowLeft.append(0)
+                rowLeft.append(0)
+                rowRight.append(0)
+                rowRight.append(0)
+
+            meshLeft.append(rowLeft)
+            meshRight.append(rowRight)
+
+    meshLeft = np.array(meshLeft)
+    meshRight = np.array(meshRight)
+
+    return meshLeft, meshRight
 
 class Replay:
     def __init__(self, path, lrMode, subpixelMode, extendedMode):
@@ -32,7 +114,7 @@ class Replay:
 
         # Load calibration data from the recording folder
         self.calibData = dai.CalibrationHandler(str(self.path / "calib.json"))
-
+        self.meshLeft, self.meshRight = getMesh(self.calibData, (1280, 800))
         # Read basic info about the straems (resolution of streams etc.)
         for name in self.cap:
             self.size[name] = self.get_size(self.cap[name])
@@ -91,7 +173,7 @@ class Replay:
             mono = False # Use depth stream by default
 
         pipeline = dai.Pipeline()
-        pipeline.setCalibrationData(self.calibData)
+        # pipeline.setCalibrationData(self.calibData)
         nodes = types.SimpleNamespace()
 
         if 'color' in self.cap:
@@ -116,10 +198,14 @@ class Replay:
             nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
             # black instead of pixel replication for missing frame data at the edges
             nodes.stereo.setRectifyEdgeFillColor(0)
+            meshLeft = list(self.meshLeft.tobytes())
+            meshRight = list(self.meshRight.tobytes())
+
+            nodes.stereo.loadMeshData(meshLeft, meshRight)
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
-
+            
         if depth:
             nodes.depth = pipeline.create(dai.node.XLinkIn)
             nodes.depth.setStreamName("depth_in")
