@@ -173,7 +173,7 @@ class Replay:
             mono = False # Use depth stream by default
 
         pipeline = dai.Pipeline()
-        # pipeline.setCalibrationData(self.calibData)
+        pipeline.setCalibrationData(self.calibData)
         nodes = types.SimpleNamespace()
 
         if 'color' in self.cap:
@@ -202,7 +202,7 @@ class Replay:
             meshRight = list(self.meshRight.tobytes())
 
             nodes.stereo.loadMeshData(meshLeft, meshRight)
-
+            # nodes.stereoSetFocalLengthFromCalibration(True)
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
             
