@@ -119,7 +119,11 @@ with dai.Device(pipeline) as device:
         # cv2.imshow("rgb", rgbFrame)
         cv2.imshow("depth", depthFrameColor)
 
-        if cv2.waitKey(1) == ord('q'):
+        key = cv2.waitKey(1)
+        if key == ord('q'):
             break
+        elif key == ord(' '):
+            print('Replay paused. Press any key to continue...')
+            cv2.waitKey(0)
     print('End of the recording')
 
