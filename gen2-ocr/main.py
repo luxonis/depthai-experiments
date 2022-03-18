@@ -49,13 +49,6 @@ nn.setBlobPath(blobconverter.from_zoo(name="east_text_detection_256x256",zoo_typ
 nn.setNumPoolFrames(1)
 colorCam.preview.link(nn.input)
 
-det_passthrough_xout = pipeline.create(dai.node.XLinkOut)
-det_passthrough_xout.setStreamName('det_passthrough')
-# Only send metadata, we are only interested in timestamp, so we can sync
-# depth frames with NN output
-det_passthrough_xout.setMetadataOnly(True)
-nn.passthrough.link(det_passthrough_xout.input)
-
 nn_xout = pipeline.create(dai.node.XLinkOut)
 nn_xout.setStreamName('detections')
 nn.out.link(nn_xout.input)
@@ -101,7 +94,6 @@ with dai.Device(pipeline) as device:
     q_vid = device.getOutputQueue("video", 4, blocking=False)
     # This should be set to block, but would get to some extreme queuing/latency!
     q_det = device.getOutputQueue("detections", 4, blocking=False)
-    q_det_pass = device.getOutputQueue("det_passthrough", 4, blocking=False)
 
     q_rec = device.getOutputQueue("recognitions", 4, blocking=True)
 
@@ -200,8 +192,7 @@ with dai.Device(pipeline) as device:
         if rec_received >= rec_pushed:
             in_det = q_det.tryGet()
             if in_det is not None:
-                seq = q_det_pass.get().getSequenceNum() # Get sequence number
-                frame = host_sync.get_msg(seq).getCvFrame().copy()
+                frame = host_sync.get_msg(in_det.getSequenceNum()).getCvFrame().copy()
 
                 scores, geom1, geom2 = to_tensor_result(in_det).values()
                 scores = np.reshape(scores, (1, 1, 64, 64))

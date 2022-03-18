@@ -60,20 +60,21 @@ class FPSHandler:
 class HostSync:
     def __init__(self):
         self.arrays = {}
-    def add_msg(self, name, data, ts):
+    def add_msg(self, name, msg):
         if not name in self.arrays:
             self.arrays[name] = []
         # Add msg to array
-        self.arrays[name].append({'data': data, 'timestamp': ts})
+        self.arrays[name].append({'msg': msg})
         # Try finding synced msgs
+        ts = msg.getTimestamp()
         synced = {}
         for name, arr in self.arrays.items():
             for i, obj in enumerate(arr):
-                time_diff = abs(obj['timestamp'] - ts)
+                time_diff = abs(obj['msg'].getTimestamp() - ts)
                 # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
                 # time difference is below 20ms, it's considered as synced
                 if time_diff < timedelta(milliseconds=33):
-                    synced[name] = obj['data']
+                    synced[name] = obj['msg']
                     # print(f"{name}: {i}/{len(arr)}")
                     break
         # If there are 3 (all) synced msgs, remove all old msgs
@@ -84,7 +85,7 @@ class HostSync:
             # Remove old msgs
             for name, arr in self.arrays.items():
                 for i, obj in enumerate(arr):
-                    if remove(obj['timestamp'], ts):
+                    if remove(obj['msg'].getTimestamp(), ts):
                         arr.remove(obj)
                     else: break
             return synced
@@ -132,13 +133,6 @@ xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
-xout_passthrough = pipeline.create(dai.node.XLinkOut)
-xout_passthrough.setStreamName("pass")
-# Only send metadata, we are only interested in timestamp, so we can sync
-# depth frames with NN output
-xout_passthrough.setMetadataOnly(True)
-detection_nn.passthrough.link(xout_passthrough.input)
-
 # Left mono camera
 left = pipeline.create(dai.node.MonoCamera)
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
@@ -175,7 +169,6 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     q_color = device.getOutputQueue(name="cam", maxSize=4, blocking=False)
     q_disp = device.getOutputQueue(name="disparity", maxSize=4, blocking=False)
     q_nn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
-    q_pass = device.getOutputQueue(name="pass", maxSize=4, blocking=False)
 
     fps = FPSHandler()
     sync = HostSync()
@@ -190,16 +183,11 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
     while True:
         msgs = False
         if q_color.has():
-            color = q_color.get()
-            msgs = msgs or sync.add_msg("color", color, color.getTimestamp())
-
+            msgs = msgs or sync.add_msg("color", q_color.get())
         if q_disp.has():
-            disp = q_disp.get()
-            msgs = msgs or sync.add_msg("depth", disp, disp.getTimestamp())
-
+            msgs = msgs or sync.add_msg("depth", q_disp.get())
         if q_nn.has():
-            timestamp = q_pass.get().getTimestamp()
-            msgs = msgs or sync.add_msg("nn", q_nn.get(), timestamp)
+            msgs = msgs or sync.add_msg("nn", q_nn.get())
 
         if msgs:
             fps.next_iter()
