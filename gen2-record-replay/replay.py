@@ -45,9 +45,13 @@ replay.keep_aspect_ratio(True)
 # detOut.setStreamName("det_out")
 # nn.out.link(detOut.input)
 
+dispOut = pipeline.create(dai.node.XLinkOut)
+dispOut.setStreamName("disp_out")
+nodes.stereo.disparity.link(dispOut.input)
+
 depthOut = pipeline.create(dai.node.XLinkOut)
 depthOut.setStreamName("depth_out")
-nodes.stereo.disparity.link(depthOut.input)
+nodes.stereo.depth.link(depthOut.input)
 
 right_s_out = pipeline.create(dai.node.XLinkOut)
 right_s_out.setStreamName("rightS")
@@ -69,8 +73,8 @@ if args.rectified:
 with dai.Device(pipeline) as device:
     replay.create_queues(device)
 
-    depthQ = device.getOutputQueue(name="depth_out", maxSize=4, blocking=False)
-    # detQ = device.getOutputQueue(name="det_out", maxSize=4, blocking=False)
+    depthQ = device.getOutputQueue(name="depth_out", maxSize=1, blocking=False)
+    dispQ = device.getOutputQueue(name="disp_out", maxSize=1, blocking=False)
     rightS_Q = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
     leftS_Q = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
     if args.rectified:
@@ -79,45 +83,59 @@ with dai.Device(pipeline) as device:
 
     disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
+    frames = {}
+    dets = []
+
+    cv2.namedWindow("disp")
+    cv2.namedWindow("depth")
+    points = None
+    def cb(event, x, y, flags, param):
+        global points
+        if event == cv2.EVENT_LBUTTONUP:
+            if points == (x, y):
+                points = None # Clear
+            else:
+                points = (x, y)
+    cv2.setMouseCallback("disp", cb)
+    cv2.setMouseCallback("depth", cb)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     while replay.send_frames():
         # rgbFrame = replay.lastFrame['color']x``
         # if mono:
-        cv2.imshow("left", leftS_Q.get().getCvFrame())
-        cv2.imshow("right", rightS_Q.get().getCvFrame())
+        if leftS_Q.has():
+            frames["left"] = leftS_Q.get().getCvFrame()
+        if rightS_Q.has():
+            frames["right"] = rightS_Q.get().getCvFrame()
         if args.rectified:
-            cv2.imshow(rectL_Q.getName(), rectL_Q.get().getCvFrame())
-            cv2.imshow(rectR_Q.getName(), rectR_Q.get().getCvFrame())
+            if rectL_Q.has():
+                frames["leftRect"] = rectL_Q.get().getCvFrame()
+            if rectR_Q.has():
+                frames["rightRect"] = rectR_Q.get().getCvFrame()
+        
+        if dispQ.has():
+            depthFrame = dispQ.get().getFrame()
+            depthFrameColor = (depthFrame*disparityMultiplier).astype(np.uint8)
+            # depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+            # depthFrameColor = cv2.equalizeHist(depthFrameColor)
+            frames["disp"] = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
 
-        depthFrame = depthQ.get().getFrame()
-        depthFrameColor = (depthFrame*disparityMultiplier).astype(np.uint8)
-        # depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        # depthFrameColor = cv2.equalizeHist(depthFrameColor)
-        depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
+        if depthQ.has():
+            frames["depth"] = depthQ.get().getFrame()
 
-        # inDet = detQ.tryGet()
-        # if inDet is not None:
-        #     # Display (spatial) object detections on the color frame
-        #     for detection in inDet.detections:
-        #         # Denormalize bounding box
-        #         x1 = int(detection.xmin * 300)
-        #         x2 = int(detection.xmax * 300)
-        #         y1 = int(detection.ymin * 300)
-        #         y2 = int(detection.ymax * 300)
-        #         try:
-        #             label = labelMap[detection.label]
-        #         except:
-        #             label = detection.label
-        #         cv2.putText(rgbFrame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        #         cv2.putText(rgbFrame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        #         cv2.putText(rgbFrame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        #         cv2.putText(rgbFrame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-        #         cv2.putText(rgbFrame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
-        #         cv2.rectangle(rgbFrame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-
-        # cv2.imshow("rgb", rgbFrame)
-        cv2.imshow("depth", depthFrameColor)
+        for name, frame in frames.items():
+            copy = frame.copy()
+            if name == "depth":
+                copy = cv2.normalize(copy, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                copy = cv2.equalizeHist(copy)
+                copy = cv2.applyColorMap(copy, cv2.COLORMAP_JET)
+            if points is not None and (name == "disp" or name == "depth"):
+                text = "{}mm".format(frames["depth"][points[1]][points[0]])
+                cv2.circle(copy, points, 3, (255, 255, 255), -1)
+                cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255))
+            # if name == "rgb":
+            #     drawDets(copy)
+            cv2.imshow(name, copy)
 
         key = cv2.waitKey(1)
         if key == ord('q'):
