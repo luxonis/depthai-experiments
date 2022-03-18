@@ -123,7 +123,7 @@ with dai.Device(pipeline) as device:
         if key == ord('q'):
             break
         elif key == ord(' '):
-            print('Replay paused. Press any key to continue...')
-            cv2.waitKey(0)
+            print('Replay paused. Press Space to continue...')
+            while cv2.waitKey(10) != ord(' '): continue
     print('End of the recording')
 
