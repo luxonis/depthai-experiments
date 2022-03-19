@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import cv2
+import time
 import depthai as dai
 import blobconverter
 import numpy as np
@@ -98,6 +99,10 @@ with dai.Device(pipeline) as device:
                 points = (x, y)
     cv2.setMouseCallback("disp", cb)
     cv2.setMouseCallback("depth", cb)
+
+    paused = False
+    stop = False
+
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     while replay.send_frames():
         # rgbFrame = replay.lastFrame['color']x``
@@ -111,37 +116,47 @@ with dai.Device(pipeline) as device:
                 frames["leftRect"] = rectL_Q.get().getCvFrame()
             if rectR_Q.has():
                 frames["rightRect"] = rectR_Q.get().getCvFrame()
-        
         if dispQ.has():
-            depthFrame = dispQ.get().getFrame()
-            depthFrameColor = (depthFrame*disparityMultiplier).astype(np.uint8)
-            # depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            # depthFrameColor = cv2.equalizeHist(depthFrameColor)
-            frames["disp"] = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
-
+            frames["disp"] = dispQ.get().getFrame()
         if depthQ.has():
             frames["depth"] = depthQ.get().getFrame()
 
+        # This acts like a do-while loop, if not paused, we break from it.
+        # It allows frame interaction (e.g depth measurement) also while paused
+        while True:
+            for name, frame in frames.items():
+                copy = frame.copy()
+                if name == "disp":
+                    copy = (copy*disparityMultiplier).astype(np.uint8)
+                    # copy = cv2.normalize(copy, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                    # copy = cv2.equalizeHist(copy)
+                    copy = cv2.applyColorMap(copy, cv2.COLORMAP_JET)
+                if name == "depth":
+                    copy = cv2.normalize(copy, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                    copy = cv2.equalizeHist(copy)
+                    copy = cv2.applyColorMap(copy, cv2.COLORMAP_JET)
+                if points is not None and (name == "disp" or name == "depth"):
+                    text = "{}mm".format(frames["depth"][points[1]][points[0]])
+                    cv2.circle(copy, points, 3, (255, 255, 255), -1)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255))
+                # if name == "rgb":
+                #     drawDets(copy)
+                cv2.imshow(name, copy)
 
-        for name, frame in frames.items():
-            copy = frame.copy()
-            if name == "depth":
-                copy = cv2.normalize(copy, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                copy = cv2.equalizeHist(copy)
-                copy = cv2.applyColorMap(copy, cv2.COLORMAP_JET)
-            if points is not None and (name == "disp" or name == "depth"):
-                text = "{}mm".format(frames["depth"][points[1]][points[0]])
-                cv2.circle(copy, points, 3, (255, 255, 255), -1)
-                cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255))
-            # if name == "rgb":
-            #     drawDets(copy)
-            cv2.imshow(name, copy)
-
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            break
-        elif key == ord(' '):
-            print('Replay paused. Press Space to continue...')
-            while cv2.waitKey(10) != ord(' '): continue
-    print('End of the recording')
+            key = cv2.waitKey(1)
+            if key == ord('q'):
+                stop = True
+                break
+            elif key == ord('.'):
+                break
+            elif key == ord(' '):
+                paused = not paused
+                if paused: print('Replay paused. Press . to advance one frame, Space to unpause...')
+            if not paused: break
+            time.sleep(0.033)
+        if stop: break
+    if stop:
+        print('Stopped')
+    else:
+        print('End of the recording')
 
