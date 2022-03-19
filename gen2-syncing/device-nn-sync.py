@@ -26,6 +26,9 @@ camRgb.preview.link(downscale_manip.inputImage)
 detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 detection_nn.setConfidenceThreshold(0.5)
 detection_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+# Frames will come a lot faster than NN will be able to process. To always
+# run inference on latest frame, we can set its queue size to 1.
+# Default is Blocking and queue size 5.
 detection_nn.input.setBlocking(False)
 detection_nn.input.setQueueSize(1)
 downscale_manip.out.link(detection_nn.input) # Downscaled 300x300 frames
@@ -41,12 +44,11 @@ camRgb.preview.link(script.inputs["frames"])
 # Currenly there are no bindings for ImgDetections.getSequenceNum() inside Script node
 detection_nn.passthrough.link(script.inputs['passthrough'])
 
-# script.setProcessor(dai.ProcessorType.LEON_MSS)
 script.setScript("""
 l = [] # List of images
 
 # So the correct frame will be the first in the list
-def remove_prev_frames(seq):
+def get_latest_frame(seq):
     global l
     for i, frame in enumerate(l):
         if seq == frame.getSequenceNum():
@@ -63,10 +65,9 @@ while True:
     if face_dets is not None:
         seq = node.io['passthrough'].get().getSequenceNum()
         if len(l) == 0: continue
-        remove_prev_frames(seq)
 
         # Sync detection with frame and send them both to the host
-        node.io['img_out'].send(l[0])
+        node.io['img_out'].send(get_latest_frame(seq))
         node.io['det_out'].send(face_dets)
 
         l.pop(0) # Remove matching frame from the list
