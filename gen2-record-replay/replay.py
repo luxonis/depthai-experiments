@@ -168,6 +168,16 @@ with dai.Device(pipeline) as device:
                     cv2.circle(copy, points, 1, (0, 0, 0), -1)
                     cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
                     cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+                    disparity = frames["disp"][points[1]][points[0]]
+                    text = "{:.3f}m H spec b".format(replay.disp_to_depth_factor_spec_baseline / disparity)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+                    text = "{:.3f}m H calib b".format(replay.disp_to_depth_factor_calib_baseline / disparity)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+                    text = "disp {}".format(disparity / replay.disp_levels)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 65), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 65), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
 
                 # if name == "rgb":
                 #     drawDets(copy)
