@@ -4,6 +4,8 @@ import cv2
 import types
 import depthai as dai
 import numpy as np
+import json
+import math
 
 def getMesh(calibData, resolution):
     M1 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.LEFT, resolution[0], resolution[1]))
@@ -209,6 +211,24 @@ class Replay:
         if depth:
             nodes.depth = pipeline.create(dai.node.XLinkIn)
             nodes.depth.setStreamName("depth_in")
+
+        # TODO use calibration handler instead
+        with open(self.path / "calib.json", 'r') as f:
+            j = json.load(f)
+            print(j['cameraData'][0][1]['extrinsics'])
+            tCal = j['cameraData'][0][1]['extrinsics']['translation']
+            baselineSpec = abs(j['cameraData'][0][1]['extrinsics']['specTranslation']['x'])
+            baselineCalib = math.sqrt(pow(tCal['x'], 2) + pow(tCal['y'], 2) + pow(tCal['z'], 2))
+            print(f'Baseline spec: {baselineSpec:.3f}, calib: {baselineCalib:.3f} cm')
+            focalRightCalib = abs(j['cameraData'][1][1]['intrinsicMatrix'][0][0])
+            #print(f'Focal right calib: {focalRightCalib:.3f}')
+            self.disp_levels = 1
+            if self.subpixelMode:
+                subpixelBits = nodes.stereo.initialConfig.get().algorithmControl.subpixelFractionalBits
+                self.disp_levels = pow(2, subpixelBits)
+            factor = focalRightCalib * self.disp_levels
+            self.disp_to_depth_factor_spec_baseline  = factor * (baselineSpec  / 100)
+            self.disp_to_depth_factor_calib_baseline = factor * (baselineCalib / 100)
 
         return pipeline, nodes
 
