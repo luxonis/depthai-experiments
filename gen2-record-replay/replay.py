@@ -163,9 +163,12 @@ with dai.Device(pipeline) as device:
                     copy = cv2.addWeighted(frameD, blendDepthRatio/100, 
                                            frameRgb, 1 - blendDepthRatio/100, 0)
                 if points is not None and (name in ["disp", "depth", rgbFrameName, "rgbd"]):
-                    text = "{}mm".format(frames["depth"][points[1]][points[0]])
+                    text = "{:.3f}m".format(frames["depth"][points[1]][points[0]] / 1000)
                     cv2.circle(copy, points, 3, (255, 255, 255), -1)
-                    cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255))
+                    cv2.circle(copy, points, 1, (0, 0, 0), -1)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
+                    cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+
                 # if name == "rgb":
                 #     drawDets(copy)
                 cv2.imshow(name, copy)

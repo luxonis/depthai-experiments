@@ -215,7 +215,6 @@ class Replay:
         # TODO use calibration handler instead
         with open(self.path / "calib.json", 'r') as f:
             j = json.load(f)
-            print(j['cameraData'][0][1]['extrinsics'])
             tCal = j['cameraData'][0][1]['extrinsics']['translation']
             baselineSpec = abs(j['cameraData'][0][1]['extrinsics']['specTranslation']['x'])
             baselineCalib = math.sqrt(pow(tCal['x'], 2) + pow(tCal['y'], 2) + pow(tCal['z'], 2))
