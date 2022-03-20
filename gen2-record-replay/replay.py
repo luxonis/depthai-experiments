@@ -100,6 +100,9 @@ with dai.Device(pipeline) as device:
     cv2.setMouseCallback("disp", cb)
     cv2.setMouseCallback("depth", cb)
 
+    colormap = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
+    colormap[0] = [0, 0, 0]  # zero (invalidated) pixels as black
+
     paused = False
     stop = False
 
@@ -130,11 +133,11 @@ with dai.Device(pipeline) as device:
                     copy = (copy*disparityMultiplier).astype(np.uint8)
                     # copy = cv2.normalize(copy, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
                     # copy = cv2.equalizeHist(copy)
-                    copy = cv2.applyColorMap(copy, cv2.COLORMAP_JET)
+                    copy = cv2.applyColorMap(copy, colormap)
                 if name == "depth":
                     copy = cv2.normalize(copy, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
                     copy = cv2.equalizeHist(copy)
-                    copy = cv2.applyColorMap(copy, cv2.COLORMAP_JET)
+                    copy = cv2.applyColorMap(copy, colormap)
                 if points is not None and (name == "disp" or name == "depth"):
                     text = "{}mm".format(frames["depth"][points[1]][points[0]])
                     cv2.circle(copy, points, 3, (255, 255, 255), -1)
