@@ -87,6 +87,17 @@ with dai.Device(pipeline) as device:
     frames = {}
     dets = []
 
+    # For RGB-depth blending
+    rgbFrameName = "rightRect"
+    depthFrameName = "disp" #"depth"
+    blendDepthRatio = 50
+    
+    cv2.namedWindow("rgbd")
+    def blendSliderCb(value):
+        global blendDepthRatio
+        blendDepthRatio = value
+    cv2.createTrackbar("Blend depth %", "rgbd", blendDepthRatio, 100, blendSliderCb)
+
     cv2.namedWindow("disp")
     cv2.namedWindow("depth")
     points = None
@@ -99,6 +110,7 @@ with dai.Device(pipeline) as device:
                 points = (x, y)
     cv2.setMouseCallback("disp", cb)
     cv2.setMouseCallback("depth", cb)
+    cv2.setMouseCallback("rgbd", cb)
 
     colormap = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
     colormap[0] = [0, 0, 0]  # zero (invalidated) pixels as black
@@ -127,6 +139,10 @@ with dai.Device(pipeline) as device:
         # This acts like a do-while loop, if not paused, we break from it.
         # It allows frame interaction (e.g depth measurement) also while paused
         while True:
+            # Add an empty placeholder for RGB-D, to reuse the loop below
+            if rgbFrameName in frames and depthFrameName in frames:
+                frames["rgbd"] = np.empty([1])
+            frameD = None
             for name, frame in frames.items():
                 copy = frame.copy()
                 if name == "disp":
@@ -138,7 +154,15 @@ with dai.Device(pipeline) as device:
                     copy = cv2.normalize(copy, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
                     copy = cv2.equalizeHist(copy)
                     copy = cv2.applyColorMap(copy, colormap)
-                if points is not None and (name == "disp" or name == "depth"):
+                if name == depthFrameName: frameD = copy
+                if name == "rgbd":
+                    frameRgb = frames[rgbFrameName]
+                    # Need to have both frames in same format (BGR) before blending
+                    if len(frameRgb.shape) < 3:
+                        frameRgb = cv2.cvtColor(frameRgb, cv2.COLOR_GRAY2BGR).copy()
+                    copy = cv2.addWeighted(frameD, blendDepthRatio/100, 
+                                           frameRgb, 1 - blendDepthRatio/100, 0)
+                if points is not None and (name in ["disp", "depth", rgbFrameName, "rgbd"]):
                     text = "{}mm".format(frames["depth"][points[1]][points[0]])
                     cv2.circle(copy, points, 3, (255, 255, 255), -1)
                     cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255))
