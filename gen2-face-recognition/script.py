@@ -5,33 +5,33 @@ l = [] # List of images
 # So the correct frame will be the first in the list
 # For this experiment this function is redundant, since everything
 # runs in blocking mode, so no frames will get lost
-def remove_prev_frames(seq):
-    if len(l) == 0:
-        return
-    for rm, frame in enumerate(l):
-        if frame.getSequenceNum() == seq:
-            # node.warn(f"List len {len(l)} Frame with same seq num: {rm},seq {seq}")
+def get_latest_frame(seq):
+    global l
+    for i, frame in enumerate(l):
+        if seq == frame.getSequenceNum():
+            # node.warn(f"List len {len(l)} Frame with same seq num: {i},seq {seq}")
+            l = l[i:]
             break
-    for i in range(rm):
-        l.pop(0)
+    return l[0]
 
 def find_frame(seq):
     for frame in l:
         if frame.getSequenceNum() == seq:
             return frame
+
 def correct_bb(bb):
-    if bb.xmin < 0: bb.xmin = 0.0
-    if bb.ymin < 0: bb.ymin = 0.0
+    if bb.xmin < 0: bb.xmin = 0.001
+    if bb.ymin < 0: bb.ymin = 0.001
     if bb.xmax > 1: bb.xmax = 0.999
     if bb.ymax > 1: bb.ymax = 0.999
-    return bb
+
 while True:
     time.sleep(0.001)
     preview = node.io['preview'].tryGet()
     if preview is not None:
         # node.warn(f"New frame {preview.getSequenceNum()}, size {len(l)}")
         l.append(preview)
-        # Max pool size is 10.
+        # Max pool size is 20.
         if 18 < len(l):
             l.pop(0)
 
@@ -45,8 +45,7 @@ while True:
             continue
 
         img = find_frame(seq) # Matching frame is the first in the list
-        if img is None:
-            continue
+        if img is None: continue
 
         for det in face_dets.detections:
             bboxes.append(det) # For the rotation
@@ -70,10 +69,7 @@ while True:
         correct_bb(bb)
 
         # remove_prev_frame(seq)
-        remove_prev_frames(seq)
-        if len(l) == 0:
-            continue
-        img = l.pop(0) # Matching frame is the first in the list
+        img = get_latest_frame(seq)
         # node.warn('HP' + str(img))
         # node.warn('bb' + str(bb))
         cfg = ImageManipConfig()
