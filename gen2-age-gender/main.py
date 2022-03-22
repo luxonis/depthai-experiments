@@ -3,75 +3,70 @@ import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
-from imutils.video import FPS
 
 def frame_norm(frame, bbox):
     normVals = np.full(len(bbox), frame.shape[0])
     normVals[::2] = frame.shape[1]
     return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
-def create_pipeline():
-    print("Creating pipeline...")
-    pipeline = dai.Pipeline()
+pipeline = dai.Pipeline()
 
-    print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(1080, 1080)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+print("Creating Color Camera...")
+cam = pipeline.create(dai.node.ColorCamera)
+cam.setPreviewSize(1080, 1080)
+cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+cam.setInterleaved(False)
+cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 
-    cam_xout = pipeline.create(dai.node.XLinkOut)
-    cam_xout.setStreamName("color")
-    cam.preview.link(cam_xout.input)
+cam_xout = pipeline.create(dai.node.XLinkOut)
+cam_xout.setStreamName("color")
+cam.preview.link(cam_xout.input)
 
-    # ImageManip that will crop the frame before sending it to the Face detection NN node
-    face_det_manip = pipeline.create(dai.node.ImageManip)
-    face_det_manip.initialConfig.setResize(300, 300)
-    face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
+# ImageManip that will crop the frame before sending it to the Face detection NN node
+face_det_manip = pipeline.create(dai.node.ImageManip)
+face_det_manip.initialConfig.setResize(300, 300)
+face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
 
-    monoLeft = pipeline.create(dai.node.MonoCamera)
-    monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-    monoRight = pipeline.create(dai.node.MonoCamera)
-    monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+monoLeft = pipeline.create(dai.node.MonoCamera)
+monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+monoRight = pipeline.create(dai.node.MonoCamera)
+monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    stereo = pipeline.create(dai.node.StereoDepth)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-    monoLeft.out.link(stereo.left)
-    monoRight.out.link(stereo.right)
+stereo = pipeline.create(dai.node.StereoDepth)
+stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+monoLeft.out.link(stereo.left)
+monoRight.out.link(stereo.right)
 
-    # NeuralNetwork
-    print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBoundingBoxScaleFactor(0.8)
-    face_det_nn.setDepthLowerThreshold(100)
-    face_det_nn.setDepthUpperThreshold(5000)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+# NeuralNetwork
+print("Creating Face Detection Neural Network...")
+face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+face_det_nn.setConfidenceThreshold(0.5)
+face_det_nn.setBoundingBoxScaleFactor(0.8)
+face_det_nn.setDepthLowerThreshold(100)
+face_det_nn.setDepthUpperThreshold(5000)
+face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
 
-    cam.preview.link(face_det_manip.inputImage)
-    stereo.depth.link(face_det_nn.inputDepth)
+cam.preview.link(face_det_manip.inputImage)
+stereo.depth.link(face_det_nn.inputDepth)
+face_det_manip.out.link(face_det_nn.input)
 
-    # Link Face ImageManip -> Face detection NN node
-    face_det_manip.out.link(face_det_nn.input)
+# Send face detections to the host (for bounding boxes)
+face_det_xout = pipeline.create(dai.node.XLinkOut)
+face_det_xout.setStreamName("detection")
+face_det_nn.out.link(face_det_xout.input)
 
-    # Send face detections to the host (for bounding boxes)
-    face_det_xout = pipeline.create(dai.node.XLinkOut)
-    face_det_xout.setStreamName("detection")
-    face_det_nn.out.link(face_det_xout.input)
+# Script node will take the output from the face detection NN as an input and set ImageManipConfig
+# to the 'age_gender_manip' to crop the initial frame
+image_manip_script = pipeline.create(dai.node.Script)
+face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
 
-    # Script node will take the output from the face detection NN as an input and set ImageManipConfig
-    # to the 'age_gender_manip' to crop the initial frame
-    image_manip_script = pipeline.create(dai.node.Script)
-    face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
+# Only send metadata, we are only interested in timestamp, so we can sync
+# depth frames with NN output
+face_det_nn.passthrough.link(image_manip_script.inputs['passthrough'])
 
-    # Only send metadata, we are only interested in timestamp, so we can sync
-    # depth frames with NN output
-    face_det_nn.passthrough.link(image_manip_script.inputs['passthrough'])
-
-    image_manip_script.setScript("""
+image_manip_script.setScript("""
 l = [] # List of images
 # So the correct frame will be the first in the list
 # For this experiment this function is redundant, since everything
@@ -117,41 +112,30 @@ while True:
             node.io['manip_cfg'].send(cfg)
             node.io['manip_img'].send(img)
 """)
-    cam.preview.link(image_manip_script.inputs['preview'])
+cam.preview.link(image_manip_script.inputs['preview'])
 
-    age_gender_manip = pipeline.create(dai.node.ImageManip)
-    age_gender_manip.initialConfig.setResize(62, 62)
-    age_gender_manip.setWaitForConfigInput(True)
-    image_manip_script.outputs['manip_cfg'].link(age_gender_manip.inputConfig)
-    image_manip_script.outputs['manip_img'].link(age_gender_manip.inputImage)
+age_gender_manip = pipeline.create(dai.node.ImageManip)
+age_gender_manip.initialConfig.setResize(62, 62)
+age_gender_manip.setWaitForConfigInput(True)
+image_manip_script.outputs['manip_cfg'].link(age_gender_manip.inputConfig)
+image_manip_script.outputs['manip_img'].link(age_gender_manip.inputImage)
 
-    # Age/Gender second stange NN
-    print("Creating Age Gender Neural Network...")
-    age_gender_nn = pipeline.create(dai.node.NeuralNetwork)
-    age_gender_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=6))
-    age_gender_manip.out.link(age_gender_nn.input)
+# Age/Gender second stange NN
+print("Creating Age Gender Neural Network...")
+age_gender_nn = pipeline.create(dai.node.NeuralNetwork)
+age_gender_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=6))
+age_gender_manip.out.link(age_gender_nn.input)
 
-    age_gender_nn_xout = pipeline.create(dai.node.XLinkOut)
-    age_gender_nn_xout.setStreamName("recognition")
-    age_gender_nn.out.link(age_gender_nn_xout.input)
+age_gender_nn_xout = pipeline.create(dai.node.XLinkOut)
+age_gender_nn_xout.setStreamName("recognition")
+age_gender_nn.out.link(age_gender_nn_xout.input)
 
-    print("Pipeline created.")
-    return pipeline
-
-with dai.Device(create_pipeline()) as device:
-    device.setLogLevel(dai.LogLevel.WARN)
-    device.setLogOutputLevel(dai.LogLevel.WARN)
-
+with dai.Device(pipeline) as device:
     sync = TwoStageHostSeqSync()
     queues = {}
+    # Create output queues
     for name in ["color", "detection", "recognition"]:
         queues[name] = device.getOutputQueue(name)
-
-    detections = []
-    results = []
-
-    fps = FPS()
-    fps.start()
 
     while True:
         for name, q in queues.items():
@@ -180,7 +164,7 @@ with dai.Device(create_pipeline()) as device:
                 cv2.putText(frame, str(age), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
                 cv2.putText(frame, gender_str, (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
                 cv2.putText(frame, gender_str, (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
-                # You could also get result["3d"].x and result["3d"].y coordinates
+                # You could also get detection.spatialCoordinates.x and detection.spatialCoordinates.y coordinates
                 coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
                 cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
                 cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
