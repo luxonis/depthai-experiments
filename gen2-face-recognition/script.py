@@ -1,23 +1,29 @@
 import time
-bboxes = [] # List of face BBs
-l = [] # List of images
+sync = {} # Dict of messages
 
 # So the correct frame will be the first in the list
 # For this experiment this function is redundant, since everything
 # runs in blocking mode, so no frames will get lost
-def get_latest_frame(seq):
-    global l
-    for i, frame in enumerate(l):
-        if seq == frame.getSequenceNum():
-            # node.warn(f"List len {len(l)} Frame with same seq num: {i},seq {seq}")
-            l = l[i:]
-            break
-    return l[0]
-
-def find_frame(seq):
-    for frame in l:
-        if frame.getSequenceNum() == seq:
-            return frame
+def get_sync(target_seq):
+    seq_remove = [] # Arr of sequence numbers to get deleted
+    for seq, msgs in sync.items():
+        if seq == str(target_seq):
+            # We have synced msgs, remove previous msgs (memory cleaning)
+            for rm in seq_remove:
+                del sync[rm]
+            return msgs
+        seq_remove.append(seq) # Will get removed from dict if we find synced sync pair
+    return None
+def find_frame(target_seq):
+    if str(target_seq) in sync:
+        return sync[str(target_seq)]["frame"]
+def add_detections(det, seq):
+    # No detections, we can remove saved frame
+    if len(det) == 0:
+        del sync[str(seq)]
+    else:
+        # Save detections, as we will need them for face recognition model
+        sync[str(seq)]["detections"] = det
 
 def correct_bb(bb):
     if bb.xmin < 0: bb.xmin = 0.001
@@ -29,11 +35,8 @@ while True:
     time.sleep(0.001)
     preview = node.io['preview'].tryGet()
     if preview is not None:
-        # node.warn(f"New frame {preview.getSequenceNum()}, size {len(l)}")
-        l.append(preview)
-        # Max pool size is 20.
-        if 18 < len(l):
-            l.pop(0)
+        sync[str(preview.getSequenceNum())] = {}
+        sync[str(preview.getSequenceNum())]["frame"] = preview
 
     face_dets = node.io['face_det_in'].tryGet()
     if face_dets is not None:
@@ -41,14 +44,13 @@ while True:
         passthrough = node.io['face_pass'].get()
         seq = passthrough.getSequenceNum()
         # node.warn(f"New detection {seq}")
-        if len(l) == 0:
-            continue
-
+        if len(sync) == 0: continue
         img = find_frame(seq) # Matching frame is the first in the list
         if img is None: continue
 
+        add_detections(face_dets.detections, seq)
+
         for det in face_dets.detections:
-            bboxes.append(det) # For the rotation
             cfg = ImageManipConfig()
             correct_bb(det)
             cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
@@ -65,11 +67,13 @@ while True:
         # node.warn(f"New headpose seq {seq}")
         # Face rotation in degrees
         r = headpose.getLayerFp16('angle_r_fc')[0] # Only 1 float in there
-        bb = bboxes.pop(0) # Get BB from the img detection
+
+        msgs = get_sync(seq)
+        bb = msgs["detections"].pop(0)
         correct_bb(bb)
 
         # remove_prev_frame(seq)
-        img = get_latest_frame(seq)
+        img = msgs["frame"]
         # node.warn('HP' + str(img))
         # node.warn('bb' + str(bb))
         cfg = ImageManipConfig()

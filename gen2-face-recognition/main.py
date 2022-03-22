@@ -13,6 +13,11 @@ parser.add_argument("-name", "--name", type=str, help="Name of the person for da
 
 args = parser.parse_args()
 
+def frame_norm(frame, bbox):
+    normVals = np.full(len(bbox), frame.shape[0])
+    normVals[::2] = frame.shape[1]
+    return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
+
 VIDEO_SIZE = (1072, 1072)
 databases = "databases"
 if not os.path.exists(databases):
@@ -115,7 +120,7 @@ cam.setInterleaved(False)
 cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 
 host_face_out = pipeline.create(dai.node.XLinkOut)
-host_face_out.setStreamName('frame')
+host_face_out.setStreamName('color')
 cam.video.link(host_face_out.input)
 
 # ImageManip as a workaround to have more frames in the pool.
@@ -190,16 +195,6 @@ face_rec_manip.setWaitForConfigInput(True)
 script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
 script.outputs['manip2_img'].link(face_rec_manip.inputImage)
 
-face_rec_cfg_out = pipeline.create(dai.node.XLinkOut)
-face_rec_cfg_out.setStreamName('face_rec_cfg_out')
-script.outputs['manip2_cfg'].link(face_rec_cfg_out.input)
-
-# Only send metadata for the host-side sync
-# pass2_out = pipeline.create(dai.node.XLinkOut)
-# pass2_out.setStreamName('pass2')
-# pass2_out.setMetadataOnly(True)
-# script.outputs['manip2_img'].link(pass2_out.input)
-
 face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
 # Removed from OMZ, so we can't use blobconverter for downloading, see here:
 # https://github.com/openvinotoolkit/open_model_zoo/issues/2448#issuecomment-851435301
@@ -212,49 +207,33 @@ face_rec_nn.out.link(arc_xout.input)
 
 
 with dai.Device(pipeline) as device:
-    frameQ = device.getOutputQueue("frame", 4, False)
-    detQ = device.getOutputQueue("detection")
-    recCfgQ = device.getOutputQueue("face_rec_cfg_out", 4, False)
-    arcQ = device.getOutputQueue("recognition", 4, False)
-
     facerec = FaceRecognition(databases, args.name)
     sync = TwoStageHostSeqSync()
     text = TextHelper()
 
+    queues = {}
+    # Create output queues
+    for name in ["color", "detection", "recognition"]:
+        queues[name] = device.getOutputQueue(name)
+
     while True:
-        if frameQ.has():
-            sync.add_msg(frameQ.get(), "color")
-        if detQ.has():
-            sync.add_msg(detQ.get(), "detection")
-        if arcQ.has():
-            # For each recognition result there's also ImageManipConfig
-            # msg that we recieve to the host
-            rec = arcQ.get()
-            sync.add_msg(rec, "recognition")
-            sync.add_msg(recCfgQ.get(), "cfg", str(rec.getSequenceNum()))
+        for name, q in queues.items():
+            # Add all msgs (color frames, object detections and face recognitions) to the Sync class.
+            if q.has():
+                sync.add_msg(q.get(), name)
 
         msgs = sync.get_msgs()
         if msgs is not None:
-            print(msgs)
             frame = msgs["color"].getCvFrame()
             dets = msgs["detection"].detections
 
-            for i, det in enumerate(dets):
-                rr = msgs["cfg"][i].getRaw().cropConfig.cropRotatedRect
-                arcIn = arcQ.get()
-                h, w = VIDEO_SIZE
-                center = (int(rr.center.x * w), int(rr.center.y * h))
-                size = (int(rr.size.width * w), int(rr.size.height * h))
-                rotatedRect = (center, size, rr.angle)
-                points = np.int0(cv2.boxPoints(rotatedRect))
+            for i, detection in enumerate(dets):
+                bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
 
-                # draw_detections(frame, face_in.detections)
                 features = np.array(msgs["recognition"][i].getFirstLayerFp16())
-                # print('New features')
                 conf, name = facerec.new_recognition(features)
-
-                text.drawContours(frame, points)
-                text.putText(frame, f"{name} {(100*conf):.0f}%", center)
+                text.putText(frame, f"{name} {(100*conf):.0f}%", (bbox[0] + 10,bbox[1] + 35))
 
             cv2.imshow("color", cv2.resize(frame, (800,800)))
 

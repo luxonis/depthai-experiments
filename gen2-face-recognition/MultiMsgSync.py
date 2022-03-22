@@ -10,29 +10,25 @@ class TwoStageHostSeqSync:
     def __init__(self):
         self.msgs = {}
     # name: color, detection, or recognition
-    def add_msg(self, msg, name, seq = None):
-        if seq is None:
-            seq = str(msg.getSequenceNum())
-
+    def add_msg(self, msg, name):
+        seq = str(msg.getSequenceNum())
         if seq not in self.msgs:
             self.msgs[seq] = {} # Create directory for msgs
+        if "recognition" not in self.msgs[seq]:
             self.msgs[seq]["recognition"] = [] # Create recognition array
-            self.msgs[seq]["cfg"] = [] # Create cfg array
 
         if name == "recognition":
-            # Append recognition msg to an array
+            # Append recognition msgs to an array
             self.msgs[seq]["recognition"].append(msg)
             # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
-        elif name == "cfg":
-            # Append manip rotation configs msg to an array
-            self.msgs[seq]["cfg"].append(msg)
-            # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
+
         elif name == "detection":
             # Save detection msg in the directory
             self.msgs[seq][name] = msg
             self.msgs[seq]["len"] = len(msg.detections)
             # print(f'Added detection seq {seq}')
-        else: # color
+
+        elif name == "color": # color
             # Save color frame in the directory
             self.msgs[seq][name] = msg
             # print(f'Added frame seq {seq}')
