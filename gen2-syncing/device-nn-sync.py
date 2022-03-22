@@ -83,7 +83,7 @@ xout_land = pipeline.create(dai.node.XLinkOut)
 xout_land.setStreamName("det")
 script.outputs['det_out'].link(xout_land.input)
 
-# Pipeline defined, now the device is assigned and pipeline is started
+# Upload the pipeline to the device
 with dai.Device(pipeline) as device:
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     q_frame = device.getOutputQueue(name="frame", maxSize=4, blocking=False)

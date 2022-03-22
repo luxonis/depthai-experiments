@@ -2,8 +2,29 @@
 
 # Message syncing
 
-These examples show how to synchronize incoming messages.
+These examples show how to synchronize incoming messages. You can synchronize messages either by sequence number or timestamp.
+All devices continuously sync their timestamps with the host (under the hood), so to sync frames across multiple devices you
+would use timestamp.
 
+When to use **sequence number for syncing**:
+- You have only one OAK camera, and want to **sync frames and/or NN results**
+- Easier for comparing than timestamp
+
+When to use **timestamp for syncing**:
+- When you have **multiple OAK cameras** connected to the same host
+- When you also want to sync IMU data. IMU data only has timestamp assigned.
+
+## Host sync frame with NN result
+
+Sync frames with NN inference results on the host. In this example we have used sequence number to sync messages. Frames always arrive to the host sooner than NN results (as inference time takes ~100ms), so we just save all frames in an array, and when a new NN result arrives, we find the correct frame from sequence number and use that to draw detections on.
+
+`python3 host-nn-sync.py`
+
+## Device sync frame with NN result
+
+This approach is very similar to the host sync-nn-sync, but we sync frames with NN results on the device, more specifically in the Script node. Once we have a synced NN result-Frame pair, we send both of these messages to the host where they are shown to the user.
+
+`python3 device-nn-sync.py`
 
 ## Host frame sync
 
@@ -65,23 +86,21 @@ Press C to capture a set of frames.
 ...
 ```
 
-## Sync multiple devices
+## Sync multiple OAK cameras
 
 If you would like to sync multiple streams (color/left/right) across multiple devices, you should
-`python3 host-multiple-devices.py` script. It uses timestamps to sync frames.
+`python3 host-multiple-OAK-sync.py` script. It uses timestamps to sync frames.
 
-Since timestamp is synced with the host, all devices get the same timestamp thus timestamps are in the script to sync across multiple devices.
+Since timestamp is synced with the host, all OAK cameras get the same timestamp thus timestamps are in the script to sync across multiple devices.
 
 ![demo](https://user-images.githubusercontent.com/18037362/130965049-0d315888-1ff4-4455-b5ec-668d33e6f051.png)
 
 As you can see, bottom color image is 16ms behind other frames. Since we were using 30FPS, time difference below 16.6 are considered in sync
 (`1/FPS => 33.3ms/2 => 16.6`).
 
-## Host sync frame with NN result
+## More complex NN result syncing
 
-Sync frames with NN inference results on the host. This can be done either with sequence numbers or timestamps.
-
-`host-nn-sync`
+If you would like to do a more complex syncing of frames and (multiple) NN results, like 2-stage inference, see [example here](../gen2-age-gender/). There's a file `MultiMsgSync.py`, which will sync frames with object detections and object recognition NN results.
 
 ## Pre-requisites
 
