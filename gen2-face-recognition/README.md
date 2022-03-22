@@ -3,11 +3,25 @@
 Face recognition
 ================
 
-This example demonstrates the Gen2 Pipeline Builder running [face detection network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_detection_retail_0004.html), [head posture estimation network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_head_pose_estimation_adas_0001.html) and [face recognition network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_recognition_mobilefacenet_arcface.html)
+This example demonstrates the DepthAI running [face detection network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_detection_retail_0004.html), [head posture estimation network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_head_pose_estimation_adas_0001.html) and [face recognition network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_recognition_mobilefacenet_arcface.html). It recognizes multiple faces at once on the frame.
 
 ## Demo
 
-[![Face recognition](https://user-images.githubusercontent.com/18037362/134054837-eed40899-7c1d-4160-aaf0-1d7c405bb7f4.gif)](https://www.youtube.com/watch?v=HNAeBwNCRek "Face recognition")
+[![Face recognition](https://user-images.githubusercontent.com/18037362/159522552-fde15cd4-4343-492e-be44-ae07f06c1d2e.gif)](https://youtu.be/Xb1cXu_SIbo)
+
+### How it works
+
+1. The color camera produces high-res frames, sends them to host, Script node, and downscale ImageManip node.
+2. Downscale ImageManip will downscale from high-res frame to `300x300`, required by 1st NN in this pipeline; object detection model.
+3. `300x300` frames are sent from downscale ImageManip node to the object detection model (MobileNetDetectionNetwork).
+4. Object detections are sent to the Script node.
+5. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected face. These configs then get sent to ImageManip together with synced high-res frame.
+6. ImageManip will crop only the face out of the original frame. It will also resize the face frame to the required size (`60x60`) by the head pose estimation NN model.
+7. Face frames get sent to the 2nd NN - head pose estimation NN model. NN estimations results are sent back to the Script node together with the passthrough frame (for syncing).
+8. Script node syncs the head pose estimation, high-res frame, and face detection results. It then creates ImageManipConfig that will rotate the bounding box so that the face will also be vertical, which significantly improves face recognition accuracy.
+9. Created ImageManipConfig and high-res frame get sent to another ImageManip node, which crops rotated rectangle and feeds the `112x112` frame to the 3rd NN: face recognition the arcface model.
+10. Frames, object detections, and recognition results are all **synced on the host** side.
+11. Face recognition results are matched with faces in the database using cosine distance (inside `FaceRecognition` class) and then displayed to the user.
 
 ## Usage
 
