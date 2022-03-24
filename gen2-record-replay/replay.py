@@ -16,7 +16,10 @@ parser.add_argument('-lr', '--lrMode', default=False, action='store_true', help=
 parser.add_argument('-sp', '--subpixelMode', default=False, action='store_true',  help="Enable subpixel mode for stereo")
 parser.add_argument('-ext', '--extendedMode', default=False, action='store_true',  help="Enable extended disparity mode for stereo")
 parser.add_argument('-rect', '--rectified', default=False, action='store_true', help="Show rectified left and right streams")
+parser.add_argument('-s', '--scale', default=1000, type=int, help="change the scale required to convert to meters")
 args = parser.parse_args()
+
+scale = args.scale
 
 # Create Replay object
 replay = Replay(args.path, args.lrMode, args.subpixelMode, args.extendedMode)
@@ -163,7 +166,7 @@ with dai.Device(pipeline) as device:
                     copy = cv2.addWeighted(frameD, blendDepthRatio/100, 
                                            frameRgb, 1 - blendDepthRatio/100, 0)
                 if points is not None and (name in ["disp", "depth", rgbFrameName, "rgbd"]):
-                    text = "{:.3f}m".format(frames["depth"][points[1]][points[0]] / 1000)
+                    text = "{:.3f}m".format(frames["depth"][points[1]][points[0]] / scale)
                     cv2.circle(copy, points, 3, (255, 255, 255), -1)
                     cv2.circle(copy, points, 1, (0, 0, 0), -1)
                     cv2.putText(copy, text, (points[0] + 5, points[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)

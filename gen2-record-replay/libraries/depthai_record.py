@@ -68,8 +68,8 @@ class Record():
 
     def start(self):
         if not self.stereo: # If device doesn't have stereo camera pair
-            if "left" in self.save: self.save.remove("left")
-            if "right" in self.save: self.save.remove("right")
+            # if "left" in self.save: self.save.remove("left")
+            # if "right" in self.save: self.save.remove("right")
             if "disparity" in self.save: self.save.remove("disparity")
             if "depth" in self.save: self.save.remove("depth")
 
@@ -160,7 +160,7 @@ class Record():
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
             nodes[name].setFps(self.fps)
-            nodes[name].setIspScale(2,3) # 1080P
+            # nodes[name].setIspScale(2,3) # 1080P
 
 
         def stream_out(name, fps, out, noEnc=False):
@@ -192,8 +192,8 @@ class Record():
             nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
             # RealSense Viewer expects RGB color order
             nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-            nodes['color'].setIspScale(1,2) # 1080P
+            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+            # nodes['color'].setIspScale(2,3) # 1080P
             nodes['color'].setFps(self.fps)
 
             if self.preview:
@@ -202,17 +202,17 @@ class Record():
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
-            stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
+            stream_out("color", nodes['color'].getFps(), nodes['color'].isp) #, noEnc='depth' in self.save)
 
         if True in (el in ["left", "disparity", "depth"] for el in self.save):
             create_mono("left")
             if "left" in self.save:
-                stream_out("left", nodes['left'].getFps(), nodes['left'].video)
+                stream_out("left", nodes['left'].getFps(), nodes['left'].isp)
 
         if True in (el in ["right", "disparity", "depth"] for el in self.save):
             create_mono("right")
             if "right" in self.save:
-                stream_out("right", nodes['right'].getFps(), nodes['right'].video)
+                stream_out("right", nodes['right'].getFps(), nodes['right'].isp)
 
         if True in (el in ["disparity", "depth"] for el in self.save):
             nodes['stereo'] = pipeline.create(dai.node.StereoDepth)
