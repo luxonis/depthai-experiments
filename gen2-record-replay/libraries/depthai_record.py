@@ -156,7 +156,7 @@ class Record():
 
         def create_mono(name):
             nodes[name] = pipeline.create(dai.node.ColorCamera)
-            nodes[name].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+            nodes[name].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
             nodes[name].setFps(self.fps)
@@ -192,7 +192,7 @@ class Record():
             nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
             # RealSense Viewer expects RGB color order
             nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
             # nodes['color'].setIspScale(2,3) # 1080P
             nodes['color'].setFps(self.fps)
 
