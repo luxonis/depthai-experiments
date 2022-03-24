@@ -202,17 +202,17 @@ class Record():
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
-            stream_out("color", nodes['color'].getFps(), nodes['color'].isp) #, noEnc='depth' in self.save)
+            stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
 
         if True in (el in ["left", "disparity", "depth"] for el in self.save):
             create_mono("left")
             if "left" in self.save:
-                stream_out("left", nodes['left'].getFps(), nodes['left'].isp)
+                stream_out("left", nodes['left'].getFps(), nodes['left'].video)
 
         if True in (el in ["right", "disparity", "depth"] for el in self.save):
             create_mono("right")
             if "right" in self.save:
-                stream_out("right", nodes['right'].getFps(), nodes['right'].isp)
+                stream_out("right", nodes['right'].getFps(), nodes['right'].video)
 
         if True in (el in ["disparity", "depth"] for el in self.save):
             nodes['stereo'] = pipeline.create(dai.node.StereoDepth)
