@@ -1,44 +1,27 @@
 # coding=utf-8
 import os
-from datetime import timedelta, datetime
 import argparse
 import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
 import time
+from MultiMsgSync import TwoStageHostSeqSync
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-name", "--name", type=str, help="Name of the person for database saving")
 
 args = parser.parse_args()
 
-DISPLAY_FACE = False
+def frame_norm(frame, bbox):
+    normVals = np.full(len(bbox), frame.shape[0])
+    normVals[::2] = frame.shape[1]
+    return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
+
 VIDEO_SIZE = (1072, 1072)
 databases = "databases"
 if not os.path.exists(databases):
     os.mkdir(databases)
-
-class HostSync:
-    def __init__(self):
-        self.array = []
-    def add_msg(self, msg):
-        self.array.append(msg)
-    def get_msg(self, timestamp):
-        def getDiff(msg, timestamp):
-            return abs(msg.getTimestamp() - timestamp)
-        if len(self.array) == 0: return None
-
-        self.array.sort(key=lambda msg: getDiff(msg, timestamp))
-
-        # Remove all frames that are older than 0.5 sec
-        for i in range(len(self.array)):
-            j = len(self.array) - 1 - i
-            if getDiff(self.array[j], timestamp) > timedelta(milliseconds=500):
-                self.array.remove(self.array[j])
-
-        if len(self.array) == 0: return None
-        return self.array.pop(0)
 
 class TextHelper:
     def __init__(self) -> None:
@@ -49,9 +32,6 @@ class TextHelper:
     def putText(self, frame, text, coords):
         cv2.putText(frame, text, coords, self.text_type, 1.0, self.bg_color, 4, self.line_type)
         cv2.putText(frame, text, coords, self.text_type, 1.0, self.color, 2, self.line_type)
-    def drawContours(self, frame, points):
-        cv2.drawContours(frame, [points], 0, self.bg_color, 6)
-        cv2.drawContours(frame, [points], 0, self.color, 2)
 
 class FaceRecognition:
     def __init__(self, db_path, name) -> None:
@@ -122,174 +102,137 @@ class FaceRecognition:
         np.savez_compressed(f"{databases}/{self.name}", *db_)
         self.adding_new = False
 
-def create_pipeline():
-    print("Creating pipeline...")
-    pipeline = dai.Pipeline()
-    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
-    openvino_version = '2021.2'
+print("Creating pipeline...")
+pipeline = dai.Pipeline()
+pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
+openvino_version = '2021.2'
 
-    print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    # For ImageManip rotate you need input frame of multiple of 16
-    cam.setPreviewSize(1072, 1072)
-    cam.setVideoSize(VIDEO_SIZE)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+print("Creating Color Camera...")
+cam = pipeline.create(dai.node.ColorCamera)
+# For ImageManip rotate you need input frame of multiple of 16
+cam.setPreviewSize(1072, 1072)
+cam.setVideoSize(VIDEO_SIZE)
+cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+cam.setInterleaved(False)
+cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 
-    host_face_out = pipeline.create(dai.node.XLinkOut)
-    host_face_out.setStreamName('frame')
-    cam.video.link(host_face_out.input)
+host_face_out = pipeline.create(dai.node.XLinkOut)
+host_face_out.setStreamName('color')
+cam.video.link(host_face_out.input)
 
-    # ImageManip that will crop the frame before sending it to the Face detection NN node
-    face_det_manip = pipeline.create(dai.node.ImageManip)
-    face_det_manip.initialConfig.setResize(300, 300)
-    face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
+# ImageManip as a workaround to have more frames in the pool.
+# cam.preview can only have 4 frames in the pool before it will
+# wait (freeze). Copying frames and setting ImageManip pool size to
+# higher number will fix this issue.
+copy_manip = pipeline.create(dai.node.ImageManip)
+cam.preview.link(copy_manip.inputImage)
+copy_manip.setNumFramesPool(20)
+copy_manip.setMaxOutputFrameSize(1072*1072*3)
 
-    # NeuralNetwork
-    print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(
-        name="face-detection-retail-0004",
-        shaves=6,
-        version=openvino_version
-    ))
-    # Link Face ImageManip -> Face detection NN node
-    face_det_manip.out.link(face_det_nn.input)
+# ImageManip that will crop the frame before sending it to the Face detection NN node
+face_det_manip = pipeline.create(dai.node.ImageManip)
+face_det_manip.initialConfig.setResize(300, 300)
+copy_manip.out.link(face_det_manip.inputImage)
 
-    # Script node will take the output from the face detection NN as an input and set ImageManipConfig
-    # to the 'age_gender_manip' to crop the initial frame
-    script = pipeline.create(dai.node.Script)
-    script.setProcessor(dai.ProcessorType.LEON_CSS)
+# NeuralNetwork
+print("Creating Face Detection Neural Network...")
+face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+face_det_nn.setConfidenceThreshold(0.5)
+face_det_nn.setBlobPath(blobconverter.from_zoo(
+    name="face-detection-retail-0004",
+    shaves=6,
+    version=openvino_version
+))
+# Link Face ImageManip -> Face detection NN node
+face_det_manip.out.link(face_det_nn.input)
 
-    face_det_nn.out.link(script.inputs['face_det_in'])
-    # We are only interested in timestamp, so we can sync depth frames with NN output
-    face_det_nn.passthrough.link(script.inputs['face_pass'])
+face_det_xout = pipeline.create(dai.node.XLinkOut)
+face_det_xout.setStreamName("detection")
+face_det_nn.out.link(face_det_xout.input)
 
-    with open("script.py", "r") as f:
-        script.setScript(f.read())
+# Script node will take the output from the face detection NN as an input and set ImageManipConfig
+# to the 'age_gender_manip' to crop the initial frame
+script = pipeline.create(dai.node.Script)
+script.setProcessor(dai.ProcessorType.LEON_CSS)
 
-    # ImageManip as a workaround to have more frames in the pool.
-    # cam.preview can only have 4 frames in the pool before it will
-    # wait (freeze). Copying frames and setting ImageManip pool size to
-    # higher number will fix this issue.
-    copy_manip = pipeline.create(dai.node.ImageManip)
-    cam.preview.link(copy_manip.inputImage)
-    copy_manip.setNumFramesPool(20)
-    copy_manip.setMaxOutputFrameSize(1072*1072*3)
+face_det_nn.out.link(script.inputs['face_det_in'])
+# We also interested in sequence number for syncing
+face_det_nn.passthrough.link(script.inputs['face_pass'])
 
-    copy_manip.out.link(face_det_manip.inputImage)
-    copy_manip.out.link(script.inputs['preview'])
+copy_manip.out.link(script.inputs['preview'])
 
-    print("Creating Head pose estimation NN")
-    headpose_manip = pipeline.create(dai.node.ImageManip)
-    headpose_manip.initialConfig.setResize(60, 60)
+with open("script.py", "r") as f:
+    script.setScript(f.read())
 
-    script.outputs['manip_cfg'].link(headpose_manip.inputConfig)
-    script.outputs['manip_img'].link(headpose_manip.inputImage)
+print("Creating Head pose estimation NN")
 
-    headpose_nn = pipeline.create(dai.node.NeuralNetwork)
-    headpose_nn.setBlobPath(blobconverter.from_zoo(
-        name="head-pose-estimation-adas-0001",
-        shaves=6,
-        version=openvino_version
-    ))
-    headpose_manip.out.link(headpose_nn.input)
+headpose_manip = pipeline.create(dai.node.ImageManip)
+headpose_manip.initialConfig.setResize(60, 60)
+headpose_manip.setWaitForConfigInput(True)
+script.outputs['manip_cfg'].link(headpose_manip.inputConfig)
+script.outputs['manip_img'].link(headpose_manip.inputImage)
 
-    headpose_nn.out.link(script.inputs['headpose_in'])
-    headpose_nn.passthrough.link(script.inputs['headpose_pass'])
+headpose_nn = pipeline.create(dai.node.NeuralNetwork)
+headpose_nn.setBlobPath(blobconverter.from_zoo(
+    name="head-pose-estimation-adas-0001",
+    shaves=6,
+    version=openvino_version
+))
+headpose_manip.out.link(headpose_nn.input)
 
-    print("Creating face recognition ImageManip/NN")
+headpose_nn.out.link(script.inputs['headpose_in'])
+headpose_nn.passthrough.link(script.inputs['headpose_pass'])
 
-    face_rec_manip = pipeline.create(dai.node.ImageManip)
-    face_rec_manip.initialConfig.setResize(112, 112)
+print("Creating face recognition ImageManip/NN")
 
-    script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
-    script.outputs['manip2_img'].link(face_rec_manip.inputImage)
+face_rec_manip = pipeline.create(dai.node.ImageManip)
+face_rec_manip.initialConfig.setResize(112, 112)
+face_rec_manip.setWaitForConfigInput(True)
 
-    face_rec_cfg_out = pipeline.create(dai.node.XLinkOut)
-    face_rec_cfg_out.setStreamName('face_rec_cfg_out')
-    script.outputs['manip2_cfg'].link(face_rec_cfg_out.input)
+script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
+script.outputs['manip2_img'].link(face_rec_manip.inputImage)
 
-    # Only send metadata for the host-side sync
-    # pass2_out = pipeline.create(dai.node.XLinkOut)
-    # pass2_out.setStreamName('pass2')
-    # pass2_out.setMetadataOnly(True)
-    # script.outputs['manip2_img'].link(pass2_out.input)
+face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
+# Removed from OMZ, so we can't use blobconverter for downloading, see here:
+# https://github.com/openvinotoolkit/open_model_zoo/issues/2448#issuecomment-851435301
+face_rec_nn.setBlobPath("models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob")
+face_rec_manip.out.link(face_rec_nn.input)
 
-    face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
-    # Removed from OMZ, so we can't use blobconverter for downloading, see here:
-    # https://github.com/openvinotoolkit/open_model_zoo/issues/2448#issuecomment-851435301
-    face_rec_nn.setBlobPath("models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob")
-    face_rec_manip.out.link(face_rec_nn.input)
-
-    if DISPLAY_FACE:
-        xout_face = pipeline.create(dai.node.XLinkOut)
-        xout_face.setStreamName('face')
-        face_rec_manip.out.link(xout_face.input)
-
-    arc_out = pipeline.create(dai.node.XLinkOut)
-    arc_out.setStreamName('arc_out')
-    face_rec_nn.out.link(arc_out.input)
-
-    return pipeline
+arc_xout = pipeline.create(dai.node.XLinkOut)
+arc_xout.setStreamName('recognition')
+face_rec_nn.out.link(arc_xout.input)
 
 
-with dai.Device(create_pipeline()) as device:
-    frameQ = device.getOutputQueue("frame", 4, False)
-    recCfgQ = device.getOutputQueue("face_rec_cfg_out", 4, False)
-    arcQ = device.getOutputQueue("arc_out", 4, False)
-    if DISPLAY_FACE:
-        faceQ = device.getOutputQueue("face", 4, False)
-
+with dai.Device(pipeline) as device:
     facerec = FaceRecognition(databases, args.name)
-    sync = HostSync()
+    sync = TwoStageHostSeqSync()
     text = TextHelper()
 
-    frameArr = []
-    frame = None
-    results = {}
+    queues = {}
+    # Create output queues
+    for name in ["color", "detection", "recognition"]:
+        queues[name] = device.getOutputQueue(name)
 
     while True:
-        frameIn = frameQ.tryGet()
-        if frameIn is not None:
-            frameArr.append(frameIn.getCvFrame())
-            # Inference time for face detection, head pose estimation and face recognition
-            # takes about ~200ms, that's why we are delaying frames intentionally.
-            if 6 < len(frameArr):
-                frame = frameArr.pop(0)
+        for name, q in queues.items():
+            # Add all msgs (color frames, object detections and face recognitions) to the Sync class.
+            if q.has():
+                sync.add_msg(q.get(), name)
 
-        cfg = recCfgQ.tryGet()
-        if cfg is not None:
-            rr = cfg.getRaw().cropConfig.cropRotatedRect
-            arcIn = arcQ.get()
-            h, w = VIDEO_SIZE
-            center = (int(rr.center.x * w), int(rr.center.y * h))
-            size = (int(rr.size.width * w), int(rr.size.height * h))
-            rotatedRect = (center, size, rr.angle)
-            points = np.int0(cv2.boxPoints(rotatedRect))
-            # draw_detections(frame, face_in.detections)
-            features = np.array(arcIn.getFirstLayerFp16())
-            # print('New features')
-            conf, name = facerec.new_recognition(features)
-            results[name] = {
-                'conf': conf,
-                'coords': center,
-                'points': points,
-                'ts': time.time()
-            }
+        msgs = sync.get_msgs()
+        if msgs is not None:
+            frame = msgs["color"].getCvFrame()
+            dets = msgs["detection"].detections
 
-        if frame is not None:
-            for name, result in results.items():
-                if time.time() - result["ts"] < 0.15:
-                    text.drawContours(frame, result['points'])
-                    text.putText(frame, f"{name} {(100*result['conf']):.0f}%", result['coords'])
+            for i, detection in enumerate(dets):
+                bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+
+                features = np.array(msgs["recognition"][i].getFirstLayerFp16())
+                conf, name = facerec.new_recognition(features)
+                text.putText(frame, f"{name} {(100*conf):.0f}%", (bbox[0] + 10,bbox[1] + 35))
 
             cv2.imshow("color", cv2.resize(frame, (800,800)))
-
-        if DISPLAY_FACE and faceQ.has():
-            cv2.imshow('face', faceQ.get().getCvFrame())
 
         if cv2.waitKey(1) == ord('q'):
             break
