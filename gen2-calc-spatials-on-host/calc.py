@@ -7,7 +7,7 @@ class HostSpatialsCalc:
     def __init__(self, device):
         calibData = device.readCalibration()
         # Required information for calculating spatial coordinates on the host
-        self.monoHFOV = np.deg2rad(calibData.getFov(dai.CameraBoardSocket.LEFT))
+        self.monoHFOV = np.deg2rad(calibData.getFov(dai.CameraBoardSocket.LEFT, False))
 
         # Values
         self.DELTA = 5

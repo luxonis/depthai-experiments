@@ -7,6 +7,65 @@ from utility import *
 import numpy as np
 import math
 
+resolution = (640, 400)
+
+def getMesh(calibData):
+    M1 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.LEFT, resolution[0], resolution[1]))
+    d1 = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.LEFT))
+    R1 = np.array(calibData.getStereoLeftRectificationRotation())
+    M2 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, resolution[0], resolution[1]))
+    d2 = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
+    R2 = np.array(calibData.getStereoRightRectificationRotation())
+    mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, M2, resolution, cv2.CV_32FC1)
+    mapXR, mapYR = cv2.initUndistortRectifyMap(M2, d2, R2, M2, resolution, cv2.CV_32FC1)
+
+    meshCellSize = 16
+    meshLeft = []
+    meshRight = []
+
+    for y in range(mapXL.shape[0] + 1):
+        if y % meshCellSize == 0:
+            rowLeft = []
+            rowRight = []
+            for x in range(mapXL.shape[1] + 1):
+                if x % meshCellSize == 0:
+                    if y == mapXL.shape[0] and x == mapXL.shape[1]:
+                        rowLeft.append(mapYL[y - 1, x - 1])
+                        rowLeft.append(mapXL[y - 1, x - 1])
+                        rowRight.append(mapYR[y - 1, x - 1])
+                        rowRight.append(mapXR[y - 1, x - 1])
+                    elif y == mapXL.shape[0]:
+                        rowLeft.append(mapYL[y - 1, x])
+                        rowLeft.append(mapXL[y - 1, x])
+                        rowRight.append(mapYR[y - 1, x])
+                        rowRight.append(mapXR[y - 1, x])
+                    elif x == mapXL.shape[1]:
+                        rowLeft.append(mapYL[y, x - 1])
+                        rowLeft.append(mapXL[y, x - 1])
+                        rowRight.append(mapYR[y, x - 1])
+                        rowRight.append(mapXR[y, x - 1])
+                    else:
+                        rowLeft.append(mapYL[y, x])
+                        rowLeft.append(mapXL[y, x])
+                        rowRight.append(mapYR[y, x])
+                        rowRight.append(mapXR[y, x])
+            if (mapXL.shape[1] % meshCellSize) % 2 != 0:
+                rowLeft.append(0)
+                rowLeft.append(0)
+                rowRight.append(0)
+                rowRight.append(0)
+
+            meshLeft.append(rowLeft)
+            meshRight.append(rowRight)
+
+    meshLeft = np.array(meshLeft)
+    meshRight = np.array(meshRight)
+
+    return meshLeft, meshRight
+
+calibData = dai.Device().readCalibration()
+leftMesh, rightMesh = getMesh(calibData)
+
 # Create pipeline
 pipeline = dai.Pipeline()
 
@@ -21,9 +80,9 @@ monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
 monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-stereo.initialConfig.setConfidenceThreshold(255)
+stereo.initialConfig.setConfidenceThreshold(190)
 stereo.setLeftRightCheck(True)
-stereo.setSubpixel(False)
+stereo.setSubpixel(True)
 
 # Linking
 monoLeft.out.link(stereo.left)
@@ -36,6 +95,12 @@ stereo.depth.link(xoutDepth.input)
 xoutDepth = pipeline.create(dai.node.XLinkOut)
 xoutDepth.setStreamName("disp")
 stereo.disparity.link(xoutDepth.input)
+meshLeft = list(leftMesh.tobytes())
+meshRight = list(rightMesh.tobytes())
+stereo.loadMeshData(meshLeft, meshRight)
+stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_5x5)  # KERNEL_7x7 default
+stereo.initialConfig.setLeftRightCheckThreshold(5);  # Known to be best
+
 
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
