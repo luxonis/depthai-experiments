@@ -17,12 +17,14 @@ parser.add_argument('-sp', '--subpixelMode', default=False, action='store_true',
 parser.add_argument('-ext', '--extendedMode', default=False, action='store_true',  help="Enable extended disparity mode for stereo")
 parser.add_argument('-rect', '--rectified', default=False, action='store_true', help="Show rectified left and right streams")
 parser.add_argument('-s', '--scale', default=1000, type=int, help="change the scale required to convert to meters")
+parser.add_argument('-off', '--offset', default=320, type=int,
+                    help="Offset to crop 1920x1200 -> 1280x1200 for depth, range 0..640. Default: %(default)s")
 args = parser.parse_args()
 
 scale = args.scale
 
 # Create Replay object
-replay = Replay(args.path, args.lrMode, args.subpixelMode, args.extendedMode)
+replay = Replay(args.path, args.lrMode, args.subpixelMode, args.extendedMode, args.offset)
 # Initialize the pipeline. This will create required XLinkIn's and connect them together
 pipeline, nodes = replay.init_pipeline()
 # Resize color frames prior to sending them to the device

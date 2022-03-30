@@ -7,7 +7,8 @@ import numpy as np
 import json
 import math
 
-def getMesh(calibData, resolution):
+def getMesh(calibData, resolution, offset):
+    print("------mesh res", resolution, "offset", offset) # TODO see if offset is needed here and implement...
     M1 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.LEFT, resolution[0], resolution[1]))
     d1 = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.LEFT))
     R1 = np.array(calibData.getStereoLeftRectificationRotation())
@@ -89,7 +90,7 @@ def getMesh(calibData, resolution):
     return meshLeft, meshRight
 
 class Replay:
-    def __init__(self, path, lrMode, subpixelMode, extendedMode):
+    def __init__(self, path, lrMode, subpixelMode, extendedMode, offset):
         self.path = Path(path).resolve().absolute()
 
         self.lrMode = lrMode
@@ -97,6 +98,7 @@ class Replay:
         self.extendedMode = extendedMode
         self.cap = {} # VideoCapture objects
         self.size = {} # Frame sizes
+        self.offset = {} # Offset from top-left corner
         self.lastFrame = {} # Last frame sent to the device
         self.frames = {} # Frames read from the VideoCapture
         # Disparity shouldn't get streamed to the device, nothing to do with it.
@@ -116,10 +118,18 @@ class Replay:
 
         # Load calibration data from the recording folder
         self.calibData = dai.CalibrationHandler(str(self.path / "calib.json"))
-        self.meshLeft, self.meshRight = getMesh(self.calibData, (1280, 800))
+        # StereoDepth hardware limitation
+        self.maxWidth = 1280
         # Read basic info about the straems (resolution of streams etc.)
         for name in self.cap:
             self.size[name] = self.get_size(self.cap[name])
+            self.offset[name] = (0, 0)
+            # TODO maybe move the cropped size info elsewhere
+            if name in ['left', 'right'] and self.size[name][0] > self.maxWidth:
+                print(f'Cropping {name:5}: {self.size[name]} -> ', end='')
+                self.size[name] = (min(self.size[name][0], self.maxWidth), self.size[name][1])
+                self.offset[name] = (offset, 0)
+                print(f'{self.size[name]}, offset {self.offset[name]}')
 
         self.color_size = None
         # By default crop image as needed to keep the aspect ratio
@@ -200,6 +210,7 @@ class Replay:
             nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
             # black instead of pixel replication for missing frame data at the edges
             nodes.stereo.setRectifyEdgeFillColor(0)
+            self.meshLeft, self.meshRight = getMesh(self.calibData, self.size['left'], self.offset['left'])
             meshLeft = list(self.meshLeft.tobytes())
             meshRight = list(self.meshRight.tobytes())
 
@@ -248,6 +259,11 @@ class Replay:
                 return True
             ok, frame = self.cap[name].read()
             if ok:
+                if name in ['left', 'right']:
+                    # Crop input frame for StereoDepth constraints
+                    x, y = self.offset[name]
+                    w, h = self.size[name]
+                    frame = frame[y:y+h, x:x+w]
                 self.frames[name] = frame
         return len(self.frames) == 0
 
