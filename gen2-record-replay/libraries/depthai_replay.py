@@ -9,10 +9,20 @@ import math
 
 def getMesh(calibData, resolution, offset):
     print("------mesh res", resolution, "offset", offset) # TODO see if offset is needed here and implement...
-    topLeftPixel = dai.Point2f(offset[0], resolution[1])
-    bottomRightPixel = dai.Point2f(resolution[0], 0)
+    topLeftPixel = dai.Point2f(offset[0] - 320, resolution[1])
+    bottomRightPixel = dai.Point2f(resolution[0] , 0)
+    print(topLeftPixel.x, topLeftPixel.y)
+    print(bottomRightPixel.x, bottomRightPixel.y)
+    print("Before Intrins---------------")
+    def_m1, w, h = calibData.getDefaultIntrinsics(dai.CameraBoardSocket.LEFT)
+    print("Def Intrins")
+    print(w,h)
+    print(def_m1)
 
     M1 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.LEFT, resolution[0], resolution[1], topLeftPixel, bottomRightPixel))
+    print("cropped Intrins")
+    print(resolution)
+    print(M1)
     d1 = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.LEFT))
     R1 = np.array(calibData.getStereoLeftRectificationRotation())
     M2 = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, resolution[0], resolution[1], topLeftPixel, bottomRightPixel))
