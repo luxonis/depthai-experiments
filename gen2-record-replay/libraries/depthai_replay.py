@@ -9,7 +9,7 @@ import math
 
 def getMesh(calibData, resolution, offset):
     print("------mesh res", resolution, "offset", offset) # TODO see if offset is needed here and implement...
-    topLeftPixel = dai.Point2f(offset[0] - 320, resolution[1])
+    topLeftPixel = dai.Point2f(offset[0] - 320, resolution[1]) # TODO: Additioanl 320 padding to overcome hardcoded center cropping. Remove it post update in the API
     bottomRightPixel = dai.Point2f(resolution[0] , 0)
     print(topLeftPixel.x, topLeftPixel.y)
     print(bottomRightPixel.x, bottomRightPixel.y)
