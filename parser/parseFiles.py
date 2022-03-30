@@ -276,100 +276,134 @@ class PoeData:
     def plotHistogram(self, plotName):
         # camera 0 data is shown separately
         if plotName == "camera0-Rotation":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera0["rotationMatrix"]["x"],
                  self.camera0["rotationMatrix"]["y"],
-                 self.camera0["rotationMatrix"]["z"]]
+                 self.camera0["rotationMatrix"]["z"]],
+                label=['X', 'Y', 'Z']
                 )
-            plt.show()
+            plt.title("Camera0-Rotation")
+
         if plotName == "camera0-SpecTranslation":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera0["specTranslation"]["x"],
                  self.camera0["specTranslation"]["y"],
-                 self.camera0["specTranslation"]["z"]]
+                 self.camera0["specTranslation"]["z"]],
+                label=['X', 'Y', 'Z']
             )
-            plt.show()
+            plt.title("Camera0-SpecTranslation")
+
         if plotName == "camera0-Translation":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera0["translation"]["x"],
                  self.camera0["translation"]["y"],
-                 self.camera0["translation"]["z"]]
+                 self.camera0["translation"]["z"]],
+                label=['X', 'Y', 'Z']
             )
-            plt.show()
+            plt.title("Camera0-Translation")
+
         if plotName == "camera0-WidthHeight":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera0["width"],
-                 self.camera0["height"]]
+                 self.camera0["height"]],
+                label=['Width', 'Height']
             )
-            plt.show()
+            for i, p in enumerate(patches):
+                plt.setp(p, 'facecolor', cm(i))
+            plt.title("Camera0-WidthHeight")
+
         if plotName == "camera0-IntrinsicMatrix":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera0["intrinsicMatrix"]["x"],
                  self.camera0["intrinsicMatrix"]["y"],
-                 self.camera0["intrinsicMatrix"]["z"]]
+                 self.camera0["intrinsicMatrix"]["z"]],
+                label=['X', 'Y', 'Z']
             )
-            plt.show()
+            plt.title("Camera0-IntrinsicMatrix")
+
         if plotName == "camera0-SpecHfovDeg":
-            plt.hist(
-                self.camera0["specHfovDeg"]
+            n, bins, patches = plt.hist(
+                self.camera0["specHfovDeg"],
+                label='SpecHFovDeg'
             )
-            plt.show()
+            plt.title("Camera0-SpecHfovDeg")
 
         # camera 1 and camera 2 data will be shown together
         if plotName == "camera12-Rotation":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera1["rotationMatrix"]["x"],
                  self.camera2["rotationMatrix"]["x"],
                  self.camera1["rotationMatrix"]["y"],
                  self.camera2["rotationMatrix"]["y"],
                  self.camera1["rotationMatrix"]["z"],
-                 self.camera2["rotationMatrix"]["z"]]
+                 self.camera2["rotationMatrix"]["z"]],
+                label=['X1', 'X2', 'Y1', 'Y2', 'Z1', 'Z2']
                 )
-            plt.show()
+            plt.title("Camera12-Rotation")
         if plotName == "camera12-SpecTranslation":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera1["specTranslation"]["x"],
                  self.camera2["specTranslation"]["x"],
                  self.camera1["specTranslation"]["y"],
                  self.camera2["specTranslation"]["y"],
                  self.camera1["specTranslation"]["z"],
-                 self.camera2["specTranslation"]["z"]]
+                 self.camera2["specTranslation"]["z"]],
+                label=['X1', 'X2', 'Y1', 'Y2', 'Z1', 'Z2']
             )
-            plt.show()
+            plt.title("Camera12-SpecTranslation")
+
         if plotName == "camera12-Translation":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera1["translation"]["x"],
                  self.camera2["translation"]["x"],
                  self.camera1["translation"]["y"],
                  self.camera2["translation"]["y"],
                  self.camera1["translation"]["z"],
-                 self.camera2["translation"]["z"]]
+                 self.camera2["translation"]["z"]],
+                label=['X1', 'X2', 'Y1', 'Y2', 'Z1', 'Z2']
             )
-            plt.show()
+            plt.title("Camera12-Translation")
+
         if plotName == "camera12-WidthHeight":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera1["width"],
                  self.camera2["width"],
                  self.camera1["height"],
-                 self.camera2["height"]]
+                 self.camera2["height"]],
+                label=['Width1', 'Width2', 'Height1', 'Height2']
             )
-            plt.show()
+            plt.title("Camera12-WidthHeight")
+
         if plotName == "camera12-IntrinsicMatrix":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera1["intrinsicMatrix"]["x"],
                  self.camera2["intrinsicMatrix"]["x"],
                  self.camera1["intrinsicMatrix"]["y"],
                  self.camera2["intrinsicMatrix"]["y"],
                  self.camera1["intrinsicMatrix"]["z"],
-                 self.camera2["intrinsicMatrix"]["z"]]
+                 self.camera2["intrinsicMatrix"]["z"]],
+                label=['X1', 'X2', 'Y1', 'Y2', 'Z1', 'Z2']
             )
-            plt.show()
+            plt.title("Camera12-IntrinsicMatrix")
+
         if plotName == "camera12-SpecHfovDeg":
-            plt.hist(
+            n, bins, patches = plt.hist(
                 [self.camera1["specHfovDeg"],
-                 self.camera2["specHfovDeg"]]
+                 self.camera2["specHfovDeg"]],
+                label=['SpecHfovDeg1', 'SpecHfovDeg2']
             )
-            plt.show()
+            plt.title("Camera12-SpecHfovDeg")
+
+        if plotName[:7] == "camera0":
+            cm = plt.cm.tab10
+        else:
+            cm = plt.cm.tab20
+        for i, p in enumerate(patches):
+            plt.setp(p, 'facecolor', cm(i))
+        plt.legend()
+        plt.xlabel("Values")
+        plt.ylabel("Number occurrences")
+        plt.show()
 
 
 # create dictionary for every camera type
@@ -419,4 +453,5 @@ for filename in os.listdir(path):
 # camera12-IntrinsicMatrix
 # camera12-SpecHfovDeg
 # MORE plotts can be added...
+filesDic["OAK-D"].plotHistogram("camera0-SpecTranslation")
 filesDic["OAK-D"].plotHistogram("camera12-Rotation")
