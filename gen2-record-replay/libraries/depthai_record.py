@@ -5,6 +5,8 @@ from threading import Thread
 import depthai as dai
 from enum import Enum
 import cv2
+import copy
+
 
 class EncodingQuality(Enum):
     BEST = 1 # Lossless MJPEG
@@ -21,7 +23,7 @@ class Record():
         self.quality = EncodingQuality.HIGH
         self.rotate = -1
         self.preview = False
-        self.connectedCameras = device.getConnectedCameras()
+        self.connectedCameras = self.device.getConnectedCameras()
         
         print(self.connectedCameras)
         self.stereo = 1 < len(device.getConnectedCameras())
@@ -130,7 +132,7 @@ class Record():
 
     # Which streams to save to the disk (on the host)
     def set_save_streams(self, save_streams):
-        self.save = save_streams
+        self.save = copy.deepcopy(save_streams)
 
         print('save', self.save, 'to', self.path)
 
