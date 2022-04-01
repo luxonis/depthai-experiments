@@ -1,9 +1,11 @@
 [depthai_experiments中文文档](README.zh-CN.md)
-
 # depthai-experiments
-Experimental projects we've done with DepthAI.  
 
-**Experiments** can be anything from "here's some code and it works sometimes" to "this is almost a tutorial".  
+[![Discord](https://img.shields.io/discord/790680891252932659?label=Discord)](https://discord.gg/luxonis)
+[![Forum](https://img.shields.io/badge/Forum-discuss-orange)](https://discuss.luxonis.com/)
+[![Docs](https://img.shields.io/badge/Docs-DepthAI-yellow)](https://docs.luxonis.com)
+
+Projects we've done with DepthAI. These can be anything from "here's some code and it works most of the time" to "this is almost a tutorial".
 
 The following list isn't exhaustive (as we randomly add experiments and we may forget to update this list):
 
