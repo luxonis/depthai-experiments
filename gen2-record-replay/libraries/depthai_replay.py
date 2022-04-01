@@ -15,7 +15,11 @@ def getMesh(calibData, resolution, offset):
     print(bottomRightPixel.x, bottomRightPixel.y)
     print("Before Intrins---------------")
     def_m1, w, h = calibData.getDefaultIntrinsics(dai.CameraBoardSocket.LEFT)
-    print("Def Intrins")
+    """ def_m1 = np.array(def_m1) * 1.5
+    def_m1[0,2] -= (1920-1280) / 2 """
+    
+
+    print("Def Intrins---")
     print(w,h)
     print(def_m1)
 
@@ -243,7 +247,7 @@ class Replay:
             baselineSpec = abs(j['cameraData'][0][1]['extrinsics']['specTranslation']['x'])
             baselineCalib = math.sqrt(pow(tCal['x'], 2) + pow(tCal['y'], 2) + pow(tCal['z'], 2))
             print(f'Baseline spec: {baselineSpec:.3f}, calib: {baselineCalib:.3f} cm')
-            focalRightCalib = abs(j['cameraData'][1][1]['intrinsicMatrix'][0][0])
+            focalRightCalib = abs(j['cameraData'][1][1]['intrinsicMatrix'][0][0])*1.5
             #print(f'Focal right calib: {focalRightCalib:.3f}')
             self.disp_levels = 1
             if self.subpixelMode:
