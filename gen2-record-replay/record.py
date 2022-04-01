@@ -52,6 +52,7 @@ def check_sync(queues, timestamp):
         return False
 
 def run_record():
+    global save_path
     # Record from all available devices
     with contextlib.ExitStack() as stack:
         device_infos = dai.Device.getAllAvailableDevices()
@@ -60,7 +61,15 @@ def run_record():
             raise RuntimeError("No devices found!")
         else:
             print("Found", len(device_infos), "devices")
-
+        name = "test"
+        i = 0
+        while True:
+            i += 1
+            recordings_path = save_path / f"{name}-{i}"
+            if not recordings_path.is_dir():
+                recordings_path.mkdir(parents=True, exist_ok=False)
+                save_path = recordings_path
+                break
         recordings = []
         # TODO: allow users to specify which available devices should record
         for device_info in device_infos:

@@ -12,7 +12,6 @@ class EncodingQuality(Enum):
     MEDIUM = 3 # MJPEG Quality=93
     LOW = 4 # H265 BitrateKbps=10000
 
-
 class Record():
     def __init__(self, path: Path, device) -> None:
         self.save = ['color', 'left', 'right']
@@ -22,7 +21,9 @@ class Record():
         self.quality = EncodingQuality.HIGH
         self.rotate = -1
         self.preview = False
-
+        self.connectedCameras = device.getConnectedCameras()
+        
+        print(self.connectedCameras)
         self.stereo = 1 < len(device.getConnectedCameras())
         self.mxid = device.getMxId()
         self.path = self.create_folder(path, self.mxid)
@@ -130,6 +131,7 @@ class Record():
     # Which streams to save to the disk (on the host)
     def set_save_streams(self, save_streams):
         self.save = save_streams
+
         print('save', self.save, 'to', self.path)
 
     def get_sizes(self):
@@ -142,13 +144,13 @@ class Record():
         return dict
 
     def create_folder(self, path: Path, mxid: str):
-        i = 0
-        while True:
-            i += 1
-            recordings_path = path / f"{i}-{str(mxid)}"
-            if not recordings_path.is_dir():
-                recordings_path.mkdir(parents=True, exist_ok=False)
-                return recordings_path
+        # i = 0
+        # while True:
+        #     # i += 1
+        recordings_path = path / f"{str(mxid)}"
+        if not recordings_path.is_dir():
+            recordings_path.mkdir(parents=True, exist_ok=False)
+            return recordings_path
 
     def create_pipeline(self):
         pipeline = dai.Pipeline()
@@ -187,7 +189,7 @@ class Record():
             out.link(encoder.input)
             encoder.bitstream.link(xout.input)
 
-        if "color" in self.save:
+        if "color" in self.save and dai.CameraBoardSocket.RGB in self.connectedCameras:
             nodes['color'] = pipeline.create(dai.node.ColorCamera)
             nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
             # RealSense Viewer expects RGB color order
@@ -195,7 +197,6 @@ class Record():
             nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
             # nodes['color'].setIspScale(2,3) # 1080P
             nodes['color'].setFps(self.fps)
-
             if self.preview:
                 nodes['color'].setPreviewSize(640, 360)
                 stream_out("preview", None, nodes['color'].preview, noEnc=True)
@@ -203,18 +204,30 @@ class Record():
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
             stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
+        elif "color" in self.save and not dai.CameraBoardSocket.RGB in self.connectedCameras:
+            print('Droping color since it is not connected in device with ID {}'.format(self.device.getMxId()))
+            self.save.remove("color")
 
-        if True in (el in ["left", "disparity", "depth"] for el in self.save):
+
+        if True in (el in ["left", "disparity", "depth"] for el in self.save) and dai.CameraBoardSocket.LEFT in self.connectedCameras:
             create_mono("left")
             if "left" in self.save:
                 stream_out("left", nodes['left'].getFps(), nodes['left'].video)
+        elif "left" in self.save and not dai.CameraBoardSocket.LEFT in self.connectedCameras:
+            print('Droping left since it is not connected in device with ID {}'.format(self.device.getMxId()))
+            self.save.remove("left")
+    
 
-        if True in (el in ["right", "disparity", "depth"] for el in self.save):
+        if True in (el in ["right", "disparity", "depth"] for el in self.save) and dai.CameraBoardSocket.RIGHT in self.connectedCameras:
             create_mono("right")
             if "right" in self.save:
                 stream_out("right", nodes['right'].getFps(), nodes['right'].video)
+        elif "right" in self.save and not dai.CameraBoardSocket.LEFT in self.connectedCameras:
+            print('Droping right since it is not connected in device with ID {}'.format(self.device.getMxId()))
+            self.save.remove("right")
 
-        if True in (el in ["disparity", "depth"] for el in self.save):
+        isStereo = dai.CameraBoardSocket.LEFT in self.connectedCameras and dai.CameraBoardSocket.RIGHT in self.connectedCameras
+        if True in (el in ["disparity", "depth"] for el in self.save) and isStereo:
             nodes['stereo'] = pipeline.create(dai.node.StereoDepth)
             nodes['stereo'].initialConfig.setConfidenceThreshold(255)
             nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
