@@ -15,12 +15,14 @@ script.setProcessor(dai.ProcessorType.LEON_CSS)
 videoEnc.bitstream.link(script.inputs['frame'])
 
 script.setScript("""
+# Enter your own IP!
+HOST_IP = "192.168.34.218"
+
 import socket
 import time
 
 sock = socket.socket()
-# Enter your own IP!
-sock.connect(("192.168.34.218", 5000))
+sock.connect((HOST_IP, 5000))
 
 while True:
     pck = node.io["frame"].get()

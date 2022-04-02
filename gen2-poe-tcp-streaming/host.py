@@ -3,6 +3,9 @@ import re
 import cv2
 import numpy as np
 
+# Enter your own IP!
+OAK_IP = "192.168.34.116"
+
 def get_frame(socket, size):
     bytes = socket.recv(4096)
     while True:
@@ -14,8 +17,7 @@ def get_frame(socket, size):
             return bytes
 
 sock = socket.socket()
-# Enter your own IP!
-sock.connect(("192.168.34.116", 5000))
+sock.connect((OAK_IP, 5000))
 
 try:
     while True:
