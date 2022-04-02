@@ -12,7 +12,7 @@ This example shows how you can stream frames (and other data) with OAK PoE via T
 
 ### OAK PoE as client
 
-In this case, OAK PoE camera acts as a server, and host computer connects to it. You could also do it vice-verca, so the server would run on the host computer and OAK PoE would connect to it and start streaming frames. For that, see [PoE Client demo](/poe-client).
+In this case, OAK PoE camera acts as a server, and host computer connects to it. You could also do it vice-verca, so the server would run on the host computer and OAK PoE would connect to it and start streaming frames. For that, see [PoE Client demo](poe-client).
 
 ## Install project requirements
 

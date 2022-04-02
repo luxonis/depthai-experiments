@@ -12,5 +12,5 @@ This example shows how you can stream frames (and other data) with OAK PoE via T
 
 ### OAK PoE as server
 
-In this case, host computer acts as a server, and OAK PoE camera connects to it. You could also do it vice-verca, so the server would run on the OAK PoE camera and host computer would connect to it. For that, see [PoE Host demo](/..).
+In this case, host computer acts as a server, and OAK PoE camera connects to it. You could also do it vice-verca, so the server would run on the OAK PoE camera and host computer would connect to it. For that, see [PoE Host demo](/../).
 
