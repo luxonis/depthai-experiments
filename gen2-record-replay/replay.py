@@ -6,6 +6,8 @@ import depthai as dai
 import blobconverter
 import numpy as np
 from libraries.depthai_replay import Replay
+from utils.config import ConfigParser
+from utils.draw import drawDets
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
@@ -19,6 +21,8 @@ parser.add_argument('-rect', '--rectified', default=False, action='store_true', 
 parser.add_argument('-s', '--scale', default=1000, type=int, help="change the scale required to convert to meters")
 parser.add_argument('-off', '--offset', default=320, type=int,
                     help="Offset to crop 1920x1200 -> 1280x1200 for depth, range 0..640. Default: %(default)s")
+parser.add_argument('-nnb', '--nnBlob', default=None, type=str, help="Path to the NN model")
+parser.add_argument('-nnc', '--nnConfig', default=None, type=str, help="Path to the NN config")
 args = parser.parse_args()
 
 scale = args.scale
@@ -28,28 +32,46 @@ replay = Replay(args.path, args.lrMode, args.subpixelMode, args.extendedMode, ar
 # Initialize the pipeline. This will create required XLinkIn's and connect them together
 pipeline, nodes = replay.init_pipeline()
 # Resize color frames prior to sending them to the device
-replay.set_resize_color((300, 300))
+replay.set_resize_color((416, 416))
 
 # Keep aspect ratio when resizing the color frames. This will crop
 # the color frame to the desired aspect ratio (in our case 300x300)
 replay.keep_aspect_ratio(True)
 
-# nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-# nn.setBoundingBoxScaleFactor(0.3)
-# nn.setDepthLowerThreshold(100)
-# nn.setDepthUpperThreshold(5000)
+if (args.nnConfig is None) is (args.nnBlob is not None):
+    raise ValueError("When specifying NN both config and model must be provided.")
 
-# nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
-# nn.setConfidenceThreshold(0.5)
-# nn.input.setBlocking(False)
+use_nn = args.nnConfig is not None and args.nnBlob is not None
 
-# # Link required inputs to the Spatial detection network
-# nodes.color.out.link(nn.input)
-# nodes.stereo.depth.link(nn.inputDepth)
+if use_nn:
+    nn = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
+    nn.setBoundingBoxScaleFactor(1)
+    nn.setDepthLowerThreshold(100)
+    nn.setDepthUpperThreshold(500000)
 
-# detOut = pipeline.create(dai.node.XLinkOut)
-# detOut.setStreamName("det_out")
-# nn.out.link(detOut.input)
+    nn.setBlobPath(args.nnBlob)
+    #nn.setConfidenceThreshold(0.5)
+    nn.input.setBlocking(False)
+
+    # parse config
+    config_parser = ConfigParser(args.nnConfig)
+    labels = config_parser.labels
+
+    nn.setConfidenceThreshold(config_parser.confidence_threshold)
+    nn.setNumClasses(config_parser.classes)
+    nn.setCoordinateSize(config_parser.coordinates)
+    nn.setAnchors(config_parser.anchors)
+    nn.setAnchorMasks(config_parser.anchor_masks)
+    nn.setIouThreshold(config_parser.iou_threshold)
+
+    # # Link required inputs to the Spatial detection network
+    nodes.color.out.link(nn.input)
+    nodes.stereo.depth.link(nn.inputDepth)
+
+    detOut = pipeline.create(dai.node.XLinkOut)
+    detOut.setStreamName("det_out")
+    nn.out.link(detOut.input)
+
 
 dispOut = pipeline.create(dai.node.XLinkOut)
 dispOut.setStreamName("disp_out")
@@ -66,6 +88,10 @@ nodes.stereo.syncedRight.link(right_s_out.input)
 left_s_out = pipeline.create(dai.node.XLinkOut)
 left_s_out.setStreamName("leftS")
 nodes.stereo.syncedLeft.link(left_s_out.input)
+
+color_out = pipeline.create(dai.node.XLinkOut)
+color_out.setStreamName("color_out")
+nodes.color.out.link(color_out.input)
 
 if args.rectified:
     rect_l_out = pipeline.create(dai.node.XLinkOut)
@@ -86,6 +112,10 @@ with dai.Device(pipeline) as device:
     if args.rectified:
         rectL_Q = device.getOutputQueue(name="rectifiedLeft", maxSize=4, blocking=False)
         rectR_Q = device.getOutputQueue(name="rectifiedRight", maxSize=4, blocking=False)
+    color_Q = device.getOutputQueue(name="color_out", maxSize=4, blocking=False)
+    if use_nn:
+        det_Q = device.getOutputQueue(name="det_out", maxSize=4, blocking=False)
+
 
     disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
@@ -127,6 +157,8 @@ with dai.Device(pipeline) as device:
     while replay.send_frames():
         # rgbFrame = replay.lastFrame['color']x``
         # if mono:
+        if color_Q.has():
+            frames["color"] = color_Q.get().getCvFrame()
         if leftS_Q.has():
             frames["left"] = leftS_Q.get().getCvFrame()
         if rightS_Q.has():
@@ -141,6 +173,12 @@ with dai.Device(pipeline) as device:
         if depthQ.has():
             frames["depth"] = depthQ.get().getFrame()
 
+        if use_nn:
+            if frames.get("color") is not None:
+                dets_obj = det_Q.get()
+                drawDets(frames["color"], dets_obj.detections, labels)
+
+            
         # This acts like a do-while loop, if not paused, we break from it.
         # It allows frame interaction (e.g depth measurement) also while paused
         while True:
