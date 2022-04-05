@@ -14,15 +14,15 @@ python3 main.py
 
 and open ``Foxglove Studio``. When you open up the studio you will be prompted with the connection type. Chose ``Open connection``
 
-![alt text](https://github.com/ZigiMigi/images/blob/4f2b3fbe1ff1e9b6109eb15a72065bf2807391db/pic1.png)
+![pic1](https://user-images.githubusercontent.com/82703447/161803788-3d0e15e9-df24-430b-8f73-4fdc82626c06.png)
 
 And after that chose ``Foxglove websocket``.
 
-![alt text](https://github.com/ZigiMigi/images/blob/4f2b3fbe1ff1e9b6109eb15a72065bf2807391db/pic2.png)
+![pic2](https://user-images.githubusercontent.com/82703447/161803642-a91e31af-18d0-4e53-babf-4268323e1255.png)
 
 When you are successfully connected, chose ``Image`` panel and your studio should look something like this:
 
-![alt text](https://github.com/ZigiMigi/images/blob/4f2b3fbe1ff1e9b6109eb15a72065bf2807391db/pic3.png)
+![pic3](https://user-images.githubusercontent.com/82703447/161803876-f3b168ed-4ca5-4059-84a5-daee22ae9db6.png)
 
 By default, the program will stream ``Color`` stream only. To enable other streams use next flags:
 
@@ -39,4 +39,4 @@ python3 main.py -pcl
 
 Studio should now be displaying your ``point cloud``, if you open it up in the ``3D`` panel.
 
-![alt text](https://github.com/ZigiMigi/images/blob/4f2b3fbe1ff1e9b6109eb15a72065bf2807391db/pic4.png)
+![pic4](https://user-images.githubusercontent.com/82703447/161804066-2f736ca3-07cd-413b-bb80-e8f71f2e53e7.png)
