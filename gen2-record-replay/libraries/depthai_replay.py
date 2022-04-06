@@ -225,6 +225,7 @@ class Replay:
             nodes.stereo.setSubpixel(self.subpixelMode)
             nodes.stereo.setExtendedDisparity(self.extendedMode)
             nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
+            nodes.stereo.initialConfig.setDepthUnit(dai.StereoDepthConfig.AlgorithmControl.DepthUnit.CENTIMETER)
             # black instead of pixel replication for missing frame data at the edges
             nodes.stereo.setRectifyEdgeFillColor(0)
             self.meshLeft, self.meshRight = getMesh(self.calibData, self.size['left'], self.offset['left'])
