@@ -20,6 +20,10 @@ def matrixToEuler(matrix):
     return x, y, z
 
 
+def intrinsicData(matrix):
+    return matrix[0][0], matrix[0][2], matrix[1][1], matrix[1][2]
+
+
 class PoeData:
     def __init__(self, boardName):
         self.name = boardName
@@ -32,9 +36,9 @@ class PoeData:
         # camera 0 specifications
         self.camera0["distortionCoeff"] = []
         self.camera0["rotationMatrix"] = dict()
-        self.camera0["rotationMatrix"]["x"] = []
+        self.camera0["rotationMatrix"]["r"] = []
+        self.camera0["rotationMatrix"]["p"] = []
         self.camera0["rotationMatrix"]["y"] = []
-        self.camera0["rotationMatrix"]["z"] = []
         self.camera0["specTranslation"] = dict()
         self.camera0["specTranslation"]["x"] = []
         self.camera0["specTranslation"]["y"] = []
@@ -45,18 +49,19 @@ class PoeData:
         self.camera0["translation"]["z"] = []
         self.camera0["height"] = []
         self.camera0["intrinsicMatrix"] = dict()
-        self.camera0["intrinsicMatrix"]["x"] = []
-        self.camera0["intrinsicMatrix"]["y"] = []
-        self.camera0["intrinsicMatrix"]["z"] = []
+        self.camera0["intrinsicMatrix"]["f_x"] = []
+        self.camera0["intrinsicMatrix"]["f_y"] = []
+        self.camera0["intrinsicMatrix"]["c_x"] = []
+        self.camera0["intrinsicMatrix"]["c_y"] = []
         self.camera0["specHfovDeg"] = []
         self.camera0["width"] = []
 
         # camera 1 specifications
         self.camera1["distortionCoeff"] = []
         self.camera1["rotationMatrix"] = dict()
-        self.camera1["rotationMatrix"]["x"] = []
+        self.camera1["rotationMatrix"]["r"] = []
+        self.camera1["rotationMatrix"]["p"] = []
         self.camera1["rotationMatrix"]["y"] = []
-        self.camera1["rotationMatrix"]["z"] = []
         self.camera1["specTranslation"] = dict()
         self.camera1["specTranslation"]["x"] = []
         self.camera1["specTranslation"]["y"] = []
@@ -67,18 +72,19 @@ class PoeData:
         self.camera1["translation"]["z"] = []
         self.camera1["height"] = []
         self.camera1["intrinsicMatrix"] = dict()
-        self.camera1["intrinsicMatrix"]["x"] = []
-        self.camera1["intrinsicMatrix"]["y"] = []
-        self.camera1["intrinsicMatrix"]["z"] = []
+        self.camera1["intrinsicMatrix"]["f_x"] = []
+        self.camera1["intrinsicMatrix"]["f_y"] = []
+        self.camera1["intrinsicMatrix"]["c_x"] = []
+        self.camera1["intrinsicMatrix"]["c_y"] = []
         self.camera1["specHfovDeg"] = []
         self.camera1["width"] = []
 
         # camera 2 specifications
         self.camera2["distortionCoeff"] = []
         self.camera2["rotationMatrix"] = dict()
-        self.camera2["rotationMatrix"]["x"] = []
+        self.camera2["rotationMatrix"]["r"] = []
+        self.camera2["rotationMatrix"]["p"] = []
         self.camera2["rotationMatrix"]["y"] = []
-        self.camera2["rotationMatrix"]["z"] = []
         self.camera2["specTranslation"] = dict()
         self.camera2["specTranslation"]["x"] = []
         self.camera2["specTranslation"]["y"] = []
@@ -89,17 +95,18 @@ class PoeData:
         self.camera2["translation"]["z"] = []
         self.camera2["height"] = []
         self.camera2["intrinsicMatrix"] = dict()
-        self.camera2["intrinsicMatrix"]["x"] = []
-        self.camera2["intrinsicMatrix"]["y"] = []
-        self.camera2["intrinsicMatrix"]["z"] = []
+        self.camera2["intrinsicMatrix"]["f_x"] = []
+        self.camera2["intrinsicMatrix"]["f_y"] = []
+        self.camera2["intrinsicMatrix"]["c_x"] = []
+        self.camera2["intrinsicMatrix"]["c_y"] = []
         self.camera2["specHfovDeg"] = []
         self.camera2["width"] = []
 
         # imu data
         self.imuRotationMatrix = dict()
-        self.imuRotationMatrix["x"] = []
+        self.imuRotationMatrix["r"] = []
+        self.imuRotationMatrix["p"] = []
         self.imuRotationMatrix["y"] = []
-        self.imuRotationMatrix["z"] = []
         self.imuSpecTranslation = dict()
         self.imuSpecTranslation["x"] = []
         self.imuSpecTranslation["y"] = []
@@ -163,9 +170,9 @@ class PoeData:
         # imu data
         if imuData["rotationMatrix"]:
             tmp = matrixToEuler(imuData["rotationMatrix"])
-            self.imuRotationMatrix["x"].append(tmp[0])
-            self.imuRotationMatrix["y"].append(tmp[1])
-            self.imuRotationMatrix["z"].append(tmp[2])
+            self.imuRotationMatrix["r"].append(tmp[0])
+            self.imuRotationMatrix["p"].append(tmp[1])
+            self.imuRotationMatrix["y"].append(tmp[2])
         self.imuSpecTranslation["x"].append(imuData["specTranslation"]["x"])
         self.imuSpecTranslation["y"].append(imuData["specTranslation"]["y"])
         self.imuSpecTranslation["z"].append(imuData["specTranslation"]["z"])
@@ -194,9 +201,9 @@ class PoeData:
 
         # camera 0 does not have rotation matrix?
         # tmp = matrixToEuler(data["extrinsics"]["rotationMatrix"])
-        # self.camera0["rotationMatrix"]["x"].append(tmp[0])
-        # self.camera0["rotationMatrix"]["y"].append(tmp[1])
-        # self.camera0["rotationMatrix"]["z"].append(tmp[2])
+        # self.camera0["rotationMatrix"]["r"].append(tmp[0])
+        # self.camera0["rotationMatrix"]["p"].append(tmp[1])
+        # self.camera0["rotationMatrix"]["y"].append(tmp[2])
 
         # save each spec translation component
         self.camera0["specTranslation"]["x"].append(data["extrinsics"]["specTranslation"]["x"])
@@ -210,10 +217,11 @@ class PoeData:
         self.camera0["height"].append(data["height"])
 
         # save each intrinsic matrix component
-        tmp = matrixToEuler(data["intrinsicMatrix"])
-        self.camera0["intrinsicMatrix"]["x"].append(tmp[0])
-        self.camera0["intrinsicMatrix"]["y"].append(tmp[1])
-        self.camera0["intrinsicMatrix"]["z"].append(tmp[2])
+        tmp = intrinsicData(data["intrinsicMatrix"])
+        self.camera0["intrinsicMatrix"]["f_x"].append(tmp[0])
+        self.camera0["intrinsicMatrix"]["f_y"].append(tmp[2])
+        self.camera0["intrinsicMatrix"]["c_x"].append(tmp[1])
+        self.camera0["intrinsicMatrix"]["c_y"].append(tmp[3])
         self.camera0["specHfovDeg"].append(data["specHfovDeg"])
         self.camera0["width"].append(data["width"])
 
@@ -222,9 +230,9 @@ class PoeData:
 
         # save each rotation matrix component
         tmp = matrixToEuler(data["extrinsics"]["rotationMatrix"])
-        self.camera1["rotationMatrix"]["x"].append(tmp[0])
-        self.camera1["rotationMatrix"]["y"].append(tmp[1])
-        self.camera1["rotationMatrix"]["z"].append(tmp[2])
+        self.camera1["rotationMatrix"]["r"].append(tmp[0])
+        self.camera1["rotationMatrix"]["p"].append(tmp[1])
+        self.camera1["rotationMatrix"]["y"].append(tmp[2])
 
         # save each spec translation component
         self.camera1["specTranslation"]["x"].append(data["extrinsics"]["specTranslation"]["x"])
@@ -238,10 +246,11 @@ class PoeData:
         self.camera1["height"].append(data["height"])
 
         # save each intrinsic matrix component
-        tmp = matrixToEuler(data["intrinsicMatrix"])
-        self.camera1["intrinsicMatrix"]["x"].append(tmp[0])
-        self.camera1["intrinsicMatrix"]["y"].append(tmp[1])
-        self.camera1["intrinsicMatrix"]["z"].append(tmp[2])
+        tmp = intrinsicData(data["intrinsicMatrix"])
+        self.camera1["intrinsicMatrix"]["f_x"].append(tmp[0])
+        self.camera1["intrinsicMatrix"]["f_y"].append(tmp[2])
+        self.camera1["intrinsicMatrix"]["c_x"].append(tmp[1])
+        self.camera1["intrinsicMatrix"]["c_y"].append(tmp[3])
         self.camera1["specHfovDeg"].append(data["specHfovDeg"])
         self.camera1["width"].append(data["width"])
 
@@ -250,9 +259,9 @@ class PoeData:
 
         # save each rotation matrix component
         tmp = matrixToEuler(data["extrinsics"]["rotationMatrix"])
-        self.camera2["rotationMatrix"]["x"].append(tmp[0])
-        self.camera2["rotationMatrix"]["y"].append(tmp[1])
-        self.camera2["rotationMatrix"]["z"].append(tmp[2])
+        self.camera2["rotationMatrix"]["r"].append(tmp[0])
+        self.camera2["rotationMatrix"]["p"].append(tmp[1])
+        self.camera2["rotationMatrix"]["y"].append(tmp[2])
 
         # save each spec translation component
         self.camera2["specTranslation"]["x"].append(data["extrinsics"]["specTranslation"]["x"])
@@ -266,10 +275,11 @@ class PoeData:
         self.camera2["height"].append(data["height"])
 
         # save each intrinsic matrix component
-        tmp = matrixToEuler(data["intrinsicMatrix"])
-        self.camera2["intrinsicMatrix"]["x"].append(tmp[0])
-        self.camera2["intrinsicMatrix"]["y"].append(tmp[1])
-        self.camera2["intrinsicMatrix"]["z"].append(tmp[2])
+        tmp = intrinsicData(data["intrinsicMatrix"])
+        self.camera2["intrinsicMatrix"]["f_x"].append(tmp[0])
+        self.camera2["intrinsicMatrix"]["f_y"].append(tmp[2])
+        self.camera2["intrinsicMatrix"]["c_x"].append(tmp[1])
+        self.camera2["intrinsicMatrix"]["c_y"].append(tmp[3])
         self.camera2["specHfovDeg"].append(data["specHfovDeg"])
         self.camera2["width"].append(data["width"])
 
@@ -277,10 +287,10 @@ class PoeData:
         # camera 0 data is shown separately
         if plotName == "camera0-Rotation":
             n, bins, patches = plt.hist(
-                [self.camera0["rotationMatrix"]["x"],
-                 self.camera0["rotationMatrix"]["y"],
-                 self.camera0["rotationMatrix"]["z"]],
-                label=['X', 'Y', 'Z']
+                [self.camera0["rotationMatrix"]["r"],
+                 self.camera0["rotationMatrix"]["p"],
+                 self.camera0["rotationMatrix"]["y"]],
+                label=['R', 'P', 'Y']
                 )
             plt.title("Camera0-Rotation")
 
@@ -308,16 +318,15 @@ class PoeData:
                  self.camera0["height"]],
                 label=['Width', 'Height']
             )
-            for i, p in enumerate(patches):
-                plt.setp(p, 'facecolor', cm(i))
             plt.title("Camera0-WidthHeight")
 
         if plotName == "camera0-IntrinsicMatrix":
             n, bins, patches = plt.hist(
-                [self.camera0["intrinsicMatrix"]["x"],
-                 self.camera0["intrinsicMatrix"]["y"],
-                 self.camera0["intrinsicMatrix"]["z"]],
-                label=['X', 'Y', 'Z']
+                [self.camera0["intrinsicMatrix"]["f_x"],
+                 self.camera0["intrinsicMatrix"]["f_y"],
+                 self.camera0["intrinsicMatrix"]["c_x"],
+                 self.camera0["intrinsicMatrix"]["c_y"]],
+                label=['F_X', 'F_Y', 'C_X', 'C_Y']
             )
             plt.title("Camera0-IntrinsicMatrix")
 
@@ -331,13 +340,13 @@ class PoeData:
         # camera 1 and camera 2 data will be shown together
         if plotName == "camera12-Rotation":
             n, bins, patches = plt.hist(
-                [self.camera1["rotationMatrix"]["x"],
-                 self.camera2["rotationMatrix"]["x"],
+                [self.camera1["rotationMatrix"]["r"],
+                 self.camera2["rotationMatrix"]["r"],
+                 self.camera1["rotationMatrix"]["p"],
+                 self.camera2["rotationMatrix"]["p"],
                  self.camera1["rotationMatrix"]["y"],
-                 self.camera2["rotationMatrix"]["y"],
-                 self.camera1["rotationMatrix"]["z"],
-                 self.camera2["rotationMatrix"]["z"]],
-                label=['X1', 'X2', 'Y1', 'Y2', 'Z1', 'Z2']
+                 self.camera2["rotationMatrix"]["y"]],
+                label=['R1', 'R2', 'P1', 'P2', 'Y1', 'Y2']
                 )
             plt.title("Camera12-Rotation")
         if plotName == "camera12-SpecTranslation":
@@ -376,13 +385,15 @@ class PoeData:
 
         if plotName == "camera12-IntrinsicMatrix":
             n, bins, patches = plt.hist(
-                [self.camera1["intrinsicMatrix"]["x"],
-                 self.camera2["intrinsicMatrix"]["x"],
-                 self.camera1["intrinsicMatrix"]["y"],
-                 self.camera2["intrinsicMatrix"]["y"],
-                 self.camera1["intrinsicMatrix"]["z"],
-                 self.camera2["intrinsicMatrix"]["z"]],
-                label=['X1', 'X2', 'Y1', 'Y2', 'Z1', 'Z2']
+                [self.camera1["intrinsicMatrix"]["f_x"],
+                 self.camera2["intrinsicMatrix"]["f_x"],
+                 self.camera1["intrinsicMatrix"]["f_y"],
+                 self.camera2["intrinsicMatrix"]["f_y"],
+                 self.camera1["intrinsicMatrix"]["c_x"],
+                 self.camera2["intrinsicMatrix"]["c_x"],
+                 self.camera1["intrinsicMatrix"]["c_y"],
+                 self.camera2["intrinsicMatrix"]["c_y"]],
+                label=['F_X1', 'F_X2', 'F_Y1', 'F_Y2', 'C_X1', 'C_X2', 'C_Y1', 'C_Y2']
             )
             plt.title("Camera12-IntrinsicMatrix")
 
