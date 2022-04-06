@@ -11,128 +11,139 @@ def frame_norm(frame, bbox):
 
 emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
-pipeline = dai.Pipeline()
+def create_pipeline(stereo):
+    pipeline = dai.Pipeline()
 
-print("Creating Color Camera...")
-cam = pipeline.create(dai.node.ColorCamera)
-cam.setPreviewSize(1080, 1080)
-cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-cam.setInterleaved(False)
-cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+    print("Creating Color Camera...")
+    cam = pipeline.create(dai.node.ColorCamera)
+    cam.setPreviewSize(1080, 1080)
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam.setInterleaved(False)
+    cam.setBoardSocket(dai.CameraBoardSocket.RGB)
 
-cam_xout = pipeline.create(dai.node.XLinkOut)
-cam_xout.setStreamName("color")
-cam.preview.link(cam_xout.input)
+    cam_xout = pipeline.create(dai.node.XLinkOut)
+    cam_xout.setStreamName("color")
+    cam.preview.link(cam_xout.input)
 
-# ImageManip that will crop the frame before sending it to the Face detection NN node
-face_det_manip = pipeline.create(dai.node.ImageManip)
-face_det_manip.initialConfig.setResize(300, 300)
-face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
+    # ImageManip that will crop the frame before sending it to the Face detection NN node
+    face_det_manip = pipeline.create(dai.node.ImageManip)
+    face_det_manip.initialConfig.setResize(300, 300)
+    face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
+    cam.preview.link(face_det_manip.inputImage)
 
-monoLeft = pipeline.create(dai.node.MonoCamera)
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-monoRight = pipeline.create(dai.node.MonoCamera)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+    if stereo:
+        monoLeft = pipeline.create(dai.node.MonoCamera)
+        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-stereo = pipeline.create(dai.node.StereoDepth)
-stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-monoLeft.out.link(stereo.left)
-monoRight.out.link(stereo.right)
+        monoRight = pipeline.create(dai.node.MonoCamera)
+        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-# NeuralNetwork
-print("Creating Face Detection Neural Network...")
-face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-face_det_nn.setConfidenceThreshold(0.5)
-face_det_nn.setBoundingBoxScaleFactor(0.8)
-face_det_nn.setDepthLowerThreshold(100)
-face_det_nn.setDepthUpperThreshold(5000)
-face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+        stereo = pipeline.create(dai.node.StereoDepth)
+        stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        monoLeft.out.link(stereo.left)
+        monoRight.out.link(stereo.right)
 
-cam.preview.link(face_det_manip.inputImage)
-stereo.depth.link(face_det_nn.inputDepth)
-face_det_manip.out.link(face_det_nn.input)
+        # Spatial Detection network if OAK-D
+        print("OAK-D detected, app will display spatial coordiantes")
+        face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+        face_det_nn.setBoundingBoxScaleFactor(0.8)
+        face_det_nn.setDepthLowerThreshold(100)
+        face_det_nn.setDepthUpperThreshold(5000)
+        stereo.depth.link(face_det_nn.inputDepth)
+    else: # Detection network if OAK-1
+        print("OAK-1 detected, app won't display spatial coordiantes")
+        face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 
-# Send face detections to the host (for bounding boxes)
-face_det_xout = pipeline.create(dai.node.XLinkOut)
-face_det_xout.setStreamName("detection")
-face_det_nn.out.link(face_det_xout.input)
+    face_det_nn.setConfidenceThreshold(0.5)
+    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+    face_det_manip.out.link(face_det_nn.input)
 
-# Script node will take the output from the face detection NN as an input and set ImageManipConfig
-# to the 'age_gender_manip' to crop the initial frame
-image_manip_script = pipeline.create(dai.node.Script)
-face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
+    # Send face detections to the host (for bounding boxes)
+    face_det_xout = pipeline.create(dai.node.XLinkOut)
+    face_det_xout.setStreamName("detection")
+    face_det_nn.out.link(face_det_xout.input)
 
-# Only send metadata, we are only interested in timestamp, so we can sync
-# depth frames with NN output
-face_det_nn.passthrough.link(image_manip_script.inputs['passthrough'])
+    # Script node will take the output from the face detection NN as an input and set ImageManipConfig
+    # to the 'age_gender_manip' to crop the initial frame
+    image_manip_script = pipeline.create(dai.node.Script)
+    face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
 
-image_manip_script.setScript("""
-l = [] # List of images
-# So the correct frame will be the first in the list
-# For this experiment this function is redundant, since everything
-# runs in blocking mode, so no frames will get lost
-def get_latest_frame(seq):
-    global l
-    for i, frame in enumerate(l):
-        if seq == frame.getSequenceNum():
-            # node.warn(f"List len {len(l)} Frame with same seq num: {i},seq {seq}")
-            l = l[i:]
-            break
-    return l[0]
+    # Only send metadata, we are only interested in timestamp, so we can sync
+    # depth frames with NN output
+    face_det_nn.passthrough.link(image_manip_script.inputs['passthrough'])
 
-def correct_bb(bb):
-    if bb.xmin < 0: bb.xmin = 0.001
-    if bb.ymin < 0: bb.ymin = 0.001
-    if bb.xmax > 1: bb.xmax = 0.999
-    if bb.ymax > 1: bb.ymax = 0.999
-    return bb
-while True:
-    preview = node.io['preview'].tryGet()
-    if preview is not None:
-        # node.warn(f"New frame {preview.getSequenceNum()}")
-        l.append(preview)
+    image_manip_script.setScript("""
+    l = [] # List of images
+    # So the correct frame will be the first in the list
+    # For this experiment this function is redundant, since everything
+    # runs in blocking mode, so no frames will get lost
+    def get_latest_frame(seq):
+        global l
+        for i, frame in enumerate(l):
+            if seq == frame.getSequenceNum():
+                # node.warn(f"List len {len(l)} Frame with same seq num: {i},seq {seq}")
+                l = l[i:]
+                break
+        return l[0]
 
-    face_dets = node.io['face_det_in'].tryGet()
-    # node.warn(f"Faces detected: {len(face_dets)}")
-    if face_dets is not None:
-        passthrough = node.io['passthrough'].get()
-        seq = passthrough.getSequenceNum()
-        # node.warn(f"New detection {seq}")
-        if len(l) == 0:
-            continue
-        img = get_latest_frame(seq)
+    def correct_bb(bb):
+        if bb.xmin < 0: bb.xmin = 0.001
+        if bb.ymin < 0: bb.ymin = 0.001
+        if bb.xmax > 1: bb.xmax = 0.999
+        if bb.ymax > 1: bb.ymax = 0.999
+        return bb
+    while True:
+        preview = node.io['preview'].tryGet()
+        if preview is not None:
+            # node.warn(f"New frame {preview.getSequenceNum()}")
+            l.append(preview)
 
-        for i, det in enumerate(face_dets.detections):
-            cfg = ImageManipConfig()
-            correct_bb(det)
-            cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
-            # node.warn(f"Sending {i + 1}. age/gender det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
-            cfg.setResize(64, 64)
-            cfg.setKeepAspectRatio(False)
-            node.io['manip_cfg'].send(cfg)
-            node.io['manip_img'].send(img)
-""")
-cam.preview.link(image_manip_script.inputs['preview'])
+        face_dets = node.io['face_det_in'].tryGet()
+        # node.warn(f"Faces detected: {len(face_dets)}")
+        if face_dets is not None:
+            passthrough = node.io['passthrough'].get()
+            seq = passthrough.getSequenceNum()
+            # node.warn(f"New detection {seq}")
+            if len(l) == 0:
+                continue
+            img = get_latest_frame(seq)
 
-manip_manip = pipeline.create(dai.node.ImageManip)
-manip_manip.initialConfig.setResize(64, 64)
-manip_manip.setWaitForConfigInput(True)
-image_manip_script.outputs['manip_cfg'].link(manip_manip.inputConfig)
-image_manip_script.outputs['manip_img'].link(manip_manip.inputImage)
+            for i, det in enumerate(face_dets.detections):
+                cfg = ImageManipConfig()
+                correct_bb(det)
+                cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
+                # node.warn(f"Sending {i + 1}. age/gender det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
+                cfg.setResize(64, 64)
+                cfg.setKeepAspectRatio(False)
+                node.io['manip_cfg'].send(cfg)
+                node.io['manip_img'].send(img)
+    """)
+    cam.preview.link(image_manip_script.inputs['preview'])
 
-# This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
-# face that was detected by the face-detection NN.
-emotions_nn = pipeline.create(dai.node.NeuralNetwork)
-emotions_nn.setBlobPath(blobconverter.from_zoo(name="emotions-recognition-retail-0003", shaves=6))
-manip_manip.out.link(emotions_nn.input)
+    manip_manip = pipeline.create(dai.node.ImageManip)
+    manip_manip.initialConfig.setResize(64, 64)
+    manip_manip.setWaitForConfigInput(True)
+    image_manip_script.outputs['manip_cfg'].link(manip_manip.inputConfig)
+    image_manip_script.outputs['manip_img'].link(manip_manip.inputImage)
 
-recognition_xout = pipeline.create(dai.node.XLinkOut)
-recognition_xout.setStreamName("recognition")
-emotions_nn.out.link(recognition_xout.input)
+    # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
+    # face that was detected by the face-detection NN.
+    emotions_nn = pipeline.create(dai.node.NeuralNetwork)
+    emotions_nn.setBlobPath(blobconverter.from_zoo(name="emotions-recognition-retail-0003", shaves=6))
+    manip_manip.out.link(emotions_nn.input)
 
-with dai.Device(pipeline) as device:
+    recognition_xout = pipeline.create(dai.node.XLinkOut)
+    recognition_xout.setStreamName("recognition")
+    emotions_nn.out.link(recognition_xout.input)
+
+    return pipeline
+
+with dai.Device() as device:
+    stereo = 1 < len(device.getConnectedCameras())
+    device.startPipeline(create_pipeline(stereo))
+
     sync = TwoStageHostSeqSync()
     queues = {}
     # Create output queues
@@ -163,10 +174,11 @@ with dai.Device(pipeline) as device:
                 y = (bbox[1] + bbox[3]) // 2
                 cv2.putText(frame, emotion_name, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
                 cv2.putText(frame, emotion_name, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
-                # You could also get detection.spatialCoordinates.x and detection.spatialCoordinates.y coordinates
-                coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
-                cv2.putText(frame, coords, (bbox[0], y + 35), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
-                cv2.putText(frame, coords, (bbox[0], y + 35), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
+                if stereo:
+                    # You could also get detection.spatialCoordinates.x and detection.spatialCoordinates.y coordinates
+                    coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
+                    cv2.putText(frame, coords, (bbox[0], y + 35), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
+                    cv2.putText(frame, coords, (bbox[0], y + 35), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
 
             cv2.imshow("Camera", frame)
         if cv2.waitKey(1) == ord('q'):
