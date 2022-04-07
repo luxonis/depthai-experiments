@@ -7,10 +7,20 @@ import blobconverter
 import numpy as np
 from libraries.depthai_replay import Replay
 from utils.config import ConfigParser
-from utils.draw import drawDets
+from utils.draw import drawDets, pred_to_lines, draw_points
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+
+COLORS = np.asarray([[0, 0, 255], [0, 255, 0], [255, 0, 0], [255, 255 ,0]], dtype = np.uint8)
+COLORS = COLORS.astype(int)
+
+ROW_ANCHORS = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 
+            80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 148, 152, 156, 
+            160, 164, 168, 172, 176, 180, 184, 188, 192, 196, 200, 204, 208, 212, 216, 220, 224, 228, 232, 
+            236, 240, 244, 248, 252, 256, 260, 264, 268, 272, 276, 280, 284]
+
+GRIDING_NUM = 100
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
@@ -23,6 +33,7 @@ parser.add_argument('-off', '--offset', default=320, type=int,
                     help="Offset to crop 1920x1200 -> 1280x1200 for depth, range 0..640. Default: %(default)s")
 parser.add_argument('-nnb', '--nnBlob', default=None, type=str, help="Path to the NN model")
 parser.add_argument('-nnc', '--nnConfig', default=None, type=str, help="Path to the NN config")
+parser.add_argument('-nnl', '--nnLaneBlob', default=None, type=str, help="Path to the NN for lane detection")
 args = parser.parse_args()
 
 scale = args.scale
@@ -32,7 +43,7 @@ replay = Replay(args.path, args.lrMode, args.subpixelMode, args.extendedMode, ar
 # Initialize the pipeline. This will create required XLinkIn's and connect them together
 pipeline, nodes = replay.init_pipeline()
 # Resize color frames prior to sending them to the device
-replay.set_resize_color((416, 416))
+replay.set_resize_color((768, 416))
 
 # Keep aspect ratio when resizing the color frames. This will crop
 # the color frame to the desired aspect ratio (in our case 300x300)
@@ -42,8 +53,19 @@ if (args.nnConfig is None) is (args.nnBlob is not None):
     raise ValueError("When specifying NN both config and model must be provided.")
 
 use_nn = args.nnConfig is not None and args.nnBlob is not None
+use_lane_nn = args.nnLaneBlob is not None
 
 if use_nn:
+
+    manip_yolo = pipeline.create(dai.node.ImageManip)
+    manip_yolo.initialConfig.setKeepAspectRatio(True)
+    manip_yolo.initialConfig.setResize(416, 416)
+    manip_yolo.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+
+    manip_yolo_out = pipeline.create(dai.node.XLinkOut)
+    manip_yolo_out.setStreamName("myo")
+    manip_yolo.out.link(manip_yolo_out.input)
+
     nn = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
     nn.setBoundingBoxScaleFactor(0.4)
     nn.setDepthLowerThreshold(100)
@@ -65,12 +87,34 @@ if use_nn:
     nn.setIouThreshold(config_parser.iou_threshold)
 
     # # Link required inputs to the Spatial detection network
-    nodes.color.out.link(nn.input)
+    nodes.color.out.link(manip_yolo.inputImage)
+    manip_yolo.out.link(nn.input)
     nodes.stereo.depth.link(nn.inputDepth)
 
     detOut = pipeline.create(dai.node.XLinkOut)
     detOut.setStreamName("det_out")
     nn.out.link(detOut.input)
+
+
+if use_lane_nn:
+    manip_lane = pipeline.create(dai.node.ImageManip)
+    manip_lane.initialConfig.setKeepAspectRatio(False)
+    manip_lane.initialConfig.setResize(512, 288)
+    manip_lane.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+
+    manip_lane_out = pipeline.create(dai.node.XLinkOut)
+    manip_lane_out.setStreamName("mlo")
+
+    nn_lane = pipeline.create(dai.node.NeuralNetwork)
+    nn_lane.setBlobPath(args.nnLaneBlob)
+
+    nn_lane_out = pipeline.create(dai.node.XLinkOut)
+    nn_lane_out.setStreamName("lane_out")
+
+    nodes.color.out.link(manip_lane.inputImage)
+    manip_lane.out.link(nn_lane.input)
+    manip_lane.out.link(manip_lane_out.input)
+    nn_lane.out.link(nn_lane_out.input)
 
 
 dispOut = pipeline.create(dai.node.XLinkOut)
@@ -115,7 +159,10 @@ with dai.Device(pipeline) as device:
     color_Q = device.getOutputQueue(name="color_out", maxSize=4, blocking=False)
     if use_nn:
         det_Q = device.getOutputQueue(name="det_out", maxSize=4, blocking=False)
-
+        myo_Q = device.getOutputQueue(name="myo", maxSize=4, blocking=False)
+    if use_lane_nn:
+        lane_Q = device.getOutputQueue(name="lane_out", maxSize=4, blocking=False)
+        mlo_Q = device.getOutputQueue(name="mlo", maxSize=4, blocking=False)
 
     disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
@@ -176,7 +223,27 @@ with dai.Device(pipeline) as device:
         if use_nn:
             if frames.get("color") is not None:
                 dets_obj = det_Q.get()
-                drawDets(frames["color"], dets_obj.detections, labels)
+                drawDets(frames.get("color"), dets_obj.detections, labels, pad = (768 - 416)//2)
+                
+                # show for debug purposes
+                myo_frame = myo_Q.get().getCvFrame()
+                cv2.imshow("MYO", myo_frame)
+        if use_lane_nn:
+            if frames.get("color") is not None:
+                lanes_obj = lane_Q.get()
+                lanes_obj = np.array(lanes_obj.getFirstLayerFp16()).reshape((101, 72, 4))
+
+                lanes = pred_to_lines(lanes_obj,ROW_ANCHORS, GRIDING_NUM, input_size = (288, 512), target_size = (416, 768))
+                
+                # aspec ratio not kept in manip, as preview is around 16:9
+                # possible to specify preview shape above and draw directly
+                # if preview shape changes to other aspect, then additional remapping of points might be needed
+                draw_points(frames.get("color"), lanes, COLORS)
+
+                # show for debug purposes
+                mlo_frame = mlo_Q.get().getCvFrame()
+                cv2.imshow("MLO", mlo_frame)
+
 
             
         # This acts like a do-while loop, if not paused, we break from it.
