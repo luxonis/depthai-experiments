@@ -16,12 +16,11 @@ Example shows input video with overlay of lane and line segmentation and vehicle
 
 ## Pre-requisites
 
-1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
+1. Install requirements:
    ```
    python3 -m pip install -r requirements.txt
    ```
-3. Download sample videos
+2. Download sample videos
    ```
    python3 download.py
    ```

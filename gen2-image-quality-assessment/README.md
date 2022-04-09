@@ -15,11 +15,10 @@ The model outputs 4 quality classes
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
+Install requirements:
+```
+python3 -m pip install -r requirements.txt
+```
 
 ## Usage
 

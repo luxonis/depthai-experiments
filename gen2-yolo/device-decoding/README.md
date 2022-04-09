@@ -19,17 +19,17 @@ As the models have to be exported to OpenVINO IR in a certain way, we provide th
 * Yolo**V5**: *YoloV5_training.ipynb* [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/master/colab-notebooks/YoloV5_training.ipynb).
 
 ## Usage
-1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
+
+1. Install requirements
 	```python
 	python3 -m pip install -r requirements.txt
 	```
-3. Run the script:	
-    ```python
+2. Run the script
+    ```
     python3 main.py -m <model_name> -c <config_json>
     ```
     or
-    ```python
+    ```
     python3 main_api.py -m <model_name> -c <config_json>
     ```
     where:

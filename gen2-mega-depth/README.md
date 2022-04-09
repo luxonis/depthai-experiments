@@ -12,12 +12,9 @@ Output is an unnormalized depth map of the same size. Note that this experiment 
 
 ## Pre-requisites
 
-1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/)).
-
-3. Install requirements.
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
+```
+python3 -m pip install -r requirements.txt
+```
 
 ## Usage
 

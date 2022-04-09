@@ -10,8 +10,7 @@ This example demonstrates the Gen2 Pipeline Builder running [face detection netw
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
+Install requirements:
 ```
 python -m pip install -r requirements.txt
 ```
