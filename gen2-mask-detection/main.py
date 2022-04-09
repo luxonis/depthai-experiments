@@ -1,6 +1,7 @@
 from scipy.special import log_softmax,softmax
 from queue import Queue
 from depthai_utils import *
+import depthai as dai
 
 class Main(DepthAI):
     def __init__(self,file=None,camera=False):

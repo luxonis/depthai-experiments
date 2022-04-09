@@ -2,4 +2,4 @@ numpy
 numba
 opencv-python
 argparse
-depthai==2.13.3.0
+depthai==2.15.2.0

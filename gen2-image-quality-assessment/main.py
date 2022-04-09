@@ -22,7 +22,8 @@ parser.add_argument('-nn', '--nn_path', type=str, help="select model blob path f
 
 args = parser.parse_args()
 
-NN_PATH = args.nn_path if args.nn_path else str(blobconverter.from_zoo(name="image_quality_assessment_256x256", zoo_type="depthai"))
+NN_PATH = blobconverter.from_zoo(name="image_quality_assessment_256x256", zoo_type="depthai", shaves=6)
+if args.nn_path: NN_PATH = args.nn_path
 
 NN_WIDTH = 256
 NN_HEIGHT = 256

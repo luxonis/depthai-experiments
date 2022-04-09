@@ -1,6 +1,7 @@
 from pathlib import Path
 from imutils.video import FPS
 from .utils import *
+import depthai as dai
 
 class DepthAI:
 
@@ -16,14 +17,14 @@ class DepthAI:
     
     def create_pipeline(self):
         print("Creating pipeline...")
-        self.pipeline = depthai.Pipeline()
+        self.pipeline = dai.Pipeline()
         if self.camera:
             print("Creating Color Camera...")
             self.cam = self.pipeline.create(dai.node.ColorCamera)
             self.cam.setPreviewSize(self._cam_size[0],self._cam_size[1])
-            self.cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
+            self.cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
             self.cam.setInterleaved(False)
-            self.cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
+            self.cam.setBoardSocket(dai.CameraBoardSocket.RGB)
             cam_xout = self.pipeline.create(dai.node.XLinkOut)
             cam_xout.setStreamName("cam_out")
             self.cam.preview.link(cam_xout.input)
@@ -63,7 +64,7 @@ class DepthAI:
         model_nn_xout.setStreamName(f"{model_name}_nn")
         model_nn.out.link(model_nn_xout.input)
     
-    def create_yolo_nn(self,model_path,model_name,first_model=False):
+    def create_yolo_nn(self,model_path,model_name,first_model=False,conf=0.5):
         print(f"Start creating{model_path}Neural Networks")
         model_nn = self.pipeline.create(dai.node.YoloDetectionNetwork)
         model_nn.setBlobPath(str(Path(model_path).resolve().absolute()))
@@ -81,15 +82,15 @@ class DepthAI:
         model_nn.out.link(model_nn_xout.input)
 
     def start_pipeline(self):
-        self.device = depthai.Device(self.pipeline)
+        self.device = dai.Device(self.pipeline)
         print("Starting pipeline...")
         self.device.startPipeline()
 
         if self.camera:
             self.cam_out = self.device.getOutputQueue("cam_out", 4, False)
-        
+
         self.start_nns()
-    
+
     def start_nns(self):
         pass
 
@@ -138,7 +139,7 @@ class DepthAI:
                     self.parse()
                 except StopIteration:
                     break
-    
+
     def parse(self):
         if debug:
             self.debug_frame = self.frame.copy()
@@ -149,10 +150,10 @@ class DepthAI:
             if cv2.waitKey(1) == ord('q'):
                 cv2.destroyAllWindows()
                 raise StopIteration()
-    
+
     def parse_run(self):
         pass
-    
+
     @property
     def cam_size(self):
         return self._cam_size
@@ -160,7 +161,7 @@ class DepthAI:
     @cam_size.setter
     def cam_size(self,v):
         self._cam_size = v
-    
+
     @property
     def get_cam_size(self):
         return (self._cam_size[0],self._cam_size[1])

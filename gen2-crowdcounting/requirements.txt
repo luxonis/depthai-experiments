@@ -1,4 +1,4 @@
 opencv-python
-depthai==2.13.3.0
-gdown
+depthai==2.15.2.0
+gdown>=4.4.0
 numpy

@@ -35,8 +35,8 @@ parser.add_argument("-nn", "--nn_model", help="select model path for inference",
 
 args = parser.parse_args()
 
-cam_source = args.cam_input 
-nn_path = args.nn_model 
+cam_source = args.cam_input
+nn_path = args.nn_model
 
 nn_shape = 256
 if '513' in nn_path:
@@ -45,7 +45,7 @@ if '513' in nn_path:
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
     class_colors = np.asarray(class_colors, dtype=np.uint8)
-    
+
     output = output_tensor.reshape(nn_shape,nn_shape)
     output_colors = np.take(class_colors, output, axis=0)
     return output_colors
@@ -57,9 +57,7 @@ def show_deeplabv3p(output_colors, frame):
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
-
-pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_2)
-
+pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_2)
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.create(dai.node.NeuralNetwork)
 detection_nn.setBlobPath(nn_path)

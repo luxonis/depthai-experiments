@@ -29,10 +29,10 @@ args = parser.parse_args()
 # choose width and height based on model
 if args.width == 320:
     NN_WIDTH, NN_HEIGHT = 320, 240
-    NN_PATH = blobconverter.from_zoo(name="depth_estimation_mbnv2_240x320", zoo_type="depthai")
+    NN_PATH = blobconverter.from_zoo(name="depth_estimation_mbnv2_240x320", zoo_type="depthai", shaves=6)
 else:
     NN_WIDTH, NN_HEIGHT = 640, 480
-    NN_PATH = blobconverter.from_zoo(name="depth_estimation_mbnv2_480x640", zoo_type="depthai")
+    NN_PATH = blobconverter.from_zoo(name="depth_estimation_mbnv2_480x640", zoo_type="depthai", shaves=6)
 
 
 # --------------- Pipeline ---------------
