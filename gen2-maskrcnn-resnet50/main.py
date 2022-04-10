@@ -85,6 +85,7 @@ with dai.Device(pm.pipeline) as device:
         fps.tick('color')
         pv.prepareFrames(blocking=True)
         frame = pv.get(Previews.nnInput.name)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
         output = toTensorResult(nm.outputQueue.get())
         boxes = output["DetectionOutput_647"].squeeze()

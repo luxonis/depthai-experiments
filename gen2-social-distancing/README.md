@@ -8,10 +8,7 @@ Below you can see 3 people in a scene.  DepthAI monitors their 3D positions and 
 
 ## Pre-requisites
 
-Purchase a DepthAI model (see https://shop.luxonis.com/)
-
-## Install This Social Distancing Example
-
+Install requirements:
 ```
 python3 -m pip install -r requirements.txt
 ```

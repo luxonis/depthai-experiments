@@ -46,7 +46,6 @@ colorCam.video.link(cam_xout.input)
 
 nn = pipeline.create(dai.node.NeuralNetwork)
 nn.setBlobPath(blobconverter.from_zoo(name="east_text_detection_256x256",zoo_type="depthai",shaves=6, version=version))
-nn.setNumPoolFrames(1)
 colorCam.preview.link(nn.input)
 
 nn_xout = pipeline.create(dai.node.XLinkOut)

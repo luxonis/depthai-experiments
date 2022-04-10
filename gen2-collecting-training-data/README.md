@@ -7,11 +7,9 @@ both left, right, rgb and disparity frames stored.
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
+```
+python3 -m pip install -r requirements.txt
+```
 
 ## Usage
 

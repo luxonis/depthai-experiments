@@ -69,8 +69,7 @@ objectTracker = pipeline.create(dai.node.ObjectTracker)
 # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
 objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
 # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
-objectTracker.setTrackerIdAssigmentPolicy(
-    dai.TrackerIdAssigmentPolicy.SMALLEST_ID)
+objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.SMALLEST_ID)
 
 # Link detection networks outputs to the object tracker
 nn.passthrough.link(objectTracker.inputTrackerFrame)

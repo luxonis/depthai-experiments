@@ -167,7 +167,7 @@ with dai.Device(create_pipeline()) as device:
 
             if closest_dist != 99999999:
                 text.putText(frame,  "Face distance: {:.2f} m".format(closest_dist/1000), (330, 1045))
-                new_lens_pos = clamp(get_lens_position_lite(closest_dist), lensMin, lensMax)
+                new_lens_pos = clamp(get_lens_position(closest_dist), lensMin, lensMax)
                 if new_lens_pos != lensPos and new_lens_pos != 255:
                     lensPos = new_lens_pos
                     print("Setting manual focus, lens position: ", lensPos)

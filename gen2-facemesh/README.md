@@ -14,12 +14,10 @@ The model also includes effect renderer from 2D PNG image.
 
 ## Pre-requisites
 
-1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/)).
-
-3. Install requirements.
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
+Install requirements:
+```
+python3 -m pip install -r requirements.txt
+```
 
 ## Usage
 

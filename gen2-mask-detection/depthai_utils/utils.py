@@ -1,9 +1,9 @@
 import argparse
 from datetime import datetime, timedelta
-from pathlib import Path
+
 import cv2
 import numpy as np
-import depthai
+import depthai as dai
 import time
 
 parser = argparse.ArgumentParser()
@@ -70,7 +70,7 @@ def to_bbox_result(nn_data):
 
 #@timer
 def run_nn(x_in, x_out, in_dict):
-    nn_data = depthai.NNData()
+    nn_data = dai.NNData()
     for key in in_dict:
         nn_data.setLayer(key, in_dict[key])
     x_in.send(nn_data)

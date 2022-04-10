@@ -31,6 +31,5 @@ DepthAI enables you to take the advantage of depth information and get `x`, `y`,
 
 ## Usage
 
-1. Purchase a DepthAI (or OAK) device (see [shop.luxonis.com](https://shop.luxonis.com/)).
-2. Open the directory and follow the instructions.
+Open the directory and follow the instructions.
 

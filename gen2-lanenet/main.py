@@ -35,7 +35,7 @@ parser.add_argument('-v', '--video_path', help="Path to video frame", default="v
 args = parser.parse_args()
 
 video_source = args.video_path
-nn_path = args.nn_model 
+nn_path = args.nn_model
 
 # resize input to smaller size for faster inference
 NN_WIDTH, NN_HEIGHT = 512, 256
@@ -95,7 +95,7 @@ def show_output(overlay, frame):
 # --------------- Check input ---------------
 vid_path = Path(video_source)
 if not vid_path.is_file():
-    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), video_source)
+    raise FileNotFoundError("Video file not found. Either run download.py script first, or specify the path to the video file with '--video_path' argument.")
 
 # --------------- Pipeline ---------------
 # Start defining a pipeline

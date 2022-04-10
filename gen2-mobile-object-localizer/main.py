@@ -25,7 +25,7 @@ parser.add_argument('-t', '--threshold', type=float, help="Coonfidence threshold
 
 args = parser.parse_args()
 THRESHOLD = args.threshold
-NN_PATH = blobconverter.from_zoo(name="mobile_object_localizer_192x192", zoo_type="depthai")
+NN_PATH = blobconverter.from_zoo(name="mobile_object_localizer_192x192", zoo_type="depthai", shaves=6)
 NN_WIDTH = 192
 NN_HEIGHT = 192
 PREVIEW_WIDTH = 640
@@ -115,6 +115,7 @@ with dai.Device(pipeline) as device:
 
         frame = in_cam.getCvFrame()
         frame_manip = in_manip.getCvFrame()
+        frame_manip = cv2.cvtColor(frame_manip, cv2.COLOR_RGB2BGR)
 
         # get outputs
         detection_boxes = np.array(in_nn.getLayerFp16("ExpandDims")).reshape((100, 4))

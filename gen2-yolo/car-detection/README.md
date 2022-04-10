@@ -17,15 +17,15 @@ Source Image: [Pexels](https://www.pexels.com/video/different-kinds-of-vehicles-
 
 ## Pre-requisites
 
-1. Purchase a DepthAI (or OAK) model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-	```python
-	python3 -m pip install -r requirements.txt
-	```
-3. Add your blobs to `models` directory, or download pretrained models using:
-	```python
-	python3 download.py
-	```
+Install requirements:
+```
+python3 -m pip install -r requirements.txt
+```
+
+Add your blobs to `models` directory, or download pretrained models using:
+```
+python3 download.py
+```
 ## Usage
 
 ```

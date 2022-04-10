@@ -1,5 +1,5 @@
 opencv-python==4.5.1.48
-depthai==2.14.1.0
-blobconverter==1.2.8
+depthai==2.15.2.0
+blobconverter==1.2.9
 depthai_sdk==1.1.6
 pyqt5>5

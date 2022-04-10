@@ -132,7 +132,7 @@ class HumanMachineSafety:
     def draw_detections(self, frame, detections):
         color = (250,0,0)
         annotate = annotate_fun(frame, (0, 0, 25))
-            
+
         for detection in detections:
             if labelMap[detection.label] not in DANGEROUS_OBJECTS: continue
             height = frame.shape[0]

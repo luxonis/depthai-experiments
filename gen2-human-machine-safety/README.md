@@ -12,11 +12,10 @@ uses function `def calc_spatials(self, bbox, depth):` to calculate spatial coord
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-   ```bash
-   python3 -m pip install -r requirements.txt
-   ```
+Install requirements:
+```bash
+python3 -m pip install -r requirements.txt
+```
 
 ## Usage
 

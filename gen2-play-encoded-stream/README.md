@@ -10,10 +10,7 @@ It does so by piping the output stream of the device to the input of the ffplay 
 
 ## Pre-requisites
 
-Purchase a DepthAI model (see https://shop.luxonis.com/)
-
-## Install project requirements
-
+Install requirements:
 ```
 sudo apt install ffmpeg
 python3 -m pip install -r requirements.txt
