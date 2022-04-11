@@ -6,6 +6,7 @@ import numpy as np
 import numba as nb
 import depthai as dai
 from pathlib import Path
+import time
 
 ''' User controls
 'C' - to capture a set of images (from isp and/or raw streams)
@@ -54,6 +55,33 @@ parser.add_argument('-rot', '--rotate', action='store_true',
                     help="Camera image orientation set to 180 degrees rotation")
 
 args = parser.parse_args()
+
+def try_reset_booted_device():
+    try:
+        import usb.core
+    except ModuleNotFoundError:
+        print("WARN The device might be already booted up with UVC firmware")
+        print("==== Please install `pyusb` to allow auto-resetting it:")
+        print("     python3 -m pip install pyusb")
+        print()
+        return
+    dev = usb.core.find(idVendor=0x03e7, idProduct=0xf63b)
+    if dev is not None:
+        print("Attempting to reset already booted device")
+        dev.ctrl_transfer(0x00, 0xF5, 0x0DA1, 0x0000)
+        # Waiting a bit for device to boot (required when flashing)
+        tstart = time.monotonic()
+        while True:
+            dev1 = usb.core.find(idVendor=0x03e7, idProduct=0xf63c)  # bootloader
+            dev2 = usb.core.find(idVendor=0x03e7, idProduct=0x2485)  # bootROM
+            if dev1 is not None or dev2 is not None:
+                break
+            if time.monotonic() - tstart > 3:
+                raise RuntimeError("Failed to find device after reset. Please power-cycle")
+
+# This is used only if old 2.1-based FW is running (from flash)
+try_reset_booted_device()
+
 
 streams = []
 # Enable one or both streams
