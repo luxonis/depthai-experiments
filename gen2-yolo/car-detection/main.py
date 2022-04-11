@@ -33,7 +33,7 @@ pm.addNn(nn)
 with dai.Device(pm.pipeline) as device:
 
     fpsHandler = FPSHandler()
-    pv = PreviewManager(display=[Previews.color.name], scale={"color":0.33}, fpsHandler=fpsHandler)
+    pv = PreviewManager(display=[Previews.color.name], fpsHandler=fpsHandler)
 
     pv.createQueues(device)
     nm.createQueues(device)
