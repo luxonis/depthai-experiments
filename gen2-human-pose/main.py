@@ -123,7 +123,7 @@ def show(frame):
 print("Starting pipeline...")
 with dai.Device(pm.pipeline, device_info) as device:
     if args.camera:
-        pv = PreviewManager(display=[Previews.color.name], nnSource=Previews.color.name, scale={"color": 0.37}, fpsHandler=fps)
+        pv = PreviewManager(display=[Previews.color.name], nnSource=Previews.color.name, fpsHandler=fps)
         pv.createQueues(device)
     nm.createQueues(device)
     seq_num = 1
