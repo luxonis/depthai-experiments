@@ -25,13 +25,12 @@ def draw(data, frame):
 
 # Start defining a pipeline
 pm = PipelineManager()
-pm.createColorCam(previewSize=nn_shape)
+pm.createColorCam(xout=True, previewSize=nn_shape)
 
 nm = NNetManager(inputSize=nn_shape)
 pm.setNnManager(nm)
 pm.addNn(
-    nm.createNN(pm.pipeline, pm.nodes, blobconverter.from_zoo(name='road-segmentation-adas-0001', shaves=6)),
-    sync=True
+    nm.createNN(pm.pipeline, pm.nodes, blobconverter.from_zoo(name='road-segmentation-adas-0001', shaves=6))
 )
 fps = FPSHandler()
 pv = PreviewManager(display=[Previews.color.name], fpsHandler=fps)
