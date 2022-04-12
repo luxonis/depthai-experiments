@@ -15,6 +15,7 @@ from pathlib import Path
   exposure time:     I   O      1..33000 [us]
   sensitivity iso:   K   L    100..1600
   focus:             ,   .      0..255 [far..near]
+  white balance:     N   M   1000..12000 (light color temperature K)
 To go back to auto controls:
   'E' - autoexposure
   'F' - autofocus (continuous)
@@ -140,6 +141,7 @@ controlQueue = device.getInputQueue('control')
 EXP_STEP = 500  # us
 ISO_STEP = 50
 LENS_STEP = 1
+WB_STEP = 100
 
 # Defaults and limits for manual focus/exposure controls
 lens_pos = 130
@@ -155,6 +157,10 @@ exp_max = int(0.99 * 1000000 / args.fps)
 sens_iso = 800
 sens_min = 100
 sens_max = 1600
+
+wb_manual = 4000
+wb_min = 1000
+wb_max = 12000
 
 # TODO how can we make the enums automatically iterable?
 awb_mode_idx = -1
@@ -289,6 +295,14 @@ while True:
         print("Setting manual exposure, time:", exp_time, "iso:", sens_iso)
         ctrl = dai.CameraControl()
         ctrl.setManualExposure(exp_time, sens_iso)
+        controlQueue.send(ctrl)
+    elif key in [ord('n'), ord('m')]:
+        if key == ord('n'): wb_manual -= WB_STEP
+        if key == ord('m'): wb_manual += WB_STEP
+        wb_manual = clamp(wb_manual, wb_min, wb_max)
+        print("Setting manual white balance, temperature: ", wb_manual, "K")
+        ctrl = dai.CameraControl()
+        ctrl.setManualWhiteBalance(wb_manual)
         controlQueue.send(ctrl)
     elif key == ord('1'):
         awb_lock = not awb_lock
