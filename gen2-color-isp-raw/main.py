@@ -7,6 +7,7 @@ import numba as nb
 import depthai as dai
 from pathlib import Path
 import time
+import sys
 
 ''' User controls
 'C' - to capture a set of images (from isp and/or raw streams)
@@ -54,6 +55,10 @@ parser.add_argument('-tun', '--camera_tuning', type=Path,
                     help="Path to custom camera tuning database")
 parser.add_argument('-rot', '--rotate', action='store_true',
                     help="Camera image orientation set to 180 degrees rotation")
+parser.add_argument('-usb', '--usb_boot', action='store_true',
+                    help="Just switch the device to USB boot mode and exit")
+parser.add_argument('-boot', '--boot_fw', type=Path,
+                    help="Path to custom firmware (mvcmd) to boot")
 
 args = parser.parse_args()
 
@@ -83,6 +88,52 @@ def try_reset_booted_device():
 # This is used only if old 2.1-based FW is running (from flash)
 try_reset_booted_device()
 
+def switch_to_usb_boot():
+    switch_done = False
+    try:
+        import usb.core
+    except ModuleNotFoundError:
+        print("==== Please install `pyusb` for bootloader flash checks:")
+        print("     python3 -m pip install pyusb")
+        raise RuntimeError("'pyusb' required")
+    dev = usb.core.find(idVendor=0x03e7, idProduct=0x2485)  # bootROM
+    if dev is not None:
+        print('[OK] Device already in USB boot mode')
+        return switch_done
+    dev = usb.core.find(idVendor=0x03e7, idProduct=0xf63c)  # bootloader
+    if dev is not None:
+        print("Device in bootloader, resetting to USB bootROM")
+        (res, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+        with dai.DeviceBootloader(info) as bl:
+            print(f'(bootloader version: {bl.getVersion()})')
+            bl.bootUsbRomBootloader()
+        # Wait for the new device to show up
+        tstart = time.monotonic()
+        while True:
+            dev = usb.core.find(idVendor=0x03e7, idProduct=0x2485)  # bootROM
+            if dev is not None:
+                switch_done = True
+                break
+            if time.monotonic() - tstart > 3:
+                raise RuntimeError("Failed to find USB bootROM device. Please run again")
+        print('[OK] Switched to USB boot mode')
+    return switch_done
+
+if args.usb_boot:
+    switch_to_usb_boot()
+    sys.exit(0)
+if args.boot_fw:
+    switch_to_usb_boot()
+    if 1:
+        (res, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+        with dai.DeviceBootloader(info) as bl:
+            print(f'(bootloader version: {bl.getVersion()})')
+            with open(args.boot_fw, mode='rb') as file:
+                bl.bootMemory(bytearray(file.read()))
+    else:
+        dai.Device(dai.Pipeline(), str(args.boot_fw))
+    print('[OK] Custom firmware booted. Power cycle may be required for next run')
+    sys.exit(0)
 
 streams = []
 # Enable one or both streams
