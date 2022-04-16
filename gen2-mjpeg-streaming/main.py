@@ -1,7 +1,9 @@
 # This Python file uses the following encoding: utf-8
 import asyncio
+import sys
 import threading
 import time
+import traceback
 from io import BytesIO
 from pathlib import Path
 
@@ -9,7 +11,7 @@ import aiohttp
 import cv2
 import depthai as dai
 from aiohttp import web, MultipartWriter
-from depthai_sdk import PipelineManager
+from depthai_sdk import PipelineManager, EncodingManager, Previews
 
 host = "localhost"
 port = 9001
@@ -17,6 +19,7 @@ port = 9001
 class HttpHandler:
     static_path = Path(__file__).parent / "build"
     site = None
+    record_task = None
     loop = None
     datatosend = None
     app = None
@@ -65,10 +68,21 @@ class HttpHandler:
         buffer = BytesIO(buffer)
         return web.Response(body=buffer.getvalue(), content_type='image/jpeg')
 
+    async def recordVideo(self):
+        print("Recording")
+        try:
+            while True:
+                self.instance.em.parseQueues()
+        except asyncio.CancelledError:
+            print("exitting")
+            self.instance.em.close()
+
     async def update(self, request):
         data = await request.json()
-        if data.get('capture', '') == "true":
-            self.instance.pm.captureStill()
+        if data.get('recording', '') == "start":
+            self.record_task = asyncio.get_event_loop().create_task(self.recordVideo())
+        if data.get('recording', '') == "stop":
+            self.record_task.cancel()
         if data.get('autofocus', '') == "trigger":
             self.instance.pm.triggerAutoFocus()
         if 'autofocus' in data:
@@ -120,7 +134,7 @@ class WebApp:
         super().__init__()
         self.running = False
         self.webserver = None
-        self.selectedPreview = "color"
+        self.selectedPreview = Previews.color.name
         self.thread = None
         self.pm = None
         self.device = None
@@ -136,14 +150,21 @@ class WebApp:
     def runDemo(self):
         self.pm = PipelineManager(lowBandwidth=True)
         self.pm.createColorCam(xout=True, xoutStill=True)
+        recordings_path = Path(__file__).parent / "recordings"
+        recordings_path.mkdir(exist_ok=True)
+        self.em = EncodingManager({Previews.color.name: 30}, encodeOutput=recordings_path)
+        self.em.createEncoders(self.pm)
 
         with dai.Device(self.pm.pipeline) as device:
             self.pm.createDefaultQueues(device)
+            self.em.createDefaultQueues(device)
             self.previewQueue = device.getOutputQueue(self.pm.nodes.xoutRgb.getStreamName())
             self.stillQueue = device.getOutputQueue(self.pm.nodes.xoutRgbStill.getStreamName())
 
             while self.shouldRun():
-                self.webserver.datatosend = self.previewQueue.get().getData()
+                packet = self.previewQueue.get()
+                if packet is not None:  # get() can sometimes return None too
+                    self.webserver.datatosend = packet.getData()
 
     def start(self):
         self.running = True
@@ -177,6 +198,6 @@ class WebApp:
 if __name__ == "__main__":
     repo_root = Path(__file__).parent.resolve().absolute()
     import subprocess
-    subprocess.check_call(["yarn"], cwd=repo_root)
-    subprocess.check_call(["yarn", "build"], cwd=repo_root)
+    # subprocess.check_call(["yarn"], cwd=repo_root)
+    # subprocess.check_call(["yarn", "build"], cwd=repo_root)
     WebApp().start()

@@ -8,6 +8,7 @@ import {
   CaretRightOutlined,
 } from '@ant-design/icons';
 import recordIcon from "./svg/recording.svg"
+import stopIcon from "./svg/stop.svg"
 import {useDispatch, useSelector} from "react-redux";
 import {sendConfig, sendDynamicConfig} from "./store";
 import autoIcon from "./../src/svg/auto-width.svg"
@@ -42,9 +43,15 @@ function App() {
             </Tooltip>
           </Button>
         </a>
-        <Button size="large" type="text" ghost icon={<img src={recordIcon} alt=""/>}>
-          <Tooltip placement="bottomLeft" title={text}>Start Recording</Tooltip>
-        </Button>
+        {
+          config.modes.recording === "stop"
+            ? <Button onClick={() => update({modes: {recording: "start"}})} size="large" type="text" ghost icon={<img src={recordIcon} alt=""/>}>
+              <Tooltip placement="bottomLeft" title={text}>Start Recording</Tooltip>
+            </Button>
+            : <Button onClick={() => update({modes: {recording: "stop"}})} size="large" type="text" ghost icon={<img src={stopIcon} alt=""/>}>
+              <Tooltip placement="bottomLeft" title={text}>Stop Recording</Tooltip>
+            </Button>
+        }
       </div>
       <div className="upperRow">
         {/* którą camere chcesz widzieć, obrazek jedną z trzech kamer tak jak ikonka saturacji tylko te niekatywne wyszarzone*/}

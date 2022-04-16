@@ -5,8 +5,9 @@ import _ from 'lodash';
 function prepareData({values = {}, modes = {}}){
   const result = {
     "focus": values.focus,
-    "expiso": [values.exp, values.iso],
+    "expiso": values.exp || values.iso ? [values.exp, values.iso] : null,
     "whitebalance": values.whitebalance,
+    "recording": modes.recording,
   }
   return _.omitBy(result, _.isNil)
 }
@@ -45,6 +46,7 @@ export const appSlice = createSlice({
         expiso: "auto",
         wb: "auto",
         focus: "auto",
+        recording: "stop",
       }
     },
     error: null,
