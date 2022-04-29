@@ -1,3 +1,4 @@
 PyGObject==3.38.0
 opencv-python==4.5.1.48
-depthai==2.15.2.0
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai==2.15.1.0.dev+75b9c40cdbdbabf0465c6ba72bfcb8e6b215d5e0

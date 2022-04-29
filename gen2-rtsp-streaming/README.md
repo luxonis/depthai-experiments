@@ -38,5 +38,5 @@ rtsp://localhost:8554/preview
 On Ubuntu or Mac OS, you can use `ffplay` (part of `ffmpeg` library) to preview the stream
 
 ```
-ffplay rtsp://localhost:8554/preview
+ffplay -fflags nobuffer -fflags discardcorrupt -flags low_delay -framedrop rtsp://localhost:8554/preview
 ```
