@@ -15,10 +15,16 @@ parser.add_argument('-v', '--verbose', default=0, action='count',
                     help='Verbose, -vv for more verbosity')
 parser.add_argument('-t', '--dev_timestamp', default=False, action='store_true',
                     help='Get device timestamps, not synced to host. For debug')
+parser.add_argument('-drgb', '--disable_rgb', default=False, action='store_true',
+                    help='Disable RGB sensor, stream only Mono L+R')
 
 args = parser.parse_args()
 
+# Order here will also be used for horizontally stacking frames
 cam_list = ['left', 'rgb', 'right']
+if args.disable_rgb:
+    cam_list.remove('rgb')
+
 cam_socket_opts = {
     'rgb'  : dai.CameraBoardSocket.RGB,
     'left' : dai.CameraBoardSocket.LEFT,
@@ -131,13 +137,13 @@ with dai.Device(pipeline) as device:
                     text = '{:1d}'.format(seqnum[c]) + '  {:.6f}'.format(tstamp[c])
                     cv2.putText(frame[c], text, (8,40), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0,0,0), 8, cv2.LINE_AA)
                     cv2.putText(frame[c], text, (8,40), cv2.FONT_HERSHEY_DUPLEX, 1.5, (255,255,255), 2, cv2.LINE_AA)
-            if not(seqnum['rgb'] == seqnum['left'] == seqnum['right']):
+            if not(seqnum['left'] == seqnum['right']) or (not args.disable_rgb and not(seqnum['rgb'] == seqnum['left'])):
                 print('ERROR: out of sync!!!')
             if args.verbose > 0:
                 seq = seqnum['left']
                 seq_diff = seq - seq_prev
                 seq_prev = seq
-                rgb_left_diff   = (tstamp['rgb']   - tstamp['left']) * 1000
+                rgb_left_diff   = (tstamp['rgb']   - tstamp['left']) * 1000 if not args.disable_rgb else 0
                 right_left_diff = (tstamp['right'] - tstamp['left']) * 1000
                 if (args.verbose > 1 or seq_diff != 1
                                      or abs(rgb_left_diff)   > 0.15
