@@ -61,9 +61,8 @@ def has_keys(obj, keys):
 
 
 class PairingSystem:
-    allowed_instances = [0, 1, 2]  # Center (0) & Left (1) & Right (2)
-
-    def __init__(self):
+    def __init__(self, instance_list):
+        self.allowed_instances = instance_list
         self.seq_packets = {}
         self.last_paired_seq = None
 
@@ -100,7 +99,7 @@ with dai.Device(pipeline) as device:
     q = {}
     for c in cam_list:
         q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
-    ps = PairingSystem()
+    ps = PairingSystem([cam_instance[c] for c in cam_list])
 
     window = ' + '.join(cam_list)
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
