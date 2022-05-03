@@ -5,8 +5,10 @@ import depthai as dai
 import numpy as np
 import time
 import argparse
+import textwrap # For argparse help msg
 
-parser = argparse.ArgumentParser(epilog='Press C to capture a set of frames.')
+parser = argparse.ArgumentParser(epilog='Press C to capture a set of frames.',
+                                 formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
 parser.add_argument('-d', '--draw', default=False, action='store_true',
@@ -17,8 +19,21 @@ parser.add_argument('-t', '--dev_timestamp', default=False, action='store_true',
                     help='Get device timestamps, not synced to host. For debug')
 parser.add_argument('-drgb', '--disable_rgb', default=False, action='store_true',
                     help='Disable RGB sensor, stream only Mono L+R')
+parser.add_argument('-hws', '--hw_sync', const='ms', choices={'ms', 'sm', 's', 'trig'}, nargs='?',
+                    help=textwrap.dedent('''\
+                    Enable hardware sync for L+R. Modes:
+                    ms   - continuous streaming master-slave, FSIN output from L, input for R
+                    sm   - continuous streaming master-slave, FSIN output from R, input for L
+                    s    - continuous streaming slave, FSIN input for both L+R
+                    trig - external snapshot trigger mode for both L+R
+                    Implies disabling RGB for now. Default mode when not explicitly selected: %(const)s'''))
 
 args = parser.parse_args()
+
+if args.hw_sync is not None:
+    args.disable_rgb = True
+
+print('DepthAI:', dai.__version__)
 
 # Order here will also be used for horizontally stacking frames
 cam_list = ['left', 'rgb', 'right']
@@ -35,6 +50,21 @@ cam_instance = {
     'left' : 1,
     'right': 2,
 }
+
+cam_fsync = {
+    'rgb'  : dai.CameraControl.FrameSyncMode.OFF,
+    'left' : dai.CameraControl.FrameSyncMode.OFF,
+    'right': dai.CameraControl.FrameSyncMode.OFF,
+}
+if args.hw_sync == 'ms':
+     cam_fsync['left' ] = dai.CameraControl.FrameSyncMode.OUTPUT
+     cam_fsync['right'] = dai.CameraControl.FrameSyncMode.INPUT
+if args.hw_sync == 'sm':
+     cam_fsync['left' ] = dai.CameraControl.FrameSyncMode.INPUT
+     cam_fsync['right'] = dai.CameraControl.FrameSyncMode.OUTPUT
+if args.hw_sync == 's':
+     cam_fsync['left' ] = dai.CameraControl.FrameSyncMode.INPUT
+     cam_fsync['right'] = dai.CameraControl.FrameSyncMode.INPUT
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
@@ -55,6 +85,10 @@ for c in cam_list:
         cam[c].out.link(xout[c].input)
     cam[c].setBoardSocket(cam_socket_opts[c])
     cam[c].setFps(args.fps)
+    if args.hw_sync == 'trig':
+        cam[c].initialControl.setExternalTrigger(2, 1)
+    else:
+        cam[c].initialControl.setFrameSyncMode(cam_fsync[c])
 
 
 def get_seq(packet):
