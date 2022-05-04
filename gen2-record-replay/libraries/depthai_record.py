@@ -3,15 +3,17 @@ from pathlib import Path
 from multiprocessing import Queue
 from threading import Thread
 import depthai as dai
-from enum import Enum
-import cv2
+from enum import IntEnum
 
-class EncodingQuality(Enum):
+class EncodingQuality(IntEnum):
     BEST = 1 # Lossless MJPEG
     HIGH = 2 # MJPEG Quality=97 (default)
     MEDIUM = 3 # MJPEG Quality=93
     LOW = 4 # H265 BitrateKbps=10000
 
+class Recorder(IntEnum):
+    RAW = 1 # Save raw bitstream
+    MP4 = 2 # Containerize into mp4 file, requires `av` library
 
 class Record():
     def __init__(self, path: Path, device) -> None:
@@ -31,39 +33,28 @@ class Record():
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
         self.convert_mp4 = False
+        self.recorder = Recorder.RAW # Raw by default
 
     def run(self):
-        files = {}
-        def create_video_file(name):
-            if name == 'depth': # or (name=='color' and 'depth' in self.save):
-                files[name] = self.depthAiBag
-            else:
-                ext = 'h265' if self.quality == EncodingQuality.LOW else 'mjpeg'
-                files[name] = open(str(self.path / f"{name}.{ext}"), 'wb')
-            # if name == "color": fourcc = "I420"
-            # elif name == "depth": fourcc = "Y16 " # 16-bit uncompressed greyscale image
-            # else : fourcc = "GREY" #Simple, single Y plane for monochrome images.
-            # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
+        if self.recorder == Recorder.RAW:
+            from .video_recorders.raw_recorder import RawRecorder
+            recorder = RawRecorder(self.path, self.quality)
+        elif self.recorder == Recorder.MP4:
+            from .video_recorders.pyav_mp4_recorder import PyAvRecorder
+            recorder = PyAvRecorder(self.path, self.quality, self.fps)
 
         while True:
             try:
                 frames = self.frame_q.get()
-                if frames is None:
+                if frames is None: # Terminate app
                     break
                 for name in frames:
-                    if name not in files: # File wasn't created yet
-                        create_video_file(name)
-
-                    # if self.rotate != -1: # Doesn't work atm
-                    #     frames[name] = cv2.rotate(frames[name], self.rotate)
-
-                    files[name].write(frames[name])
-                    # frames[name].tofile(files[name])
+                    # Save all synced frames into files
+                    recorder.save(name, frames[name])
             except KeyboardInterrupt:
                 break
         # Close all files - Can't use ExitStack with VideoWriter
-        for name in files:
-            files[name].close()
+        recorder.close()
         print('Exiting store frame thread')
 
     def start(self):
@@ -103,18 +94,13 @@ class Record():
                 'mxid': self.mxid
             })
 
-
-    def set_fps(self, fps):
-        self.fps = fps
-
-    def set_timelapse(self, timelapse):
-        self.timelapse = timelapse
-
-    def set_quality(self, quality: EncodingQuality):
-        self.quality = quality
-
-    def set_preview(self, preview: bool):
-        self.preview = preview
+    def set_fps(self, fps): self.fps = fps
+    def set_timelapse(self, timelapse): self.timelapse = timelapse
+    def set_quality(self, quality: EncodingQuality): self.quality = quality
+    def set_recorder(self, recorder: Recorder): self.recorder = recorder
+    def set_preview(self, preview: bool): self.preview = preview
+    # Which streams to save to the disk (on the host)
+    def set_save_streams(self, save_streams): self.save = save_streams
 
     '''
     Available values for `angle`:
@@ -126,11 +112,6 @@ class Record():
         raise Exception("Rotating not yet supported!")
         # Currently RealSense Viewer throws error "memory access violation". Debug.
         self.rotate = angle
-
-    # Which streams to save to the disk (on the host)
-    def set_save_streams(self, save_streams):
-        self.save = save_streams
-        print('save', self.save)
 
     def get_sizes(self):
         dict = {}
