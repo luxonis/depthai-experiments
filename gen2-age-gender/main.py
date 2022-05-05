@@ -23,7 +23,7 @@ def create_pipeline(stereo):
     cam_xout.setStreamName("color")
     cam.preview.link(cam_xout.input)
 
-    # ImageManip that will crop the frame before sending it to the Face detection NN node
+    # ImageManip will resize the frame before sending it to the Face detection NN node
     face_det_manip = pipeline.create(dai.node.ImageManip)
     face_det_manip.initialConfig.setResize(300, 300)
     face_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
