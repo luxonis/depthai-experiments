@@ -27,7 +27,6 @@ parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
 parser.add_argument('-tl', '--timelapse', type=int, default=-1,
                     help='Number of seconds between frames for timelapse recording. Default: timelapse disabled')
 parser.add_argument('-d', '--display', action="store_true", help="Display color preview")
-parser.add_argument('-mp4', '--mp4', action="store_true", help="Record videos directly into .mp4 files")
 
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
@@ -78,7 +77,6 @@ def run_record():
             recording.set_save_streams(args.save)
             recording.set_quality(EncodingQuality[args.quality])
             recording.set_preview(args.display)
-            if args.mp4: recording.set_recorder(Recorder.MP4)
             recording.start()
 
             recordings.append(recording)

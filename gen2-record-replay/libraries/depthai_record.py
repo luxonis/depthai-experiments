@@ -33,15 +33,16 @@ class Record():
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
         self.convert_mp4 = False
-        self.recorder = Recorder.RAW # Raw by default
 
     def run(self):
-        if self.recorder == Recorder.RAW:
-            from .video_recorders.raw_recorder import RawRecorder
-            recorder = RawRecorder(self.path, self.quality)
-        elif self.recorder == Recorder.MP4:
+        try:
+            # Try importing av
             from .video_recorders.pyav_mp4_recorder import PyAvRecorder
             recorder = PyAvRecorder(self.path, self.quality, self.fps)
+        except:
+            print("'av' library is not installed, depthai-record will save raw encoded streams.")
+            from .video_recorders.raw_recorder import RawRecorder
+            recorder = RawRecorder(self.path, self.quality)
 
         while True:
             try:

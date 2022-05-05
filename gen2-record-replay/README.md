@@ -20,14 +20,13 @@ optional arguments:
   -f, --fps,          default=30          Camera sensor FPS, applied to all cameras
   -q, --quality,      default="HIGH",     Selects the quality of the recording
   -fc,--frame_cnt     default=-1,         Number of frames to record. Record until stopped by default
-  -mp4,--mp4          default=False,      Record directly into mp4 container. Requires `av` library
 ```
 
 For the `frame_cnt`, -1 means it will record streams until user terminates the program (`CTRL+C`). If you select eg. `-fc 300 --fps 30`, recording will be of 300 frames (of each stream), for a total of 10 seconds.
 
 `quality` specifies the quality of encoded video streams. It can either be `BEST` (lossless encoding), `HIGH`, `MEDIUM` or `LOW`. More information regarding **file sizes and quality of recordings** can be [found here](encoding_quality/README.md).
 
-`-mp4` argument will enable recording streams directly into `.mp4` videos so you can view them with standard video player. To enable need, make sure you have [PyAV](https://github.com/PyAV-Org/PyAV) installed (`python3 -mpip install av`). More [info here](../gen2-container-encoding).
+By default, depthai-record will try to **save streames directly into `.mp4` containers** you have [PyAV](https://github.com/PyAV-Org/PyAV) installed (`python3 -mpip install av`). This will allow you to watch videos with a standard video player. More [info here](../gen2-container-encoding).
 
 ### Replaying
 
