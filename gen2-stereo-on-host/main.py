@@ -4,14 +4,19 @@ import depthai as dai
 
 
 class StereoSGBM:
-    def __init__(self, baseline, H_right, H_left=np.identity(3, dtype=np.float32)):
+    def __init__(self, baseline, focalLength, H_right, H_left=np.identity(3, dtype=np.float32)):
         self.max_disparity = 96
-        self.stereoProcessor = cv2.StereoSGBM_create(0, self.max_disparity, 21)
+        self.stereoProcessor = cv2.StereoSGBM_create(
+            minDisparity=1,
+            numDisparities=96,
+            blockSize=5,
+            P1=250, # 50
+            P2=500, # 800
+            disp12MaxDiff=5,
+            mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
+        )
         self.baseline = baseline
-        fov = 71.86
-        self.focal_lenght = 1280 / (
-                    2 * np.tan((fov * 3.142) / (2 * 180)))  # orig_frame_w / (2.f * std::tan(fov / 2 / 180.f * pi));
-        # print(self.focal_lenght)
+        self.focal_length = focalLength
         self.H1 = H_left  # for left camera
         self.H2 = H_right  # for right camera
 
@@ -30,24 +35,21 @@ class StereoSGBM:
 
     def create_disparity_map(self, left_img, right_img, is_rectify_enabled=True):
 
-        # left_img = cv2.imread(left_img_path, cv2.IMREAD_GRAYSCALE)
-        # right_img = cv2.imread(right_img_path, cv2.IMREAD_GRAYSCALE)
-
         if is_rectify_enabled:
             left_img_rect, right_img_rect = self.rectification(left_img, right_img)  # Rectification using Homography
-            # print("rectified")
         else:
             left_img_rect = left_img
             right_img_rect = right_img
 
-        self.disparity = self.stereoProcessor.compute(left_img_rect, right_img_rect)
-        cv2.filterSpeckles(self.disparity, 0, 60, self.max_disparity)
+        #opencv skips disparity calculation for the first max_disparity pixels
+        padImg = np.zeros(shape=[left_img.shape[0], self.max_disparity], dtype=np.uint8)
+        left_img_rect_pad = cv2.hconcat([padImg, left_img_rect])
+        right_img_rect_pad = cv2.hconcat([padImg, right_img_rect])
+        self.disparity = self.stereoProcessor.compute(left_img_rect_pad, right_img_rect_pad)
+        self.disparity = self.disparity[0:self.disparity.shape[0], self.max_disparity:self.disparity.shape[1]]
 
-        _, self.disparity = cv2.threshold(self.disparity, 0, self.max_disparity * 16, cv2.THRESH_TOZERO)
+        # scale back to integer disparities, opencv has 4 subpixel bits
         disparity_scaled = (self.disparity / 16.).astype(np.uint8)
-        # frame = cv2.applyColorMap(disparity_scaled, cv2.COLORMAP_HOT)
-        # frame[frame > 200] = 0
-        # cv2.imshow("Scaled Disparity stream", frame)
 
         disparity_colour_mapped = cv2.applyColorMap(
             (disparity_scaled * (256. / self.max_disparity)).astype(np.uint8),
@@ -84,40 +86,36 @@ if not depth_enabled:
     raise RuntimeError("Unable to run this experiment on device without left & right cameras! (Available cameras: {})".format(cams))
 calibObj = device.readCalibration()
 
-M_left = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoLeftCameraId(), 1280, 720))
-M_right = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoRightCameraId(), 1280, 720))
+width = monoLeft.getResolutionWidth()
+height = monoLeft.getResolutionHeight()
+
+M_left = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoLeftCameraId(), width, height))
+M_right = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoRightCameraId(), width, height))
 R1 = np.array(calibObj.getStereoLeftRectificationRotation())
 R2 = np.array(calibObj.getStereoRightRectificationRotation())
 
 H_left = np.matmul(np.matmul(M_right, R1), np.linalg.inv(M_left))
 H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))
 
-stereo_obj = StereoSGBM(7.5, H_right, H_left)
+baseline = calibObj.getBaselineDistance() * 10 # mm
+focalLength = M_right[0][0]
+stereo_obj = StereoSGBM(baseline, focalLength, H_right, H_left)
 
-right = None
-left = None
+with device:
+    device.startPipeline(pipeline)
+    qLeft = device.getOutputQueue(name="left", maxSize=4, blocking=False)
+    qRight = device.getOutputQueue(name="right", maxSize=4, blocking=False)
+    while True:
+        inLeft = qLeft.get()
+        inRight = qRight.get()
 
-device.startPipeline(pipeline)
-qLeft = device.getOutputQueue(name="left", maxSize=4, blocking=False)
-qRight = device.getOutputQueue(name="right", maxSize=4, blocking=False)
-
-while True:
-    inLeft = qLeft.tryGet()
-    inRight = qRight.tryGet()
-    
-    if inLeft is not None:
         cv2.imshow("left", inLeft.getCvFrame())
         left = inLeft.getCvFrame()
 
-    if inRight is not None:
         cv2.imshow("right", inRight.getCvFrame())
         right = inRight.getCvFrame()
 
-    if cv2.waitKey(1) == ord('q'):
-        break
-    
-    if right is not None and left is not None:
         stereo_obj.create_disparity_map(left, right)
 
-    if cv2.waitKey(1) == ord('q'):
-        break
+        if cv2.waitKey(1) == ord('q'):
+            break
