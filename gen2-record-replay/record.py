@@ -9,7 +9,7 @@ from pathlib import Path
 import cv2
 
 # DepthAI Record library
-from libraries.depthai_record import EncodingQuality, Record
+from libraries.depthai_record import EncodingQuality, Record, Recorder
 
 _save_choices = ("color", "left", "right", "disparity", "depth") # TODO: depth/IMU/ToF...
 _quality_choices = ("BEST", "HIGH", "MEDIUM", "LOW")

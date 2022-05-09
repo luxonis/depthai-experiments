@@ -26,6 +26,7 @@ camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
 # Properties
 videoEnc = pipeline.create(dai.node.VideoEncoder)
 videoEnc.setDefaultProfilePreset(30, get_encoder_profile(codec))
+# videoEnc.setLossless(True) # Lossless MJPEG, video players usually don't support it
 camRgb.video.link(videoEnc.input)
 
 xout = pipeline.create(dai.node.XLinkOut)

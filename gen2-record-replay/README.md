@@ -26,6 +26,8 @@ For the `frame_cnt`, -1 means it will record streams until user terminates the p
 
 `quality` specifies the quality of encoded video streams. It can either be `BEST` (lossless encoding), `HIGH`, `MEDIUM` or `LOW`. More information regarding **file sizes and quality of recordings** can be [found here](encoding_quality/README.md).
 
+By default, depthai-record will try to **save streames directly into `.mp4` containers** you have [PyAV](https://github.com/PyAV-Org/PyAV) installed (`python3 -mpip install av`). This will allow you to watch videos with a standard video player. More [info here](../gen2-container-encoding).
+
 ### Replaying
 
 `replay.py` is a demo script that runs Spatial MobileNet network. It will reconstruct stereo depth perception, which will allow it to calculate spatial coordinates as well.
