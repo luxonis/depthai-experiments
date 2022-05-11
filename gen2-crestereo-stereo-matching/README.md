@@ -29,6 +29,8 @@ python3 download.py
 ```
 ## Usage
 
+> Note: Make sure `-shape` matches the blob's model input shape
+
 ```
 usage: main.py [-h] -nn NN_PATH -shape {120x160,160x240}
 
