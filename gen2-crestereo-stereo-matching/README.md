@@ -23,6 +23,10 @@ CREStereo: Practical Stereo Matching via Cascaded Recurrent Network with Adaptiv
 python3 -m pip install -r requirements.txt
 ```
 
+Download blobs:
+```
+python3 download.py
+```
 ## Usage
 
 ```

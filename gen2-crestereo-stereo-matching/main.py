@@ -81,7 +81,7 @@ depth.disparity.link(xout.input)
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
 
-    qNn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
+    qNn = device.getOutputQueue(name="nn", maxSize=2, blocking=False)
     qDisp = device.getOutputQueue(name="disparity", maxSize=2, blocking=False)
 
     fps_handler = FPSHandler()
