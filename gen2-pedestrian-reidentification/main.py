@@ -36,7 +36,7 @@ def create_pipeline(stereo):
 
     person_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     person_nn.setConfidenceThreshold(0.5)
-    person_nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=6, use_cache=False))
+    person_nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=6))
     person_det_manip.out.link(person_nn.input)
 
     # Send face detections to the host (for bounding boxes)
@@ -76,7 +76,7 @@ def create_pipeline(stereo):
     while True:
         preview = node.io['preview'].tryGet()
         if preview is not None:
-            node.warn(f"New frame {preview.getSequenceNum()}")
+            # node.warn(f"New frame {preview.getSequenceNum()}")
             l.append(preview)
 
         face_dets = node.io['nn_in'].tryGet()
@@ -109,8 +109,7 @@ def create_pipeline(stereo):
     print("Creating Age Gender Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
 
-    recognition_nn.setBlobPath(blobconverter.from_zoo(name="person-reidentification-retail-0288", shaves=6, use_cache=False))
-    # recognition_nn.setBlobPath("models/person-reidentification-retail-0031_openvino_2020.1_4shave.blob")
+    recognition_nn.setBlobPath(blobconverter.from_zoo(name="person-reidentification-retail-0288", shaves=6))
     recognition_manip.out.link(recognition_nn.input)
 
     recognition_nn_xout = pipeline.create(dai.node.XLinkOut)
@@ -145,9 +144,9 @@ with dai.Device() as device:
             detections = msgs["detection"].detections
             recognitions = msgs["recognition"]
 
-            txt = f"FPS: {fps.fps()}"
-            cv2.putText(frame, txt, (10, 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
-            cv2.putText(frame, txt, (10, 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
+            txt = "FPS: {:.1f}".format(fps.fps())
+            cv2.putText(frame, txt, (10, 30), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
+            cv2.putText(frame, txt, (10, 30), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
 
             for i, detection in enumerate(detections):
                 bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
@@ -158,7 +157,7 @@ with dai.Device() as device:
                 for i, vector in enumerate(results):
                     # print(f"Checking vector {i}")
                     dist = cos_dist(reid_result, vector)
-                    if dist > 0.65:
+                    if dist > 0.7:
                         results[i] = np.array(reid_result)
                         break
                 else:
@@ -169,12 +168,6 @@ with dai.Device() as device:
                 y = (bbox[1] + bbox[3]) // 2
                 cv2.putText(frame, f"Person {i}", (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
                 cv2.putText(frame, f"Person {i}", (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
-
-                if stereo:
-                    # You could also get detection.spatialCoordinates.x and detection.spatialCoordinates.y coordinates
-                    coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
-                    cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
-                    cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
 
             cv2.imshow("Camera", frame)
         if cv2.waitKey(1) == ord('q'):
