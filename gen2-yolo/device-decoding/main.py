@@ -30,7 +30,7 @@ pm.createColorCam(previewSize=nm.inputSize, xout=True)
 
 # create preview manager
 fpsHandler = FPSHandler()
-pv = PreviewManager(display=[Previews.color.name], scale={"color":0.33}, fpsHandler=fpsHandler)
+pv = PreviewManager(display=[Previews.color.name], fpsHandler=fpsHandler)
 
 # create NN with managers
 nn = nm.createNN(pipeline=pm.pipeline, nodes=pm.nodes, source=Previews.color.name,
