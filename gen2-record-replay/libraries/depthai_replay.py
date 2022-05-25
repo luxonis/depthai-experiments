@@ -107,6 +107,10 @@ class Replay:
 
             nodes.stereo = pipeline.create(dai.node.StereoDepth)
             nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
+            nodes.stereo.setLeftRightCheck(True)
+            nodes.stereo.setSubpixel(True)
+            nodes.stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+            nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
