@@ -7,9 +7,6 @@ Unfiltered subpixel disparity depth results from a [BW1092 board](https://shop.l
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
 
-If you are interested in running over SPI instead (for embedded application), see [here](https://github.com/luxonis/depthai-experiments/tree/depthai-experiments-spi/gen2-spi).  For example the ESP32 onboard the BW1092 can pull the results out over SPI.
-
-
 ### Install Dependencies:
 `python3 install_requirements.py`
 

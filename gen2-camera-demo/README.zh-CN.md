@@ -7,9 +7,6 @@
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
 
-如果您有兴趣改为通过SPI(对于嵌入式应用程序)运行，请参见 [此处](https://github.com/luxonis/depthai-experiments/tree/depthai-experiments-spi/gen2-spi).  例如，BW1092上的ESP32可以通过SPI提取结果。
-
-
 ### 安装依赖项:
 
 `python3 install_requirements.py`
