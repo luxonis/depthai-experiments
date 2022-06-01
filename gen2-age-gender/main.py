@@ -3,6 +3,7 @@ import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
+from scipy.special import log_softmax
 
 def frame_norm(frame, bbox):
     normVals = np.full(len(bbox), frame.shape[0])
@@ -18,6 +19,7 @@ def create_pipeline(stereo):
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
     cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("color")
@@ -113,7 +115,7 @@ def create_pipeline(stereo):
                 correct_bb(det)
                 cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
                 # node.warn(f"Sending {i + 1}. det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
-                cfg.setResize(62, 62)
+                cfg.setResize(224, 224)
                 cfg.setKeepAspectRatio(False)
                 node.io['manip_cfg'].send(cfg)
                 node.io['manip_img'].send(img)
@@ -121,7 +123,7 @@ def create_pipeline(stereo):
     cam.preview.link(image_manip_script.inputs['preview'])
 
     recognition_manip = pipeline.create(dai.node.ImageManip)
-    recognition_manip.initialConfig.setResize(62, 62)
+    recognition_manip.initialConfig.setResize(224, 224)
     recognition_manip.setWaitForConfigInput(True)
     image_manip_script.outputs['manip_cfg'].link(recognition_manip.inputConfig)
     image_manip_script.outputs['manip_img'].link(recognition_manip.inputImage)
@@ -129,7 +131,7 @@ def create_pipeline(stereo):
     # Second stange recognition NN
     print("Creating recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=6))
+    recognition_nn.setBlobPath("sbd_mask.blob")
     recognition_manip.out.link(recognition_nn.input)
 
     recognition_xout = pipeline.create(dai.node.XLinkOut)
@@ -164,17 +166,18 @@ with dai.Device() as device:
                 bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
                 # Decoding of recognition results
-                rec = recognitions[i]
-                age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
-                gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
-                gender_str = "female" if gender[0] > gender[1] else "male"
+                rec = recognitions[i].getFirstLayerFp16()
+                index = np.argmax(log_softmax(rec))
+                text = "No Mask"
+                color = (0,0,255) # Red
+                if index == 1:
+                    text = "Mask"
+                    color = (0,255,0)
 
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 3)
                 y = (bbox[1] + bbox[3]) // 2
-                cv2.putText(frame, str(age), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
-                cv2.putText(frame, str(age), (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
-                cv2.putText(frame, gender_str, (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
-                cv2.putText(frame, gender_str, (bbox[0], y + 30), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
+                cv2.putText(frame, text, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
+                cv2.putText(frame, text, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
                 if stereo:
                     # You could also get detection.spatialCoordinates.x and detection.spatialCoordinates.y coordinates
                     coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
