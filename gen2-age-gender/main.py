@@ -64,7 +64,7 @@ def create_pipeline(stereo):
     face_det_nn.out.link(face_det_xout.input)
 
     # Script node will take the output from the face detection NN as an input and set ImageManipConfig
-    # to the 'age_gender_manip' to crop the initial frame
+    # to the 'recognition_manip' to crop the initial frame
     image_manip_script = pipeline.create(dai.node.Script)
     face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
 
@@ -112,7 +112,7 @@ def create_pipeline(stereo):
                 cfg = ImageManipConfig()
                 correct_bb(det)
                 cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
-                # node.warn(f"Sending {i + 1}. age/gender det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
+                # node.warn(f"Sending {i + 1}. det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
                 cfg.setResize(62, 62)
                 cfg.setKeepAspectRatio(False)
                 node.io['manip_cfg'].send(cfg)
@@ -120,21 +120,21 @@ def create_pipeline(stereo):
     """)
     cam.preview.link(image_manip_script.inputs['preview'])
 
-    age_gender_manip = pipeline.create(dai.node.ImageManip)
-    age_gender_manip.initialConfig.setResize(62, 62)
-    age_gender_manip.setWaitForConfigInput(True)
-    image_manip_script.outputs['manip_cfg'].link(age_gender_manip.inputConfig)
-    image_manip_script.outputs['manip_img'].link(age_gender_manip.inputImage)
+    recognition_manip = pipeline.create(dai.node.ImageManip)
+    recognition_manip.initialConfig.setResize(62, 62)
+    recognition_manip.setWaitForConfigInput(True)
+    image_manip_script.outputs['manip_cfg'].link(recognition_manip.inputConfig)
+    image_manip_script.outputs['manip_img'].link(recognition_manip.inputImage)
 
-    # Age/Gender second stange NN
-    print("Creating Age Gender Neural Network...")
-    age_gender_nn = pipeline.create(dai.node.NeuralNetwork)
-    age_gender_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=6))
-    age_gender_manip.out.link(age_gender_nn.input)
+    # Second stange recognition NN
+    print("Creating recognition Neural Network...")
+    recognition_nn = pipeline.create(dai.node.NeuralNetwork)
+    recognition_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=6))
+    recognition_manip.out.link(recognition_nn.input)
 
-    age_gender_nn_xout = pipeline.create(dai.node.XLinkOut)
-    age_gender_nn_xout.setStreamName("recognition")
-    age_gender_nn.out.link(age_gender_nn_xout.input)
+    recognition_xout = pipeline.create(dai.node.XLinkOut)
+    recognition_xout.setStreamName("recognition")
+    recognition_nn.out.link(recognition_xout.input)
 
     return pipeline
 
@@ -150,7 +150,7 @@ with dai.Device() as device:
 
     while True:
         for name, q in queues.items():
-            # Add all msgs (color frames, object detections and age/gender recognitions) to the Sync class.
+            # Add all msgs (color frames, object detections and recognitions) to the Sync class.
             if q.has():
                 sync.add_msg(q.get(), name)
 
@@ -163,8 +163,8 @@ with dai.Device() as device:
             for i, detection in enumerate(detections):
                 bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
+                # Decoding of recognition results
                 rec = recognitions[i]
-
                 age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
                 gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
                 gender_str = "female" if gender[0] > gender[1] else "male"
