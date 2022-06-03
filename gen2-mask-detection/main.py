@@ -3,7 +3,10 @@ import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
-from scipy.special import log_softmax
+
+def log_softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return np.log(e_x / e_x.sum())
 
 def frame_norm(frame, bbox):
     normVals = np.full(len(bbox), frame.shape[0])
@@ -19,7 +22,6 @@ def create_pipeline(stereo):
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
     cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("color")
