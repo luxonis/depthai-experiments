@@ -80,7 +80,7 @@ class Replay:
 
         return cv2.resize(preview, self.color_size)
 
-    def init_pipeline(self):
+    def init_pipeline(self, subpixel, lrCheck, enableMesh):
         nodes = {}
         mono = 'left' and 'right' in self.cap
         depth = 'depth' in self.cap
@@ -107,8 +107,10 @@ class Replay:
 
             nodes.stereo = pipeline.create(dai.node.StereoDepth)
             nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
-            nodes.stereo.setLeftRightCheck(True)
-            nodes.stereo.setSubpixel(True)
+            nodes.stereo.setLeftRightCheck(lrCheck)
+            nodes.stereo.setSubpixel(subpixel)
+            nodes.stereo.useHomographyRectification(not enableMesh) 
+
             nodes.stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
             nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
 
