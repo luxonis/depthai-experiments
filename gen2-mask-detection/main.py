@@ -19,7 +19,6 @@ def create_pipeline(stereo):
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-    # RGB required by SBD-Mask recognition model
     cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
     cam_xout = pipeline.create(dai.node.XLinkOut)
@@ -43,6 +42,7 @@ def create_pipeline(stereo):
 
         stereo = pipeline.create(dai.node.StereoDepth)
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
         monoLeft.out.link(stereo.left)
         monoRight.out.link(stereo.right)
 
@@ -132,7 +132,7 @@ def create_pipeline(stereo):
     # Second stange recognition NN
     print("Creating recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setBlobPath("sbd_mask.blob")
+    recognition_nn.setBlobPath(blobconverter.from_zoo(name="sbd_mask_classification_224x224", zoo_type="depthai", shaves=6))
     recognition_manip.out.link(recognition_nn.input)
 
     recognition_xout = pipeline.create(dai.node.XLinkOut)
@@ -182,8 +182,8 @@ with dai.Device() as device:
                 if stereo:
                     # You could also get detection.spatialCoordinates.x and detection.spatialCoordinates.y coordinates
                     coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
-                    # cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
-                    # cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
+                    cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
+                    cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
 
             cv2.imshow("Camera", frame)
         if cv2.waitKey(1) == ord('q'):

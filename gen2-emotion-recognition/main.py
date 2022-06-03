@@ -42,6 +42,7 @@ def create_pipeline(stereo):
 
         stereo = pipeline.create(dai.node.StereoDepth)
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
         monoLeft.out.link(stereo.left)
         monoRight.out.link(stereo.right)
 
