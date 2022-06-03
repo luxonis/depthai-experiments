@@ -1,1 +1,0 @@
-from .gen2_depthai import *
