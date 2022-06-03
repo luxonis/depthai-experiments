@@ -8,6 +8,9 @@ Input video is resized to 426 x 240 (W x H). Due to a relatively heavy model, th
 
 ![Image example](imgs/example.gif)
 
+![image](https://user-images.githubusercontent.com/32992551/171780142-5cd4f2a4-6c51-4dbc-9e3e-17062a9c6c6c.png)
+
+
 Example shows input video with overlay density map input. Example video taken from [VIRAT](https://viratdata.org/) dataset.
 
 ## Pre-requisites
