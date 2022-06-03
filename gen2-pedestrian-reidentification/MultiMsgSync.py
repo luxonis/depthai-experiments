@@ -1,7 +1,7 @@
-# Color frames (ImgFrame), object detection (ImgDetections) and age/gender recognition (NNData)
+# Color frames (ImgFrame), object detection (ImgDetections) and recognition (NNData)
 # messages arrive to the host all with some additional delay.
 # For each ImgFrame there's one ImgDetections msg, which has multiple detections, and for each
-# detection there's a NNData msg which contains age/gender recognition results.
+# detection there's a NNData msg which contains recognition results.
 
 # How it works:
 # Every ImgFrame, ImgDetections and NNData message has it's own sequence number, by which we can sync messages.
@@ -43,7 +43,7 @@ class TwoStageHostSeqSync:
             # Check if we have both detections and color frame with this sequence number
             if "color" in msgs and "len" in msgs:
 
-                # Check if all detected objects (faces) have finished recognition (age/gender) inference
+                # Check if all detected objects (faces) have finished recognition inference
                 if msgs["len"] == len(msgs["recognition"]):
                     # print(f"Synce`d msgs with sequence number {seq}", msgs)
 
