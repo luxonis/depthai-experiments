@@ -39,7 +39,7 @@ Image captured running with `python3 host-frame-sync.py -d`
 #### Output with logging enabled
 
 ```
-usage: python3 main.py [-h] [-f FPS] [-d] [-v] [-t]
+usage: python3 host-frame-sync.py [-h] [-f FPS] [-d] [-v] [-t]
 
 optional arguments:
   -h, --help           show this help message and exit
