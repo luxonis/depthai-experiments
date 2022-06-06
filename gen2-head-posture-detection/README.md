@@ -5,7 +5,7 @@ It recognizes head pose detection of all detected faces on the frame. Demo uses 
 
 ## Demo
 
-![Head pose estimation](https://user-images.githubusercontent.com/18037362/159127397-f75a96a9-f699-4bc8-bb54-39f998c044be.png)
+![Head pose estimation](https://user-images.githubusercontent.com/18037362/172148301-45adb7ce-3aab-478f-8cad-0c05f349ce50.gif)
 
 ### How it works
 
