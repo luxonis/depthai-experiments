@@ -1,10 +1,10 @@
 # coding=utf-8
-from pathlib import Path
 import math
 import cv2
 import depthai as dai
 import numpy as np
 from palm_detection import PalmDetection
+import blobconverter
 
 DEPTH_THRESH_HIGH = 3000
 DEPTH_THRESH_LOW = 500
@@ -225,7 +225,7 @@ cam.isp.link(isp_xout.input)
 
 print(f"Creating palm detection Neural Network...")
 model_nn = pipeline.create(dai.node.NeuralNetwork)
-model_nn.setBlobPath(str(Path("models/palm_detection_openvino_2021.3_6shave.blob").resolve().absolute()))
+model_nn.setBlobPath(blobconverter.from_zoo(name="palm_detection_128x128", zoo_type="depthai", shaves=6))
 model_nn.input.setBlocking(False)
 
 # For Palm-detection NN
@@ -257,7 +257,7 @@ left.out.link(stereo.left)
 right.out.link(stereo.right)
 
 sdn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-sdn.setBlobPath("models/mobilenet-ssd_openvino_2021.2_6shave.blob")
+sdn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
 sdn.setConfidenceThreshold(0.5)
 sdn.input.setBlocking(False)
 sdn.setBoundingBoxScaleFactor(0.2)
