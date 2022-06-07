@@ -1,46 +1,21 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
 import argparse
 import time
-import sys
-
-'''
-Deeplabv3 person running on selected camera.
-Run as:
-python3 -m pip install -r requirements.txt
-python3 deeplabv3_person_256.py -cam rgb
-Possible input choices (-cam):
-'rgb', 'left', 'right'
-
-Blob taken from the great PINTO zoo
-
-git clone git@github.com:PINTO0309/PINTO_model_zoo.git
-cd PINTO_model_zoo/026_mobile-deeplabv3-plus/01_float32/
-./download.sh
-source /opt/intel/openvino/bin/setupvars.sh
-python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo_tf.py   --input_model deeplab_v3_plus_mnv2_decoder_256.pb   --model_name deeplab_v3_plus_mnv2_decoder_256   --input_shape [1,256,256,3]   --data_type FP16   --output_dir openvino/256x256/FP16 --mean_values [127.5,127.5,127.5] --scale_values [127.5,127.5,127.5]
-/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/myriad_compile -ip U8 -VPU_NUMBER_OF_SHAVES 6 -VPU_NUMBER_OF_CMX_SLICES 6 -m openvino/256x256/FP16/deeplab_v3_plus_mnv2_decoder_256.xml -o deeplabv3p_person_6_shaves.blob
-
-'''
+import blobconverter
 
 cam_options = ['rgb', 'left', 'right']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-cam", "--cam_input", help="select camera input source for inference", default='rgb', choices=cam_options)
-parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
-
+parser.add_argument("-s", "--size", help="Shape", choices=['256','513'], default='256', type=str)
 args = parser.parse_args()
 
 cam_source = args.cam_input
-nn_path = args.nn_model
-
-nn_shape = 256
-if '513' in nn_path:
-    nn_shape = 513
+nn_shape = int(args.size)
 
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
@@ -57,9 +32,8 @@ def show_deeplabv3p(output_colors, frame):
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
-pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_2)
-# Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.create(dai.node.NeuralNetwork)
+nn_path = blobconverter.from_zoo(name=f"deeplab_v3_mnv2_{args.size}x{args.size}", zoo_type="depthai", shaves=6)
 detection_nn.setBlobPath(nn_path)
 
 detection_nn.setNumPoolFrames(4)
