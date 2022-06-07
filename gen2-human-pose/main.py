@@ -4,6 +4,7 @@ from pathlib import Path
 
 from depthai_sdk.managers import PipelineManager, NNetManager, BlobManager, PreviewManager
 from depthai_sdk import FPSHandler, Previews, getDeviceInfo, downloadYTVideo
+import blobconverter
 
 from pose import getKeypoints, getValidPairs, getPersonwiseKeypoints
 import cv2
@@ -23,15 +24,16 @@ debug = not args.no_debug
 device_info = getDeviceInfo()
 
 if args.camera:
-    blob_path = "models/human-pose-estimation-0001_openvino_2021.2_6shave.blob"
+    shaves = 6
 else:
-    blob_path = "models/human-pose-estimation-0001_openvino_2021.2_8shave.blob"
+    shaves = 8
     if str(args.video).startswith('https'):
         args.video = downloadYTVideo(str(args.video))
         print("Youtube video downloaded.")
     if not Path(args.video).exists():
         raise ValueError("Path {} does not exists!".format(args.video))
 
+blob_path = blobconverter.from_zoo(name="human-pose-estimation-0001", shaves=shaves)
 
 colors = [[0, 100, 255], [0, 100, 255], [0, 255, 255], [0, 100, 255], [0, 255, 255], [0, 100, 255], [0, 255, 0],
           [255, 200, 100], [255, 0, 255], [0, 255, 0], [255, 200, 100], [255, 0, 255], [0, 0, 255], [255, 0, 0],
