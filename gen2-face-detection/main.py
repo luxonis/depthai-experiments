@@ -7,32 +7,14 @@ import argparse
 import time
 from utils.utils import draw
 from utils.priorbox import PriorBox
-
-
-'''
-YuNet face detection demo running on device with video input from host.
-https://github.com/ShiqiYu/libfacedetection
-
-
-Run as:
-python3 -m pip install -r requirements.txt
-python3 main.py
-
-Blob is taken from:
-https://github.com/PINTO0309/PINTO_model_zoo/tree/main/144_YuNet
-'''
+import blobconverter
 
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
-parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/face_detection_yunet_120x160.blob', type=str)
 parser.add_argument("-conf", "--confidence_thresh", help="set the confidence threshold", default=0.6, type=float)
 parser.add_argument("-iou", "--iou_thresh", help="set the NMS IoU threshold", default=0.3, type=float)
 parser.add_argument("-topk", "--keep_top_k", default=750, type=int, help='set keep_top_k for results outputing.')
-
-
 args = parser.parse_args()
-
-nn_path = args.nn_model
 
 # resize input to smaller size for faster inference
 NN_WIDTH, NN_HEIGHT = 160, 120
@@ -42,21 +24,17 @@ VIDEO_WIDTH, VIDEO_HEIGHT = 640, 480
 # --------------- Pipeline ---------------
 # Start defining a pipeline
 pipeline = dai.Pipeline()
-pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
-
 
 # Define a neural network that will detect faces
 detection_nn = pipeline.create(dai.node.NeuralNetwork)
-detection_nn.setBlobPath(nn_path)
-detection_nn.setNumPoolFrames(4)
+detection_nn.setBlobPath(blobconverter.from_zoo(name="face_detection_yunet_160x120", zoo_type="depthai", shaves=6))
 detection_nn.input.setBlocking(False)
-detection_nn.setNumInferenceThreads(2)
 
 # Define camera
 cam = pipeline.create(dai.node.ColorCamera)
 cam.setPreviewSize(VIDEO_WIDTH, VIDEO_HEIGHT)
 cam.setInterleaved(False)
-cam.setFps(40)
+cam.setFps(60)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
 # Define manip
