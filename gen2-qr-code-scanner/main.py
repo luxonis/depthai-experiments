@@ -3,6 +3,8 @@ import depthai as dai
 import numpy as np
 import blobconverter
 
+DECODE = True
+
 class TextHelper:
     def __init__(self) -> None:
         self.bg_color = (0, 0, 0)
@@ -55,24 +57,49 @@ with dai.Device(pipeline) as device:
     qDet = device.getOutputQueue("nn", maxSize=4, blocking=False)
     c = TextHelper()
 
+    def decode(frame, bbox, detector = None):
+        img = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+        data, vertices_array, binary_qrcode = detector.detectAndDecode(img)
+        if data:
+            print("Decoded text", data)
+            return data
+        else:
+            print("Decoding failed")
+            return ""
+
+    def expandDetection(det, percent=2):
+        percent /= 100
+        det.xmin -= percent
+        det.ymin -= percent
+        det.xmax += percent
+        det.ymax += percent
+        if det.xmin < 0: det.xmin = 0
+        if det.ymin < 0: det.ymin = 0
+        if det.xmax > 1: det.xmax = 1
+        if det.ymax > 1: det.ymax = 1
+
     # nn data, being the bounding box locations, are in <0..1> range - they need to be normalized with frame width/height
     def frameNorm(frame, bbox):
         normVals = np.full(len(bbox), frame.shape[0])
         normVals[::2] = frame.shape[1]
         return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
-    def displayFrame(name, frame):
-        for detection in detections:
-            bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-            c.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 20))
-            c.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]))
-        # Show the frame
-        cv2.imshow(name, frame)
+    if DECODE: detector = cv2.QRCodeDetector()
 
     while True:
         frame = qRight.get().getCvFrame()
         detections = inDet = qDet.get().detections
-        displayFrame("right", frame)
+
+        for det in detections:
+            expandDetection(det)
+            bbox = frameNorm(frame, (det.xmin, det.ymin, det.xmax, det.ymax))
+            c.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]))
+            c.putText(frame, f"{int(det.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 20))
+            if DECODE:
+                text = decode(frame, bbox, detector)
+                c.putText(frame, text, (bbox[0] + 10, bbox[1] + 40))
+
+        cv2.imshow("Image", frame)
 
         if cv2.waitKey(1) == ord('q'):
             break
