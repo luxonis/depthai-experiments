@@ -1,7 +1,6 @@
 ### Deprecated
 
-This was an example of depthai gen1, which is has been deprected since 2021.
-
+This was an example using the gen1 `depthai` library, which has been deprected since 2021.
 ### Alternatives
 
 See these demos that implement two-stage (or more) inference:
