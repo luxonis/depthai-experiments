@@ -137,7 +137,7 @@ timestamp,label,left,top,right,bottom,raw_frame,overlay_frame,cropped_frame
 
 ## Head Posture Detection On-Camera ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-head-posture-detection#gen2-head-posture-detection))
 
-![Head Pose Detection](https://github.com/luxonis/depthai-experiments/blob/master/gen2-head-posture-detection/media/pose.gif?raw=true)
+![Head Pose Detection](https://user-images.githubusercontent.com/18037362/172148301-45adb7ce-3aab-478f-8cad-0c05f349ce50.gif)
 
 ## Human-Machine Safety Example On-Camera ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-human-machine-safety#gen2-human-machine-safety))
 
