@@ -6,6 +6,7 @@ import argparse
 import time
 import numpy as np
 from utils.effect import EffectRenderer2D
+import blobconverter
 
 '''
 MediaPipe Facial Landmark detector with PNG EffectRenderer.
@@ -22,7 +23,6 @@ parser.add_argument("-conf", "--confidence_thresh", help="set the confidence thr
 
 args = parser.parse_args()
 CONF_THRESH = args.confidence_thresh
-NN_PATH = "models/face_landmark_openvino_2021.4_6shave.blob"
 NN_WIDTH, NN_HEIGHT = 192, 192
 PREVIEW_WIDTH, PREVIEW_HEIGHT = 416, 416
 OVERLAY_IMAGE = "mask/facepaint.png"
@@ -42,7 +42,7 @@ cam.setFps(30)
 
 # Neural Network for Landmark detection
 nn = pipeline.create(dai.node.NeuralNetwork)
-nn.setBlobPath(NN_PATH)
+nn.setBlobPath(blobconverter.from_zoo(name="facemesh_192x192", zoo_type="depthai", shaves=6))
 nn.setNumPoolFrames(4)
 nn.input.setBlocking(False)
 nn.setNumInferenceThreads(2)
