@@ -4,6 +4,7 @@ import depthai as dai
 import subprocess as sp
 from os import name as osName
 import argparse
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-res', '--resolution', default='4k',
@@ -14,6 +15,8 @@ parser.add_argument('-enc', '--encode', default='h264',
                     help="Select encoding format. Default: %(default)s")
 parser.add_argument('-fps', '--fps', type=float, default=30.0,
                     help="Camera FPS to configure. Default: %(default)s")
+parser.add_argument('-v', '--verbose', default=False, action="store_true",
+                    help="Prints latency for the encoded frame data to reach the app")
 args = parser.parse_args()
 
 res_opts = {
@@ -76,7 +79,13 @@ with dai.Device(pipeline) as device:
 
     try:
         while True:
-            data = q.get().getData()  # Blocking call, will wait until new data has arrived
+            pkt = q.get()  # Blocking call, will wait until new data has arrived
+            data = pkt.getData()
+            if args.verbose:
+                latms = (dai.Clock.now() - pkt.getTimestamp()).total_seconds() * 1000
+                # Writing to a different channel (stderr)
+                # Also `ffplay` is printing things, adding a separator
+                print(f'Latency: {latms:.3f} ms === ', file=sys.stderr)
             proc.stdin.write(data)
     except:
         pass
