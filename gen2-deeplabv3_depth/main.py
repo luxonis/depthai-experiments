@@ -11,20 +11,23 @@ import blobconverter
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 jet_custom[0] = [0, 0, 0]
 
+blob = dai.OpenVINO.Blob(blobconverter.from_zoo(name="deeplab_v3_mnv2_256x256", zoo_type="depthai", shaves=6))
+# for name,tensorInfo in blob.networkInputs.items(): print(name, tensorInfo.dims)
+INPUT_SHAPE = blob.networkInputs['Input'].dims[:2]
 TARGET_SHAPE = (400,400)
 
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
     class_colors = np.asarray(class_colors, dtype=np.uint8)
 
-    output = output_tensor.reshape(256,256)
+    output = output_tensor.reshape(*INPUT_SHAPE)
     output_colors = np.take(class_colors, output, axis=0)
     return output_colors
 
 def get_multiplier(output_tensor):
     class_binary = [[0], [1]]
     class_binary = np.asarray(class_binary, dtype=np.uint8)
-    output = output_tensor.reshape(256,256)
+    output = output_tensor.reshape(*INPUT_SHAPE)
     output_colors = np.take(class_binary, output, axis=0)
     return output_colors
 
@@ -89,11 +92,10 @@ cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 # Mono cam: 640x400
 cam.setIspScale(2,3) # To match 400P mono cameras
 cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-cam.initialControl.setManualFocus(130)
 
 # For deeplabv3
 cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-cam.setPreviewSize(256, 256)
+cam.setPreviewSize(*INPUT_SHAPE)
 cam.setInterleaved(False)
 
 # NN output linked to XLinkOut
@@ -103,7 +105,7 @@ cam.isp.link(isp_xout.input)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.create(dai.node.NeuralNetwork)
-detection_nn.setBlobPath(blobconverter.from_zoo(name="deeplab_v3_mnv2_256x256", zoo_type="depthai", shaves=6))
+detection_nn.setBlob(blob)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 cam.preview.link(detection_nn.input)
@@ -124,11 +126,7 @@ right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
 stereo = pipeline.create(dai.node.StereoDepth)
-stereo.initialConfig.setConfidenceThreshold(245)
-stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-# stereo.initialConfig.setBilateralFilterSigma(64000)
-# stereo.setSubpixel(True)
-stereo.setLeftRightCheck(True)
+stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
@@ -139,7 +137,7 @@ xout_disp.setStreamName("disparity")
 stereo.disparity.link(xout_disp.input)
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pipeline.getOpenVINOVersion()) as device:
+with dai.Device() as device:
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
     if not depth_enabled:
@@ -174,7 +172,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             # get layer1 data
             layer1 = msgs['nn'].getFirstLayerInt32()
             # reshape to numpy array
-            lay1 = np.asarray(layer1, dtype=np.int32).reshape((256, 256))
+            lay1 = np.asarray(layer1, dtype=np.int32).reshape(*INPUT_SHAPE)
             output_colors = decode_deeplabv3p(lay1)
 
             # To match depth frames
