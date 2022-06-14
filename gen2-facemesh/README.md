@@ -2,7 +2,7 @@
 
 This example shows an implementation of Facial Landmark detection that's used in [MediaPipe Face Mesh](https://google.github.io/mediapipe/solutions/face_mesh.html). The TFLite model was taken from [MediaPipe](https://github.com/google/mediapipe/tree/master/mediapipe/modules/face_landmark) and converted to blob so that it can run on OAK devices.
 
-Model takes input image of size 192 x 192, and predicts 468 facial landmarks and a score. Note that this demo only supports once face. For multiface support, additional face detection stage must be first implemented.
+Model takes input image of size 192 x 192, and predicts 468 facial landmarks and a score. Note that this demo only supports one face. For multiface support, additional face detection stage must be first implemented.
 
 We use input image 416 x 416 and resize it to 192 x 192 using ImageManip node.
 

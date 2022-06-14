@@ -5,7 +5,6 @@ import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
-import time
 from MultiMsgSync import TwoStageHostSeqSync
 
 parser = argparse.ArgumentParser()
@@ -104,8 +103,6 @@ class FaceRecognition:
 
 print("Creating pipeline...")
 pipeline = dai.Pipeline()
-pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
-openvino_version = '2021.2'
 
 print("Creating Color Camera...")
 cam = pipeline.create(dai.node.ColorCamera)
@@ -138,11 +135,7 @@ copy_manip.out.link(face_det_manip.inputImage)
 print("Creating Face Detection Neural Network...")
 face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 face_det_nn.setConfidenceThreshold(0.5)
-face_det_nn.setBlobPath(blobconverter.from_zoo(
-    name="face-detection-retail-0004",
-    shaves=6,
-    version=openvino_version
-))
+face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
 # Link Face ImageManip -> Face detection NN node
 face_det_manip.out.link(face_det_nn.input)
 
@@ -173,11 +166,7 @@ script.outputs['manip_cfg'].link(headpose_manip.inputConfig)
 script.outputs['manip_img'].link(headpose_manip.inputImage)
 
 headpose_nn = pipeline.create(dai.node.NeuralNetwork)
-headpose_nn.setBlobPath(blobconverter.from_zoo(
-    name="head-pose-estimation-adas-0001",
-    shaves=6,
-    version=openvino_version
-))
+headpose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=6))
 headpose_manip.out.link(headpose_nn.input)
 
 headpose_nn.out.link(script.inputs['headpose_in'])
@@ -193,9 +182,7 @@ script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
 script.outputs['manip2_img'].link(face_rec_manip.inputImage)
 
 face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
-# Removed from OMZ, so we can't use blobconverter for downloading, see here:
-# https://github.com/openvinotoolkit/open_model_zoo/issues/2448#issuecomment-851435301
-face_rec_nn.setBlobPath("models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob")
+face_rec_nn.setBlobPath(blobconverter.from_zoo(name="face-recognition-arcface-112x112", zoo_type="depthai", shaves=6))
 face_rec_manip.out.link(face_rec_nn.input)
 
 arc_xout = pipeline.create(dai.node.XLinkOut)

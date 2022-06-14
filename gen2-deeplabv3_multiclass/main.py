@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
 import argparse
 import time
-import sys
 
 '''
 Deeplabv3 multiclass running on selected camera.

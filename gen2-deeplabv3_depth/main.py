@@ -3,51 +3,36 @@
 import cv2
 import depthai as dai
 import numpy as np
-import argparse
 import time
-from datetime import datetime, timedelta
-
-'''
-Blob taken from the great PINTO zoo
-
-git clone git@github.com:PINTO0309/PINTO_model_zoo.git
-cd PINTO_model_zoo/026_mobile-deeplabv3-plus/01_float32/
-./download.sh
-source /opt/intel/openvino/bin/setupvars.sh
-python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo_tf.py   --input_model deeplab_v3_plus_mnv2_decoder_256.pb   --model_name deeplab_v3_plus_mnv2_decoder_256   --input_shape [1,256,256,3]   --data_type FP16   --output_dir openvino/256x256/FP16 --mean_values [127.5,127.5,127.5] --scale_values [127.5,127.5,127.5]
-/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/myriad_compile -ip U8 -VPU_NUMBER_OF_SHAVES 6 -VPU_NUMBER_OF_CMX_SLICES 6 -m openvino/256x256/FP16/deeplab_v3_plus_mnv2_decoder_256.xml -o deeplabv3p_person_6_shaves.blob
-'''
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-shape", "--nn_shape", help="select NN model shape", default=256, type=int)
-parser.add_argument("-nn", "--nn_path", help="select model path for inference", default='models/deeplab_v3_plus_mvn2_decoder_256_openvino_2021.2_6shave.blob', type=str)
-args = parser.parse_args()
+from datetime import timedelta
+import blobconverter
 
 # Custom JET colormap with 0 mapped to `black` - better disparity visualization
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 jet_custom[0] = [0, 0, 0]
 
-nn_shape = args.nn_shape
-nn_path = args.nn_path
+blob = dai.OpenVINO.Blob(blobconverter.from_zoo(name="deeplab_v3_mnv2_256x256", zoo_type="depthai", shaves=6))
+# for name,tensorInfo in blob.networkInputs.items(): print(name, tensorInfo.dims)
+INPUT_SHAPE = blob.networkInputs['Input'].dims[:2]
 TARGET_SHAPE = (400,400)
 
 def decode_deeplabv3p(output_tensor):
     class_colors = [[0,0,0],  [0,255,0]]
     class_colors = np.asarray(class_colors, dtype=np.uint8)
 
-    output = output_tensor.reshape(nn_shape,nn_shape)
+    output = output_tensor.reshape(*INPUT_SHAPE)
     output_colors = np.take(class_colors, output, axis=0)
     return output_colors
 
 def get_multiplier(output_tensor):
     class_binary = [[0], [1]]
     class_binary = np.asarray(class_binary, dtype=np.uint8)
-    output = output_tensor.reshape(nn_shape,nn_shape)
+    output = output_tensor.reshape(*INPUT_SHAPE)
     output_colors = np.take(class_binary, output, axis=0)
     return output_colors
 
 class FPSHandler:
-    def __init__(self, cap=None):
+    def __init__(self):
         self.timestamp = time.time()
         self.start = time.time()
         self.frame_cnt = 0
@@ -101,19 +86,16 @@ def crop_to_square(frame):
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 
-pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
-
 cam = pipeline.create(dai.node.ColorCamera)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 # Color cam: 1920x1080
 # Mono cam: 640x400
 cam.setIspScale(2,3) # To match 400P mono cameras
 cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-cam.initialControl.setManualFocus(130)
 
 # For deeplabv3
 cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-cam.setPreviewSize(nn_shape, nn_shape)
+cam.setPreviewSize(*INPUT_SHAPE)
 cam.setInterleaved(False)
 
 # NN output linked to XLinkOut
@@ -123,7 +105,7 @@ cam.isp.link(isp_xout.input)
 
 # Define a neural network that will make predictions based on the source frames
 detection_nn = pipeline.create(dai.node.NeuralNetwork)
-detection_nn.setBlobPath(nn_path)
+detection_nn.setBlob(blob)
 detection_nn.input.setBlocking(False)
 detection_nn.setNumInferenceThreads(2)
 cam.preview.link(detection_nn.input)
@@ -144,11 +126,7 @@ right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Create a node that will produce the depth map (using disparity output as it's easier to visualize depth this way)
 stereo = pipeline.create(dai.node.StereoDepth)
-stereo.initialConfig.setConfidenceThreshold(245)
-stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-# stereo.initialConfig.setBilateralFilterSigma(64000)
-# stereo.setSubpixel(True)
-stereo.setLeftRightCheck(True)
+stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
@@ -159,7 +137,7 @@ xout_disp.setStreamName("disparity")
 stereo.disparity.link(xout_disp.input)
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pipeline.getOpenVINOVersion()) as device:
+with dai.Device() as device:
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
     if not depth_enabled:
@@ -194,7 +172,7 @@ with dai.Device(pipeline.getOpenVINOVersion()) as device:
             # get layer1 data
             layer1 = msgs['nn'].getFirstLayerInt32()
             # reshape to numpy array
-            lay1 = np.asarray(layer1, dtype=np.int32).reshape((nn_shape, nn_shape))
+            lay1 = np.asarray(layer1, dtype=np.int32).reshape(*INPUT_SHAPE)
             output_colors = decode_deeplabv3p(lay1)
 
             # To match depth frames
