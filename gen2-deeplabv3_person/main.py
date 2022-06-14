@@ -29,7 +29,6 @@ def show_deeplabv3p(output_colors, frame):
     return cv2.addWeighted(frame,1, output_colors,0.2,0)
 
 
-
 # Start defining a pipeline
 pipeline = dai.Pipeline()
 detection_nn = pipeline.create(dai.node.NeuralNetwork)

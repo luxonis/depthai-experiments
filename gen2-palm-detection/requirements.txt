@@ -1,7 +1,4 @@
-depthai==2.15.2.0
 opencv-python
 numpy
-scipy
-imutils
-pynput
-python-xlib
+depthai==2.16.0.0
+blobconverter==1.3.0
