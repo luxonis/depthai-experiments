@@ -2,8 +2,10 @@ import av
 from fractions import Fraction
 import time
 from pathlib import Path
+from .abstract_recorder import Recorder
 
-class PyAvRecorder:
+class PyAvRecorder(Recorder):
+    closed = False
     def __init__(self, folder: Path, quality, fps: int):
         print('quality',quality)
         self.folder = folder
@@ -14,7 +16,7 @@ class PyAvRecorder:
 
         self.files = {}
 
-    def save(self, name, frame):
+    def write(self, name, frame):
         if name not in self.files:
             self.__create_file(name)
 
@@ -37,6 +39,8 @@ class PyAvRecorder:
             self.start = time.time()
 
     def close(self):
+        if self.closed: return
+        self.closed = True
         # Close the containers
         for name in self.files:
             self.files[name].close()

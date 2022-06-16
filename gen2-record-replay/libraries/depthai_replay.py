@@ -5,34 +5,35 @@ import types
 import depthai as dai
 
 class Replay:
+    disabled_streams = []
+    stream_types = ['color', 'left', 'right', 'depth']
+
     def __init__(self, path):
         self.path = Path(path).resolve().absolute()
 
-        self.cap = {} # VideoCapture objects
-        self.size = {} # Frame sizes
-        self.lastFrame = {} # Last frame sent to the device
-        self.frames = {} # Frames read from the VideoCapture
-        # Disparity shouldn't get streamed to the device, nothing to do with it.
-        self.stream_types = ['color', 'left', 'right', 'depth']
+        self.frameSent = dict() # Last frame sent to the device
+        self.frames = dict() # Frames read from Readers
 
         file_types = ['color', 'left', 'right', 'disparity', 'depth']
-        extensions = ['mjpeg', 'avi', 'mp4', 'h265', 'h264']
+        extensions = ['mjpeg', 'avi', 'mp4', 'h265', 'h264', 'bag']
 
+        self.readers = dict()
         for file in os.listdir(path):
             if not '.' in file: continue # Folder
             name, extension = file.split('.')
             if name in file_types and extension in extensions:
-                self.cap[name] = cv2.VideoCapture(str(self.path / file))
+                if extension == 'bag':
+                    from .video_readers.rosbag_reader import RosbagReader
+                    self.readers[name] = RosbagReader(str(self.path / file))
+                else:
+                    from .video_readers.videocap_reader import VideoCapReader
+                    self.readers[name] = VideoCapReader(str(self.path / file))
 
-        if len(self.cap) == 0:
+        if len(self.readers) == 0:
             raise RuntimeError("There are no recordings in the folder specified.")
 
         # Load calibration data from the recording folder
         self.calibData = dai.CalibrationHandler(str(self.path / "calib.json"))
-
-        # Read basic info about the straems (resolution of streams etc.)
-        for name in self.cap:
-            self.size[name] = self.get_size(self.cap[name])
 
         self.color_size = None
         # By default crop image as needed to keep the aspect ratio
@@ -44,13 +45,16 @@ class Replay:
     def keep_aspect_ratio(self, keep_aspect_ratio):
         self.keep_ar = keep_aspect_ratio
 
-    def disable_stream(self, stream_name):
-        if stream_name not in self.cap:
-            print(f"There's no stream {stream_name} available!")
+    def disable_stream(self, stream_name, disable_reading = False):
+        if stream_name not in self.readers:
+            print(f"There's no stream '{stream_name}' available!")
             return
-        self.cap[stream_name].release()
-        # Remove the stream from the VideoCapture dict
-        self.cap.pop(stream_name, None)
+        if disable_reading:
+            self.readers[stream_name].close()
+            # Remove the stream from the dict
+            self.readers.pop(stream_name, None)
+
+        self.disabled_streams.append(stream_name)
 
     def resize_color(self, frame):
         if self.color_size is None:
@@ -81,46 +85,34 @@ class Replay:
         return cv2.resize(preview, self.color_size)
 
     def init_pipeline(self):
-        nodes = {}
-        mono = 'left' and 'right' in self.cap
-        depth = 'depth' in self.cap
-        if mono and depth: # This should be possible either way.
-            mono = False # Use depth stream by default
-
         pipeline = dai.Pipeline()
         pipeline.setCalibrationData(self.calibData)
         nodes = types.SimpleNamespace()
 
-        if 'color' in self.cap:
-            nodes.color = pipeline.create(dai.node.XLinkIn)
-            nodes.color.setMaxDataSize(self.get_max_size('color'))
-            nodes.color.setStreamName("color_in")
+        def createXIn(p: dai.Pipeline, name: str):
+            xin = p.create(dai.node.XLinkIn)
+            xin.setMaxDataSize(self.get_max_size(name))
+            xin.setStreamName(name + '_in')
+            return xin
 
-        if mono:
-            nodes.left = pipeline.create(dai.node.XLinkIn)
-            nodes.left.setStreamName("left_in")
-            nodes.left.setMaxDataSize(self.get_max_size('left'))
+        for name in self.readers:
+            if name not in self.disabled_streams:
+                setattr(nodes, name, createXIn(pipeline, name))
+        print(nodes)
 
-            nodes.right = pipeline.create(dai.node.XLinkIn)
-            nodes.right.setStreamName("right_in")
-            nodes.right.setMaxDataSize(self.get_max_size('right'))
-
+        if hasattr(nodes, 'left') and hasattr(nodes, 'right'): # Create StereoDepth node
             nodes.stereo = pipeline.create(dai.node.StereoDepth)
-            nodes.stereo.setInputResolution(self.size['left'][0], self.size['left'][1])
+            nodes.stereo.setInputResolution(self.readers['left'].getShape())
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
 
-        if depth:
-            nodes.depth = pipeline.create(dai.node.XLinkIn)
-            nodes.depth.setStreamName("depth_in")
-
         return pipeline, nodes
 
     def create_queues(self, device):
-        self.queues = {}
-        for name in self.cap:
-            if name in self.stream_types:
+        self.queues = dict()
+        for name in self.readers:
+            if name in self.stream_types and name not in self.disabled_streams:
                 self.queues[name+'_in'] = device.getInputQueue(name+'_in')
 
     def to_planar(self, arr, shape = None):
@@ -128,14 +120,11 @@ class Replay:
         return arr.transpose(2, 0, 1).flatten()
 
     def read_frames(self):
-        self.frames = {}
-        for name in self.cap:
-            if not self.cap[name].isOpened():
-                return True
-            ok, frame = self.cap[name].read()
-            if ok:
-                self.frames[name] = frame
-        return len(self.frames) == 0
+        self.frames = dict()
+        for name in self.readers:
+            self.frames[name] = self.readers[name].read() # Read the frame
+            if self.frames[name] is False:
+                return True # No more frames!
 
     def send_frames(self):
         if self.read_frames():
@@ -144,24 +133,26 @@ class Replay:
             if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:
                 self.frames[name] = self.frames[name][:,:,0] # All 3 planes are the same
 
+            # Don't send these frames to the OAK camera
+            if name in self.disabled_streams: continue
+
             self.send_frame(self.frames[name], name)
 
         return True
 
-    def get_size(self, cap):
-        return (
-            int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-            int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-        )
     def get_max_size(self, name):
-        total = self.size[name][0] * self.size[name][1]
-        if name == 'color': total *= 3 # 3 channels
-        return total
+        size = self.readers[name].getShape()
+        bytes_per_pixel = 1
+        if name == 'color': bytes_per_pixel = 3
+        elif name == 'depth': bytes_per_pixel = 2 # 16bit
+        return size[0] * size[1] * bytes_per_pixel
 
     def send_frame(self, frame, name):
         q_name = name + '_in'
         if q_name in self.queues:
             if name == 'color':
+                # Resize/crop color frame as specified by the user
+                frame = self.resize_color(frame)
                 self.send_color(self.queues[q_name], frame)
             elif name == 'left':
                 self.send_mono(self.queues[q_name], frame, False)
@@ -170,8 +161,10 @@ class Replay:
             elif name == 'depth':
                 self.send_depth(self.queues[q_name], frame)
 
+            # Save the sent frame
+            self.frameSent[name] = frame
+
     def send_mono(self, q, img, right):
-        self.lastFrame['right' if right else 'left'] = img
         h, w = img.shape
         frame = dai.ImgFrame()
         frame.setData(img)
@@ -182,9 +175,6 @@ class Replay:
         q.send(frame)
 
     def send_color(self, q, img):
-        # Resize/crop color frame as specified by the user
-        img = self.resize_color(img)
-        self.lastFrame['color'] = img
         h, w, c = img.shape
         frame = dai.ImgFrame()
         frame.setType(dai.RawImgFrame.Type.BGR888p)
@@ -210,3 +200,7 @@ class Replay:
         frame.setHeight(400)
         frame.setInstanceNum(0)
         q.send(frame)
+
+    def close(self):
+        for name in self.readers:
+            self.readers[name].close()

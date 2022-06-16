@@ -21,21 +21,18 @@ import os
 import time
 import depthai as dai
 
-class DepthAiBags:
-    def __enter__(self):
-        return self
+from .abstract_recorder import Recorder
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.close()
-
+class RosbagRecorder(Recorder):
+    closed = False
     '''
     path: Path to the folder where rosbag will be saved
     resolutions: dict of resolutions ('depth', 'color')
     rgb: Whether to save color stream as well
     overwrite: Whether to overwrite existing rosbag (if it exists)
     '''
-    def __init__(self, path: Path, device, resolutions, rgb=False, overwrite = False):
-        rgb=False # Not yet supported
+    def __init__(self, path: Path, device: dai.Device, resolutions, overwrite = True):
+        rgb = False
         if not str(path).endswith('.bag'):
             path = path / 'depth.bag'
 
@@ -49,7 +46,6 @@ class DepthAiBags:
         self.writer = Writer(path)
         # Compression will cause error in RealSense
         # self.writer.set_compression(Writer.CompressionFormat.LZ4)
-        self.closed = False
         self.writer.open()
 
         # sensor_msgs__msg__CameraInfo won't work, as parameters (eg. D, K, R) are in lowercase (d, k, r), so
@@ -70,7 +66,7 @@ class DepthAiBags:
             'Advanced Mode': 'YES',
             'Product Id': '0000',
         })
-        self.write_streamInfo(depth=True, rgb=rgb)
+        self.write_streamInfo(depth=True)
 
         self.write_keyvalues('/device_0/sensor_0/info', {'Name': 'Stereo'})
         self.write_keyvalues('/device_0/sensor_0/property', {
@@ -118,10 +114,34 @@ class DepthAiBags:
             self.rgb_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/data', Image.__msgtype__, latching=1)
             self.rgb_meta_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/metadata', KeyValue.__msgtype__, latching=1)
 
+    def write(self, name: str, frame):
+        # First frames
+        if self.start_nanos == 0: self.start_nanos = time.time_ns()
+
+        rgb = len(frame.shape) == 3
+        if rgb:
+            frame = frame[:, :, [2, 1, 0]]
+        img = Image(header=self.get_current_header(),
+                height=frame.shape[0],
+                width=frame.shape[1],
+                encoding='rgb8' if rgb else 'mono16',
+                is_bigendian=0,
+                step=frame.shape[1]*2,
+                data=frame.flatten().view(dtype=np.int8))
+        type = Image.__msgtype__
+
+        self._write(self.rgb_conn if rgb else self.depth_conn, type, img)
+
+        self.write_keyvalues(self.rgb_meta_conn if rgb else self.depth_meta_conn, {
+            'system_time': "%.6f" % time.time(),
+            'timestamp_domain': 'System Time',
+            'Time Of Arrival': int(time.time())
+        }, connection=True)
+
     def close(self):
         if self.closed: return
-        self.writer.close()
         self.closed = True
+        self.writer.close()
 
     def _write(self, connection, type, data):
         self.writer.write(connection, time.time_ns() - self.start_nanos, cdr_to_ros1(serialize_cdr(data, type), type))
@@ -188,14 +208,14 @@ class DepthAiBags:
         self.write_cameraInfo(topic, resolution, M_color, np.zeros((3,3)), np.zeros((4,4)))
 
     def write_cameraInfo(self, topic, resolution, intrinsics, rect, project):
-        print(topic, resolution)
+        # print(topic, resolution)
         type = self.CamInfo.__msgtype__
         c = self.writer.add_connection(topic, type, latching=1)
         info = self.CamInfo(header=self.get__default_header(),
                     height=resolution[1],
                     width=resolution[0],
                     distortion_model='Brown Conrady',
-                    # D=dist[:5], # Doesn't work:(
+                    # D=dist[:5], # Doesn't work
                     D=np.zeros(5), # Distortion parameters (k1,k2,t1,t2,k3)
                     K=intrinsics.flatten(), # Intrinsic camera matrix
                     R=rect.flatten(), # Rectification matrix (stereo cameras only)
@@ -204,30 +224,6 @@ class DepthAiBags:
                     binning_y=0,
                     roi=self.get_default_roi())
         self._write(c, type, info)
-
-    def write(self, frame):
-        # First frames
-        if self.start_nanos == 0: self.start_nanos = time.time_ns()
-
-        rgb = len(frame.shape) == 3
-        if rgb:
-            frame = frame[:, :, [2, 1, 0]]
-        img = Image(header=self.get_current_header(),
-                height=frame.shape[0],
-                width=frame.shape[1],
-                encoding='rgb8' if rgb else 'mono16',
-                is_bigendian=0,
-                step=frame.shape[1]*2,
-                data=frame.flatten().view(dtype=np.int8))
-        type = Image.__msgtype__
-
-        self._write(self.rgb_conn if rgb else self.depth_conn, type, img)
-
-        self.write_keyvalues(self.rgb_meta_conn if rgb else self.depth_meta_conn, {
-            'system_time': "%.6f" % time.time(),
-            'timestamp_domain': 'System Time',
-            'Time Of Arrival': int(time.time())
-        }, connection=True)
 
     def get__default_header(self):
         t = Time(sec=0, nanosec=0)
