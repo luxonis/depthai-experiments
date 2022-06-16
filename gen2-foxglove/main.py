@@ -22,6 +22,13 @@ except ImportError as e:
     raise ImportError(
         f"\033[1;5;31mError occured when importing PCL projector: {e}")
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-l', '--left', default=False, action="store_true", help="Enable streaming from left camera")
+parser.add_argument('-r', '--right', default=False, action="store_true", help="Enable streaming from right camera")
+parser.add_argument('-dpcl', '--disable_pcl', default=False, action="store_true", help="Disable streaming point cloud from camera")
+parser.add_argument('-dc', '--disable_color', default=False, action="store_true", help="Disable streaming color camera")
+args = parser.parse_args()
+print(args)
 # Depth resolution
 resolution = (640, 400)  # 24 FPS (without visualization)
 
@@ -111,16 +118,6 @@ def get_resolution(width):
     else:
         return dai.MonoCameraProperties.SensorResolution.THE_400_P
 
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument('-l', '--left', default=False, type=bool, help="Enable to stream from left camera")
-parser.add_argument('-r', '--right', default=False, type=bool, help="Enable to stream from right camera")
-parser.add_argument('-c', '--color', default=True, type=bool, help="Disable to stop streaming color camera")
-parser.add_argument('-pcl', '--pcl', default=False, type=bool, help="Enable to stream point cloud from camera")
-
-args = parser.parse_args()
-
 pipeline = dai.Pipeline()
 
 camRgb = pipeline.createColorCamera()
@@ -187,7 +184,7 @@ async def main():
         # create schema for the type of message that will be sent over to foxglove
         # for more details on how the schema must look like visit:
         # http://docs.ros.org/en/noetic/api/sensor_msgs/html/index-msg.html
-        if args.pcl:
+        if not args.disable_pcl:
             pointCloudChanel = await server.add_channel(
                 {
                     "topic": "pointCloud",
@@ -235,7 +232,7 @@ async def main():
                     ),
                 }
             )
-        if args.color:
+        if not args.disable_color:
             colorChannel = await server.add_channel(
                 {
                     "topic": "colorImage",
@@ -326,7 +323,7 @@ async def main():
         seq = 0
         with dai.Device(pipeline) as device:
             print("Opening device")
-            if args.pcl:
+            if not args.disable_pcl:
                 calibData = device.readCalibration()
                 M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT,
                                                         dai.Size2f(resolution[0], resolution[1]),
@@ -339,7 +336,7 @@ async def main():
                 buff.setData(matrix)
                 device.getInputQueue("xyz_in").send(buff)
                 queue = device.getOutputQueue("pcl", maxSize=8, blocking=False)
-            if args.color:
+            if not args.disable_color:
                 qRgb = device.getOutputQueue("rgb", maxSize=1, blocking=False)
             if args.left:
                 qLeft = device.getOutputQueue("left", maxSize=1, blocking=False)
@@ -353,7 +350,7 @@ async def main():
 
                 await asyncio.sleep(0.1)
 
-                if args.pcl:
+                if not args.disable_pcl:
                     pcl_data = np.array(queue.get().getFirstLayerFp16()).reshape(1, 3, resolution[1], resolution[0])
                     pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
 
@@ -395,7 +392,7 @@ async def main():
                     )
                     seq += 1
 
-                if args.color:
+                if not args.disable_color:
                     if qRgb.has():
                         img = qRgb.get().getCvFrame()
                         is_success, im_buf_arr = cv2.imencode(".jpg", img)
