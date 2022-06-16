@@ -6,23 +6,46 @@ import base64
 import math
 import struct
 import time
-import cv2
 import json
 import numpy as np
 from mcap.mcap0.writer import Writer
+from .abstract_recorder import Recorder
+from pathlib import Path
+import depthai as dai
 
-
-class DepthAiMcap:
-
-    # when initialising send in path (folder most likely: "./recordings/-name-") without .mcap at the end
-    def __init__(self, path):
-        self.fileName = path + ".mcap"
-        self.stream = open(self.fileName, "wb")
+class McapRecorder(Recorder):
+    pclSeq = 0
+    def __init__(self, path: Path, device: dai.Device):
+        self.stream = open(str(path / "recordings.mcap"), "wb")
         self.writer = Writer(self.stream)
         self.writer.start(profile="x-custom", library="my-writer-v1")
-        self.channels = {}
+        self.channels = dict()
+        self.initialized = [] # Already initialized streams
+        self.device = device
 
-    def imageInit(self, name):
+    def write(self, name: str, frame):
+        # Initialize the stream
+        if name not in self.initialized:
+            if name == 'depth':
+                self.pointCloudInit()
+                resolution = frame.shape
+                calibData = self.device.readCalibration()
+                M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, dai.Size2f(resolution[1], resolution[0]))
+                # Creater xyz data for pointcloud generation
+                self.xyz = self.create_xyz(resolution[1], resolution[0], np.array(M_right).reshape(3, 3))
+            else: self.imageInit(name)
+            self.initialized.append(name) # Stream initialized
+
+        if name == 'depth':
+            # print(f"self.xyz {self.xyz.shape}, frame {frame.shape}")
+            frame = np.expand_dims(frame, axis=-1)
+            # print(f"self.xyz {self.xyz.shape}, frame {frame.shape}")
+            points = self.xyz * frame # Calculate pointcloud
+            # print(pcl.shape)
+            self.pointCloudSave(points)
+        else: self.imageSave(name, frame)
+
+    def imageInit(self, name: str):
         # create schema for the type of message that will be sent over to foxglove
         # for more details on how the schema must look like visit:
         # http://docs.ros.org/en/noetic/api/sensor_msgs/html/index-msg.html
@@ -118,10 +141,7 @@ class DepthAiMcap:
 
         self.channels["pointClouds"] = channel_id
 
-    # send in image read with "cv2.getCvFrame"
-    def imageSave(self, img, name):
-        # convert cv2 image to .jpg format
-        # is_success, im_buf_arr = cv2.imencode(".jpg", img)
+    def imageSave(self, name: str, img):
 
         # read from .jpeg format to buffer of bytes
         byte_im = img.tobytes()
@@ -150,15 +170,13 @@ class DepthAiMcap:
     # "o3d.io.read_point_cloud" or
     # "o3d.geometry.PointCloud.create_from_depth_image"
     # seq is just a sequence number that will be incremented in main  program (int from 0 to number at end of recording)
-    def pointCloudSave(self, pcd, seq, name):
-        points = np.asarray(pcd.points)
-
+    def pointCloudSave(self, points: np.array):
+        h, w, _  = points.shape
+        total_points = h * w
+        points = points.reshape(total_points, 3)
         # points must be read to a buffer and then encoded with base64
-        buf = bytes()
-        for point in points:
-            buf += struct.pack('f', float(point[0]))
-            buf += struct.pack('f', float(point[1]))
-            buf += struct.pack('f', float(point[2]))
+        # TODO: double check this - from FoxGlove studio it isn't clear whether this is correct
+        buf = points.tobytes()
 
         data = base64.b64encode(buf).decode("ascii")
 
@@ -167,29 +185,30 @@ class DepthAiMcap:
         nsec = tmpTime - sec
 
         self.writer.add_message(
-            channel_id=self.channels[name],
+            channel_id=self.channels['pointClouds'],
             log_time=time.time_ns(),
             data=json.dumps(
                 {
                     "header": {
-                        "seq": seq,
+                        "seq": self.pclSeq,
                         "stamp": {"sec": sec, "nsec": nsec},
                         "frame_id": "front"
                     },
                     "height": 1,
-                    "width": len(pcd),
+                    "width": total_points,
                     "fields": [{"name": "x", "offset": 0, "datatype": 7, "count": 1},
                                {"name": "y", "offset": 4, "datatype": 7, "count": 1},
                                {"name": "z", "offset": 8, "datatype": 7, "count": 1}],
                     "is_bigendian": False,
                     "point_step": 12,
-                    "row_step": 12 * len(pcd),
+                    "row_step": 12 * total_points,
                     "data": data,
                     "is_dense": True
                 }
             ).encode("utf8"),
             publish_time=time.time_ns(),
         )
+        self.pclSeq += 1 # Increase sequence number by 1
 
     def imuInit(self):
         # TODO create imu support
@@ -203,3 +222,28 @@ class DepthAiMcap:
         # end writer and close opened file
         self.writer.finish()
         self.stream.close()
+
+    def create_xyz(self, width, height, camera_matrix):
+        xs = np.linspace(0, width - 1, width, dtype=np.float32)
+        ys = np.linspace(0, height - 1, height, dtype=np.float32)
+
+        # generate grid by stacking coordinates
+        base_grid = np.stack(np.meshgrid(xs, ys))  # WxHx2
+        points_2d = base_grid.transpose(1, 2, 0)  # 1xHxWx2
+
+        # unpack coordinates
+        u_coord: np.array = points_2d[..., 0]
+        v_coord: np.array = points_2d[..., 1]
+
+        # unpack intrinsics
+        fx: np.array = camera_matrix[0, 0]
+        fy: np.array = camera_matrix[1, 1]
+        cx: np.array = camera_matrix[0, 2]
+        cy: np.array = camera_matrix[1, 2]
+
+        # projective
+        x_coord: np.array = (u_coord - cx) / fx
+        y_coord: np.array = (v_coord - cy) / fy
+
+        xyz = np.stack([x_coord, y_coord], axis=-1)
+        return np.pad(xyz, ((0, 0), (0, 0), (0, 1)), "constant", constant_values=1.0)

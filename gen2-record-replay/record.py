@@ -73,7 +73,7 @@ def run_record():
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
 
             # Create recording object for this device
-            recording = Record(save_path, device, args.mcap)
+            recording = Record(save_path, device)
             # Set recording configuration
             # TODO: add support for specifying resolution
             recording.set_fps(args.fps)
@@ -81,6 +81,7 @@ def run_record():
             recording.set_save_streams(args.save)
             recording.set_quality(EncodingQuality[args.quality])
             recording.set_preview(args.display)
+            recording.set_mcap(args.mcap)
             recording.start()
 
             recordings.append(recording)

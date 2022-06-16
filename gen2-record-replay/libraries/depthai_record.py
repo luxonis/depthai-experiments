@@ -22,6 +22,7 @@ class Record():
     quality = EncodingQuality.HIGH
     rotate = -1
     preview = False
+    mcap = False
 
     def __init__(self, path: Path, device) -> None:
         self.device = device
@@ -54,24 +55,33 @@ class Record():
     def get_recorders(self) -> dict:
         recorders = dict()
         save = self.save.copy()
+
+        if self.mcap:
+            if self.quality == EncodingQuality.LOW or self.quality == EncodingQuality.BEST:
+                raise Exception("MCAP only supports MEDIUM and HIGH quality!")
+            from .video_recorders.mcap_recorder import McapRecorder
+            rec = McapRecorder(self.path, self.device)
+            for name in save:
+                print('setting mcap for', name)
+                recorders[name] = rec
+            return recorders
+
         if 'depth' in save:
             from .video_recorders.rosbag_recorder import RosbagRecorder
             recorders['depth'] = RosbagRecorder(self.path, self.device, self.get_sizes())
             save.remove('depth')
 
-        if len(save) == 0:
-            print("only depth recorder")
-            return recorders
+        if len(save) == 0: return recorders
 
-        try:
-            # Try importing av
-            from .video_recorders.pyav_mp4_recorder import PyAvRecorder
-            rec = PyAvRecorder(self.path, self.quality, self.fps)
-        except:
-            print("'av' library is not installed, depthai-record will save raw encoded streams.")
-            from .video_recorders.raw_recorder import RawRecorder
-            rec = RawRecorder(self.path, self.quality)
-
+        else:
+            try:
+                # Try importing av
+                from .video_recorders.pyav_mp4_recorder import PyAvRecorder
+                rec = PyAvRecorder(self.path, self.quality, self.fps)
+            except:
+                print("'av' library is not installed, depthai-record will save raw encoded streams.")
+                from .video_recorders.raw_recorder import RawRecorder
+                rec = RawRecorder(self.path, self.quality)
         # All other streams ("color", "left", "right", "disparity") will use
         # the same Raw/PyAv recorder
         for name in save:
@@ -113,6 +123,7 @@ class Record():
     def set_quality(self, quality: EncodingQuality): self.quality = quality
     # def set_recorder(self, recorder: Recorder): self.recorder = recorder
     def set_preview(self, preview: bool): self.preview = preview
+    def set_mcap(self, enable: bool): self.mcap = enable
     # Which streams to save to the disk (on the host)
     def set_save_streams(self, save_streams): self.save = save_streams
 
@@ -136,7 +147,7 @@ class Record():
         if "depth" in self.save: dict['depth'] = self.nodes['left'].getResolutionSize()
         return dict
 
-    def create_folder(self, path: Path, mxid: str):
+    def create_folder(self, path: Path, mxid: str) -> Path:
         i = 0
         while True:
             i += 1
