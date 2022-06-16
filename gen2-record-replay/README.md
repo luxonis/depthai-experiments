@@ -4,7 +4,11 @@ These tools allow you to record encoded and synced camera streams and replay the
 
 ### Recording
 
-When running `record.py`, it will record encoded streams from all devices and will synchronize all streams across all devices on the host. Recordings will be saved in the specified folder (with `-p`, by default that folder is `recordings/`). Recordings will be saved as MJPEG (motion JPEG) files or H265, depending on the quality of the recording. You can manually use `ffmpeg` to convert these `.mjpeg` recordings to `.mp4`. If you enable depth, program will save into rosbag (`.bag`), which you can open with [RealSense Viewer](https://www.intelrealsense.com/sdk-2/#sdk2-tools):
+When running `record.py`, it will record encoded streams from all devices and will synchronize all streams across all devices on the host. Recordings will be saved in the specified folder (with `-p`, by default that folder is `recordings/`). Recordings will be saved as:
+- By default: MJPEG (motion JPEG) files or H265, depending on the quality of the recording You can manually use `ffmpeg` to convert these `.mjpeg` recordings to `.mp4`
+- If [PyAv](https://github.com/PyAV-Org/PyAV) is installed: It will save encoded streames directly into `.mp4` containers. Install PyAv with `python3 -mpip install av`. This will allow you to watch videos with a standard video player. More [info here](../gen2-container-encoding).
+- If depth is enabled: Program will save depth into rosbag (`.bag`), which you can open with [RealSense Viewer](https://www.intelrealsense.com/sdk-2/#sdk2-tools) (image below)
+- If `-mcap` is enabled, depthai-record will record selected streams into [mcap file](https://github.com/foxglove/mcap) and can be viewed with [Foxglove studio](https://foxglove.dev/). Depth is converted to pointcloud on the host before being saved. Standalone Foxglove studio streaming demo can be [found here](../gen2-foxglove/).
 
 ![depth gif](https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif)
 
@@ -20,13 +24,12 @@ optional arguments:
   -f, --fps,          default=30          Camera sensor FPS, applied to all cameras
   -q, --quality,      default="HIGH",     Selects the quality of the recording
   -fc,--frame_cnt     default=-1,         Number of frames to record. Record until stopped by default
+  -mcap, --mcap       default=False       Record streams into the .mcap file
 ```
 
 For the `frame_cnt`, -1 means it will record streams until user terminates the program (`CTRL+C`). If you select eg. `-fc 300 --fps 30`, recording will be of 300 frames (of each stream), for a total of 10 seconds.
 
 `quality` specifies the quality of encoded video streams. It can either be `BEST` (lossless encoding), `HIGH`, `MEDIUM` or `LOW`. More information regarding **file sizes and quality of recordings** can be [found here](encoding_quality/README.md).
-
-By default, depthai-record will try to **save streames directly into `.mp4` containers** you have [PyAV](https://github.com/PyAV-Org/PyAV) installed (`python3 -mpip install av`). This will allow you to watch videos with a standard video player. More [info here](../gen2-container-encoding).
 
 ### Replaying
 
@@ -34,7 +37,7 @@ By default, depthai-record will try to **save streames directly into `.mp4` cont
 
 #### Replay usage
 
-`Replay` class (from `libraries/depthai_replay.py`) will read `depthai_recordings` (color and mono streams) and send frames back to the device to reconstruct stereo depth perception.
+`Replay` class (from `libraries/depthai_replay.py`) will read `recordings` and send recorded and synced frames back to the device to reconstruct the stereo depth perception.
 
 There are a few things you can specify when using the `Replay` class:
 
@@ -50,6 +53,11 @@ replay.set_resize_color((width, height))
 # It's set to True by default. Setting it to False will squish the image,
 # but will preserve the full FOV
 replay.keep_aspect_ratio(False)
+
+# Don't read/stream recorded disparity
+replay.disable_stream("disparity", disable_reading=True)
+# Read but don't stream recorded depth
+replay.disable_stream("depth")
 ```
 #### Replay usage
 ```
@@ -64,5 +72,3 @@ optional arguments:
 ```
 python3 -m pip install -r requirements.txt
 ```
-
-.

@@ -85,9 +85,6 @@ class Replay:
         return cv2.resize(preview, self.color_size)
 
     def init_pipeline(self):
-        mono = 'left' and 'right' in self.readers
-        depth = 'depth' in self.readers
-
         pipeline = dai.Pipeline()
         pipeline.setCalibrationData(self.calibData)
         nodes = types.SimpleNamespace()
