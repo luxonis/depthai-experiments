@@ -11,20 +11,20 @@ class EncodingQuality(IntEnum):
     MEDIUM = 3 # MJPEG Quality=93
     LOW = 4 # H265 BitrateKbps=10000
 
-class Recorder(IntEnum):
-    RAW = 1 # Save raw bitstream
-    MP4 = 2 # Containerize into mp4 file, requires `av` library
+# class Recorder(IntEnum):
+#     RAW = 1 # Save raw bitstream
+#     MP4 = 2 # Containerize into mp4 file, requires `av` library
 
 class Record():
-    def __init__(self, path: Path, device) -> None:
-        self.save = ['color', 'left', 'right']
-        self.fps = 30
-        self.timelapse = -1
-        self.device = device
-        self.quality = EncodingQuality.HIGH
-        self.rotate = -1
-        self.preview = False
+    save = ['color', 'left', 'right']
+    fps = 30
+    timelapse = -1
+    quality = EncodingQuality.HIGH
+    rotate = -1
+    preview = False
 
+    def __init__(self, path: Path, device) -> None:
+        self.device = device
         self.stereo = 1 < len(device.getConnectedCameras())
         self.mxid = device.getMxId()
         self.path = self.create_folder(path, self.mxid)
@@ -35,15 +35,7 @@ class Record():
         self.convert_mp4 = False
 
     def run(self):
-        try:
-            # Try importing av
-            from .video_recorders.pyav_mp4_recorder import PyAvRecorder
-            recorder = PyAvRecorder(self.path, self.quality, self.fps)
-        except:
-            print("'av' library is not installed, depthai-record will save raw encoded streams.")
-            from .video_recorders.raw_recorder import RawRecorder
-            recorder = RawRecorder(self.path, self.quality)
-
+        recorders = self.get_recorders()
         while True:
             try:
                 frames = self.frame_q.get()
@@ -51,12 +43,40 @@ class Record():
                     break
                 for name in frames:
                     # Save all synced frames into files
-                    recorder.save(name, frames[name])
+                    recorders[name].write(name, frames[name])
             except KeyboardInterrupt:
                 break
-        # Close all files - Can't use ExitStack with VideoWriter
-        recorder.close()
+        # Close all recorders - Can't use ExitStack with VideoWriter
+        for n in recorders:
+            recorders[n].close()
         print('Exiting store frame thread')
+
+    def get_recorders(self) -> dict:
+        recorders = dict()
+        save = self.save.copy()
+        if 'depth' in save:
+            from .video_recorders.rosbag_recorder import RosbagRecorder
+            recorders['depth'] = RosbagRecorder(self.path, self.device, self.get_sizes())
+            save.remove('depth')
+
+        if len(save) == 0:
+            print("only depth recorder")
+            return recorders
+
+        try:
+            # Try importing av
+            from .video_recorders.pyav_mp4_recorder import PyAvRecorder
+            rec = PyAvRecorder(self.path, self.quality, self.fps)
+        except:
+            print("'av' library is not installed, depthai-record will save raw encoded streams.")
+            from .video_recorders.raw_recorder import RawRecorder
+            rec = RawRecorder(self.path, self.quality)
+
+        # All other streams ("color", "left", "right", "disparity") will use
+        # the same Raw/PyAv recorder
+        for name in save:
+            recorders[name] = rec
+        return recorders
 
     def start(self):
         if not self.stereo: # If device doesn't have stereo camera pair
@@ -71,13 +91,6 @@ class Record():
             self.fps = 5
 
         self.pipeline, self.nodes = self.create_pipeline()
-
-        if "depth" in self.save:
-            from libraries.depthai_rosbags import DepthAiBags
-            res = ['depth']
-            # If rotate 90 degrees
-            if self.rotate in [0,2]: res = (res[1], res[0])
-            self.depthAiBag = DepthAiBags(self.path, self.device, self.get_sizes(), rgb='color' in self.save)
 
         self.frame_q = Queue(20)
         self.process = Thread(target=self.run)
@@ -98,7 +111,7 @@ class Record():
     def set_fps(self, fps): self.fps = fps
     def set_timelapse(self, timelapse): self.timelapse = timelapse
     def set_quality(self, quality: EncodingQuality): self.quality = quality
-    def set_recorder(self, recorder: Recorder): self.recorder = recorder
+    # def set_recorder(self, recorder: Recorder): self.recorder = recorder
     def set_preview(self, preview: bool): self.preview = preview
     # Which streams to save to the disk (on the host)
     def set_save_streams(self, save_streams): self.save = save_streams
@@ -196,14 +209,14 @@ class Record():
 
         if True in (el in ["disparity", "depth"] for el in self.save):
             nodes['stereo'] = pipeline.create(dai.node.StereoDepth)
+
             nodes['stereo'].initialConfig.setConfidenceThreshold(255)
             nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-            # TODO: configurable
             nodes['stereo'].setLeftRightCheck(True)
-            nodes['stereo'].setExtendedDisparity(False)
+            nodes['stereo'].setExtendedDisparity(True)
 
-            if "disparity" not in self.save and "depth" in self.save:
-                nodes['stereo'].setSubpixel(True) # For better depth visualization
+            # if "disparity" not in self.save and "depth" in self.save:
+            #     nodes['stereo'].setSubpixel(True) # For better depth visualization
 
             # if "depth" and "color" in self.save: # RGB depth alignment
             #     nodes['color'].setIspScale(1,3) # 4k -> 720P

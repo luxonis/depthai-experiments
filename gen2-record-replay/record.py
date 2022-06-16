@@ -9,10 +9,10 @@ from pathlib import Path
 import cv2
 
 # DepthAI Record library
-from libraries.depthai_record import EncodingQuality, Record, Recorder
+from libraries.depthai_record import EncodingQuality, Record
 
 _save_choices = ("color", "left", "right", "disparity", "depth") # TODO: depth/IMU/ToF...
-_quality_choices = ("BEST", "HIGH", "MEDIUM", "LOW")
+_quality_choices = tuple(str(q).split('.')[1] for q in EncodingQuality)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")

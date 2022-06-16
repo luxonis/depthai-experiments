@@ -1,7 +1,9 @@
 
 from pathlib import Path
+from .abstract_recorder import Recorder
 
-class RawRecorder:
+class RawRecorder(Recorder):
+    closed = False
     def __init__(self, folder: Path, quality):
         self.folder = folder
         # Could also be "h264", but we don't support that
@@ -9,7 +11,7 @@ class RawRecorder:
 
         self.files = {}
 
-    def save(self, name, frame):
+    def write(self, name, frame):
         if name not in self.files:
             self.__create_file(name)
 
@@ -23,6 +25,8 @@ class RawRecorder:
         # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
 
     def close(self):
-        # Close the containers
+        if self.closed: return
+        self.closed = True
+        # Close opened files
         for name in self.files:
             self.files[name].close()

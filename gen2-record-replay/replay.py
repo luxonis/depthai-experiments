@@ -66,7 +66,7 @@ with dai.Device(pipeline) as device:
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
     while replay.send_frames():
-        rgbFrame = replay.lastFrame['color']
+        rgbFrame = replay.frameSent['color']
 
         # if mono:
         cv2.imshow("left", leftS_Q.get().getCvFrame())
