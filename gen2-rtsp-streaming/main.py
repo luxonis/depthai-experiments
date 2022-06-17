@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import threading
 
 import gi
@@ -58,14 +60,15 @@ if __name__ == "__main__":
 
     pipeline = dai.Pipeline()
 
+    FPS = 30
     colorCam = pipeline.create(dai.node.ColorCamera)
     colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     colorCam.setInterleaved(False)
     colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    colorCam.setFps(10)
+    colorCam.setFps(FPS)
 
     videnc = pipeline.create(dai.node.VideoEncoder)
-    videnc.setDefaultProfilePreset(10, dai.VideoEncoderProperties.Profile.H265_MAIN)
+    videnc.setDefaultProfilePreset(FPS, dai.VideoEncoderProperties.Profile.H265_MAIN)
     colorCam.video.link(videnc.input)
 
     veOut = pipeline.create(dai.node.XLinkOut)
@@ -88,11 +91,11 @@ if __name__ == "__main__":
             except:
                 raise ValueError("Incorrect value supplied: {}".format(val))
 
-    if device_info.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
-        print("Running RTSP stream may be unstable due to connection... (protocol: {})".format(device_info.desc.protocol))
+    if device_info.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+        print("Running RTSP stream may be unstable due to connection... (protocol: {})".format(device_info.protocol))
 
     with dai.Device(pipeline, device_info) as device:
-        encoded = device.getOutputQueue("encoded", maxSize=4, blocking=False)
+        encoded = device.getOutputQueue("encoded", maxSize=30, blocking=True)
         print("Setup finished, RTSP stream available under \"rtsp://localhost:8554/preview\"")
         while True:
             data = encoded.get().getData()
