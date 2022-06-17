@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import threading
 
 import gi
@@ -89,8 +91,8 @@ if __name__ == "__main__":
             except:
                 raise ValueError("Incorrect value supplied: {}".format(val))
 
-    if device_info.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
-        print("Running RTSP stream may be unstable due to connection... (protocol: {})".format(device_info.desc.protocol))
+    if device_info.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+        print("Running RTSP stream may be unstable due to connection... (protocol: {})".format(device_info.protocol))
 
     with dai.Device(pipeline, device_info) as device:
         encoded = device.getOutputQueue("encoded", maxSize=30, blocking=True)
