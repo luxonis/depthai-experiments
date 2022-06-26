@@ -82,12 +82,12 @@ def create_pipeline(stereo):
                 break
         return l[0]
 
-    def correct_bb(bb):
-        if bb.xmin < 0: bb.xmin = 0.001
-        if bb.ymin < 0: bb.ymin = 0.001
-        if bb.xmax > 1: bb.xmax = 0.999
-        if bb.ymax > 1: bb.ymax = 0.999
-        return bb
+    def correct_bb(xmin,ymin,xmax,ymax):
+        if xmin < 0: xmin = 0.001
+        if ymin < 0: ymin = 0.001
+        if xmax > 1: xmax = 0.999
+        if ymax > 1: ymax = 0.999
+        return [xmin,ymin,xmax,ymax]
     while True:
         preview = node.io['preview'].tryGet()
         if preview is not None:
@@ -106,12 +106,8 @@ def create_pipeline(stereo):
 
             for i, det in enumerate(face_dets.detections):
                 cfg = ImageManipConfig()
-                det.xmin-=0.03
-                det.ymin-=0.03
-                det.xmax+=0.03
-                det.ymax+=0.03
-                correct_bb(det)
-                cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
+                bb = correct_bb(det.xmin-0.03, det.ymin-0.03, det.xmax+0.03, det.ymax+0.03)
+                cfg.setCropRect(*bb)
                 # node.warn(f"Sending {i + 1}. det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
                 cfg.setResize(60, 60)
                 cfg.setKeepAspectRatio(False)
