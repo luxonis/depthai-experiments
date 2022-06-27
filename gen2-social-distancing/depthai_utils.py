@@ -60,6 +60,7 @@ class DepthAI:
 
         spatialDetectionNetwork.out.link(xoutNN.input)
         stereo.depth.link(spatialDetectionNetwork.inputDepth)
+        stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
         log.info("Pipeline created.")
         return pipeline
 
