@@ -58,6 +58,9 @@ class HumanMachineSafety:
         if ymin > ymax:  # bbox flipped
             ymin, ymax = ymax, ymin
 
+        if xmin == xmax or ymin == ymax: # Box of size zero
+            return None
+
         # Calculate the average depth in the ROI.
         depthROI = depth[ymin:ymax, xmin:xmax]
         inThreshRange = (DEPTH_THRESH_LOW < depthROI) & (depthROI < DEPTH_THRESH_HIGH)
@@ -166,8 +169,10 @@ class HumanMachineSafety:
         annotate = annotate_fun(self.debug_frame, color)
 
         for bbox in palm_coords:
-            self.draw_bbox(bbox, color)
             spatialCoords = self.calc_spatials(bbox, depth)
+            if spatialCoords is None: # Box of size 0
+                continue
+            self.draw_bbox(bbox, color)
             x,y,z,cx,cy = spatialCoords
             annotate(f"X: {int(x)} mm", (bbox[0], bbox[1]))
             annotate(f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15))

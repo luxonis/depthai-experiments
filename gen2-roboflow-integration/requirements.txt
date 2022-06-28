@@ -1,6 +1,6 @@
 certifi==2021.10.8
 charset-normalizer==2.0.9
-depthai==2.15.2.0
+depthai==2.16.0.0
 idna==3.3
 numpy>=1.21
 opencv-python==4.5.5.62
