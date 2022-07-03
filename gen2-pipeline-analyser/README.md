@@ -1,4 +1,9 @@
-# Gen2 Pipeline JSON file analyser
+# DepthAI Pipeline Graph
+
+For **debugging purposes we suggest using [DepthAI Pipeline Graph](https://github.com/geaxgx/depthai_pipeline_graph) visualizing tool**, as it's more sophisticated and provides **better UX** than this simple demo.
+
+
+## Pipeline JSON file analyser
 
 This experiment prints relevant information about JSON-serialized pipeline. Useful for debug purposes when analysing the pipeline
 
