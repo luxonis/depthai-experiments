@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+import time
 import cv2
 import depthai as dai
 import open3d as o3d
 from box_estimator import BoxEstimator
+from projector_3d import PointCloudFromRGBD
+
 
 COLOR = True
 
@@ -106,11 +109,6 @@ with dai.Device(pipeline) as device:
     qs.append(device.getOutputQueue("depth", 1))
     qs.append(device.getOutputQueue("colorize", 1))
 
-    try:
-        from projector_3d import PointCloudVisualizer
-    except ImportError as e:
-        raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e}. Try disabling the point cloud \033[0m ")
-
     calibData = device.readCalibration()
     if COLOR:
         w, h = camRgb.getIspSize()
@@ -118,12 +116,17 @@ with dai.Device(pipeline) as device:
     else:
         w, h = monoRight.getResolutionSize()
         intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, dai.Size2f(w, h))
-    pcl_converter = PointCloudVisualizer(intrinsics, w, h)
 
+    # Sleep for 5 seconds, for the camera to settle
+    time.sleep(5)
+
+    pcl_converter = PointCloudFromRGBD(intrinsics, w, h)
     sync = HostSync()
     box_estimator = BoxEstimator()
 
     i = 0
+    t = time.time()
+
     while True:
         for q in qs:
             new_msg = q.tryGet()
@@ -136,14 +139,13 @@ with dai.Device(pipeline) as device:
                     cv2.imshow("color", color)
                     rgb = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
                     pointcloud = pcl_converter.rgbd_to_projection(depth, rgb)
+                    t_new = time.time()
+                    dt =  t_new - t
+                    fps = 1 / dt
+                    t = t_new
                     l, w, h = box_estimator.process_pcl(pointcloud)
-                    print(f"l: {l}, w: {w}, h:{h}")
+                    print(f"l: {l}, w: {w}, h:{h}, fps:{fps}")
                     if(l * w * h  > 0.003):
                         box_estimator.vizualise_box()
-        if cv2.waitKey(1) == ord('s'):
-            i += 1
-            print("Writing!")
-            o3d.io.write_point_cloud(f"./examples/example_{i}.ply", pcl_converter.pcl)
-            cv2.imwrite(f"./examples/example_{i}.png", color)
         if cv2.waitKey(1) == ord('q'):
             break

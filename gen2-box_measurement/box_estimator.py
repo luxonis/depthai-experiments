@@ -5,7 +5,7 @@ import copy
 
 DISTANCE_THRESHOLD_PLANE = 0.02 # Defines the maximum distance a point can have 
                                 # to an estimated plane to be considered an inlier
-MAX_ITER_PLANE = 3000   # Defines how often a random plane is sampled and verified
+MAX_ITER_PLANE = 300   # Defines how often a random plane is sampled and verified
 N_POINTS_SAMPLED_PLANE = 3 # Defines the number of points that are randomly sampled to estimate a plane
 
 
@@ -64,17 +64,20 @@ class BoxEstimator():
             self.vis.add_geometry(origin)
             self.isstarted = True
         else:
-            self.vis.add_geometry(line_set)
+            self.vis.add_geometry(line_set, reset_bounding_box=False)
             self.vis.update_geometry(self.raw_pcl)
             self.vis.poll_events()
             self.vis.update_renderer()
-            self.vis.remove_geometry(line_set)
+            self.vis.remove_geometry(line_set, reset_bounding_box=False)
 
     def process_pcl(self, raw_pcl):
         self.raw_pcl = raw_pcl
-        if(len(raw_pcl.points) < 100):
+        if len(raw_pcl.points) < 100:
             return 0,0,0
         self.crop_plc()
+
+        if len(self.roi_pcl.points) < 100:
+            return 0,0,0
         plane_eq, plane_inliers = self.detect_ground_plane()
         box = self.get_box_pcl(plane_eq, plane_inliers) # TODO, check if there is a reasonable box even
         if box is None:
