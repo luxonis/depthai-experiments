@@ -11,7 +11,7 @@ N_POINTS_SAMPLED_PLANE = 3 # Defines the number of points that are randomly samp
 
 class BoxEstimator():
 
-    def __init__(self):
+    def __init__(self, max_distance):
         self.raw_pcl = None
         self.roi_pcl = None
         self.plane_pcl = None
@@ -24,6 +24,8 @@ class BoxEstimator():
 
         self.bounding_box = None
         self.rotation_matrix = None
+
+        self.max_distance = max_distance
 
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window()
@@ -112,7 +114,7 @@ class BoxEstimator():
         # Only take points less than 1 meter away
         # TODO, ROI should be done somewhere else
         # (already at RGBD according to user specified bounding box)
-        indices = np.nonzero(pcl_dist < 1.5)[0]
+        indices = np.nonzero(pcl_dist < self.max_distance)[0]
         self.roi_pcl = raw_pcl.select_by_index(indices)
         return self.roi_pcl
     

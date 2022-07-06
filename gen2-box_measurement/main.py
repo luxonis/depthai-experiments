@@ -4,9 +4,19 @@ import time
 import cv2
 import depthai as dai
 import open3d as o3d
+import argparse
 from box_estimator import BoxEstimator
 from projector_3d import PointCloudFromRGBD
 
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-maxd', '--max_dist', type=float, help="Maximum distance between camera and object in space in meters",
+                    default=1.5)
+parser.add_argument('-mins', '--min_box_size', type=float, help="Minimum box size in cubic meters",
+                    default=0.003)
+
+args = parser.parse_args()
 
 COLOR = True
 
@@ -122,7 +132,7 @@ with dai.Device(pipeline) as device:
 
     pcl_converter = PointCloudFromRGBD(intrinsics, w, h)
     sync = HostSync()
-    box_estimator = BoxEstimator()
+    box_estimator = BoxEstimator(args.max_dist)
 
     i = 0
     t = time.time()
@@ -144,8 +154,8 @@ with dai.Device(pipeline) as device:
                     fps = 1 / dt
                     t = t_new
                     l, w, h = box_estimator.process_pcl(pointcloud)
-                    print(f"l: {l}, w: {w}, h:{h}, fps:{fps}")
-                    if(l * w * h  > 0.003):
+                    if(l * w * h  > args.min_box_size):
                         box_estimator.vizualise_box()
+                        print(f"l: {l}, w: {w}, h:{h}, fps:{fps}")
         if cv2.waitKey(1) == ord('q'):
             break
