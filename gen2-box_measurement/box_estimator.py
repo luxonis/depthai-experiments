@@ -75,15 +75,17 @@ class BoxEstimator():
     def process_pcl(self, raw_pcl):
         self.raw_pcl = raw_pcl
         if len(raw_pcl.points) < 100:
-            return 0,0,0
-        self.crop_plc()
+            return 0,0,0 # No box
 
+        self.crop_plc()
         if len(self.roi_pcl.points) < 100:
-            return 0,0,0
+            return 0,0,0 # No box
+
         plane_eq, plane_inliers = self.detect_ground_plane()
         box = self.get_box_pcl(plane_eq, plane_inliers) # TODO, check if there is a reasonable box even
         if box is None:
-            return 0,0,0
+            return 0,0,0 # No box
+
         self.get_box_top(plane_eq)
         dimensions = self.get_dimensions()
         return dimensions
@@ -111,9 +113,8 @@ class BoxEstimator():
         # Calculate point distances
         pcl_dist = np.sqrt(np.sum(np.square(raw_pcl_np), axis=1))
 
-        # Only take points less than 1 meter away
         # TODO, ROI should be done somewhere else
-        # (already at RGBD according to user specified bounding box)
+        # (probably already on RGBD according to user specified bounding box)
         indices = np.nonzero(pcl_dist < self.max_distance)[0]
         self.roi_pcl = raw_pcl.select_by_index(indices)
         return self.roi_pcl

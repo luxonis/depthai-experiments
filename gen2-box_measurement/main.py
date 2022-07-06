@@ -156,6 +156,6 @@ with dai.Device(pipeline) as device:
                     l, w, h = box_estimator.process_pcl(pointcloud)
                     if(l * w * h  > args.min_box_size):
                         box_estimator.vizualise_box()
-                        print(f"l: {l}, w: {w}, h:{h}, fps:{fps}")
+                        print(f"Length: {l:.2f}, Width: {w:.2f}, Height:{h:.2f}")
         if cv2.waitKey(1) == ord('q'):
             break
