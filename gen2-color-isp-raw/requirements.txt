@@ -4,5 +4,5 @@ pyusb
 opencv-python
 argparse
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local
-depthai==2.14.1.0.dev+0b8ba0cc80150bcb560aded0799896e862516668
+depthai==2.14.1.0.dev+9aec9439f54863b231f7aedee7eb73749c472d64
 # depthai==2.15.2.0
