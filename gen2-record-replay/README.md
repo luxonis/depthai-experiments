@@ -13,23 +13,20 @@ When running `record.py`, it will record encoded streams from all devices and wi
 ![depth gif](https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif)
 
 #### Record usage
-```
-usage: record.py [-h] [-p PATH] [-s [STREAMS]] [-f FPS]
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -d, --display       default=False,      Display color preview
-  -p, --path,         default="recordings/"       Path where to store the captured data
-  -s, --save,         default=["color", "left", "right"]   Choose which streams to save
-  -f, --fps,          default=30          Camera sensor FPS, applied to all cameras
-  -q, --quality,      default="HIGH",     Selects the quality of the recording
-  -fc,--frame_cnt     default=-1,         Number of frames to record. Record until stopped by default
-  -mcap, --mcap       default=False       Record streams into the .mcap file
+```
+python record.py [arguments]
 ```
 
-For the `frame_cnt`, -1 means it will record streams until user terminates the program (`CTRL+C`). If you select eg. `-fc 300 --fps 30`, recording will be of 300 frames (of each stream), for a total of 10 seconds.
+**Optional arguments:**
 
-`quality` specifies the quality of encoded video streams. It can either be `BEST` (lossless encoding), `HIGH`, `MEDIUM` or `LOW`. More information regarding **file sizes and quality of recordings** can be [found here](encoding_quality/README.md).
+- `-p / --path`: Folder path where recordings will be saved. Default: `recordings/`.
+- `-save / --save`: Choose which streams to save. Currently supported: `color`, `left`, `right`, `disparity`, `depth` (.bag or .mcap), `pointcloud` (.mcap)
+- `-f / --fps`: Camera sensor FPS, applied to all cameras
+- `-q / --quality`: Selects the quality of the encoded streams that are being recording. It can either be `BEST` (lossless encoding), `HIGH`, `MEDIUM` or `LOW`. More information regarding **file sizes and quality of recordings** can be [found here](encoding_quality/README.md). Default: `HIGH`. If integer 0..100 is used, MJPEG encoding will be used and the MJPEG quality will be set to the value specified.
+- `-fc / --frame_cnt`: Number of frames to record. App will record until it's stopped (CTRL+C) by default. If you select eg. `-fc 300 --fps 30`, recording will be of 300 frames (of each stream), for a total of 10 seconds.
+- `-tl / --timelapse`: Number of seconds between saved frames, which is used for timelapse recording. By default, timelapse is disabled.
+- `-mcap / --mcap`: Record all streams into the .mcap file, so it can be viewed with [Foxglove Studio](https://foxglove.dev/)
 
 ### Replaying
 

@@ -4,7 +4,8 @@ import cv2
 import depthai as dai
 import blobconverter
 import numpy as np
-from libraries.depthai_replay import Replay
+from depthai_sdk import Replay
+from depthai_sdk.utils import frameNorm, cropToAspectRatio
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
@@ -13,17 +14,26 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default="data", type=str, help="Path where to store the captured data")
 args = parser.parse_args()
 
-# Create Replay object
+# Create Replay objects
 replay = Replay(args.path)
-# Initialize the pipeline. This will create required XLinkIn's and connect them together
-pipeline, nodes = replay.init_pipeline()
 
+replay.disableStream('depth') # In case depth was saved (mcap)
 # Resize color frames prior to sending them to the device
-replay.set_resize_color((300, 300))
-
+replay.setResizeColor((304, 304))
 # Keep aspect ratio when resizing the color frames. This will crop
 # the color frame to the desired aspect ratio (in our case 300x300)
-replay.keep_aspect_ratio(True)
+replay.keepAspectRatio(True)
+
+# Initializes the pipeline. This will create required XLinkIn's and connect them together
+# Creates StereoDepth node, if both left and right streams are recorded
+pipeline, nodes = replay.initPipeline()
+
+nodes.stereo.setSubpixel(True)
+
+manip = pipeline.create(dai.node.ImageManip)
+manip.initialConfig.setResize(300,300)
+manip.setMaxOutputFrameSize(300*300*3)
+nodes.color.out.link(manip.inputImage)
 
 nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
 nn.setBoundingBoxScaleFactor(0.3)
@@ -35,7 +45,7 @@ nn.setConfidenceThreshold(0.5)
 nn.input.setBlocking(False)
 
 # Link required inputs to the Spatial detection network
-nodes.color.out.link(nn.input)
+manip.out.link(nn.input)
 nodes.stereo.depth.link(nn.inputDepth)
 
 detOut = pipeline.create(dai.node.XLinkOut)
@@ -46,31 +56,17 @@ depthOut = pipeline.create(dai.node.XLinkOut)
 depthOut.setStreamName("depth_out")
 nodes.stereo.disparity.link(depthOut.input)
 
-right_s_out = pipeline.create(dai.node.XLinkOut)
-right_s_out.setStreamName("rightS")
-nodes.stereo.syncedRight.link(right_s_out.input)
-
-left_s_out = pipeline.create(dai.node.XLinkOut)
-left_s_out.setStreamName("leftS")
-nodes.stereo.syncedLeft.link(left_s_out.input)
-
 with dai.Device(pipeline) as device:
-    replay.create_queues(device)
+    replay.createQueues(device)
 
     depthQ = device.getOutputQueue(name="depth_out", maxSize=4, blocking=False)
     detQ = device.getOutputQueue(name="det_out", maxSize=4, blocking=False)
-    rightS_Q = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
-    leftS_Q = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
 
     disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
-    while replay.send_frames():
-        rgbFrame = replay.frameSent['color']
-
-        # if mono:
-        cv2.imshow("left", leftS_Q.get().getCvFrame())
-        cv2.imshow("right", rightS_Q.get().getCvFrame())
+    while replay.sendFrames():
+        rgbFrame = cropToAspectRatio(replay.frames['color'], (300,300))
 
         depthFrame = depthQ.get().getFrame()
         depthFrameColor = (depthFrame*disparityMultiplier).astype(np.uint8)
@@ -83,21 +79,18 @@ with dai.Device(pipeline) as device:
             # Display (spatial) object detections on the color frame
             for detection in inDet.detections:
                 # Denormalize bounding box
-                x1 = int(detection.xmin * 300)
-                x2 = int(detection.xmax * 300)
-                y1 = int(detection.ymin * 300)
-                y2 = int(detection.ymax * 300)
+                bbox = frameNorm(rgbFrame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
                 try:
                     label = labelMap[detection.label]
                 except:
                     label = detection.label
-                cv2.putText(rgbFrame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                cv2.putText(rgbFrame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(rgbFrame, str(label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(rgbFrame, "{:.2f}".format(detection.confidence*100), (bbox[0] + 10, bbox[1] + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(rgbFrame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(rgbFrame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(rgbFrame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
-                cv2.rectangle(rgbFrame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+                cv2.rectangle(rgbFrame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, cv2.FONT_HERSHEY_SIMPLEX)
 
         cv2.imshow("rgb", rgbFrame)
         cv2.imshow("depth", depthFrameColor)
