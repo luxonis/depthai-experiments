@@ -20,7 +20,7 @@ class Record():
         self.fps = 30
         self.timelapse = -1
         self.device = device
-        self.quality = EncodingQuality.HIGH
+        self.quality = EncodingQuality.BEST
         self.rotate = -1
         self.preview = False
         self.connectedCameras = self.device.getConnectedCameras()
@@ -160,7 +160,7 @@ class Record():
 
         def create_mono(name):
             nodes[name] = pipeline.create(dai.node.ColorCamera)
-            nodes[name].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
+            nodes[name].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
             nodes[name].setFps(self.fps)
