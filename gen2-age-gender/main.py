@@ -23,7 +23,7 @@ def create_pipeline(stereo):
     # Workaround: remove in 2.18, use `cam.setPreviewNumFramesPool(10)`
     # This manip uses 15*3.5 MB => 52 MB of RAM.
     copy_manip = pipeline.create(dai.node.ImageManip)
-    copy_manip.setMaxOutputFrameSize(15)
+    copy_manip.setNumFramesPool(15)
     copy_manip.setMaxOutputFrameSize(3499200)
     cam.preview.link(copy_manip.inputImage)
 
