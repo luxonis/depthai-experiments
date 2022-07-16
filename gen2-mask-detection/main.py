@@ -95,7 +95,7 @@ def create_pipeline(stereo):
         if seq is None:
             seq = msg.getSequenceNum()
         seq = str(seq)
-        node.warn(f"New msg {name}, seq {seq}")
+        # node.warn(f"New msg {name}, seq {seq}")
 
         # Each seq number has it's own dict of msgs
         if seq not in msgs:
@@ -118,7 +118,7 @@ def create_pipeline(stereo):
             if len(syncMsgs) == 2: # 1 frame, 1 detection
                 for rm in seq_remove:
                     del msgs[rm]
-                node.warn(f"synced {seq}. Removed older sync values. len {len(msgs)}")
+                # node.warn(f"synced {seq}. Removed older sync values. len {len(msgs)}")
                 return syncMsgs # Returned synced msgs
         return None
 
