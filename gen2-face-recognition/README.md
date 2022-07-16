@@ -9,6 +9,8 @@ This example demonstrates the DepthAI running [face detection network](https://d
 
 [![Face recognition](https://user-images.githubusercontent.com/18037362/159522552-fde15cd4-4343-492e-be44-ae07f06c1d2e.gif)](https://youtu.be/Xb1cXu_SIbo)
 
+## Pipeline graph
+
 ### How it works
 
 1. The color camera produces high-res frames, sends them to host, Script node, and downscale ImageManip node.
