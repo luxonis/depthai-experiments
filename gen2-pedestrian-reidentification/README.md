@@ -22,6 +22,12 @@ Original OpenVINO demo, on which this example was made, is [here](https://docs.o
 7. Face frames get send to the 2nd NN - [person-reidentification](https://docs.openvino.ai/latest/omz_models_model_person_reidentification_retail_0288.html) NN model. NN results are sent back to the host
 8. Frames, object detections, and reidentification results are all **synced on the host** side and then displayed to the user
 
+## 2-stage NN pipeline graph
+
+![image](https://user-images.githubusercontent.com/18037362/179375207-1ccf27a6-59bb-4a42-8cae-d8908c4ed51a.png)
+
+[DepthAI Pipeline Graph](https://github.com/geaxgx/depthai_pipeline_graph#depthai-pipeline-graph-experimental) was used to generate this image.
+
 ## Pre-requisites
 
 Install requirements:

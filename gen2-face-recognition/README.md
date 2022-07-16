@@ -9,7 +9,6 @@ This example demonstrates the DepthAI running [face detection network](https://d
 
 [![Face recognition](https://user-images.githubusercontent.com/18037362/159522552-fde15cd4-4343-492e-be44-ae07f06c1d2e.gif)](https://youtu.be/Xb1cXu_SIbo)
 
-## Pipeline graph
 
 ### How it works
 
@@ -24,6 +23,12 @@ This example demonstrates the DepthAI running [face detection network](https://d
 9. Created ImageManipConfig and high-res frame get sent to another ImageManip node, which crops rotated rectangle and feeds the `112x112` frame to the 3rd NN: face recognition the arcface model.
 10. Frames, object detections, and recognition results are all **synced on the host** side.
 11. Face recognition results are matched with faces in the database using cosine distance (inside `FaceRecognition` class) and then displayed to the user.
+
+## Pipeline graph
+
+![image](https://user-images.githubusercontent.com/18037362/179375078-c2544a58-a9b3-464f-9f80-2e7deb49a727.png)
+
+[DepthAI Pipeline Graph](https://github.com/geaxgx/depthai_pipeline_graph#depthai-pipeline-graph-experimental) was used to generate this image.
 
 ## Usage
 
