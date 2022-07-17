@@ -1,3 +1,5 @@
 opencv-python
-imutils==0.5.4
-depthai==2.16.0.0
+depthai==2.17.0.0
+depthai-sdk
+numpy
+blobconverter==1.3.0
