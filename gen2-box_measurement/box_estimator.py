@@ -19,6 +19,9 @@ class BoxEstimator():
         self.box_pcl = None
         self.top_side_pcl = None
 
+        self.is_calibrated = False
+        self.ground_plane_eq = None
+
         self.height = None
         self.width = None
         self.length = None
@@ -82,7 +85,12 @@ class BoxEstimator():
         if len(self.roi_pcl.points) < 100:
             return 0,0,0 # No box
 
-        plane_eq, plane_inliers = self.detect_ground_plane()
+        if not self.is_calibrated:
+            plane_eq, plane_inliers = self.detect_ground_plane()
+        else:
+            plane_eq = self.ground_plane_eq
+            plane_inliers = self.get_plane_inliers(plane_eq, np.asarray(self.roi_pcl.points), DISTANCE_THRESHOLD_PLANE)
+
         box = self.get_box_pcl(plane_eq, plane_inliers) # TODO, check if there is a reasonable box even
         if box is None:
             return 0,0,0 # No box
@@ -91,7 +99,20 @@ class BoxEstimator():
         dimensions = self.get_dimensions()
         return dimensions
 
+    def calibrate(self, raw_pcl):
+        self.raw_pcl = raw_pcl
+        if len(raw_pcl.points) < 100:
+            print("Cannot calibrate, too little points in the point cloud.")
+            return False
 
+        self.crop_plc()
+        if len(self.roi_pcl.points) < 100:
+            print("Cannot calibrate, too little points in the ROI point cloud")
+            return False
+        plane_eq, _ = self.detect_ground_plane()
+        self.ground_plane_eq = plane_eq
+        self.is_calibrated = True
+        return True
 
     def create_rotation_matrix(self, vec_in, vec_target):
         # Create a rotation matrix that rotates vec_in to vec_target
