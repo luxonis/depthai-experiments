@@ -2,6 +2,7 @@ import numpy as np
 import open3d as o3d
 import cv2
 import copy
+import random
 
 DISTANCE_THRESHOLD_PLANE = 0.02 # Defines the maximum distance a point can have 
                                 # to an estimated plane to be considered an inlier
@@ -159,15 +160,12 @@ class BoxEstimator():
         self.raw_pcl = self.raw_pcl.translate(translate_vector)
 
         points_np = np.asarray(self.box_pcl.points)
-        zs = points_np[:, 2]
-        sorted_zs = np.sort(zs)
-        height = np.percentile(sorted_zs, 90)
+        top_plane_eq, top_plane_inliers = self.fit_plane_vec_constraint([0, 0, 1], points_np, 0.03, 30)
 
-        upper_plane_points_indices = np.nonzero(zs > 0.8 * height)[0]
-        upper_plane = self.box_pcl.select_by_index(upper_plane_points_indices)
-        self.top_side_pcl = upper_plane
-        self.height = height
-        return height
+        top_plane = self.box_pcl.select_by_index(top_plane_inliers)
+        self.top_side_pcl = top_plane
+        self.height = abs(top_plane_eq[3])
+        return self.height
 
     def get_dimensions(self):
         upper_plane_points = np.asarray(self.top_side_pcl.points)
@@ -177,3 +175,34 @@ class BoxEstimator():
         self.width, self.length = rect[1][0], rect[1][1]
 
         return self.length, self.width, self.height
+
+    def fit_plane_vec_constraint(self, norm_vec, pts, thresh=0.05, n_iterations=300):
+        best_eq = []
+        best_inliers = []
+
+        n_points = pts.shape[0]
+        for iter in range(n_iterations):
+            id_sample = random.sample(range(0, n_points), 1)
+            point = pts[id_sample]
+            d = -np.sum(np.multiply(norm_vec, point))
+            plane_eq = [*norm_vec, d]
+            pt_id_inliers = self.get_plane_inliers(plane_eq, pts, thresh)
+            if len(pt_id_inliers) > len(best_inliers):
+                best_eq = plane_eq
+                best_inliers = pt_id_inliers
+
+        return best_eq, best_inliers
+    
+    def get_plane_inliers(self, plane_eq, pts, thresh=0.05):
+        pt_id_inliers = []
+        dist_pt = self.get_pts_distances_plane(plane_eq, pts)
+
+        # Select indexes where distance is bigger than the threshold
+        pt_id_inliers = np.where(np.abs(dist_pt) <= thresh)[0]
+        return pt_id_inliers
+
+    def get_pts_distances_plane(self, plane_eq, pts):
+        dist_pt = (plane_eq[0] * pts[:, 0] + plane_eq[1] * pts[:, 1] 
+                + plane_eq[2] * pts[:, 2] + plane_eq[3])\
+                / np.sqrt(plane_eq[0] ** 2 + plane_eq[1] ** 2 + plane_eq[2] ** 2)
+        return dist_pt
