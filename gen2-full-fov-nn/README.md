@@ -1,14 +1,19 @@
 # Full FOV NN inferencing
 
-This demo shows how you can run NN inferencing on full FOV frames. Color camera's sensor has `4032x3040`
-resultion, which can only be obtained from `isp` and `still` outputs of [ColorCamera](https://docs.luxonis.com/projects/api/en/latest/components/nodes/color_camera/) node. In order to run NN inference on a frame, the frame must be in `RGB` format and needs to be specific size. We use [ImageManip](https://docs.luxonis.com/projects/api/en/latest/components/nodes/image_manip/) node to convert `YUV420` (`isp`) to `RGB` and to resize the frame to `300x300` (required by MobileNet NN that we use).
+See [Maximizing FOV documentation page](https://docs.luxonis.com/projects/api/en/latest/tutorials/maximize_fov/) for more information.
+
+This demo shows how you can run NN inferencing on full FOV frames. IMX378 sensor has `4032x3040`
+resultion, which can only be obtained from `isp` and `still` outputs of [ColorCamera](https://docs.luxonis.com/projects/api/en/latest/components/nodes/color_camera/) node. In order to run NN inference on a frame it must be of specific size, eg. 300x300, which is a different aspect ratio than the full FOV of the sensor.
+
+Here we have 3 options:
+
+1. Crop the ISP frame to 1:1 aspect ratio and lose some FOV - see [cropping.py](cropping.py) demo.
+2. Stretch the ISP frame to to the 1:1 aspect ratio of the NN - see [stretching.py](stretching.py) demo.
+3. Apply letterboxing to the ISP frame to get 1:1 aspect ratio frame - see [letterboxing.py](letterboxing.py) demo.
+
+## Demos
 
 
-## Demo
-
-As you can see on the top left side of the image, `isp` frame resolution is `812x608` (downscaled from `4032x3040` - Full FOV of the camera).
-
-![Full FOV](https://user-images.githubusercontent.com/18037362/145134354-7e6b2459-e4d5-4160-bd4f-d29458d30dad.png)
 
 ## Installation
 
@@ -21,5 +26,7 @@ python3 -m pip install -r requirements.txt
 Run the application
 
 ```
-python3 main.py
+python3 cropping.py
+python3 letterboxing.py
+python3 stretching.py
 ```
