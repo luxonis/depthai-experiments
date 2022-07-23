@@ -13,6 +13,15 @@ Here we have 3 options:
 
 ## Demos
 
+### Cropping
+
+![cropping](https://user-images.githubusercontent.com/18037362/180607873-6a476ea4-55e0-4557-a93e-a7cadcd80725.jpg)
+### Letterboxing
+
+![letterboxing](https://user-images.githubusercontent.com/18037362/180607958-0db7fb34-1221-42a1-b889-10d1f9793912.jpg)
+### Stretching
+
+![stretched](https://user-images.githubusercontent.com/18037362/180607962-e616cdc7-fcad-4bc8-a15f-617b89a2c047.jpg)
 
 
 ## Installation
