@@ -27,9 +27,10 @@ xoutIsp.setStreamName("isp")
 camRgb.isp.link(xoutIsp.input)
 
 # Use ImageManip to resize to 300x300 with letterboxing
-manip = pipeline.create(dai.node.ImageManip)
+manip = pipeline.createImageManip()
+manip.setResize(300,300)
 manip.setMaxOutputFrameSize(270000) # 300x300x3
-manip.initialConfig.setResizeThumbnail(300, 300)
+manip.initialConfig.setKeepAspectRatio(False) # Stretching the image
 camRgb.preview.link(manip.inputImage)
 
 # NN to demonstrate how to run inference on full FOV frames
@@ -65,18 +66,19 @@ with dai.Device(pipeline) as device:
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
         cv2.imshow(name, frame)
-
+    dets = []
     while True:
         if qNn.has():
             dets = qNn.get().detections
+        if qRgb.has():
             frame = qRgb.get()
             f = frame.getCvFrame()
-            displayFrame("rgb", f, dets)
+            displayFrame("Stretched frame", f, dets)
         if qIsp.has():
             frame = qIsp.get()
             f = frame.getCvFrame()
             cv2.putText(f, str(f.shape), (20, 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255))
-            cv2.imshow("isp", f)
+            displayFrame("ISP", f, dets)
 
         if cv2.waitKey(1) == ord('q'):
             break
