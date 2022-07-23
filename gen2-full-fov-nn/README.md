@@ -24,6 +24,14 @@ Here we have 3 options:
 ![stretched](https://user-images.githubusercontent.com/18037362/180607962-e616cdc7-fcad-4bc8-a15f-617b89a2c047.jpg)
 
 
+## ISP vs Video vs Preview at 12MP
+
+![Isp vs Video vs Preview](https://user-images.githubusercontent.com/18037362/180610776-854c5215-8b59-4300-81d8-0014847a04bc.jpg)
+
+Image above is the `isp` output frame from the `ColorCamera` (12MP from IMX378). Blue rectangle represents the cropped 4K
+`video` output, and yellow rectangle represents cropped `preview` output when preview size is set to 1:1 aspect ratio
+(eg. when using 300x300 MobileNet-SSD NN model). [Source code here](https://gist.github.com/Erol444/56e23ec203a122d540ebc4d01d894d44).
+
 ## Installation
 
 ```
