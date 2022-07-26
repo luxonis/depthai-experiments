@@ -1,4 +1,4 @@
-# # OAK PoE TCP streaming - Configure focus
+# OAK PoE TCP streaming - Configure focus
 
 Very similar to [OAK PoE TCP streaming](../), this example only adds option to configure OAK PoE's focus from the host with `.` and `,` keys.
 
