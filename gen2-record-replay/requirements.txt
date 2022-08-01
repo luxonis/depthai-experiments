@@ -3,4 +3,5 @@ numpy
 blobconverter>=1.2.8
 rosbags>=0.9.7
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.15.1.0.dev+39da981db8b886cf6c88b55a044724a82619a794
+# depthai==2.15.1.0.dev+39da981db8b886cf6c88b55a044724a82619a794
+depthai==2.17.2.0.dev+211dc1c0a135d5615dba75ebf2098ba8cdc05cd0
