@@ -44,7 +44,6 @@ if args.rgbFps != args.monoFps:
     raise ValueError('RGB and MONO FPS must be the same when recording for now!')
 
 args.fps = args.rgbFps
-print(args.ispScale, args.rgbResolution)
 # TODO: make camera resolutions configrable
 save_path = Path.cwd() / args.path
 
