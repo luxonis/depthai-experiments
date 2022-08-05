@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from multiprocessing.sharedctypes import Value
 import depthai as dai
 import contextlib
 import math
@@ -12,6 +11,7 @@ import threading
 from depthai_sdk import Record, EncodingQuality
 from depthai_sdk.managers import ArgsManager
 import argparse
+from typing import List
 
 _save_choices = ("color", "left", "right", "disparity", "depth", "pointcloud") # TODO: IMU/ToF...
 _quality_choices = tuple(str(q).split('.')[1] for q in EncodingQuality)
@@ -67,7 +67,7 @@ def checkSync(queues, sequenceNum: int):
 def run():
     with contextlib.ExitStack() as stack:
         # Record from all available devices
-        device_infos = dai.Device.getAllAvailableDevices()
+        device_infos: List[dai.DeviceInfo] = dai.Device.getAllAvailableDevices()
 
         if len(device_infos) == 0:
             raise RuntimeError("No devices found!")
@@ -77,6 +77,12 @@ def run():
         devices = []
         # TODO: allow users to specify which available devices should record
         for device_info in device_infos:
+            if args.deviceId and \
+                device_info.name not in args.deviceId and \
+                device_info.mxid not in args.deviceId:
+                print(f'Found Device {device_info.name} (mxid {device_info.mxid}), but skipping it')
+                continue
+            print(f'Found Device {device_info.name} (mxid {device_info.mxid})')
             openvino_version = dai.OpenVINO.Version.VERSION_2021_4
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2Mode=False))
 
@@ -113,7 +119,7 @@ def run():
                         continue
                     # Loop through device streams
                     for q in recording.queues:
-                        new_msg = q['q'].tryGet()
+                        new_msg: dai.ImgFrame = q['q'].tryGet()
                         if new_msg is not None:
                             q['msgs'].append(new_msg)
                             if checkSync(recording.queues, new_msg.getSequenceNum()):
