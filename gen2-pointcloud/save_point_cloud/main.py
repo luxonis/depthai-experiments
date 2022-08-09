@@ -39,6 +39,11 @@ height = 720
 # max depth (only used for visualisation) in millimeters
 visualisation_max_depth = 4000
 
+serials = []
+for device in dai.Device.getAllAvailableDevices():
+    serials.append(device.getMxId())
+    print(f"{len(serials)}: {device.getMxId()} {device.state}")
+
 # Create pipeline
 pipeline = dai.Pipeline()
 device = dai.Device()
@@ -74,6 +79,7 @@ try:
         camRgb.initialControl.setManualFocus(lensPosition)
 except:
     raise
+    
 left.setResolution(monoResolution)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 left.setFps(fps)
@@ -101,9 +107,10 @@ stereo.rectifiedRight.link(xoutRectifRight.input)
 
 # Connect to device and start pipeline
 with device:
+    device.setIrLaserDotProjectorBrightness(1200)
     serial_number = device.getMxId()
     timestamp = str(int(time.time()))
-    calibFile = f"calibration_{serial_number}_{timestamp}.json"
+    calibFile = f"{serial_number}_{timestamp}_calibration.json"
     calibData = device.readCalibration()
     calibData.eepromToJsonFile(calibFile)
     print("wrote", calibFile)
@@ -177,16 +184,16 @@ with device:
 
         if cv2.waitKey(1) == ord("q"):
             # save all images
-            if cv2.imwrite(f"rgb_{serial_number}_{timestamp}.png", raw_rgb):
-                print("wrote", f"rgb_{serial_number}_{timestamp}.png")
-            if cv2.imwrite(f"depth_{serial_number}_{timestamp}.png", raw_depth):
-                print("wrote", f"depth_{serial_number}_{timestamp}.png")
-            if cv2.imwrite(f"rectifiedLeft_{serial_number}_{timestamp}.png", raw_left):
-                print("wrote", f"rectifiedLeft_{serial_number}_{timestamp}.png")
+            if cv2.imwrite(f"{serial_number}_{timestamp}_rgb.png", raw_rgb):
+                print("wrote", f"{serial_number}_{timestamp}_rgb.png")
+            if cv2.imwrite(f"{serial_number}_{timestamp}_depth.png", raw_depth):
+                print("wrote", f"{serial_number}_{timestamp}_depth.png")
+            if cv2.imwrite(f"{serial_number}_{timestamp}_rectifiedLeft.png", raw_left):
+                print("wrote", f"{serial_number}_{timestamp}_rectifiedLeft.png")
             if cv2.imwrite(
-                f"rectifiedRight_{serial_number}_{timestamp}.png", raw_right
+                f"{serial_number}_{timestamp}_rectifiedRight.png", raw_right
             ):
-                print("wrote", f"rectifiedRight_{serial_number}_{timestamp}.png")
+                print("wrote", f"{serial_number}_{timestamp}_rectifiedRight.png")
             # compute point cloud
             pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
                 image=o3d.geometry.RGBDImage.create_from_color_and_depth(
