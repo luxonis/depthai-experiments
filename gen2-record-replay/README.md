@@ -21,7 +21,7 @@ python record.py [arguments]
 **Optional arguments:**
 
 - `-p / --path`: Folder path where recordings will be saved. Default: `recordings/`.
-- `-save / --save`: Choose which streams to save. Currently supported: `color`, `left`, `right`, `disparity`, `depth` (.bag or .mcap), `pointcloud` (.mcap)
+- `-s / --save`: Choose which streams to save. Currently supported: `color`, `left`, `right`, `disparity`, `depth` (.bag or .mcap), `pointcloud` (.mcap)
 - `-f / --fps`: Camera sensor FPS, applied to all cameras
 - `-q / --quality`: Selects the quality of the encoded streams that are being recording. It can either be `BEST` (lossless encoding), `HIGH`, `MEDIUM` or `LOW`. More information regarding **file sizes and quality of recordings** can be [found here](encoding_quality/README.md). Default: `HIGH`. If integer 0..100 is used, MJPEG encoding will be used and the MJPEG quality will be set to the value specified.
 - `-fc / --frame_cnt`: Number of frames to record. App will record until it's stopped (CTRL+C) by default. If you select eg. `-fc 300 --fps 30`, recording will be of 300 frames (of each stream), for a total of 10 seconds.
