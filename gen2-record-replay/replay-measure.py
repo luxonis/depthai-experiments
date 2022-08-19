@@ -28,33 +28,33 @@ args = parser.parse_args()
 # Create Replay object
 replay = Replay(args.path)
 # Initialize the pipeline. This will create required XLinkIn's and connect them together
-pipeline, nodes = replay.init_pipeline()
+pipeline = replay.initPipeline()
 
 depthOut = pipeline.create(dai.node.XLinkOut)
 depthOut.setStreamName("depth_out")
-nodes.stereo.depth.link(depthOut.input)
+replay.stereo.depth.link(depthOut.input)
 
 right_s_out = pipeline.create(dai.node.XLinkOut)
 right_s_out.setStreamName("rightS")
-nodes.stereo.syncedRight.link(right_s_out.input)
+replay.stereo.syncedRight.link(right_s_out.input)
 
 left_s_out = pipeline.create(dai.node.XLinkOut)
 left_s_out.setStreamName("leftS")
-nodes.stereo.syncedLeft.link(left_s_out.input)
+replay.stereo.syncedLeft.link(left_s_out.input)
 
-nodes.stereo.initialConfig.setConfidenceThreshold(190)
-nodes.stereo.setLeftRightCheck(True)
-nodes.stereo.setSubpixel(True)
+replay.stereo.initialConfig.setConfidenceThreshold(190)
+replay.stereo.setLeftRightCheck(True)
+replay.stereo.setSubpixel(True)
 # nodes.stereo.useHomographyRectification(False)
 
 with dai.Device(pipeline) as device:
-    replay.create_queues(device)
+    replay.createQueues(device)
 
     depthQ = device.getOutputQueue(name="depth_out", maxSize=4, blocking=False)
     rightS_Q = device.getOutputQueue(name="rightS", maxSize=4, blocking=False)
     leftS_Q = device.getOutputQueue(name="leftS", maxSize=4, blocking=False)
 
-    disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
+    disparityMultiplier = 255 / replay.stereo.initialConfig.getMaxDisparity()
     color = (255, 0, 0)
 
     text = TextHelper()
@@ -87,7 +87,7 @@ with dai.Device(pipeline) as device:
     z_arr = []
 
     # Read rgb/mono frames, send them to device and wait for the spatial object detection results
-    while replay.send_frames(pause):
+    while replay.sendFrames(pause):
         i += 1
         if i == 40:
             pause = True
