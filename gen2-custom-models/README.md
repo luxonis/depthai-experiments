@@ -22,6 +22,13 @@ PyTorch/Kornia, convert them and run them on the DepthAI.
 
 ![Laplacian corner detection](https://user-images.githubusercontent.com/18037362/134209951-4e1c7343-a333-4fb6-bdc9-bc86f6dc36b2.jpeg)
 
+**Difference between 2 frames**
+
+`diff.py` computes the difference between two consecutive color frames and visualizes that along with the color frame.
+
+![diff-demo](https://user-images.githubusercontent.com/18037362/185765421-3f391d9c-341a-4e5c-9f5d-3ce322347af1.gif)
+
+
 ## Pre-requisites
 
 Install requirements
