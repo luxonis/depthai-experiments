@@ -119,9 +119,6 @@ with dai.Device(pipeline) as device:
 
     while True:
         for name, stream in streams.items():
-            if stream['queue'].has():
-                img: dai.ImgFrame = stream['queue'].get()
-                stream['fps'].next_iter()
-                print(f"[{time.time()}] Stream {name} fps {stream['fps'].fps()}, timestamp: {img.getTimestamp()}, seq: {img.getSequenceNum()}")
-
-        time.sleep(0.001)  # Avoid lazy looping
+            img: dai.ImgFrame = stream['queue'].get()
+            stream['fps'].next_iter()
+            print(f"[{time.time()}] Stream {name} fps {stream['fps'].fps()}, timestamp: {img.getTimestamp()}, seq: {img.getSequenceNum()}")
