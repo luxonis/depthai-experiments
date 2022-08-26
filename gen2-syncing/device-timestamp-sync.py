@@ -4,23 +4,26 @@ import depthai as dai
 from depthai_sdk import FPSHandler
 import time
 
+FPS = 15
+
 pipeline = dai.Pipeline()
 
 # Define a source - color camera
 camRgb = pipeline.create(dai.node.ColorCamera)
 camRgb.setInterleaved(True)
 camRgb.setIspScale(1, 3)
-camRgb.setFps(20)
+camRgb.setPreviewSize(640, 360)
+camRgb.setFps(FPS)
 
 left = pipeline.create(dai.node.MonoCamera)
 left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-left.setFps(20)
+left.setFps(FPS)
 
 right = pipeline.create(dai.node.MonoCamera)
 right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-right.setFps(20)
+right.setFps(FPS)
 
 stereo = pipeline.createStereoDepth()
 stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
@@ -31,16 +34,12 @@ stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 left.out.link(stereo.left)
 right.out.link(stereo.right)
 
-encRgb = pipeline.create(dai.node.VideoEncoder)
-encRgb.setDefaultProfilePreset(camRgb.getFps(), dai.VideoEncoderProperties.Profile.H265_MAIN)
-camRgb.video.link(encRgb.input)
-
 encLeft = pipeline.create(dai.node.VideoEncoder)
-encLeft.setDefaultProfilePreset(left.getFps(), dai.VideoEncoderProperties.Profile.H265_MAIN)
+encLeft.setDefaultProfilePreset(left.getFps(), dai.VideoEncoderProperties.Profile.H264_MAIN)
 stereo.syncedLeft.link(encLeft.input)
 
 encRight = pipeline.create(dai.node.VideoEncoder)
-encRight.setDefaultProfilePreset(right.getFps(), dai.VideoEncoderProperties.Profile.H265_MAIN)
+encRight.setDefaultProfilePreset(right.getFps(), dai.VideoEncoderProperties.Profile.H264_MAIN)
 stereo.syncedRight.link(encRight.input)
 
 # Script node will sync high-res frames
@@ -49,10 +48,10 @@ script = pipeline.create(dai.node.Script)
 stereo.disparity.link(script.inputs["disp_in"])
 encLeft.bitstream.link(script.inputs["left_in"])
 encRight.bitstream.link(script.inputs["right_in"])
-encRgb.bitstream.link(script.inputs["rgb_in"])
+camRgb.preview.link(script.inputs["rgb_in"])
 
 script.setScript("""
-FPS=20
+FPS=15
 import time
 from datetime import timedelta
 import math
@@ -102,14 +101,29 @@ while True:
     time.sleep(0.001)  # Avoid lazy looping
 """)
 
-names = ['disp', 'left', 'right', 'rgb']
+script_out = ['disp', 'left', 'right']
 
-for name in names:
+for name in script_out:
     xout = pipeline.create(dai.node.XLinkOut)
     xout.setStreamName(name)
     script.outputs[name+'_out'].link(xout.input)
 
+# Convert color stream RGB->NV12 and encode it
+type_manip = pipeline.create(dai.node.ImageManip)
+type_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.NV12)
+script.outputs['rgb_out'].link(type_manip.inputImage)
+
+encRgb = pipeline.create(dai.node.VideoEncoder)
+encRgb.setDefaultProfilePreset(camRgb.getFps(), dai.VideoEncoderProperties.Profile.H264_MAIN)
+type_manip.out.link(encRgb.input)
+
+xoutRgb = pipeline.create(dai.node.XLinkOut)
+xoutRgb.setStreamName('rgb')
+encRgb.bitstream.link(xoutRgb.input)
+
 with dai.Device(pipeline) as device:
+    # Rgb should be the first - as we will first .get() that frame, as it will arrive the latest to the host
+    names = ['rgb', 'disp', 'left', 'right']
     streams = {}
     for name in names:
         streams[name] = {
