@@ -16,7 +16,7 @@ python3 main.py
 ### 2. pyav.py using PyAv library
 
 
-This demo decodes encoded stream to OpenCV frames using the PyAv library.
+This demo decodes encoded stream to OpenCV frames using the PyAv library. **Note** that this might freeze on Linux computers, which is due to PyAv library; see [workaround here](https://github.com/PyAV-Org/PyAV/issues/978#issuecomment-1121173652). For us, it worked as expected on Windows.
 
 ```
 python3 pyav.py

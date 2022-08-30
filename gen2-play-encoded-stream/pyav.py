@@ -20,13 +20,13 @@ videoEnc.bitstream.link(xout.input)
 
 with dai.Device(pipeline) as device:
     q = device.getOutputQueue(name="h264", maxSize=30, blocking=True)
+    
     codec = av.CodecContext.create("h264", "r")
-
     while True:
         data = q.get().getData()  # Blocking call, will wait until new data has arrived
         packets = codec.parse(data)
 
-        for i, packet in enumerate(packets):
+        for packet in packets:
             frames = codec.decode(packet)
             if frames:
                 frame = frames[0].to_ndarray(format='bgr24')
