@@ -6,7 +6,7 @@ This example shows how you can use multiple DepthAI's on a single host. The demo
 
 [![Multiple devices per host](https://user-images.githubusercontent.com/18037362/113307040-01d83c00-9305-11eb-9a42-c69c72a5dba5.gif)](https://www.youtube.com/watch?v=N1IY2CfhmEc "Multiple devices per host")
 
-Just two DepthAI's looking at each other.
+Just two OAK cameras looking at each other.
 
 Program will also print USB speed, model type and connected cameras for each connected device before starting the pipeline. Output example for having connected an OAK-1 on USB2, OAK-D on USB3, OAK-1-POE and OAK-D-POE:
 

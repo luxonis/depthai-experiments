@@ -11,6 +11,16 @@ This demo will use `H265` codec by default.
 ![image](https://user-images.githubusercontent.com/18037362/166504853-68072d92-f3ed-4a08-a7ca-15d7b8e774a2.png)
 
 As you can see, the `video.mp4` uses the codec of the stream being saved, so there's no decoding/encoding (or converting) happening on the host computer and **host CPU/GPU/RAM usage is minimal**.
+
+### Matroska
+
+Besides ffmpeg and `.mp4` video container (which is patent encumbered), you could also use the `mkvmerge`
+(see [MKVToolNix](https://mkvtoolnix.download/doc/mkvmerge.html) for GUI usage) and `.mkv` video container to mux encoded stream into video file that is supported by all major video players (eg. [VLC](https://www.videolan.org/vlc/))
+
+```
+mkvmerge -o vid.mkv video.h265
+```
+
 ## Install requirements
 
 ```
