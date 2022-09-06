@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #!/usr/bin/env python3
 
 import cv2
@@ -18,7 +17,7 @@ camRgb = pipeline.create(dai.node.ColorCamera)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
 camRgb.setInterleaved(False)
 camRgb.setIspScale(1,5) # 4056x3040 -> 812x608
-camRgb.setPreviewSize(812, 608)
+camRgb.setPreviewSize(608, 608)
 camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 # Slightly lower FPS to avoid lag, as ISP takes more resources at 12MP
 camRgb.setFps(25)
@@ -31,7 +30,6 @@ camRgb.isp.link(xoutIsp.input)
 manip = pipeline.createImageManip()
 manip.setResize(300,300)
 manip.setMaxOutputFrameSize(270000) # 300x300x3
-manip.initialConfig.setKeepAspectRatio(False) # Stretching the image
 camRgb.preview.link(manip.inputImage)
 
 # NN to demonstrate how to run inference on full FOV frames
@@ -67,30 +65,18 @@ with dai.Device(pipeline) as device:
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
         cv2.imshow(name, frame)
-    dets = []
+
     while True:
         if qNn.has():
             dets = qNn.get().detections
-        if qRgb.has():
             frame = qRgb.get()
             f = frame.getCvFrame()
-            displayFrame("Stretched frame", f, dets)
+            displayFrame("Cropping", f, dets)
         if qIsp.has():
             frame = qIsp.get()
             f = frame.getCvFrame()
             cv2.putText(f, str(f.shape), (20, 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255))
-            displayFrame("ISP", f, dets)
+            cv2.imshow("ISP", f)
 
         if cv2.waitKey(1) == ord('q'):
             break
-=======
-from depthai_sdk import OakCamera, AspectRatioResizeMode
-
-with OakCamera() as oak:
-    color = oak.create_camera('color', out='color')
-    nn = oak.create_nn('mobilenet-ssd', color, out='dets')
-    nn.config_nn(passthroughOut=True) # Also display passthrough frame
-    nn.set_aspect_ratio_resize_mode(AspectRatioResizeMode.STRETCH)
-    oak.create_visualizer([color, nn], fps=True)
-    oak.start(blocking=True)
->>>>>>> 487659b (started working on full-fov-nn)
