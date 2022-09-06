@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from multiprocessing.sharedctypes import Value
 import depthai as dai
 import contextlib
 import math
@@ -126,6 +125,7 @@ def run():
                                 if args.frame_cnt == recording.frameCntr:
                                     quitEvent.set()
 
+                                print(f"{time.time()}|||{device.getChipTemperature().average}")
                                 frames = dict()
                                 for stream in recording.queues:
                                     frames[stream['name']] = stream['msgs'].pop(0)
