@@ -2,9 +2,11 @@
 
 # Message syncing
 
-These examples show how to synchronize incoming messages. You can synchronize messages either by sequence number or timestamp.
+These examples show how to synchronize incoming messages. You can soft-synchronize messages either by sequence number or timestamp.
 All devices continuously sync their timestamps with the host (under the hood), so to sync frames across multiple devices you
 would use timestamp.
+
+**For Hardware syncing** (STROBE/FSIN), see [docs here](https://docs.luxonis.com/projects/hardware/en/latest/pages/guides/sync_frames.html).
 
 When to use **sequence number for syncing**:
 - You have only one OAK camera, and want to **sync frames and/or NN results**
