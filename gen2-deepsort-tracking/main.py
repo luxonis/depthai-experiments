@@ -33,17 +33,11 @@ def create_pipeline(stereo, yolo_config):
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-
-    # Workaround: remove in 2.18, use `cam.setPreviewNumFramesPool(15)`
-    # This manip uses 15*3.5 MB => 52.5 MB of RAM.
-    copy_manip = pipeline.create(dai.node.ImageManip)
-    copy_manip.setNumFramesPool(15)
-    copy_manip.setMaxOutputFrameSize(3499200)
-    cam.preview.link(copy_manip.inputImage)
+    cam.setPreviewNumFramesPool(30)
 
     cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("color")
-    copy_manip.out.link(cam_xout.input)
+    cam.preview.link(cam_xout.input)
 
     # ImageManip will resize the frame before sending it to the Object detection NN node
     obj_det_manip = pipeline.create(dai.node.ImageManip)
@@ -51,13 +45,7 @@ def create_pipeline(stereo, yolo_config):
     # obj_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888p)
     obj_det_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
     obj_det_manip.setMaxOutputFrameSize(640 * 640 * 3) # assume 3 channels UINT8 images
-    copy_manip.out.link(obj_det_manip.inputImage)
-    # cam.preview.link(obj_det_manip.inputImage)
-
-    # Debug
-    # obj_det_manip_xout = pipeline.create(dai.node.XLinkOut)
-    # obj_det_manip_xout.setStreamName("color")
-    # obj_det_manip.out.link(obj_det_manip_xout.input)
+    cam.preview.link(obj_det_manip.inputImage)
 
     if stereo:
         monoLeft = pipeline.create(dai.node.MonoCamera)
@@ -111,8 +99,7 @@ def create_pipeline(stereo, yolo_config):
     obj_det.out.link(image_manip_script.inputs['detections'])
     # Remove in 2.18 and use `imgFrame.getSequenceNum()` in Script node
     obj_det.passthrough.link(image_manip_script.inputs['passthrough'])
-    copy_manip.out.link(image_manip_script.inputs['preview'])
-    # obj_det_manip.out.link(image_manip_script.inputs['preview'])
+    cam.preview.link(image_manip_script.inputs['preview'])
 
     image_manip_script.setScript("""
     import time
@@ -131,7 +118,7 @@ def create_pipeline(stereo, yolo_config):
         msgs[seq][name] = msg
 
         # To avoid freezing (not necessary for this ObjDet model)
-        if 15 < len(msgs):
+        if 30 < len(msgs):
             node.warn(f"Removing first element! len {len(msgs)}")
             msgs.popitem() # Remove first element
 
@@ -229,7 +216,7 @@ with dai.Device() as device:
     
     device.startPipeline(create_pipeline(stereo, config))
 
-    tracker = DeepSort(max_age=70, nn_budget=None, embedder=None, nms_max_overlap=1.0, max_cosine_distance=0.2)
+    tracker = DeepSort(max_age=1000, nn_budget=None, embedder=None, nms_max_overlap=1.0, max_cosine_distance=0.2)
 
     sync = TwoStageHostSeqSync()
     queues = {}
@@ -275,9 +262,6 @@ with dai.Device() as device:
                     cv2.putText(frame, coords, (x, y + 60), cv2.FONT_HERSHEY_TRIPLEX, 0.7, (255, 255, 255), 2)
 
             cv2.imshow("Camera", frame)
-
-            # from PIL import Image
-            # im = Image.fromarray(frame)
-            # im.save("frame_v1.jpeg")
+        
         if cv2.waitKey(1) == ord('q'):
             break
