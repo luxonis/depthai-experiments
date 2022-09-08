@@ -7,6 +7,8 @@ import argparse
 import depthai as dai
 import math
 
+res_dict = {400:dai.MonoCameraProperties.SensorResolution.THE_400_P,720:dai.MonoCameraProperties.SensorResolution.THE_720_P}
+
 X = np.random.rand(100, 3)*10
 Y = np.random.rand(100, 3)*5
 
@@ -20,10 +22,14 @@ color = (255, 0, 0)
 parser = argparse.ArgumentParser()
 parser.add_argument("-gt", "--groundTruth", type=float,required=True,
                             help="Set the actual disatance of the destination flat textured surface in mtrs")
+parser.add_argument("-r", "--resolution", type=int,required=True,
+                            help="Resoluton:400 = 400P, 720 = 720P")
+
 args = parser.parse_args()
 gtNormal = np.array([0, 0, 1], dtype=np.float32)
 gtD = - args.groundTruth
 gtPlane = (gtNormal, gtD)
+resolution = res_dict[args.resolution]
 
 def pixel_coord_np(startX, startY, endX, endY):
     """
@@ -133,9 +139,9 @@ xoutDepth = pipeline.createXLinkOut()
 xoutDepth.setStreamName("depth")
 
 # Properties
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+monoLeft.setResolution(resolution)
 monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+monoRight.setResolution(resolution)
 monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 stereo.setConfidenceThreshold(200)
