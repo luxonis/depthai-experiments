@@ -1,4 +1,4 @@
-opencv-python
+opencv-python==4.6.0.66
 depthai==2.16.0.0
 numpy
 open3d==0.13.0.0
