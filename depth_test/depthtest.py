@@ -3,6 +3,7 @@ import os.path
 import depthai as dai
 import cv2
 import serial
+import numpy as np
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QDialog, QAbstractSpinBox
@@ -19,9 +20,11 @@ x_dist = 0
 y_dist = 0
 z_dist = 0
 
-CSV_HEADER = "TimeStamp,MxID,Error,Result"
+CSV_HEADER = "TimeStamp,MxID,RealDistance,DetectedDistance,planeFitMSE,gtPlaneMSE,planeFitRMSE," \
+             "gtPlaneRMSE,fillRate,Error(%),Error(cm),Result "
 mx_id = None
 product = None
+inter_conv = None
 
 
 class Ui_DepthTest(object):
@@ -132,7 +135,9 @@ class Ui_DepthTest(object):
 
 class Camera:
     def __init__(self):
+        # Create pipeline
         pipeline = dai.Pipeline()
+        # Define sources and outputs
         mono_left = pipeline.create(dai.node.MonoCamera)
         mono_right = pipeline.create(dai.node.MonoCamera)
         stereo = pipeline.create(dai.node.StereoDepth)
@@ -146,17 +151,23 @@ class Camera:
         xout_spatial_data.setStreamName("spatialData")
         xin_spatial_calc_config.setStreamName("spatialCalcConfig")
 
-        mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
         mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
         mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
+        # stereo mode configs
         lrcheck = False
         subpixel = False
+        extended = False
 
+        stereo.initialConfig.setConfidenceThreshold(200)
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        stereo.setRectifyEdgeFillColor(0)  # black, to better see the cutout
+        stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF)
         stereo.setLeftRightCheck(lrcheck)
         stereo.setSubpixel(subpixel)
+        stereo.setExtendedDisparity(extended)
 
         top_left = dai.Point2f(0.4, 0.4)
         bottom_right = dai.Point2f(0.6, 0.6)
@@ -169,6 +180,7 @@ class Camera:
         spatial_location_calculator.inputConfig.setWaitForMessage(False)
         spatial_location_calculator.initialConfig.addROI(self.config)
 
+        # Linking
         mono_left.out.link(stereo.left)
         mono_right.out.link(stereo.right)
 
@@ -181,17 +193,19 @@ class Camera:
         self.device = dai.Device(pipeline)
         global mx_id, product
         mx_id = self.device.getDeviceInfo().getMxId()
+        calib_obj = self.device.readCalibration()
         try:
-            product = self.device.readCalibration().eepromToJson()['productMame']
+            product = calib_obj.eepromToJson()['productMame']
         except KeyError:
-            product = self.device.readCalibration().eepromToJson()['boardName']
+            product = calib_obj.eepromToJson()['boardName']
+        M_right = np.array(calib_obj.getCameraIntrinsics(calib_obj.getStereoRightCameraId(), 1280, 720))
+        R2 = np.array(calib_obj.getStereoRightRectificationRotation())
+        H_right_inv = np.linalg.inv(np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right)))
+        global inter_conv
+        inter_conv = np.matmul(np.linalg.inv(M_right), H_right_inv)
         self.spatialCalcConfigInQueue = self.device.getInputQueue("spatialCalcConfig")
         self.depthQueue = self.device.getOutputQueue(name="depth", maxSize=4, blocking=False)
         self.spatialCalcQueue = self.device.getOutputQueue(name="spatialData", maxSize=4, blocking=False)
-
-        self.x_dist = 0
-        self.y_dist = 0
-        self.z_dist = 0
 
     def get_frame(self):
         in_depth = self.depthQueue.tryGet()
@@ -212,7 +226,7 @@ class Camera:
             x_dist = depthData.spatialCoordinates.x
             y_dist = depthData.spatialCoordinates.y
             z_dist = round(depthData.spatialCoordinates.z / 1000, 2)
-            return depth_frame_color
+            return depth_frame_color, depth_frame
 
     def update_roi(self, top_left, bottom_right):
         if top_left == bottom_right:
@@ -224,7 +238,6 @@ class Camera:
         config = dai.SpatialLocationCalculatorConfig()
         config.addROI(self.config)
         self.spatialCalcConfigInQueue.send(config)
-
 
 class ROI:
     def __init__(self, white_rect, black_rect):
@@ -256,8 +269,73 @@ class ROI:
 
 
 def clamp(n, smallest, largest):
-    return max(smallest, min(n, largest))
+    return int(max(smallest, min(n, largest)))
 
+
+def pixel_coord_np(startX, startY, endX, endY):
+    """
+    Pixel in homogenous coordinate
+    Returns:
+        Pixel coordinate:       [3, width * height]
+    """
+    print(startX, startY, endX, endY)
+    x = np.linspace(startX, endX - 1, endX - startX).astype(np.int32)
+    y = np.linspace(startY, endY - 1, endY - startY).astype(np.int32)
+
+    [x, y] = np.meshgrid(x, y)
+    return np.vstack((x.flatten(), y.flatten(), np.ones_like(x.flatten())))
+
+
+def search_depth_pos(x, y, depth):
+    def_x = x
+    def_y = y
+    while depth[y, x] == 0:
+        if depth[y + 1, x] != 0:
+            y += 1
+        elif depth[y, x + 1] != 0:
+            x += 1
+        else:
+            y += 1
+            x += 1
+        if abs(def_x - x) > 10 or abs(def_y - y) > 10:
+            return x, y, False
+    return x, y, True
+
+
+def search_depth_neg(x, y, depth):
+    def_x = x
+    def_y = y
+    while depth[y, x] == 0:
+        if depth[y - 1, x] != 0:
+            y -= 1
+        elif depth[y, x - 1] != 0:
+            x -= 1
+        else:
+            y -= 1
+            x -= 1
+        if abs(def_x - x) > 10 or abs(def_y - y) > 10:
+            return x, y, False
+    return x, y, True
+
+
+def search_depth(x, y, depth):
+    up_x, up_y, status = search_depth_pos(x, y, depth)
+    if not status:
+        up_x, up_y, status = search_depth_neg(x, y, depth)
+    return up_x, up_y
+
+
+def fit_plane_LTSQ(XYZ):
+    (rows, cols) = XYZ.shape
+    G = np.ones((rows, 3))
+    G[:, 0] = XYZ[:, 0]  #X
+    G[:, 1] = XYZ[:, 1]  #Y
+    Z = XYZ[:, 2]
+    (a, b, c),resid,rank,s = np.linalg.lstsq(G, Z)
+    normal = (a, b, -1)
+    nn = np.linalg.norm(normal)
+    normal = normal / nn
+    return c, normal
 
 class Frame(QtWidgets.QGraphicsPixmapItem):
     def __init__(self, roi):
@@ -271,23 +349,34 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.cameraEnabled = False
         self.width = 0
         self.height = 0
+        self.depth_roi = None
+        self.depth_frame = None
+
+    def get_depth_frame(self):
+        return self.depth_frame
+
+    def get_roi(self):
+        return self.p1, self.p2
 
     def update_frame(self):
-        if self.cameraEnabled:
-            cv_frame = self.camera.get_frame()
-            if cv_frame is None:
-                return
-
-            q_image = QtGui.QImage(cv_frame.data, cv_frame.shape[1], cv_frame.shape[0], colorMode)
-            pixmap = QtGui.QPixmap.fromImage(q_image)
-            self.pixmap = pixmap.scaled(600, 600, QtCore.Qt.KeepAspectRatio)
-            if self.width == 0 or self.height == 0:
-                self.width = self.pixmap.width()
-                self.height = self.pixmap.height()
-                self.p1 = [self.width * 0.4, self.height * 0.4]
-                self.p2 = [self.width * 0.6, self.height * 0.6]
-                self.roi.update(self.p1, self.p2)
-            self.setPixmap(self.pixmap)
+        if not self.cameraEnabled:
+            return
+        frames = self.camera.get_frame()
+        if frames is None:
+            return
+        cv_frame, self.depth_frame = frames
+        if cv_frame is None:
+            return
+        q_image = QtGui.QImage(cv_frame.data, cv_frame.shape[1], cv_frame.shape[0], colorMode)
+        pixmap = QtGui.QPixmap.fromImage(q_image)
+        self.pixmap = pixmap.scaled(600, 600, QtCore.Qt.KeepAspectRatio)
+        if self.width == 0 or self.height == 0:
+            self.width = self.pixmap.width()
+            self.height = self.pixmap.height()
+            self.p1 = [int(self.width * 0.4), int(self.height * 0.4)]
+            self.p2 = [int(self.width * 0.6), int(self.height * 0.6)]
+            self.roi.update(self.p1, self.p2)
+        self.setPixmap(self.pixmap)
 
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.p1 = [event.pos().x(), event.pos().y()]
@@ -295,13 +384,13 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.p1[1] = clamp(self.p1[1], 0, self.height)
 
     def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        self.p2 = [event.pos().x(), event.pos().y()]
+        self.p2 = [int(event.pos().x()), int(event.pos().y())]
         self.p2[0] = clamp(self.p2[0], 0, self.width)
         self.p2[1] = clamp(self.p2[1], 0, self.height)
         self.roi.update(self.p1, self.p2)
 
     def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        self.p2 = [event.pos().x(), event.pos().y()]
+        self.p2 = [int(event.pos().x()), int(event.pos().y())]
         self.p2[0] = clamp(self.p2[0], 0, self.width)
         self.p2[1] = clamp(self.p2[1], 0, self.height)
         self.roi.update(self.p1, self.p2)
@@ -330,7 +419,7 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
 
     def disable_camera(self):
         global z_dist
-        z_dist = 0
+        # z_dist = 0
         self.camera.device.close()
         self.cameraEnabled = False
         if self.pixmap is not None:
@@ -357,6 +446,11 @@ class Application(QDialog):
     def __init__(self):
         super().__init__()
         # DepthTest = QtWidgets.QMainWindow()
+        self.fill_rate = None
+        self.gt_plane_rmse = None
+        self.plane_fit_rmse = None
+        self.gt_plane_mse = None
+        self.plane_fit_mse = None
         self.error = None
         self.true_distance = 0
         self.ui = Ui_DepthTest()
@@ -420,8 +514,75 @@ class Application(QDialog):
             file.write(CSV_HEADER + '\n')
         if self.ui.l_result.text() != 'PASS' and self.ui.l_result.text() != 'FAIL':
             self.ui.l_result.setText('NOT TESTED')
-        file.write(f'{int(time.time())},{mx_id},{self.average_error},{self.ui.l_result.text()}\n')
+        file.write(f'   {int(time.time())},{mx_id},{self.true_distance},{z_dist},{self.plane_fit_mse},\
+                        {self.gt_plane_mse},{self.plane_fit_rmse},{self.gt_plane_rmse},{self.fill_rate},\
+                        {self.average_error},{abs(self.true_distance-z_dist)},{self.ui.l_result.text()}\n')
         file.close()
+
+    def calculate_errors(self):
+        depth_frame = self.scene.get_frame().get_depth_frame()
+        sbox, ebox = self.scene.get_frame().get_roi()
+        depth_roi = depth_frame[sbox[1]:ebox[1], sbox[0]:ebox[0]]
+        coord = pixel_coord_np(*sbox, *ebox)
+        # Removing Zeros from coordinates
+        cam_coords = np.dot(inter_conv, coord) * depth_roi.flatten() / 1000.0
+        # Removing outliers from Z coordinates. top and bottoom 0.5 percentile of valid depth
+        valid_cam_coords = np.delete(cam_coords, np.where(cam_coords[2, :] == 0.0), axis=1)
+        valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] <= np.percentile(valid_cam_coords[2, :], 0.5)), axis=1)
+        valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] >= np.percentile(valid_cam_coords[2, :], 99.5)), axis=1)
+
+        # Subsampling 4x4 grid points in the selected ROI
+        subsampled_pixels = []
+        subsampled_pixels_depth = []
+        x_diff = ebox[0] - sbox[0]
+        y_diff = ebox[1] - sbox[1]
+        for i in range(4):
+            x_loc = sbox[0] + int(x_diff * (i / 3))
+            for j in range(4):
+                y_loc = sbox[1] + int(y_diff * (j / 3))
+                subsampled_pixels.append([x_loc, y_loc, 1])
+                if depth_frame[y_loc, x_loc] == 0:
+                    x_loc, y_loc = search_depth(x_loc, y_loc, depth_frame)
+                subsampled_pixels_depth.append(depth_frame[y_loc, x_loc])
+                # print("Coordinate at {}, {} is {} & {} with depth of {}".format(i, j, x_loc, y_loc, depth_img[y_loc, x_loc]))
+        subsampled_pixels_depth = np.array(subsampled_pixels_depth)
+        subsampled_pixels = np.array(subsampled_pixels).transpose()
+        sub_points3D = np.dot(inter_conv, subsampled_pixels) * subsampled_pixels_depth.flatten() / 1000.0  # [x, y, z]
+        sub_points3D = sub_points3D.transpose()
+        # sc._offsets3d = (sub_points3D[:, 0], sub_points3D[:, 1], sub_points3D[:, 2]) #3D Plot
+        c, normal = fit_plane_LTSQ(sub_points3D)
+        # maxx = np.max(sub_points3D[:, 0])
+        # maxy = np.max(sub_points3D[:, 1])
+        # minx = np.min(sub_points3D[:, 0])
+        # miny = np.min(sub_points3D[:, 1])
+
+        d = -np.array([0.0, 0.0, c]).dot(normal)
+        # fitPlane = (normal, d)
+        # xx, yy = np.meshgrid([minx, maxx], [miny, maxy])
+        # z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
+        plane_offset_error = 0
+        gt_offset_error = 0
+        planeR_ms_offset_rror = 0
+        gtR_ms_offset_error = 0
+        for roi_point in valid_cam_coords.transpose():
+            fitPlaneDist = roi_point.dot(normal) + d
+            gt_normal = np.array([0, 0, 1], dtype=np.float32)
+            gt_plane = (gt_normal, self.true_distance)
+            gt_plane_dist = roi_point.dot(gt_plane[0]) + gt_plane[1]
+            plane_offset_error += fitPlaneDist
+            gt_offset_error += gt_plane_dist
+            planeR_ms_offset_rror += fitPlaneDist ** 2
+            gtR_ms_offset_error += gt_plane_dist ** 2
+            
+        self.plane_fit_mse = plane_offset_error / valid_cam_coords.shape[1]
+        self.gt_plane_mse = gt_offset_error / valid_cam_coords.shape[1]
+        self.plane_fit_rmse = np.sqrt(planeR_ms_offset_rror / valid_cam_coords.shape[1])
+        self.gt_plane_rmse = np.sqrt(gtR_ms_offset_error / valid_cam_coords.shape[1])
+
+        totalPixels = (ebox[0] - sbox[0]) * (ebox[1] - sbox[1])
+        flatRoi = depth_roi.flatten()
+        sampledPixels = np.delete(flatRoi, np.where(flatRoi == 0))
+        self.fill_rate = 100 * sampledPixels.shape[0] / totalPixels
 
     def timer_event(self):
         # global x_dist, y_dist, z_dist
@@ -454,6 +615,7 @@ class Application(QDialog):
         self.ui.l_lidar.setText(f'{self.true_distance}')
 
         if self.true_distance > 0 and z_dist > 0:
+            self.calculate_errors()
             if self.count < 30:
                 self.sum += abs(self.true_distance - z_dist) * 100 / self.true_distance
                 self.count += 1
