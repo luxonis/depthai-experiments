@@ -10,19 +10,19 @@ PyTorch/Kornia, convert them and run them on the DepthAI.
 
 ## Demos
 
-**Concatenate frames**
+### Concatenate frames
 
 ![Concat frames](https://user-images.githubusercontent.com/18037362/134209980-09c6e2f9-8a26-45d5-a6ad-c31d9e2816e1.png)
 
-**Blur frames**
+### Blur frames
 
 ![Blur frames](https://docs.luxonis.com/en/latest/_images/blur.jpeg)
 
-**Corner detection**
+### Corner detection
 
 ![Laplacian corner detection](https://user-images.githubusercontent.com/18037362/134209951-4e1c7343-a333-4fb6-bdc9-bc86f6dc36b2.jpeg)
 
-**Difference between 2 frames**
+### Difference between 2 frames
 
 `diff.py` computes the difference between two consecutive color frames and visualizes that along with the color frame.
 
