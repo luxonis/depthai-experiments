@@ -84,7 +84,7 @@ class DeepSort(object):
             if embedder not in EMBEDDER_CHOICES:
                 raise Exception(f"Embedder {embedder} is not a valid choice.")
             if embedder == "mobilenet":
-                self.embedder = MobileNetv2_Embedder(embedder_wts, input_shape=(224, 224), gpu=embedder_gpu)
+                self.embedder = MobileNetv2_Embedder(embedder_wts, gpu=embedder_gpu, half=half, bgr=bgr)
         else:
             self.embedder = None
         self.polygon = polygon

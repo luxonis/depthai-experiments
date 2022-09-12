@@ -3,6 +3,7 @@ import cv2
 import depthai as dai
 import numpy as np
 import json
+import blobconverter
 
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
@@ -75,7 +76,7 @@ def create_pipeline(stereo, yolo_config):
     
     metadata = yolo_config.get("NN_specific_metadata", {})
     
-    obj_det.setBlobPath('yolov6n_openvino_2021.4_6shave.blob')
+    obj_det.setBlobPath(blobconverter.from_zoo(name="yolov6n_coco_640x640", zoo_type="depthai", shaves=6, use_cache=False))
     confidence = metadata.get("confidence_threshold", config.get("confidence_threshold", 0.5))
     obj_det.setConfidenceThreshold(confidence)
     obj_det.setNumClasses(metadata["classes"])
@@ -184,7 +185,7 @@ def create_pipeline(stereo, yolo_config):
     # Second stage Embedding NN
     print("Creating recognition Neural Network...")
     embedding_nn = pipeline.create(dai.node.NeuralNetwork)
-    embedding_nn.setBlobPath('embedder.blob')
+    embedding_nn.setBlobPath(blobconverter.from_zoo(name="mobilenetv2_imagenet_embedder_224x224", zoo_type="depthai", shaves=6))
     embedding_manip.out.link(embedding_nn.input)
 
     recognition_xout = pipeline.create(dai.node.XLinkOut)
@@ -208,7 +209,7 @@ def tracker_iter(detections, embeddings, tracker, frame):
 with dai.Device() as device:
     stereo = 1 < len(device.getConnectedCameras())
 
-    with open('yolov6n.json', 'r') as file:
+    with open('./yolov6n.json', 'r') as file:
         raw_config = json.load(file)
         config = raw_config.get("nn_config", {})
         mappings = raw_config.get("mappings", {})
