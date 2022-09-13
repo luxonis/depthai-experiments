@@ -16,12 +16,8 @@ try:
 except:
     colorMode = QtGui.QImage.Format_RGB888
 
-x_dist = 0
-y_dist = 0
-z_dist = 0
-
 CSV_HEADER = "TimeStamp,MxID,RealDistance,DetectedDistance,planeFitMSE,gtPlaneMSE,planeFitRMSE," \
-             "gtPlaneRMSE,fillRate,Error(%),Error(cm),Result "
+             "gtPlaneRMSE,fillRate,Result "
 mx_id = None
 product = None
 inter_conv = None
@@ -137,18 +133,14 @@ class Camera:
     def __init__(self):
         # Create pipeline
         pipeline = dai.Pipeline()
-        # Define sources and outputs
         mono_left = pipeline.create(dai.node.MonoCamera)
         mono_right = pipeline.create(dai.node.MonoCamera)
         stereo = pipeline.create(dai.node.StereoDepth)
-        spatial_location_calculator = pipeline.create(dai.node.SpatialLocationCalculator)
 
         xout_depth = pipeline.create(dai.node.XLinkOut)
-        xout_spatial_data = pipeline.create(dai.node.XLinkOut)
         xin_spatial_calc_config = pipeline.create(dai.node.XLinkIn)
 
         xout_depth.setStreamName("depth")
-        xout_spatial_data.setStreamName("spatialData")
         xin_spatial_calc_config.setStreamName("spatialCalcConfig")
 
         mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
@@ -177,18 +169,11 @@ class Camera:
         self.config.depthThresholds.upperThreshold = 10000
         self.config.roi = dai.Rect(top_left, bottom_right)
 
-        spatial_location_calculator.inputConfig.setWaitForMessage(False)
-        spatial_location_calculator.initialConfig.addROI(self.config)
-
         # Linking
         mono_left.out.link(stereo.left)
         mono_right.out.link(stereo.right)
 
-        spatial_location_calculator.passthroughDepth.link(xout_depth.input)
-        stereo.depth.link(spatial_location_calculator.inputDepth)
-
-        spatial_location_calculator.out.link(xout_spatial_data.input)
-        xin_spatial_calc_config.out.link(spatial_location_calculator.inputConfig)
+        stereo.depth.link(xout_depth.input)
 
         self.device = dai.Device(pipeline)
         global mx_id, product
@@ -205,7 +190,7 @@ class Camera:
         inter_conv = np.matmul(np.linalg.inv(M_right), H_right_inv)
         self.spatialCalcConfigInQueue = self.device.getInputQueue("spatialCalcConfig")
         self.depthQueue = self.device.getOutputQueue(name="depth", maxSize=4, blocking=False)
-        self.spatialCalcQueue = self.device.getOutputQueue(name="spatialData", maxSize=4, blocking=False)
+        # self.spatialCalcQueue = self.device.getOutputQueue(name="spatialData", maxSize=4, blocking=False)
 
     def get_frame(self):
         in_depth = self.depthQueue.tryGet()
@@ -216,28 +201,10 @@ class Camera:
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
         depth_frame_color = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_HOT)
 
-        spatial_data = self.spatialCalcQueue.get().getSpatialLocations()
-
-        for depthData in spatial_data:
-            if colorMode == QtGui.QImage.Format_RGB888:
-                depth_frame_color = cv2.cvtColor(depth_frame_color, cv2.COLOR_BGR2RGB)
-
-            global x_dist, y_dist, z_dist
-            x_dist = depthData.spatialCoordinates.x
-            y_dist = depthData.spatialCoordinates.y
-            z_dist = round(depthData.spatialCoordinates.z / 1000, 2)
+        if colorMode == QtGui.QImage.Format_RGB888:
+            depth_frame_color = cv2.cvtColor(depth_frame_color, cv2.COLOR_BGR2RGB)
             return depth_frame_color, depth_frame
 
-    def update_roi(self, top_left, bottom_right):
-        if top_left == bottom_right:
-            return
-        top_left = dai.Point2f(top_left[0], top_left[1])
-        bottom_right = dai.Point2f(bottom_right[0], bottom_right[1])
-        self.config.roi = dai.Rect(top_left, bottom_right)
-        self.config.calculationAlgorithm = dai.SpatialLocationCalculatorAlgorithm.AVERAGE
-        config = dai.SpatialLocationCalculatorConfig()
-        config.addROI(self.config)
-        self.spatialCalcConfigInQueue.send(config)
 
 class ROI:
     def __init__(self, white_rect, black_rect):
@@ -278,7 +245,7 @@ def pixel_coord_np(startX, startY, endX, endY):
     Returns:
         Pixel coordinate:       [3, width * height]
     """
-    print(startX, startY, endX, endY)
+    # print(startX, startY, endX, endY)
     x = np.linspace(startX, endX - 1, endX - startX).astype(np.int32)
     y = np.linspace(startY, endY - 1, endY - startY).astype(np.int32)
 
@@ -331,19 +298,20 @@ def fit_plane_LTSQ(XYZ):
     G[:, 0] = XYZ[:, 0]  #X
     G[:, 1] = XYZ[:, 1]  #Y
     Z = XYZ[:, 2]
-    (a, b, c),resid,rank,s = np.linalg.lstsq(G, Z)
+    (a, b, c), resid, rank, s = np.linalg.lstsq(G, Z)
     normal = (a, b, -1)
     nn = np.linalg.norm(normal)
     normal = normal / nn
     return c, normal
+
 
 class Frame(QtWidgets.QGraphicsPixmapItem):
     def __init__(self, roi):
         super().__init__()
         self.pixmap = None
         self.camera = None
-        self.p1 = 0, 0
-        self.p2 = 0, 0
+        self.p1 = None
+        self.p2 = None
         self.acceptHoverEvents()
         self.roi = roi
         self.cameraEnabled = False
@@ -356,6 +324,12 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         return self.depth_frame
 
     def get_roi(self):
+        if self.p1 is None and self.p2 is None:
+            return None, None
+        if self.p1[0] > self.p2[0]:
+            self.p1[0], self.p2[0] = self.p2[0], self.p1[0]
+        if self.p1[1] > self.p2[1]:
+            self.p1[1], self.p2[1] = self.p2[1], self.p1[1]
         return self.p1, self.p2
 
     def update_frame(self):
@@ -387,39 +361,18 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.p2 = [int(event.pos().x()), int(event.pos().y())]
         self.p2[0] = clamp(self.p2[0], 0, self.width)
         self.p2[1] = clamp(self.p2[1], 0, self.height)
-        self.roi.update(self.p1, self.p2)
 
     def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self.p2 = [int(event.pos().x()), int(event.pos().y())]
         self.p2[0] = clamp(self.p2[0], 0, self.width)
         self.p2[1] = clamp(self.p2[1], 0, self.height)
         self.roi.update(self.p1, self.p2)
-        if not self.cameraEnabled:
-            return
-        if self.p1[0] < self.p2[0]:
-            x1 = self.p1[0]
-            x2 = self.p2[0]
-        else:
-            x1 = self.p2[0]
-            x2 = self.p1[0]
-
-        if self.p1[1] < self.p2[1]:
-            y1 = self.p1[1]
-            y2 = self.p2[1]
-        else:
-            y1 = self.p2[1]
-            y2 = self.p1[1]
-        top_left = x1 / self.width, y1 / self.height
-        bottom_right = x2 / self.width, y2 / self.height
-        self.camera.update_roi(top_left, bottom_right)
 
     def enable_camera(self):
         self.camera = Camera()
         self.cameraEnabled = True
 
     def disable_camera(self):
-        global z_dist
-        # z_dist = 0
         self.camera.device.close()
         self.cameraEnabled = False
         if self.pixmap is not None:
@@ -470,9 +423,11 @@ class Application(QDialog):
         self.count = 0
         self.pass_count = 0
         self.fail_count = 0
-        self.sum = 0
+        self.max_error = 0
+        self.min_plane_error = 100
         self.average_error = None
         self.set_result('')
+        self.z_distance = 0
 
     def set_result(self, result):
         self.ui.l_result.setText(result)
@@ -514,14 +469,16 @@ class Application(QDialog):
             file.write(CSV_HEADER + '\n')
         if self.ui.l_result.text() != 'PASS' and self.ui.l_result.text() != 'FAIL':
             self.ui.l_result.setText('NOT TESTED')
-        file.write(f'   {int(time.time())},{mx_id},{self.true_distance},{z_dist},{self.plane_fit_mse},\
+        file.write(f'   {int(time.time())},{mx_id},{self.true_distance},{self.z_distance},{self.plane_fit_mse},\
                         {self.gt_plane_mse},{self.plane_fit_rmse},{self.gt_plane_rmse},{self.fill_rate},\
-                        {self.average_error},{abs(self.true_distance-z_dist)},{self.ui.l_result.text()}\n')
+                        {self.ui.l_result.text()}\n')
         file.close()
 
     def calculate_errors(self):
         depth_frame = self.scene.get_frame().get_depth_frame()
         sbox, ebox = self.scene.get_frame().get_roi()
+        if sbox is None or ebox is None:
+            return False
         depth_roi = depth_frame[sbox[1]:ebox[1], sbox[0]:ebox[0]]
         coord = pixel_coord_np(*sbox, *ebox)
         # Removing Zeros from coordinates
@@ -555,11 +512,13 @@ class Application(QDialog):
         # maxy = np.max(sub_points3D[:, 1])
         # minx = np.min(sub_points3D[:, 0])
         # miny = np.min(sub_points3D[:, 1])
-
+        #
         d = -np.array([0.0, 0.0, c]).dot(normal)
-        # fitPlane = (normal, d)
+        # # fitPlane = (normal, d)
         # xx, yy = np.meshgrid([minx, maxx], [miny, maxy])
-        # z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
+        # self.z_distance = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
+        # print("Distance of subpixel from plane")
+        # print(sub_points3D[0].dot(normal) + d)
         plane_offset_error = 0
         gt_offset_error = 0
         planeR_ms_offset_rror = 0
@@ -567,7 +526,7 @@ class Application(QDialog):
         for roi_point in valid_cam_coords.transpose():
             fitPlaneDist = roi_point.dot(normal) + d
             gt_normal = np.array([0, 0, 1], dtype=np.float32)
-            gt_plane = (gt_normal, self.true_distance)
+            gt_plane = (gt_normal, -self.true_distance)
             gt_plane_dist = roi_point.dot(gt_plane[0]) + gt_plane[1]
             plane_offset_error += fitPlaneDist
             gt_offset_error += gt_plane_dist
@@ -583,11 +542,12 @@ class Application(QDialog):
         flatRoi = depth_roi.flatten()
         sampledPixels = np.delete(flatRoi, np.where(flatRoi == 0))
         self.fill_rate = 100 * sampledPixels.shape[0] / totalPixels
+        return True
 
     def timer_event(self):
-        # global x_dist, y_dist, z_dist
         self.scene.get_frame().update_frame()
-        self.ui.l_distance.setText(f'{z_dist}')
+        if not self.calculate_errors():
+            return
 
         if self.ui.r_manual.isChecked():
             self.true_distance = self.ui.spin_manual.value()
@@ -614,39 +574,23 @@ class Application(QDialog):
                 self.true_distance = 0
         self.ui.l_lidar.setText(f'{self.true_distance}')
 
-        if self.true_distance > 0 and z_dist > 0:
-            self.calculate_errors()
-            if self.count < 30:
-                self.sum += abs(self.true_distance - z_dist) * 100 / self.true_distance
-                self.count += 1
-            else:
-                self.error = round(self.sum / 30, 2)
-                self.ui.l_error.setText(f'{self.error}')
-                self.count = 0
-                self.sum = 0
-                if self.error < 3:
-                    if self.pass_count < 10:
-                        self.pass_count += 1
-                        self.fail_count = 0
-                        if self.pass_count == 1:
-                            self.average_error = self.error
-                        else:
-                            self.average_error += self.error / 10
-                else:
-                    if self.fail_count < 10:
-                        self.pass_count = 0
-                        self.fail_count += 1
-                        if self.fail_count == 1:
-                            self.average_error = self.error
-                        else:
-                            self.average_error += self.error / 10
+        # if self.true_distance > 0 and self.z_distance > 0:
+        if self.count < 30:
+            if self.max_error < self.gt_plane_rmse:
+                self.max_error = self.gt_plane_rmse
+            if self.min_plane_error > self.fill_rate:
+                self.min_plane_error = self.fill_rate
+            self.count += 1
         else:
-            self.error = None
-            self.ui.l_error.setText(f'{self.error}')
-        if self.pass_count == 10:
-            self.set_result('PASS')
-        if self.fail_count == 10:
-            self.set_result('FAIL')
+            # self.error = round(self.sum / 30, 2)
+            self.ui.l_error.setText(f'{self.max_error}')
+            if self.max_error < 0.02 and self.min_plane_error > 0.9:
+                self.set_result('PASS')
+            else:
+                self.set_result('FAIL')
+            self.count = 0
+            self.max_error = 0
+            self.min_plane_error = 100
 
 
 if __name__ == "__main__":
