@@ -26,107 +26,135 @@ inter_conv = None
 class Ui_DepthTest(object):
     def setupUi(self, DepthTest):
         DepthTest.setObjectName("DepthTest")
-        DepthTest.resize(983, 643)
-        self.l_info = QtWidgets.QLabel(DepthTest)
-        self.l_info.setGeometry(QtCore.QRect(20, 350, 221, 191))
+        DepthTest.resize(1074, 696)
+        self.centralwidget = QtWidgets.QWidget(DepthTest)
+        self.centralwidget.setObjectName("centralwidget")
+        self.l_info = QtWidgets.QLabel(self.centralwidget)
+        self.l_info.setGeometry(QtCore.QRect(30, 270, 221, 331))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_info.setFont(font)
         self.l_info.setStyleSheet("QLabel {\n"
-                                  "    .adjust-line-height {\n"
-                                  "        line-height: 1em;\n"
-                                  "    }\n"
-                                  "}")
+"    .adjust-line-height {\n"
+"        line-height: 1em;\n"
+"    }\n"
+"}")
         self.l_info.setObjectName("l_info")
-        self.l_result = QtWidgets.QLabel(DepthTest)
-        self.l_result.setGeometry(QtCore.QRect(100, 240, 101, 51))
+        self.l_result = QtWidgets.QLabel(self.centralwidget)
+        self.l_result.setGeometry(QtCore.QRect(110, 230, 101, 51))
         font = QtGui.QFont()
         font.setPointSize(30)
         self.l_result.setFont(font)
+        self.l_result.setText("")
         self.l_result.setObjectName("l_result")
-        self.b_start = QtWidgets.QPushButton(DepthTest)
-        self.b_start.setGeometry(QtCore.QRect(550, 530, 151, 71))
+        self.b_start = QtWidgets.QPushButton(self.centralwidget)
+        self.b_start.setGeometry(QtCore.QRect(640, 550, 151, 71))
         self.b_start.setObjectName("b_start")
-        self.l_test = QtWidgets.QLabel(DepthTest)
+        self.l_test = QtWidgets.QLabel(self.centralwidget)
         self.l_test.setGeometry(QtCore.QRect(20, 40, 231, 81))
         font = QtGui.QFont()
-        font.setPointSize(21)
+        font.setPointSize(30)
         self.l_test.setFont(font)
         self.l_test.setObjectName("l_test")
-        self.l_lidar = QtWidgets.QLabel(DepthTest)
-        self.l_lidar.setGeometry(QtCore.QRect(250, 360, 71, 31))
+        self.l_lidar = QtWidgets.QLabel(self.centralwidget)
+        self.l_lidar.setGeometry(QtCore.QRect(270, 300, 71, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_lidar.setFont(font)
         self.l_lidar.setObjectName("l_lidar")
-        self.l_distance = QtWidgets.QLabel(DepthTest)
-        self.l_distance.setGeometry(QtCore.QRect(250, 410, 71, 31))
-        self.l_distance.setSizeIncrement(QtCore.QSize(0, 0))
+        self.l_fill_rate = QtWidgets.QLabel(self.centralwidget)
+        self.l_fill_rate.setGeometry(QtCore.QRect(270, 350, 71, 31))
+        self.l_fill_rate.setSizeIncrement(QtCore.QSize(0, 0))
         font = QtGui.QFont()
         font.setFamily("Noto Sans")
         font.setPointSize(18)
         font.setUnderline(False)
-        self.l_distance.setFont(font)
-        self.l_distance.setObjectName("l_distance")
-        self.l_error = QtWidgets.QLabel(DepthTest)
-        self.l_error.setGeometry(QtCore.QRect(250, 460, 91, 31))
+        self.l_fill_rate.setFont(font)
+        self.l_fill_rate.setObjectName("l_distance")
+        self.l_gt_plane_rmse = QtWidgets.QLabel(self.centralwidget)
+        self.l_gt_plane_rmse.setGeometry(QtCore.QRect(270, 400, 91, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
-        self.l_error.setFont(font)
-        self.l_error.setObjectName("l_error")
-        self.spin_manual = QtWidgets.QDoubleSpinBox(DepthTest)
-        self.spin_manual.setDecimals(3)
-        self.spin_manual.setRange(0.0, 9.99)
+        self.l_gt_plane_rmse.setFont(font)
+        self.l_gt_plane_rmse.setObjectName("l_error")
+        self.spin_manual = QtWidgets.QDoubleSpinBox(self.centralwidget)
         self.spin_manual.setGeometry(QtCore.QRect(20, 140, 76, 36))
         font = QtGui.QFont()
         font.setPointSize(14)
         self.spin_manual.setFont(font)
-        self.spin_manual.setObjectName("spinManualBox")
-        self.spin_manual.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
-        self.r_manual = QtWidgets.QRadioButton(DepthTest)
+        self.spin_manual.setObjectName("doubleSpinBox")
+        self.r_manual = QtWidgets.QRadioButton(self.centralwidget)
         self.r_manual.setGeometry(QtCore.QRect(110, 140, 201, 26))
         font = QtGui.QFont()
         font.setPointSize(14)
         self.r_manual.setFont(font)
         self.r_manual.setObjectName("r_manual")
-        self.r_sensor = QtWidgets.QRadioButton(DepthTest)
+        self.r_sensor = QtWidgets.QRadioButton(self.centralwidget)
         self.r_sensor.setGeometry(QtCore.QRect(110, 190, 201, 26))
         font = QtGui.QFont()
         font.setPointSize(14)
         self.r_sensor.setFont(font)
         self.r_sensor.setObjectName("r_sensor")
+        self.l_sensor = QtWidgets.QLabel(self.centralwidget)
+        self.l_sensor.setGeometry(QtCore.QRect(20, 190, 71, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
-        self.preview_video = QtWidgets.QGraphicsView(DepthTest)
-        self.preview_video.setGeometry(QtCore.QRect(350, 40, 611, 471))
+        self.l_sensor.setFont(font)
+        self.l_sensor.setObjectName("l_sensor")
+        self.preview_video = QtWidgets.QGraphicsView(self.centralwidget)
+        self.preview_video.setGeometry(QtCore.QRect(410, 30, 640, 480))
         self.preview_video.setObjectName("preview_video")
+        self.l_plane_fit_mse = QtWidgets.QLabel(self.centralwidget)
+        self.l_plane_fit_mse.setGeometry(QtCore.QRect(270, 450, 91, 31))
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        self.l_plane_fit_mse.setFont(font)
+        self.l_plane_fit_mse.setObjectName("l_plane_fit_mse")
+        self.l_gt_plane_mse = QtWidgets.QLabel(self.centralwidget)
+        self.l_gt_plane_mse.setGeometry(QtCore.QRect(270, 500, 91, 31))
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        self.l_gt_plane_mse.setFont(font)
+        self.l_gt_plane_mse.setObjectName("l_gt_plane_mse")
+        self.l_gt_plane_mse_2 = QtWidgets.QLabel(self.centralwidget)
+        self.l_gt_plane_mse_2.setGeometry(QtCore.QRect(270, 550, 91, 31))
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        self.l_gt_plane_mse_2.setFont(font)
+        self.l_gt_plane_mse_2.setObjectName("l_gt_plane_mse_2")
+        DepthTest.setCentralWidget(self.centralwidget)
+        self.statusbar = QtWidgets.QStatusBar(DepthTest)
+        self.statusbar.setObjectName("statusbar")
+        DepthTest.setStatusBar(self.statusbar)
 
         self.retranslateUi(DepthTest)
         QtCore.QMetaObject.connectSlotsByName(DepthTest)
-        # self.update_image()
 
     def retranslateUi(self, DepthTest):
         _translate = QtCore.QCoreApplication.translate
         DepthTest.setWindowTitle(_translate("DepthTest", "Depth Test"))
         self.l_info.setText(_translate("DepthTest", "<html>\n"
-                                                    "<head/>\n"
-                                                    "<body>\n"
-                                                    "<div style=\"line-height:48px\">\n"
-                                                    "<p align=\"right\">\n"
-                                                    "True Distance:<br>\n"
-                                                    "Detected Depth:<br>\n"
-                                                    "Percentage error:</span></p>\n"
-                                                    "<p align=\"center\"><span style=\" font-style:italic; "
-                                                    "color:#00aa00;\">Unit: meters</span></p></div></body></html>"))
-        # self.l_result.setText(_translate("DepthTest", "<html><head/><body><p><span style=\"
-        # color:#00ff00;\">PASS</span></p></body></html>"))
+"<head/>\n"
+"<body>\n"
+"<div style=\"line-height:49px\">\n"
+"<p align=\"right\">\n"
+"LiDAR Depth:<br>\n"
+"fillRate:<br>\n"
+"gtPlaneRMSE:<br>\n"
+"planeFitMSE:<br>\n"
+"gtPlaneMSE:<br>\n"
+"planeFitRMSE:</span></p>"))
         self.b_start.setText(_translate("DepthTest", "Start"))
         self.l_test.setText(_translate("DepthTest", "Depth Test"))
-        self.l_lidar.setText(_translate("DepthTest", "0.000"))
-        self.l_distance.setText(_translate("DepthTest", "0.802"))
-        self.l_error.setText(_translate("DepthTest", "0.374%"))
+        self.l_lidar.setText(_translate("DepthTest", "-"))
+        self.l_fill_rate.setText(_translate("DepthTest", "-"))
+        self.l_gt_plane_rmse.setText(_translate("DepthTest", "-"))
         self.r_manual.setText(_translate("DepthTest", "Manual Distance"))
         self.r_sensor.setText(_translate("DepthTest", "Sensor Distance"))
+        self.l_sensor.setText(_translate("DepthTest", "-"))
+        self.l_plane_fit_mse.setText(_translate("DepthTest", "-"))
+        self.l_gt_plane_mse.setText(_translate("DepthTest", "-"))
+        self.l_gt_plane_mse_2.setText(_translate("DepthTest", "-"))
 
 
 class Camera:
@@ -238,6 +266,95 @@ class ROI:
 def clamp(n, smallest, largest):
     return int(max(smallest, min(n, largest)))
 
+class Frame(QtWidgets.QGraphicsPixmapItem):
+    def __init__(self, roi):
+        super().__init__()
+        self.pixmap = None
+        self.camera = None
+        self.p1 = None
+        self.p2 = None
+        self.acceptHoverEvents()
+        self.roi = roi
+        self.cameraEnabled = False
+        self.width = 0
+        self.height = 0
+        self.depth_roi = None
+        self.depth_frame = None
+
+    def get_depth_frame(self):
+        return self.depth_frame
+
+    def get_roi(self):
+        if self.p1 is None and self.p2 is None:
+            return None, None
+        if self.p1[0] > self.p2[0]:
+            self.p1[0], self.p2[0] = self.p2[0], self.p1[0]
+        if self.p1[1] > self.p2[1]:
+            self.p1[1], self.p2[1] = self.p2[1], self.p1[1]
+        return self.p1, self.p2
+
+    def update_frame(self):
+        if not self.cameraEnabled:
+            return
+        frames = self.camera.get_frame()
+        if frames is None:
+            return
+        cv_frame, self.depth_frame = frames
+        if cv_frame is None:
+            return
+        q_image = QtGui.QImage(cv_frame.data, cv_frame.shape[1], cv_frame.shape[0], colorMode)
+        pixmap = QtGui.QPixmap.fromImage(q_image)
+        self.pixmap = pixmap.scaled(630, 480, QtCore.Qt.KeepAspectRatio)
+        if self.width == 0 or self.height == 0:
+            self.width = self.pixmap.width()
+            self.height = self.pixmap.height()
+            self.p1 = [int(self.width * 0.4), int(self.height * 0.4)]
+            self.p2 = [int(self.width * 0.6), int(self.height * 0.6)]
+            self.roi.update(self.p1, self.p2)
+        self.setPixmap(self.pixmap)
+
+    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        self.p1 = [event.pos().x(), event.pos().y()]
+        self.p1[0] = clamp(self.p1[0], 0, self.width)
+        self.p1[1] = clamp(self.p1[1], 0, self.height)
+
+    def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        self.p2 = [int(event.pos().x()), int(event.pos().y())]
+        self.p2[0] = clamp(self.p2[0], 0, self.width)
+        self.p2[1] = clamp(self.p2[1], 0, self.height)
+        self.roi.update(self.p1, self.p2)
+
+    def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        self.p2 = [int(event.pos().x()), int(event.pos().y())]
+        self.p2[0] = clamp(self.p2[0], 0, self.width)
+        self.p2[1] = clamp(self.p2[1], 0, self.height)
+        self.roi.update(self.p1, self.p2)
+
+    def enable_camera(self):
+        self.camera = Camera()
+        self.cameraEnabled = True
+
+    def disable_camera(self):
+        self.camera.device.close()
+        self.cameraEnabled = False
+        if self.pixmap is not None:
+            self.pixmap.fill()
+        self.setPixmap(self.pixmap)
+
+
+class Scene(QtWidgets.QGraphicsScene):
+    def __init__(self, dialog):
+        super().__init__(dialog)
+        self.whiteRect = QtWidgets.QGraphicsRectItem()
+        self.blackRect = QtWidgets.QGraphicsRectItem()
+        self.roi = ROI(self.whiteRect, self.blackRect)
+        self.frame = Frame(self.roi)
+        self.addItem(self.frame)
+        self.addItem(self.whiteRect)
+        self.addItem(self.blackRect)
+
+    def get_frame(self):
+        return self.frame
 
 def pixel_coord_np(startX, startY, endX, endY):
     """
@@ -298,104 +415,14 @@ def fit_plane_LTSQ(XYZ):
     G[:, 0] = XYZ[:, 0]  #X
     G[:, 1] = XYZ[:, 1]  #Y
     Z = XYZ[:, 2]
-    (a, b, c), resid, rank, s = np.linalg.lstsq(G, Z)
+    (a, b, c), resid, rank, s = np.linalg.lstsq(G, Z, rcond=None)
     normal = (a, b, -1)
     nn = np.linalg.norm(normal)
     normal = normal / nn
     return c, normal
 
 
-class Frame(QtWidgets.QGraphicsPixmapItem):
-    def __init__(self, roi):
-        super().__init__()
-        self.pixmap = None
-        self.camera = None
-        self.p1 = None
-        self.p2 = None
-        self.acceptHoverEvents()
-        self.roi = roi
-        self.cameraEnabled = False
-        self.width = 0
-        self.height = 0
-        self.depth_roi = None
-        self.depth_frame = None
-
-    def get_depth_frame(self):
-        return self.depth_frame
-
-    def get_roi(self):
-        if self.p1 is None and self.p2 is None:
-            return None, None
-        if self.p1[0] > self.p2[0]:
-            self.p1[0], self.p2[0] = self.p2[0], self.p1[0]
-        if self.p1[1] > self.p2[1]:
-            self.p1[1], self.p2[1] = self.p2[1], self.p1[1]
-        return self.p1, self.p2
-
-    def update_frame(self):
-        if not self.cameraEnabled:
-            return
-        frames = self.camera.get_frame()
-        if frames is None:
-            return
-        cv_frame, self.depth_frame = frames
-        if cv_frame is None:
-            return
-        q_image = QtGui.QImage(cv_frame.data, cv_frame.shape[1], cv_frame.shape[0], colorMode)
-        pixmap = QtGui.QPixmap.fromImage(q_image)
-        self.pixmap = pixmap.scaled(600, 600, QtCore.Qt.KeepAspectRatio)
-        if self.width == 0 or self.height == 0:
-            self.width = self.pixmap.width()
-            self.height = self.pixmap.height()
-            self.p1 = [int(self.width * 0.4), int(self.height * 0.4)]
-            self.p2 = [int(self.width * 0.6), int(self.height * 0.6)]
-            self.roi.update(self.p1, self.p2)
-        self.setPixmap(self.pixmap)
-
-    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        self.p1 = [event.pos().x(), event.pos().y()]
-        self.p1[0] = clamp(self.p1[0], 0, self.width)
-        self.p1[1] = clamp(self.p1[1], 0, self.height)
-
-    def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        self.p2 = [int(event.pos().x()), int(event.pos().y())]
-        self.p2[0] = clamp(self.p2[0], 0, self.width)
-        self.p2[1] = clamp(self.p2[1], 0, self.height)
-
-    def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        self.p2 = [int(event.pos().x()), int(event.pos().y())]
-        self.p2[0] = clamp(self.p2[0], 0, self.width)
-        self.p2[1] = clamp(self.p2[1], 0, self.height)
-        self.roi.update(self.p1, self.p2)
-
-    def enable_camera(self):
-        self.camera = Camera()
-        self.cameraEnabled = True
-
-    def disable_camera(self):
-        self.camera.device.close()
-        self.cameraEnabled = False
-        if self.pixmap is not None:
-            self.pixmap.fill()
-        self.setPixmap(self.pixmap)
-
-
-class Scene(QtWidgets.QGraphicsScene):
-    def __init__(self, dialog):
-        super().__init__(dialog)
-        self.whiteRect = QtWidgets.QGraphicsRectItem()
-        self.blackRect = QtWidgets.QGraphicsRectItem()
-        self.roi = ROI(self.whiteRect, self.blackRect)
-        self.frame = Frame(self.roi)
-        self.addItem(self.frame)
-        self.addItem(self.whiteRect)
-        self.addItem(self.blackRect)
-
-    def get_frame(self):
-        return self.frame
-
-
-class Application(QDialog):
+class Application(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         # DepthTest = QtWidgets.QMainWindow()
@@ -453,8 +480,8 @@ class Application(QDialog):
             self.pass_count = 0
             self.fail_count = 0
             self.sum = 0
-            self.ui.l_error.setText('None')
-            self.ui.l_distance.setText('')
+            self.ui.l_gt_plane_rmse.setText('None')
+            self.ui.l_fill_rate.setText('')
             self.ui.l_lidar.setText('')
             self.ui.b_start.setText("Save")
             self.ui.l_test.setText(str(product))
@@ -484,9 +511,12 @@ class Application(QDialog):
         # Removing Zeros from coordinates
         cam_coords = np.dot(inter_conv, coord) * depth_roi.flatten() / 1000.0
         # Removing outliers from Z coordinates. top and bottoom 0.5 percentile of valid depth
-        valid_cam_coords = np.delete(cam_coords, np.where(cam_coords[2, :] == 0.0), axis=1)
-        valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] <= np.percentile(valid_cam_coords[2, :], 0.5)), axis=1)
-        valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] >= np.percentile(valid_cam_coords[2, :], 99.5)), axis=1)
+        try:
+            valid_cam_coords = np.delete(cam_coords, np.where(cam_coords[2, :] == 0.0), axis=1)
+            valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] <= np.percentile(valid_cam_coords[2, :], 0.5)), axis=1)
+            valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] >= np.percentile(valid_cam_coords[2, :], 99.5)), axis=1)
+        except IndexError:
+            return
 
         # Subsampling 4x4 grid points in the selected ROI
         subsampled_pixels = []
@@ -536,7 +566,7 @@ class Application(QDialog):
         self.plane_fit_mse = plane_offset_error / valid_cam_coords.shape[1]
         self.gt_plane_mse = gt_offset_error / valid_cam_coords.shape[1]
         self.plane_fit_rmse = np.sqrt(planeR_ms_offset_rror / valid_cam_coords.shape[1])
-        self.gt_plane_rmse = np.sqrt(gtR_ms_offset_error / valid_cam_coords.shape[1])
+        self.gt_plane_rmse = round(np.sqrt(gtR_ms_offset_error / valid_cam_coords.shape[1]), 3)
 
         totalPixels = (ebox[0] - sbox[0]) * (ebox[1] - sbox[1])
         flatRoi = depth_roi.flatten()
@@ -583,8 +613,12 @@ class Application(QDialog):
             self.count += 1
         else:
             # self.error = round(self.sum / 30, 2)
-            self.ui.l_error.setText(f'{self.max_error}')
-            if self.max_error < 0.02 and self.min_plane_error > 0.9:
+            self.ui.l_fill_rate.setText(f'{self.fill_rate}')
+            self.ui.l_gt_plane_rmse.setText(f'{self.max_error}')
+            self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
+            self.ui.l_gt_plane_mse.setText(f'{self.gt_plane_mse}')
+            self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
+            if self.max_error < 0.02 and self.min_plane_error > 0.98:
                 self.set_result('PASS')
             else:
                 self.set_result('FAIL')
