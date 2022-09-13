@@ -28,6 +28,7 @@ class BoxEstimator():
 
         self.bounding_box = None
         self.rotation_matrix = None
+        self.translate_vector = None
 
         self.max_distance = max_distance
 
@@ -75,6 +76,50 @@ class BoxEstimator():
             self.vis.poll_events()
             self.vis.update_renderer()
             self.vis.remove_geometry(line_set, reset_bounding_box=False)
+
+    def vizualise_box_2d(self, intrinsic_mat, img):
+        bounding_box = self.bounding_box
+        points_floor = np.c_[bounding_box, np.zeros(4)]
+        points_top = np.c_[bounding_box, self.height * np.ones(4)]
+        box_points = np.concatenate((points_top, points_floor))
+
+        # reverse transformations:
+        inverse_translation = [-x for x in self.translate_vector]
+        inverse_rot_mat = np.linalg.inv(self.rotation_matrix)
+
+        bbox_pcl = o3d.geometry.PointCloud()
+        bbox_pcl.points = o3d.utility.Vector3dVector(box_points)
+        bbox_pcl.translate(inverse_translation)
+        bbox_pcl.rotate(inverse_rot_mat, center=(0,0,0))
+
+        lines = [
+            [0, 4],
+            [1, 5],
+            [2, 6],
+            [3, 7],
+            [0,1],
+            [1,2],
+            [2,3],
+            [3,0],
+            [4,5],
+            [5,6],
+            [6,7],
+            [7,4],
+        ]
+        intrinsic_mat = np.array(intrinsic_mat)
+
+        # object along negative z-axis so need to correct perspective when plotting using OpenCV
+        cord_change_mat = np.array([[1., 0., 0.], [0, -1., 0.], [0., 0., -1.]], dtype=np.float32)
+        box_points = np.array(bbox_pcl.points).dot(cord_change_mat.T)
+        img_points, _ = cv2.projectPoints(box_points, (0, 0, 0), (0, 0, 0), intrinsic_mat, np.zeros(4, dtype='float32'))
+
+        # draw perspective correct point cloud back on the image
+        for line in lines:
+            p1 = [int(x) for x in img_points[line[0]][0]]
+            p2 = [int(x) for x in img_points[line[1]][0]]
+            cv2.line(img, p1, p2, (0, 0,255), 2)
+
+        return img
 
     def process_pcl(self, raw_pcl):
         self.raw_pcl = raw_pcl
@@ -172,6 +217,8 @@ class BoxEstimator():
         avg_z = np.average(np.asarray(self.plane_pcl.points)[:, 2])
 
         translate_vector = [0, 0, -avg_z]
+        self.translate_vector = np.array(translate_vector)
+
         self.plane_pcl = self.plane_pcl.translate(translate_vector)
 
         self.box_pcl = self.box_pcl.rotate(rot_matrix, center=(0,0,0))
