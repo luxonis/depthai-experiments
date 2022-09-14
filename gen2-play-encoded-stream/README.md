@@ -22,6 +22,15 @@ This demo decodes encoded stream to OpenCV frames using the PyAv library. **Note
 python3 pyav.py
 ```
 
+### 3. mjpeg.py with OpenCV decoding
+
+
+This demo decodes encoded MJPEG stream using OpenCV's [cv2.imdecode()](https://docs.opencv.org/3.4/d4/da8/group__imgcodecs.html#ga26a67788faa58ade337f8d28ba0eb19e) function. Note that MJPEG compression isn't as great compared to H.264/H.265, more information [here](../gen2-record-replay/encoding_quality/).
+
+```
+python3 mjpeg.py
+```
+
 ## Pre-requisites
 
 Install requirements:
