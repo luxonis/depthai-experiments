@@ -17,7 +17,7 @@ except:
     colorMode = QtGui.QImage.Format_RGB888
 
 CSV_HEADER = "TimeStamp,MxID,RealDistance,DetectedDistance,planeFitMSE,gtPlaneMSE,planeFitRMSE," \
-             "gtPlaneRMSE,fillRate,Result "
+             "gtPlaneRMSE,fillRate,Result,Side"
 mx_id = None
 product = None
 inter_conv = None
@@ -70,19 +70,19 @@ class Ui_DepthTest(object):
         font.setPointSize(18)
         font.setUnderline(False)
         self.l_fill_rate.setFont(font)
-        self.l_fill_rate.setObjectName("l_distance")
+        self.l_fill_rate.setObjectName("l_fill_rate")
         self.l_gt_plane_rmse = QtWidgets.QLabel(self.centralwidget)
         self.l_gt_plane_rmse.setGeometry(QtCore.QRect(270, 400, 91, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_gt_plane_rmse.setFont(font)
-        self.l_gt_plane_rmse.setObjectName("l_error")
+        self.l_gt_plane_rmse.setObjectName("l_gt_plane_rmse")
         self.spin_manual = QtWidgets.QDoubleSpinBox(self.centralwidget)
         self.spin_manual.setGeometry(QtCore.QRect(20, 140, 76, 36))
         font = QtGui.QFont()
         font.setPointSize(14)
         self.spin_manual.setFont(font)
-        self.spin_manual.setObjectName("doubleSpinBox")
+        self.spin_manual.setObjectName("spin_manual")
         self.r_manual = QtWidgets.QRadioButton(self.centralwidget)
         self.r_manual.setGeometry(QtCore.QRect(110, 140, 201, 26))
         font = QtGui.QFont()
@@ -122,6 +122,20 @@ class Ui_DepthTest(object):
         font.setPointSize(18)
         self.l_gt_plane_mse_2.setFont(font)
         self.l_gt_plane_mse_2.setObjectName("l_gt_plane_mse_2")
+        self.groupBox = QtWidgets.QGroupBox(self.centralwidget)
+        self.groupBox.setGeometry(QtCore.QRect(410, 520, 151, 131))
+        self.groupBox.setObjectName("groupBox")
+        self.r_left = QtWidgets.QRadioButton(self.groupBox)
+        self.r_left.setGeometry(QtCore.QRect(10, 30, 117, 26))
+        self.r_left.setObjectName("r_left")
+        self.r_right = QtWidgets.QRadioButton(self.groupBox)
+        self.r_right.setGeometry(QtCore.QRect(10, 90, 117, 26))
+        self.r_right.setObjectName("r_right")
+        self.r_center = QtWidgets.QRadioButton(self.groupBox)
+        self.r_center.setGeometry(QtCore.QRect(10, 60, 117, 26))
+        self.r_center.setCheckable(True)
+        self.r_center.setChecked(True)
+        self.r_center.setObjectName("r_center")
         DepthTest.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(DepthTest)
         self.statusbar.setObjectName("statusbar")
@@ -155,6 +169,10 @@ class Ui_DepthTest(object):
         self.l_plane_fit_mse.setText(_translate("DepthTest", "-"))
         self.l_gt_plane_mse.setText(_translate("DepthTest", "-"))
         self.l_gt_plane_mse_2.setText(_translate("DepthTest", "-"))
+        self.groupBox.setTitle(_translate("DepthTest", "board_side"))
+        self.r_left.setText(_translate("DepthTest", "Left"))
+        self.r_right.setText(_translate("DepthTest", "Right"))
+        self.r_center.setText(_translate("DepthTest", "Center"))
 
 
 class Camera:
@@ -191,11 +209,6 @@ class Camera:
 
         top_left = dai.Point2f(0.4, 0.4)
         bottom_right = dai.Point2f(0.6, 0.6)
-
-        self.config = dai.SpatialLocationCalculatorConfigData()
-        self.config.depthThresholds.lowerThreshold = 100
-        self.config.depthThresholds.upperThreshold = 10000
-        self.config.roi = dai.Rect(top_left, bottom_right)
 
         # Linking
         mono_left.out.link(stereo.left)
@@ -496,9 +509,16 @@ class Application(QtWidgets.QMainWindow):
             file.write(CSV_HEADER + '\n')
         if self.ui.l_result.text() != 'PASS' and self.ui.l_result.text() != 'FAIL':
             self.ui.l_result.setText('NOT TESTED')
+        side = ''
+        if self.ui.r_left.isChecked():
+            side = 'left'
+        elif self.ui.r_right.isChecked():
+            side = 'right'
+        elif self.ui.r_center.isChecked():
+            side = 'center'
         file.write(f'   {int(time.time())},{mx_id},{self.true_distance},{self.z_distance},{self.plane_fit_mse},\
                         {self.gt_plane_mse},{self.plane_fit_rmse},{self.gt_plane_rmse},{self.fill_rate},\
-                        {self.ui.l_result.text()}\n')
+                        {self.ui.l_result.text()},{side}\n')
         file.close()
 
     def calculate_errors(self):
