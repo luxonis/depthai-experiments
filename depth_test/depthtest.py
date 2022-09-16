@@ -680,7 +680,14 @@ class Application(QtWidgets.QMainWindow):
             self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
             self.ui.l_gt_plane_mse.setText(f'{self.gt_plane_mse}')
             self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
-            if self.max_error < 0.02 and self.min_plane_error > 0.98:
+
+            if self.true_distance <= 1:
+                error_threshold = 0.03
+            elif self.true_distance >= 2:
+                error_threshold = 0.06
+            else:
+                error_threshold = self.true_distance*0.03
+            if self.max_error < error_threshold and self.min_plane_error > 0.98:
                 self.set_result('PASS')
             else:
                 self.set_result('FAIL')
