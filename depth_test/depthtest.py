@@ -122,20 +122,34 @@ class Ui_DepthTest(object):
         font.setPointSize(18)
         self.l_gt_plane_mse_2.setFont(font)
         self.l_gt_plane_mse_2.setObjectName("l_gt_plane_mse_2")
-        self.groupBox = QtWidgets.QGroupBox(self.centralwidget)
-        self.groupBox.setGeometry(QtCore.QRect(410, 520, 151, 131))
-        self.groupBox.setObjectName("groupBox")
-        self.r_left = QtWidgets.QRadioButton(self.groupBox)
+        self.board_group = QtWidgets.QGroupBox(self.centralwidget)
+        self.board_group.setGeometry(QtCore.QRect(410, 520, 151, 131))
+        self.board_group.setObjectName("board_group")
+        self.r_left = QtWidgets.QRadioButton(self.board_group)
         self.r_left.setGeometry(QtCore.QRect(10, 30, 117, 26))
         self.r_left.setObjectName("r_left")
-        self.r_right = QtWidgets.QRadioButton(self.groupBox)
+        self.r_right = QtWidgets.QRadioButton(self.board_group)
         self.r_right.setGeometry(QtCore.QRect(10, 90, 117, 26))
         self.r_right.setObjectName("r_right")
-        self.r_center = QtWidgets.QRadioButton(self.groupBox)
+        self.r_center = QtWidgets.QRadioButton(self.board_group)
         self.r_center.setGeometry(QtCore.QRect(10, 60, 117, 26))
         self.r_center.setCheckable(True)
         self.r_center.setChecked(True)
         self.r_center.setObjectName("r_center")
+        self.options_group = QtWidgets.QGroupBox(self.centralwidget)
+        self.options_group.setGeometry(QtCore.QRect(900, 520, 151, 131))
+        self.options_group.setObjectName("options_group")
+        self.c_lrcheck = QtWidgets.QCheckBox(self.options_group)
+        self.c_lrcheck.setGeometry(QtCore.QRect(10, 30, 97, 26))
+        self.c_lrcheck.setChecked(True)
+        self.c_lrcheck.setObjectName("c_lrcheck")
+        self.c_extended = QtWidgets.QCheckBox(self.options_group)
+        self.c_extended.setGeometry(QtCore.QRect(10, 90, 97, 26))
+        self.c_extended.setObjectName("c_extended")
+        self.c_subpixel = QtWidgets.QCheckBox(self.options_group)
+        self.c_subpixel.setGeometry(QtCore.QRect(10, 60, 97, 26))
+        self.c_subpixel.setChecked(True)
+        self.c_subpixel.setObjectName("c_subpixel")
         DepthTest.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(DepthTest)
         self.statusbar.setObjectName("statusbar")
@@ -169,14 +183,28 @@ class Ui_DepthTest(object):
         self.l_plane_fit_mse.setText(_translate("DepthTest", "-"))
         self.l_gt_plane_mse.setText(_translate("DepthTest", "-"))
         self.l_gt_plane_mse_2.setText(_translate("DepthTest", "-"))
-        self.groupBox.setTitle(_translate("DepthTest", "board_side"))
+        self.board_group.setTitle(_translate("DepthTest", "board_side"))
         self.r_left.setText(_translate("DepthTest", "Left"))
         self.r_right.setText(_translate("DepthTest", "Right"))
         self.r_center.setText(_translate("DepthTest", "Center"))
+        self.options_group.setTitle(_translate("DepthTest", "options"))
+        self.c_lrcheck.setText(_translate("DepthTest", "lrcheck"))
+        self.c_extended.setText(_translate("DepthTest", "extended"))
+        self.c_subpixel.setText(_translate("DepthTest", "subpixel"))
 
 
 class Camera:
-    def __init__(self):
+    def __init__(self, lrcheck, subpixel, extended):
+        # get mono resolution
+        cam_res = {
+            'OV7251': dai.MonoCameraProperties.SensorResolution.THE_480_P,
+            'OV9282': dai.MonoCameraProperties.SensorResolution.THE_800_P
+        }
+        self.device = dai.Device()
+        print(self.device.getDeviceInfo().getXLinkDeviceDesc())
+        sensors = self.device.getCameraSensorNames()
+        mono_resolution = cam_res[sensors[dai.CameraBoardSocket.LEFT]]
+
         # Create pipeline
         pipeline = dai.Pipeline()
         mono_left = pipeline.create(dai.node.MonoCamera)
@@ -189,15 +217,10 @@ class Camera:
         xout_depth.setStreamName("depth")
         xin_spatial_calc_config.setStreamName("spatialCalcConfig")
 
-        mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+        mono_left.setResolution(mono_resolution)
         mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+        mono_right.setResolution(mono_resolution)
         mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-
-        # stereo mode configs
-        lrcheck = False
-        subpixel = False
-        extended = False
 
         stereo.initialConfig.setConfidenceThreshold(200)
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
@@ -216,7 +239,8 @@ class Camera:
 
         stereo.depth.link(xout_depth.input)
 
-        self.device = dai.Device(pipeline)
+        # self.device = dai.Device(pipeline)
+        self.device.startPipeline(pipeline)
         global mx_id, product
         mx_id = self.device.getDeviceInfo().getMxId()
         calib_obj = self.device.readCalibration()
@@ -278,6 +302,7 @@ class ROI:
 
 def clamp(n, smallest, largest):
     return int(max(smallest, min(n, largest)))
+
 
 class Frame(QtWidgets.QGraphicsPixmapItem):
     def __init__(self, roi):
@@ -343,8 +368,8 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.p2[1] = clamp(self.p2[1], 0, self.height)
         self.roi.update(self.p1, self.p2)
 
-    def enable_camera(self):
-        self.camera = Camera()
+    def enable_camera(self, lrcheck, subpixel, extended):
+        self.camera = Camera(lrcheck, subpixel, extended)
         self.cameraEnabled = True
 
     def disable_camera(self):
@@ -485,8 +510,10 @@ class Application(QtWidgets.QMainWindow):
             self.average_error = round(self.average_error, 2)
             self.save_csv()
             self.set_result('')
+            self.ui.options_group.setDisabled(False)
         else:
-            self.scene.get_frame().enable_camera()
+            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked())
+            print(f'{self.ui.c_lrcheck.isChecked()}, {self.ui.c_subpixel.isChecked()}, {self.ui.c_extended.isChecked()}')
             self.error = 0
             self.average_error = 0
             self.count = 0
@@ -498,6 +525,8 @@ class Application(QtWidgets.QMainWindow):
             self.ui.l_lidar.setText('')
             self.ui.b_start.setText("Save")
             self.ui.l_test.setText(str(product))
+            self.ui.options_group.setDisabled(True)
+
 
     def save_csv(self):
         path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depth_result/' + str(product) + '.csv'
