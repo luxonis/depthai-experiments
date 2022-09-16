@@ -180,6 +180,7 @@ class Camera:
         # get mono resolution
         cam_res = {
             'OV7251': dai.MonoCameraProperties.SensorResolution.THE_480_P,
+            'OV9*82': dai.MonoCameraProperties.SensorResolution.THE_800_P,
             'OV9282': dai.MonoCameraProperties.SensorResolution.THE_800_P
         }
         self.device = dai.Device()
