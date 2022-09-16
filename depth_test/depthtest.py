@@ -204,7 +204,16 @@ class Camera:
         print(self.device.getDeviceInfo().getXLinkDeviceDesc())
         sensors = self.device.getCameraSensorNames()
         mono_resolution = cam_res[sensors[dai.CameraBoardSocket.LEFT]]
-
+        if mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_400_P:
+            self.resolution = (640, 400)
+        elif mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_480_P:
+            self.resolution = (640, 480)
+        elif mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_800_P:
+            self.resolution = (1280, 800)
+        elif mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_720_P:
+            self.resolution = (1280, 720)
+        else:
+            self.resolution = None
         # Create pipeline
         pipeline = dai.Pipeline()
         mono_left = pipeline.create(dai.node.MonoCamera)
@@ -230,9 +239,6 @@ class Camera:
         stereo.setSubpixel(subpixel)
         stereo.setExtendedDisparity(extended)
 
-        top_left = dai.Point2f(0.4, 0.4)
-        bottom_right = dai.Point2f(0.6, 0.6)
-
         # Linking
         mono_left.out.link(stereo.left)
         mono_right.out.link(stereo.right)
@@ -248,7 +254,7 @@ class Camera:
             product = calib_obj.eepromToJson()['productMame']
         except KeyError:
             product = calib_obj.eepromToJson()['boardName']
-        M_right = np.array(calib_obj.getCameraIntrinsics(calib_obj.getStereoRightCameraId(), 1280, 720))
+        M_right = np.array(calib_obj.getCameraIntrinsics(calib_obj.getStereoRightCameraId(), self.resolution[0], self.resolution[1]))
         R2 = np.array(calib_obj.getStereoRightRectificationRotation())
         H_right_inv = np.linalg.inv(np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right)))
         global inter_conv
@@ -269,6 +275,9 @@ class Camera:
         if colorMode == QtGui.QImage.Format_RGB888:
             depth_frame_color = cv2.cvtColor(depth_frame_color, cv2.COLOR_BGR2RGB)
             return depth_frame_color, depth_frame
+
+    def get_resolution(self):
+        return self.resolution
 
 
 class ROI:
@@ -325,11 +334,14 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
     def get_roi(self):
         if self.p1 is None and self.p2 is None:
             return None, None
-        if self.p1[0] > self.p2[0]:
-            self.p1[0], self.p2[0] = self.p2[0], self.p1[0]
-        if self.p1[1] > self.p2[1]:
-            self.p1[1], self.p2[1] = self.p2[1], self.p1[1]
-        return self.p1, self.p2
+        resolution = self.camera.get_resolution()
+        sbox = [int(self.p1[0]*resolution[0]/self.width), int(self.p1[1]*resolution[1]/self.height)]
+        ebox = [int(self.p2[0]*resolution[0]/self.width), int(self.p2[1]*resolution[1]/self.height)]
+        if sbox[0] > ebox[0]:
+            sbox[0], ebox[0] = ebox[0], sbox[0]
+        if sbox[1] > ebox[1]:
+            sbox[1], ebox[1] = ebox[1], sbox[1]
+        return sbox, ebox
 
     def update_frame(self):
         if not self.cameraEnabled:
@@ -526,7 +538,6 @@ class Application(QtWidgets.QMainWindow):
             self.ui.b_start.setText("Save")
             self.ui.l_test.setText(str(product))
             self.ui.options_group.setDisabled(True)
-
 
     def save_csv(self):
         path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depth_result/' + str(product) + '.csv'
