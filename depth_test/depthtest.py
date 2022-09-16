@@ -136,20 +136,6 @@ class Ui_DepthTest(object):
         self.r_center.setCheckable(True)
         self.r_center.setChecked(True)
         self.r_center.setObjectName("r_center")
-        self.options_group = QtWidgets.QGroupBox(self.centralwidget)
-        self.options_group.setGeometry(QtCore.QRect(900, 520, 151, 131))
-        self.options_group.setObjectName("options_group")
-        self.c_lrcheck = QtWidgets.QCheckBox(self.options_group)
-        self.c_lrcheck.setGeometry(QtCore.QRect(10, 30, 97, 26))
-        self.c_lrcheck.setChecked(True)
-        self.c_lrcheck.setObjectName("c_lrcheck")
-        self.c_extended = QtWidgets.QCheckBox(self.options_group)
-        self.c_extended.setGeometry(QtCore.QRect(10, 90, 97, 26))
-        self.c_extended.setObjectName("c_extended")
-        self.c_subpixel = QtWidgets.QCheckBox(self.options_group)
-        self.c_subpixel.setGeometry(QtCore.QRect(10, 60, 97, 26))
-        self.c_subpixel.setChecked(True)
-        self.c_subpixel.setObjectName("c_subpixel")
         DepthTest.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(DepthTest)
         self.statusbar.setObjectName("statusbar")
@@ -187,10 +173,6 @@ class Ui_DepthTest(object):
         self.r_left.setText(_translate("DepthTest", "Left"))
         self.r_right.setText(_translate("DepthTest", "Right"))
         self.r_center.setText(_translate("DepthTest", "Center"))
-        self.options_group.setTitle(_translate("DepthTest", "options"))
-        self.c_lrcheck.setText(_translate("DepthTest", "lrcheck"))
-        self.c_extended.setText(_translate("DepthTest", "extended"))
-        self.c_subpixel.setText(_translate("DepthTest", "subpixel"))
 
 
 class Camera:
@@ -522,10 +504,12 @@ class Application(QtWidgets.QMainWindow):
             self.average_error = round(self.average_error, 2)
             self.save_csv()
             self.set_result('')
-            self.ui.options_group.setDisabled(False)
+            # self.ui.options_group.setDisabled(False)
         else:
-            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked())
-            print(f'{self.ui.c_lrcheck.isChecked()}, {self.ui.c_subpixel.isChecked()}, {self.ui.c_extended.isChecked()}')
+            # self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked())
+            self.scene.get_frame().enable_camera(True, True, False)
+
+            # print(f'{self.ui.c_lrcheck.isChecked()}, {self.ui.c_subpixel.isChecked()}, {self.ui.c_extended.isChecked()}')
             self.error = 0
             self.average_error = 0
             self.count = 0
@@ -537,7 +521,7 @@ class Application(QtWidgets.QMainWindow):
             self.ui.l_lidar.setText('')
             self.ui.b_start.setText("Save")
             self.ui.l_test.setText(str(product))
-            self.ui.options_group.setDisabled(True)
+            # self.ui.options_group.setDisabled(True)
 
     def save_csv(self):
         path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depth_result/' + str(product) + '.csv'
