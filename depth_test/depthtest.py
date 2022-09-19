@@ -9,6 +9,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QDialog, QAbstractSpinBox
 import os
 import time
+from matplotlib import pyplot as plt
 
 colorMode = QtGui.QImage.Format_RGB888
 try:
@@ -17,7 +18,7 @@ except:
     colorMode = QtGui.QImage.Format_RGB888
 
 CSV_HEADER = "TimeStamp,MxID,RealDistance,DetectedDistance,planeFitMSE,gtPlaneMSE,planeFitRMSE," \
-             "gtPlaneRMSE,fillRate,Result,Side"
+             "gtPlaneRMSE,fillRate,pixelsNo,Result,Side"
 mx_id = None
 product = None
 inter_conv = None
@@ -26,11 +27,14 @@ inter_conv = None
 class Ui_DepthTest(object):
     def setupUi(self, DepthTest):
         DepthTest.setObjectName("DepthTest")
-        DepthTest.resize(1074, 696)
+        DepthTest.resize(1074, 723)
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        DepthTest.setFont(font)
         self.centralwidget = QtWidgets.QWidget(DepthTest)
         self.centralwidget.setObjectName("centralwidget")
         self.l_info = QtWidgets.QLabel(self.centralwidget)
-        self.l_info.setGeometry(QtCore.QRect(30, 270, 221, 331))
+        self.l_info.setGeometry(QtCore.QRect(20, 330, 221, 351))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_info.setFont(font)
@@ -41,7 +45,7 @@ class Ui_DepthTest(object):
 "}")
         self.l_info.setObjectName("l_info")
         self.l_result = QtWidgets.QLabel(self.centralwidget)
-        self.l_result.setGeometry(QtCore.QRect(110, 230, 101, 51))
+        self.l_result.setGeometry(QtCore.QRect(110, 280, 101, 51))
         font = QtGui.QFont()
         font.setPointSize(30)
         self.l_result.setFont(font)
@@ -57,13 +61,13 @@ class Ui_DepthTest(object):
         self.l_test.setFont(font)
         self.l_test.setObjectName("l_test")
         self.l_lidar = QtWidgets.QLabel(self.centralwidget)
-        self.l_lidar.setGeometry(QtCore.QRect(270, 300, 71, 31))
+        self.l_lidar.setGeometry(QtCore.QRect(270, 350, 71, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_lidar.setFont(font)
         self.l_lidar.setObjectName("l_lidar")
         self.l_fill_rate = QtWidgets.QLabel(self.centralwidget)
-        self.l_fill_rate.setGeometry(QtCore.QRect(270, 350, 71, 31))
+        self.l_fill_rate.setGeometry(QtCore.QRect(270, 400, 71, 31))
         self.l_fill_rate.setSizeIncrement(QtCore.QSize(0, 0))
         font = QtGui.QFont()
         font.setFamily("Noto Sans")
@@ -72,7 +76,7 @@ class Ui_DepthTest(object):
         self.l_fill_rate.setFont(font)
         self.l_fill_rate.setObjectName("l_fill_rate")
         self.l_gt_plane_rmse = QtWidgets.QLabel(self.centralwidget)
-        self.l_gt_plane_rmse.setGeometry(QtCore.QRect(270, 400, 91, 31))
+        self.l_gt_plane_rmse.setGeometry(QtCore.QRect(270, 450, 91, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_gt_plane_rmse.setFont(font)
@@ -105,23 +109,23 @@ class Ui_DepthTest(object):
         self.preview_video.setGeometry(QtCore.QRect(410, 30, 640, 480))
         self.preview_video.setObjectName("preview_video")
         self.l_plane_fit_mse = QtWidgets.QLabel(self.centralwidget)
-        self.l_plane_fit_mse.setGeometry(QtCore.QRect(270, 450, 91, 31))
+        self.l_plane_fit_mse.setGeometry(QtCore.QRect(270, 500, 91, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_plane_fit_mse.setFont(font)
         self.l_plane_fit_mse.setObjectName("l_plane_fit_mse")
         self.l_gt_plane_mse = QtWidgets.QLabel(self.centralwidget)
-        self.l_gt_plane_mse.setGeometry(QtCore.QRect(270, 500, 91, 31))
+        self.l_gt_plane_mse.setGeometry(QtCore.QRect(270, 550, 91, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
         self.l_gt_plane_mse.setFont(font)
         self.l_gt_plane_mse.setObjectName("l_gt_plane_mse")
-        self.l_gt_plane_mse_2 = QtWidgets.QLabel(self.centralwidget)
-        self.l_gt_plane_mse_2.setGeometry(QtCore.QRect(270, 550, 91, 31))
+        self.l_plane_fit_rmse = QtWidgets.QLabel(self.centralwidget)
+        self.l_plane_fit_rmse.setGeometry(QtCore.QRect(270, 600, 91, 31))
         font = QtGui.QFont()
         font.setPointSize(18)
-        self.l_gt_plane_mse_2.setFont(font)
-        self.l_gt_plane_mse_2.setObjectName("l_gt_plane_mse_2")
+        self.l_plane_fit_rmse.setFont(font)
+        self.l_plane_fit_rmse.setObjectName("l_plane_fit_rmse")
         self.board_group = QtWidgets.QGroupBox(self.centralwidget)
         self.board_group.setGeometry(QtCore.QRect(410, 520, 151, 131))
         self.board_group.setObjectName("board_group")
@@ -137,19 +141,28 @@ class Ui_DepthTest(object):
         self.r_center.setChecked(True)
         self.r_center.setObjectName("r_center")
         self.options_group = QtWidgets.QGroupBox(self.centralwidget)
-        self.options_group.setGeometry(QtCore.QRect(900, 520, 151, 131))
+        self.options_group.setGeometry(QtCore.QRect(890, 520, 161, 131))
         self.options_group.setObjectName("options_group")
         self.c_lrcheck = QtWidgets.QCheckBox(self.options_group)
         self.c_lrcheck.setGeometry(QtCore.QRect(10, 30, 97, 26))
         self.c_lrcheck.setChecked(True)
         self.c_lrcheck.setObjectName("c_lrcheck")
         self.c_extended = QtWidgets.QCheckBox(self.options_group)
-        self.c_extended.setGeometry(QtCore.QRect(10, 90, 97, 26))
+        self.c_extended.setGeometry(QtCore.QRect(10, 90, 121, 26))
         self.c_extended.setObjectName("c_extended")
         self.c_subpixel = QtWidgets.QCheckBox(self.options_group)
-        self.c_subpixel.setGeometry(QtCore.QRect(10, 60, 97, 26))
+        self.c_subpixel.setGeometry(QtCore.QRect(10, 60, 111, 26))
         self.c_subpixel.setChecked(True)
         self.c_subpixel.setObjectName("c_subpixel")
+        self.l_pixels_no = QtWidgets.QLabel(self.centralwidget)
+        self.l_pixels_no.setGeometry(QtCore.QRect(270, 650, 91, 31))
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        self.l_pixels_no.setFont(font)
+        self.l_pixels_no.setObjectName("l_pixels_no")
+        self.c_matplot = QtWidgets.QCheckBox(self.centralwidget)
+        self.c_matplot.setGeometry(QtCore.QRect(110, 230, 111, 31))
+        self.c_matplot.setObjectName("c_matplot")
         DepthTest.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(DepthTest)
         self.statusbar.setObjectName("statusbar")
@@ -171,7 +184,8 @@ class Ui_DepthTest(object):
 "gtPlaneRMSE:<br>\n"
 "planeFitMSE:<br>\n"
 "gtPlaneMSE:<br>\n"
-"planeFitRMSE:</span></p>"))
+"planeFitRMSE:<br>\n"
+"pixelsNo:</span></p>"))
         self.b_start.setText(_translate("DepthTest", "Start"))
         self.l_test.setText(_translate("DepthTest", "Depth Test"))
         self.l_lidar.setText(_translate("DepthTest", "-"))
@@ -182,7 +196,7 @@ class Ui_DepthTest(object):
         self.l_sensor.setText(_translate("DepthTest", "-"))
         self.l_plane_fit_mse.setText(_translate("DepthTest", "-"))
         self.l_gt_plane_mse.setText(_translate("DepthTest", "-"))
-        self.l_gt_plane_mse_2.setText(_translate("DepthTest", "-"))
+        self.l_plane_fit_rmse.setText(_translate("DepthTest", "-"))
         self.board_group.setTitle(_translate("DepthTest", "board_side"))
         self.r_left.setText(_translate("DepthTest", "Left"))
         self.r_right.setText(_translate("DepthTest", "Right"))
@@ -191,6 +205,8 @@ class Ui_DepthTest(object):
         self.c_lrcheck.setText(_translate("DepthTest", "lrcheck"))
         self.c_extended.setText(_translate("DepthTest", "extended"))
         self.c_subpixel.setText(_translate("DepthTest", "subpixel"))
+        self.l_pixels_no.setText(_translate("DepthTest", "-"))
+        self.c_matplot.setText(_translate("DepthTest", "Matplot"))
 
 
 class Camera:
@@ -202,7 +218,7 @@ class Camera:
             'OV9282': dai.MonoCameraProperties.SensorResolution.THE_800_P
         }
         self.device = dai.Device()
-        print(self.device.getDeviceInfo().getXLinkDeviceDesc())
+        # print(self.device.getDeviceInfo().getXLinkDeviceDesc())
         sensors = self.device.getCameraSensorNames()
         mono_resolution = cam_res[sensors[dai.CameraBoardSocket.LEFT]]
         if mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_400_P:
@@ -233,6 +249,7 @@ class Camera:
         mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         stereo.initialConfig.setConfidenceThreshold(200)
+        stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_3x3)
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
         stereo.setRectifyEdgeFillColor(0)  # black, to better see the cutout
         stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF)
@@ -477,6 +494,7 @@ class Application(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         # DepthTest = QtWidgets.QMainWindow()
+        self.pixels_no = 0
         self.fill_rate = None
         self.gt_plane_rmse = None
         self.plane_fit_rmse = None
@@ -506,6 +524,22 @@ class Application(QtWidgets.QMainWindow):
         self.average_error = None
         self.set_result('')
         self.z_distance = 0
+        self.plot_fit_plane = None
+
+    def set_plot(self):
+        # Plot Setup
+        plt.ion()
+        x, y, z = [], [], []
+        fig = plt.figure()
+        self.ax = fig.add_subplot(111, projection='3d')
+        self.sc = self.ax.scatter(x, y, z)
+        self.ax.set_xlabel('x')
+        self.ax.set_ylabel('y')
+        self.ax.set_zlabel('z')
+        self.ax.set_zlim(-1, 5)
+        self.ax.set_xlim(-0.3, 0.3)
+        self.ax.set_ylim(-0.3, 0.3)
+        self.plot_fit_plane = None
 
     def set_result(self, result):
         self.ui.l_result.setText(result)
@@ -543,7 +577,7 @@ class Application(QtWidgets.QMainWindow):
 
     def save_csv(self):
         path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depth_result/' + str(product) + '.csv'
-        print(path)
+        # print(path)
         if os.path.exists(path):
             file = open(path, 'a')
         else:
@@ -560,7 +594,7 @@ class Application(QtWidgets.QMainWindow):
             side = 'center'
         file.write(f'   {int(time.time())},{mx_id},{self.true_distance},{self.z_distance},{self.plane_fit_mse},\
                         {self.gt_plane_mse},{self.plane_fit_rmse},{self.gt_plane_rmse},{self.fill_rate},\
-                        {self.ui.l_result.text()},{side}\n')
+                        {self.pixels_no},{self.ui.l_result.text()},{side}\n')
         file.close()
 
     def calculate_errors(self):
@@ -568,6 +602,7 @@ class Application(QtWidgets.QMainWindow):
         sbox, ebox = self.scene.get_frame().get_roi()
         if sbox is None or ebox is None:
             return False
+        self.pixels_no = (ebox[0]-sbox[0])*(ebox[1]-sbox[1])
         depth_roi = depth_frame[sbox[1]:ebox[1], sbox[0]:ebox[0]]
         coord = pixel_coord_np(*sbox, *ebox)
         # Removing Zeros from coordinates
@@ -634,6 +669,34 @@ class Application(QtWidgets.QMainWindow):
         flatRoi = depth_roi.flatten()
         sampledPixels = np.delete(flatRoi, np.where(flatRoi == 0))
         self.fill_rate = 100 * sampledPixels.shape[0] / totalPixels
+
+        if self.ui.c_matplot.isChecked():
+            if self.plot_fit_plane is None:
+                self.set_plot()
+            self.sc._offsets3d = (sub_points3D[:, 0], sub_points3D[:, 1], sub_points3D[:, 2])  # 3D Plot
+            # Fitting the plane to the subsampled RPOI points
+            maxx = np.max(sub_points3D[:, 0])
+            maxy = np.max(sub_points3D[:, 1])
+            minx = np.min(sub_points3D[:, 0])
+            miny = np.min(sub_points3D[:, 1])
+
+            d = -np.array([0.0, 0.0, c]).dot(normal)
+            xx, yy = np.meshgrid([minx, maxx], [miny, maxy])
+            z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
+
+            # Plotting the fit plane
+            if self.plot_fit_plane is None:
+                self.plot_fit_plane = self.ax.plot_surface(xx, yy, z, alpha=0.2)
+            else:
+                fit_plane_corners = np.vstack((xx.flatten(), yy.flatten(), z.flatten(), np.ones((1, 4))))
+                temp_col3 = fit_plane_corners[:, 2].copy()
+                fit_plane_corners[:, 2] = fit_plane_corners[:, 3]
+                fit_plane_corners[:, 3] = temp_col3
+                self.plot_fit_plane._vec = fit_plane_corners
+            plt.draw()
+        else:
+            self.plot_fit_plane = None
+            plt.close()
         return True
 
     def timer_event(self):
@@ -679,8 +742,8 @@ class Application(QtWidgets.QMainWindow):
             self.ui.l_gt_plane_rmse.setText(f'{self.max_error}')
             self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
             self.ui.l_gt_plane_mse.setText(f'{self.gt_plane_mse}')
-            self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
-
+            self.ui.l_plane_fit_rmse.setText(f'{self.plane_fit_rmse}')
+            self.ui.l_pixels_no.setText(f'{self.pixels_no}')
             if self.true_distance <= 1:
                 error_threshold = 0.03
             elif self.true_distance >= 2:
