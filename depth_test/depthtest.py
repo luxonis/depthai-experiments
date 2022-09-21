@@ -52,7 +52,7 @@ class Ui_DepthTest(object):
         self.l_result.setText("")
         self.l_result.setObjectName("l_result")
         self.b_start = QtWidgets.QPushButton(self.centralwidget)
-        self.b_start.setGeometry(QtCore.QRect(640, 550, 151, 71))
+        self.b_start.setGeometry(QtCore.QRect(600, 550, 151, 71))
         self.b_start.setObjectName("b_start")
         self.l_test = QtWidgets.QLabel(self.centralwidget)
         self.l_test.setGeometry(QtCore.QRect(20, 40, 231, 81))
@@ -141,7 +141,7 @@ class Ui_DepthTest(object):
         self.r_center.setChecked(True)
         self.r_center.setObjectName("r_center")
         self.options_group = QtWidgets.QGroupBox(self.centralwidget)
-        self.options_group.setGeometry(QtCore.QRect(890, 520, 161, 131))
+        self.options_group.setGeometry(QtCore.QRect(800, 520, 251, 161))
         self.options_group.setObjectName("options_group")
         self.c_lrcheck = QtWidgets.QCheckBox(self.options_group)
         self.c_lrcheck.setGeometry(QtCore.QRect(10, 30, 97, 26))
@@ -154,6 +154,9 @@ class Ui_DepthTest(object):
         self.c_subpixel.setGeometry(QtCore.QRect(10, 60, 111, 26))
         self.c_subpixel.setChecked(True)
         self.c_subpixel.setObjectName("c_subpixel")
+        self.c_distrotion = QtWidgets.QCheckBox(self.options_group)
+        self.c_distrotion.setGeometry(QtCore.QRect(10, 120, 231, 26))
+        self.c_distrotion.setObjectName("c_distrotion")
         self.l_pixels_no = QtWidgets.QLabel(self.centralwidget)
         self.l_pixels_no.setGeometry(QtCore.QRect(270, 650, 91, 31))
         font = QtGui.QFont()
@@ -205,12 +208,13 @@ class Ui_DepthTest(object):
         self.c_lrcheck.setText(_translate("DepthTest", "lrcheck"))
         self.c_extended.setText(_translate("DepthTest", "extended"))
         self.c_subpixel.setText(_translate("DepthTest", "subpixel"))
+        self.c_distrotion.setText(_translate("DepthTest", "distortionCorrection"))
         self.l_pixels_no.setText(_translate("DepthTest", "-"))
         self.c_matplot.setText(_translate("DepthTest", "Matplot"))
 
 
 class Camera:
-    def __init__(self, lrcheck, subpixel, extended):
+    def __init__(self, lrcheck, subpixel, extended, distortion):
         # get mono resolution
         cam_res = {
             'OV7251': dai.MonoCameraProperties.SensorResolution.THE_480_P,
@@ -256,6 +260,7 @@ class Camera:
         stereo.setLeftRightCheck(lrcheck)
         stereo.setSubpixel(subpixel)
         stereo.setExtendedDisparity(extended)
+        stereo.enableDistortionCorrection(distortion)
 
         # Linking
         mono_left.out.link(stereo.left)
@@ -398,8 +403,8 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.p2[1] = clamp(self.p2[1], 0, self.height)
         self.roi.update(self.p1, self.p2)
 
-    def enable_camera(self, lrcheck, subpixel, extended):
-        self.camera = Camera(lrcheck, subpixel, extended)
+    def enable_camera(self, lrcheck, subpixel, extended, distortion):
+        self.camera = Camera(lrcheck, subpixel, extended, distortion)
         self.cameraEnabled = True
 
     def disable_camera(self):
@@ -560,7 +565,7 @@ class Application(QtWidgets.QMainWindow):
             self.set_result('')
             self.ui.options_group.setDisabled(False)
         else:
-            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked())
+            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked(), self.ui.c_distrotion.isChecked())
 
             # print(f'{self.ui.c_lrcheck.isChecked()}, {self.ui.c_subpixel.isChecked()}, {self.ui.c_extended.isChecked()}')
             self.error = 0
