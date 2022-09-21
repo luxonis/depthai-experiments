@@ -266,7 +266,7 @@ class Camera:
         # self.device = dai.Device(pipeline)
         self.device.startPipeline(pipeline)
         global mx_id, product
-        mx_id = self.device.getDeviceInfo().getMxId()
+        mx_id = str(self.device.getDeviceInfo().getMxId())
         calib_obj = self.device.readCalibration()
         try:
             product = calib_obj.eepromToJson()['productMame']
@@ -423,6 +423,7 @@ class Scene(QtWidgets.QGraphicsScene):
 
     def get_frame(self):
         return self.frame
+
 
 def pixel_coord_np(startX, startY, endX, endY):
     """
@@ -592,9 +593,9 @@ class Application(QtWidgets.QMainWindow):
             side = 'right'
         elif self.ui.r_center.isChecked():
             side = 'center'
-        file.write(f'   {int(time.time())},{mx_id},{self.true_distance},{self.z_distance},{self.plane_fit_mse},\
-                        {self.gt_plane_mse},{self.plane_fit_rmse},{self.gt_plane_rmse},{self.fill_rate},\
-                        {self.pixels_no},{self.ui.l_result.text()},{side}\n')
+        file.write(f'{int(time.time())},{mx_id},{self.true_distance},{self.z_distance},{self.plane_fit_mse},\
+                     {self.gt_plane_mse},{self.plane_fit_rmse},{self.max_error},{self.min_plane_error},\
+                     {self.pixels_no},{self.ui.l_result.text()},{side}\n')
         file.close()
 
     def calculate_errors(self):
@@ -738,7 +739,7 @@ class Application(QtWidgets.QMainWindow):
             self.count += 1
         else:
             # self.error = round(self.sum / 30, 2)
-            self.ui.l_fill_rate.setText(f'{self.fill_rate}')
+            self.ui.l_fill_rate.setText(f'{self.min_plane_error}')
             self.ui.l_gt_plane_rmse.setText(f'{self.max_error}')
             self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
             self.ui.l_gt_plane_mse.setText(f'{self.gt_plane_mse}')
