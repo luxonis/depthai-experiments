@@ -20,14 +20,14 @@ except:
 CSV_HEADER = "TimeStamp,MxID,RealDistance,DetectedDistance,planeFitMSE,gtPlaneMSE,planeFitRMSE," \
              "gtPlaneRMSE,fillRate,pixelsNo,Result,Side"
 mx_id = None
-product = None
+product = ''
 inter_conv = None
 
 
 class Ui_DepthTest(object):
     def setupUi(self, DepthTest):
         DepthTest.setObjectName("DepthTest")
-        DepthTest.resize(1074, 723)
+        DepthTest.resize(1095, 762)
         font = QtGui.QFont()
         font.setPointSize(14)
         DepthTest.setFont(font)
@@ -127,7 +127,7 @@ class Ui_DepthTest(object):
         self.l_plane_fit_rmse.setFont(font)
         self.l_plane_fit_rmse.setObjectName("l_plane_fit_rmse")
         self.board_group = QtWidgets.QGroupBox(self.centralwidget)
-        self.board_group.setGeometry(QtCore.QRect(410, 520, 151, 131))
+        self.board_group.setGeometry(QtCore.QRect(410, 520, 141, 131))
         self.board_group.setObjectName("board_group")
         self.r_left = QtWidgets.QRadioButton(self.board_group)
         self.r_left.setGeometry(QtCore.QRect(10, 30, 117, 26))
@@ -141,7 +141,7 @@ class Ui_DepthTest(object):
         self.r_center.setChecked(True)
         self.r_center.setObjectName("r_center")
         self.options_group = QtWidgets.QGroupBox(self.centralwidget)
-        self.options_group.setGeometry(QtCore.QRect(800, 520, 251, 161))
+        self.options_group.setGeometry(QtCore.QRect(800, 520, 251, 171))
         self.options_group.setObjectName("options_group")
         self.c_lrcheck = QtWidgets.QCheckBox(self.options_group)
         self.c_lrcheck.setGeometry(QtCore.QRect(10, 30, 97, 26))
@@ -167,8 +167,22 @@ class Ui_DepthTest(object):
         self.c_matplot.setGeometry(QtCore.QRect(110, 230, 111, 31))
         self.c_matplot.setObjectName("c_matplot")
         self.b_save = QtWidgets.QPushButton(self.centralwidget)
-        self.b_save.setGeometry(QtCore.QRect(600, 580, 151, 51))
+        self.b_save.setGeometry(QtCore.QRect(560, 580, 81, 41))
         self.b_save.setObjectName("b_save")
+        self.combo_res = QtWidgets.QComboBox(self.centralwidget)
+        self.combo_res.setGeometry(QtCore.QRect(410, 660, 201, 36))
+        self.combo_res.setObjectName("combo_res")
+        self.combo_res.addItem("")
+        self.combo_res.addItem("")
+        self.combo_res.addItem("")
+        self.combo_res.addItem("")
+        self.combo_res.addItem("")
+        self.c_ir = QtWidgets.QCheckBox(self.centralwidget)
+        self.c_ir.setGeometry(QtCore.QRect(640, 650, 131, 31))
+        self.c_ir.setObjectName("c_ir")
+        self.b_export = QtWidgets.QPushButton(self.centralwidget)
+        self.b_export.setGeometry(QtCore.QRect(650, 580, 141, 41))
+        self.b_export.setObjectName("b_export")
         DepthTest.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(DepthTest)
         self.statusbar.setObjectName("statusbar")
@@ -211,24 +225,38 @@ class Ui_DepthTest(object):
         self.c_lrcheck.setText(_translate("DepthTest", "lrcheck"))
         self.c_extended.setText(_translate("DepthTest", "extended"))
         self.c_subpixel.setText(_translate("DepthTest", "subpixel"))
-        self.c_distrotion.setText(_translate("DepthTest", "distortionCorrection"))
+        self.c_distrotion.setText(_translate("DepthTest", "distortion correction"))
         self.l_pixels_no.setText(_translate("DepthTest", "-"))
         self.c_matplot.setText(_translate("DepthTest", "Matplot"))
         self.b_save.setText(_translate("DepthTest", "Save"))
+        self.combo_res.setItemText(0, _translate("DepthTest", "Auto"))
+        self.combo_res.setItemText(1, _translate("DepthTest", "800p"))
+        self.combo_res.setItemText(2, _translate("DepthTest", "720p"))
+        self.combo_res.setItemText(3, _translate("DepthTest", "480p"))
+        self.combo_res.setItemText(4, _translate("DepthTest", "400p"))
+        self.c_ir.setText(_translate("DepthTest", "enable IR"))
+        self.b_export.setText(_translate("DepthTest", "Export Depth"))
 
 
 class Camera:
-    def __init__(self, lrcheck, subpixel, extended, distortion):
+    def __init__(self, lrcheck, subpixel, extended, distortion, resolution):
         # get mono resolution
         cam_res = {
             'OV7251': dai.MonoCameraProperties.SensorResolution.THE_480_P,
             'OV9*82': dai.MonoCameraProperties.SensorResolution.THE_800_P,
-            'OV9282': dai.MonoCameraProperties.SensorResolution.THE_800_P
+            'OV9282': dai.MonoCameraProperties.SensorResolution.THE_800_P,
+            '800p': dai.MonoCameraProperties.SensorResolution.THE_800_P,
+            '720p': dai.MonoCameraProperties.SensorResolution.THE_720_P,
+            '480p': dai.MonoCameraProperties.SensorResolution.THE_480_P,
+            '400p': dai.MonoCameraProperties.SensorResolution.THE_400_P
         }
         self.device = dai.Device()
         # print(self.device.getDeviceInfo().getXLinkDeviceDesc())
         sensors = self.device.getCameraSensorNames()
-        mono_resolution = cam_res[sensors[dai.CameraBoardSocket.LEFT]]
+        if resolution == 'Auto':
+            mono_resolution = cam_res[sensors[dai.CameraBoardSocket.LEFT]]
+        else:
+            mono_resolution = cam_res[resolution]
         if mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_400_P:
             self.resolution = (640, 400)
         elif mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_480_P:
@@ -260,7 +288,6 @@ class Camera:
         stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_3x3)
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
         stereo.setRectifyEdgeFillColor(0)  # black, to better see the cutout
-        stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF)
         stereo.setLeftRightCheck(lrcheck)
         stereo.setSubpixel(subpixel)
         stereo.setExtendedDisparity(extended)
@@ -289,6 +316,18 @@ class Camera:
         self.spatialCalcConfigInQueue = self.device.getInputQueue("spatialCalcConfig")
         self.depthQueue = self.device.getOutputQueue(name="depth", maxSize=4, blocking=False)
         # self.spatialCalcQueue = self.device.getOutputQueue(name="spatialData", maxSize=4, blocking=False)
+
+    def set_ir(self, state):
+        try:
+            if state:
+                self.device.setIrFloodLightBrightness(250)
+                self.device.setIrLaserDotProjectorBrightness(100)
+            else:
+                self.device.setIrFloodLightBrightness(0)
+                self.device.setIrLaserDotProjectorBrightness(0)
+            return True
+        except:
+            return False
 
     def get_frame(self):
         in_depth = self.depthQueue.tryGet()
@@ -356,6 +395,7 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.depth_frame = None
 
     def get_depth_frame(self):
+        self.update_frame()
         return self.depth_frame
 
     def get_roi(self):
@@ -407,16 +447,23 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.p2[1] = clamp(self.p2[1], 0, self.height)
         self.roi.update(self.p1, self.p2)
 
-    def enable_camera(self, lrcheck, subpixel, extended, distortion):
-        self.camera = Camera(lrcheck, subpixel, extended, distortion)
+    def enable_camera(self, lrcheck, subpixel, extended, distortion, resolution):
+        self.camera = Camera(lrcheck, subpixel, extended, distortion, resolution)
         self.cameraEnabled = True
+
+    def set_ir(self, state):
+        return self.camera.set_ir(state)
 
     def disable_camera(self):
         self.camera.device.close()
         self.cameraEnabled = False
-        if self.pixmap is not None:
-            self.pixmap.fill()
+        if self.pixmap is None:
+            return
+        self.pixmap.fill()
         self.setPixmap(self.pixmap)
+
+    def is_enabled(self):
+        return self.cameraEnabled
 
 
 class Scene(QtWidgets.QGraphicsScene):
@@ -504,6 +551,8 @@ class Application(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         # DepthTest = QtWidgets.QMainWindow()
+        self.ir = False
+        self.roi_depth_np = None
         self.pixels_no = 0
         self.fill_rate = None
         self.gt_plane_rmse = None
@@ -518,10 +567,11 @@ class Application(QtWidgets.QMainWindow):
         # self.ui.preview_video.onm
         self.ui.b_connect.clicked.connect(self.button_event)
         self.ui.b_save.clicked.connect(self.save_csv)
+        self.ui.b_export.clicked.connect(self.save_depth_array)
         self.ui.b_save.setDisabled(True)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.timer_event)
-        self.timer.start(1000 // 30)
+        # self.timer.start(1000 // 30)
         try: #TODO Find a way to scan for USB ports
             self.serial_reader = serial.Serial("/dev/ttyUSB0", 115200)
         except:
@@ -535,6 +585,8 @@ class Application(QtWidgets.QMainWindow):
         self.set_result('')
         self.z_distance = 0
         self.plot_fit_plane = None
+        self.ui.c_ir.setDisabled(True)
+        self.ui.b_export.setDisabled(True)
 
     def set_plot(self):
         # Plot Setup
@@ -565,8 +617,12 @@ class Application(QtWidgets.QMainWindow):
             self.ui.l_test.setText('Depth Test')
             self.ui.options_group.setDisabled(False)
             self.set_result('')
+            self.timer.stop()
+            self.ui.combo_res.setEnabled(True)
+            self.ui.c_ir.setDisabled(True)
+            self.ui.b_export.setDisabled(True)
         else:
-            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked(), self.ui.c_distrotion.isChecked())
+            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked(), self.ui.c_distrotion.isChecked(), self.ui.combo_res.currentText())
             self.count = 0
             self.pass_count = 0
             self.fail_count = 0
@@ -578,10 +634,32 @@ class Application(QtWidgets.QMainWindow):
             self.ui.b_save.setEnabled(True)
             self.ui.l_test.setText(str(product))
             self.ui.options_group.setDisabled(True)
+            self.timer.start(1000 // 30)
+            self.ui.combo_res.setDisabled(True)
+            if self.scene.get_frame().set_ir(False):
+                self.ui.c_ir.setEnabled(True)
+            self.ui.b_export.setEnabled(True)
+
+    def save_depth_array(self):
+        self.ui.b_export.setDisabled(True)
+        path = os.path.realpath(__file__).rsplit('/', 1)[0] + f'/depth_result/{str(product)}.npz'
+        side = ''
+        if self.ui.r_left.isChecked():
+            side = 'left'
+        elif self.ui.r_right.isChecked():
+            side = 'right'
+        elif self.ui.r_center.isChecked():
+            side = 'center'
+        save_data = {}
+        if os.path.exists(path):
+            save_data = np.load(path)
+            save_data = dict(save_data)
+        save_data[f'{mx_id}_{side}_{self.true_distance}'] = self.roi_depth_np
+        np.savez(path, **save_data)
+        self.ui.b_export.setEnabled(True)
 
     def save_csv(self):
-        path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depth_result/' + str(product) + '.csv'
-        # print(path)
+        path = os.path.realpath(__file__).rsplit('/', 1)[0] + f'/depth_result/{str(product)}.csv'
         if os.path.exists(path):
             file = open(path, 'a')
         else:
@@ -611,6 +689,7 @@ class Application(QtWidgets.QMainWindow):
         coord = pixel_coord_np(*sbox, *ebox)
         # Removing Zeros from coordinates
         cam_coords = np.dot(inter_conv, coord) * depth_roi.flatten() / 1000.0
+        self.roi_depth_np = cam_coords
         # Removing outliers from Z coordinates. top and bottoom 0.5 percentile of valid depth
         try:
             valid_cam_coords = np.delete(cam_coords, np.where(cam_coords[2, :] == 0.0), axis=1)
@@ -637,19 +716,8 @@ class Application(QtWidgets.QMainWindow):
         subsampled_pixels = np.array(subsampled_pixels).transpose()
         sub_points3D = np.dot(inter_conv, subsampled_pixels) * subsampled_pixels_depth.flatten() / 1000.0  # [x, y, z]
         sub_points3D = sub_points3D.transpose()
-        # sc._offsets3d = (sub_points3D[:, 0], sub_points3D[:, 1], sub_points3D[:, 2]) #3D Plot
         c, normal = fit_plane_LTSQ(sub_points3D)
-        # maxx = np.max(sub_points3D[:, 0])
-        # maxy = np.max(sub_points3D[:, 1])
-        # minx = np.min(sub_points3D[:, 0])
-        # miny = np.min(sub_points3D[:, 1])
-        #
         d = -np.array([0.0, 0.0, c]).dot(normal)
-        # # fitPlane = (normal, d)
-        # xx, yy = np.meshgrid([minx, maxx], [miny, maxy])
-        # self.z_distance = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
-        # print("Distance of subpixel from plane")
-        # print(sub_points3D[0].dot(normal) + d)
         plane_offset_error = 0
         gt_offset_error = 0
         planeR_ms_offset_rror = 0
@@ -704,7 +772,10 @@ class Application(QtWidgets.QMainWindow):
         return True
 
     def timer_event(self):
-        self.scene.get_frame().update_frame()
+        if self.ui.c_ir.isEnabled():
+            if self.ir != self.ui.c_ir.isChecked():
+                self.ir = self.ui.c_ir.isChecked()
+                self.scene.get_frame().set_ir(self.ir)
         if not self.calculate_errors():
             return
 
