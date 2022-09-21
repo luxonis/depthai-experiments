@@ -51,9 +51,9 @@ class Ui_DepthTest(object):
         self.l_result.setFont(font)
         self.l_result.setText("")
         self.l_result.setObjectName("l_result")
-        self.b_start = QtWidgets.QPushButton(self.centralwidget)
-        self.b_start.setGeometry(QtCore.QRect(600, 550, 151, 71))
-        self.b_start.setObjectName("b_start")
+        self.b_connect = QtWidgets.QPushButton(self.centralwidget)
+        self.b_connect.setGeometry(QtCore.QRect(600, 520, 151, 51))
+        self.b_connect.setObjectName("b_connect")
         self.l_test = QtWidgets.QLabel(self.centralwidget)
         self.l_test.setGeometry(QtCore.QRect(20, 40, 231, 81))
         font = QtGui.QFont()
@@ -166,6 +166,9 @@ class Ui_DepthTest(object):
         self.c_matplot = QtWidgets.QCheckBox(self.centralwidget)
         self.c_matplot.setGeometry(QtCore.QRect(110, 230, 111, 31))
         self.c_matplot.setObjectName("c_matplot")
+        self.b_save = QtWidgets.QPushButton(self.centralwidget)
+        self.b_save.setGeometry(QtCore.QRect(600, 580, 151, 51))
+        self.b_save.setObjectName("b_save")
         DepthTest.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(DepthTest)
         self.statusbar.setObjectName("statusbar")
@@ -189,7 +192,7 @@ class Ui_DepthTest(object):
 "gtPlaneMSE:<br>\n"
 "planeFitRMSE:<br>\n"
 "pixelsNo:</span></p>"))
-        self.b_start.setText(_translate("DepthTest", "Start"))
+        self.b_connect.setText(_translate("DepthTest", "Connect"))
         self.l_test.setText(_translate("DepthTest", "Depth Test"))
         self.l_lidar.setText(_translate("DepthTest", "-"))
         self.l_fill_rate.setText(_translate("DepthTest", "-"))
@@ -211,6 +214,7 @@ class Ui_DepthTest(object):
         self.c_distrotion.setText(_translate("DepthTest", "distortionCorrection"))
         self.l_pixels_no.setText(_translate("DepthTest", "-"))
         self.c_matplot.setText(_translate("DepthTest", "Matplot"))
+        self.b_save.setText(_translate("DepthTest", "Save"))
 
 
 class Camera:
@@ -506,14 +510,15 @@ class Application(QtWidgets.QMainWindow):
         self.plane_fit_rmse = None
         self.gt_plane_mse = None
         self.plane_fit_mse = None
-        self.error = None
         self.true_distance = 0
         self.ui = Ui_DepthTest()
         self.ui.setupUi(self)
         self.scene = Scene(self)
         self.ui.preview_video.setScene(self.scene)
         # self.ui.preview_video.onm
-        self.ui.b_start.clicked.connect(self.button_event)
+        self.ui.b_connect.clicked.connect(self.button_event)
+        self.ui.b_save.clicked.connect(self.save_csv)
+        self.ui.b_save.setDisabled(True)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.timer_event)
         self.timer.start(1000 // 30)
@@ -527,7 +532,6 @@ class Application(QtWidgets.QMainWindow):
         self.fail_count = 0
         self.max_error = 0
         self.min_plane_error = 100
-        self.average_error = None
         self.set_result('')
         self.z_distance = 0
         self.plot_fit_plane = None
@@ -554,22 +558,15 @@ class Application(QtWidgets.QMainWindow):
         if result == "FAIL": self.ui.l_result.setStyleSheet("color: red")
 
     def button_event(self):
-        if self.ui.b_start.text() == "Save":
+        if self.ui.b_connect.text() == "Disconnect":
             self.scene.get_frame().disable_camera()
-            self.ui.b_start.setText("Start")
+            self.ui.b_connect.setText("Connect")
+            self.ui.b_save.setDisabled(True)
             self.ui.l_test.setText('Depth Test')
-            if self.pass_count < 10 and self.fail_count < 10:
-                self.average_error = self.error
-            self.average_error = round(self.average_error, 2)
-            self.save_csv()
-            self.set_result('')
             self.ui.options_group.setDisabled(False)
+            self.set_result('')
         else:
             self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked(), self.ui.c_distrotion.isChecked())
-
-            # print(f'{self.ui.c_lrcheck.isChecked()}, {self.ui.c_subpixel.isChecked()}, {self.ui.c_extended.isChecked()}')
-            self.error = 0
-            self.average_error = 0
             self.count = 0
             self.pass_count = 0
             self.fail_count = 0
@@ -577,7 +574,8 @@ class Application(QtWidgets.QMainWindow):
             self.ui.l_gt_plane_rmse.setText('None')
             self.ui.l_fill_rate.setText('')
             self.ui.l_lidar.setText('')
-            self.ui.b_start.setText("Save")
+            self.ui.b_connect.setText("Disconnect")
+            self.ui.b_save.setEnabled(True)
             self.ui.l_test.setText(str(product))
             self.ui.options_group.setDisabled(True)
 
@@ -743,7 +741,6 @@ class Application(QtWidgets.QMainWindow):
                 self.min_plane_error = self.fill_rate
             self.count += 1
         else:
-            # self.error = round(self.sum / 30, 2)
             self.ui.l_fill_rate.setText(f'{self.min_plane_error}')
             self.ui.l_gt_plane_rmse.setText(f'{self.max_error}')
             self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
