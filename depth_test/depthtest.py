@@ -654,7 +654,7 @@ class Application(QtWidgets.QMainWindow):
         if os.path.exists(path):
             save_data = np.load(path)
             save_data = dict(save_data)
-        save_data[f'{mx_id}_{side}_{self.true_distance}'] = self.roi_depth_np
+        save_data[f'{str(product)}_{mx_id}_{side}_{self.true_distance}'] = self.roi_depth_np
         np.savez(path, **save_data)
         self.ui.b_export.setEnabled(True)
 
