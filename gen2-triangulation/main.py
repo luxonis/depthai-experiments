@@ -21,9 +21,9 @@ class TextHelper:
         cv2.putText(frame, text, coords, self.text_type, 0.5, self.bg_color, 4, self.line_type)
         cv2.putText(frame, text, coords, self.text_type, 0.5, self.color, 1, self.line_type)
 
-openvinoVersion = "2021.3"
+openvinoVersion = "2021.4"
 p = dai.Pipeline()
-p.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_3)
+p.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_4)
 
 # Set resolution of mono cameras
 resolution = dai.MonoCameraProperties.SensorResolution.THE_720_P
@@ -89,7 +89,7 @@ while True:
     face_nn.passthrough.link(manip_crop.inputImage)
     image_manip_script.outputs['to_manip'].link(manip_crop.inputConfig)
     manip_crop.initialConfig.setResize(48, 48)
-    manip_crop.setWaitForConfigInput(False)
+    manip_crop.inputConfig.setWaitForMessage(False)
 
     # Send ImageManipConfig to host so it can visualize the landmarks
     config_xout = p.create(dai.node.XLinkOut)
@@ -113,34 +113,33 @@ populate_pipeline(p, "right", resolution)
 populate_pipeline(p, "left", resolution)
 
 class StereoInference:
-    def __init__(self, device, resolution_num, mono_width, mono_heigth) -> None:
+    def __init__(self, device: dai.Device, resolution_num, width, heigth) -> None:
         calibData = device.readCalibration()
-        lr_extrinsics = np.array(calibData.getCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RIGHT, useSpecTranslation=True))
-        translation_vector = lr_extrinsics[0:3,3:4].flatten()
-        baseline_cm = math.sqrt(np.sum(translation_vector ** 2))
-        self.baseline = baseline_cm * 10 # to get in mm
+        baseline = calibData.getBaselineDistance(useSpecTranslation=True) * 10  # mm
 
-        self.hfov = calibData.getFov(dai.CameraBoardSocket.LEFT)
-        # Cropped frame shape
-        self.mono_width = mono_width
-        self.mono_heigth = mono_heigth
         # Original mono frames shape
         self.original_heigth = resolution_num
         self.original_width = 640 if resolution_num == 400 else 1280
+        self.hfov = calibData.getFov(dai.CameraBoardSocket.RIGHT)
 
+        focalLength = self.get_focal_length_pixels(self.original_width, self.hfov)
+        self.dispScaleFactor = baseline * focalLength
+
+        # Cropped frame shape
+        self.mono_width = width
+        self.mono_heigth = heigth
         # Our coords are normalized for 300x300 image. 300x300 was downscaled from
         # 720x720 (by ImageManip), so we need to multiple coords by 2.4 to get the correct disparity.
         self.resize_factor = self.original_heigth / self.mono_heigth
 
-        self.focal_length_pixels = self.get_focal_length_pixels(self.original_width, self.hfov)
-        print('focal', self.focal_length_pixels)
-
     def get_focal_length_pixels(self, pixel_width, hfov):
         return pixel_width * 0.5 / math.tan(hfov * 0.5 * math.pi/180)
 
-    def calculate_depth(self, disparity_pixels):
-        if disparity_pixels == 0: return 9999999999999 # To avoid dividing by 0 error
-        return self.focal_length_pixels * self.baseline / disparity_pixels
+    def calculate_depth(self, disparity_pixels: float):
+        try:
+            return self.dispScaleFactor / disparity_pixels
+        except ZeroDivisionError:
+            return 0 # Or inf?
 
     def calculate_distance(self, c1, c2):
         # Our coords are normalized for 300x300 image. 300x300 was downscaled from 720x720 (by ImageManip),
@@ -180,7 +179,7 @@ with dai.Device(p.getOpenVINOVersion()) as device:
     device.setLogLevel(dai.LogLevel.INFO)
     device.setLogOutputLevel(dai.LogLevel.INFO)
 
-    stereoInference = StereoInference(device, resolution_num, mono_width=300, mono_heigth=300)
+    stereoInference = StereoInference(device, resolution_num, width=300, heigth=300)
 
     if VISUALIZE:
         vis = o3d.visualization.Visualizer()
