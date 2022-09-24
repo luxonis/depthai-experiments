@@ -5,6 +5,4 @@ This was an example using the gen1 `depthai` library, which has been deprected s
 
 ### Updated demo
 
-Check updated examples here: [IMU examples of functionality]([../gen2-stereo-on-host/](https://docs.luxonis.com/projects/api/en/latest/components/nodes/imu/#examples-of-functionality))
-
-
+Check updated examples here: [IMU examples of functionality](https://docs.luxonis.com/projects/api/en/latest/components/nodes/imu/#examples-of-functionality)
