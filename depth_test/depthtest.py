@@ -2,6 +2,7 @@ import os.path
 
 import depthai as dai
 import cv2
+import numpy
 import serial
 import numpy as np
 
@@ -17,8 +18,8 @@ try:
 except:
     colorMode = QtGui.QImage.Format_RGB888
 
-CSV_HEADER = "TimeStamp,MxID,RealDistance,DetectedDistance,planeFitMSE,gtPlaneMSE,planeFitRMSE," \
-             "gtPlaneRMSE,fillRate,pixelsNo,Result,Side"
+CSV_HEADER = "TimeStamp,MxID,RealDistance,planeFitMSE,gtPlaneMSE,planeFitRMSE," \
+             "gtPlaneRMSE,medGtPlaneRMSE,fillRate,pixelsNo,Result,Side"
 mx_id = None
 product = ''
 inter_conv = None
@@ -254,7 +255,11 @@ class Camera:
         # print(self.device.getDeviceInfo().getXLinkDeviceDesc())
         sensors = self.device.getCameraSensorNames()
         if resolution == 'Auto':
-            mono_resolution = cam_res[sensors[dai.CameraBoardSocket.LEFT]]
+            try:
+                mono_resolution = cam_res[sensors[dai.CameraBoardSocket.LEFT]]
+            except KeyError as e:
+                print(f'=================e = {e}')
+                # mono_resolution = cam_res[sensors[dai.CameraBoardSocket.CAM_B]]
         else:
             mono_resolution = cam_res[resolution]
         if mono_resolution is dai.MonoCameraProperties.SensorResolution.THE_400_P:
@@ -551,6 +556,15 @@ class Application(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         # DepthTest = QtWidgets.QMainWindow()
+        self.gt_plane_rmse_med = None
+        self.plane_fit_rmse_avg = 0
+        self.plane_fit_rmse_res = None
+        self.gt_plane_mse_avg = 0
+        self.gt_plane_mse_res = None
+        self.plane_fit_mse_avg = 0
+        self.plane_fit_mse_res = None
+        self.fill_plane_res = None
+        self.gt_plane_rmse_res = None
         self.ir = False
         self.roi_depth_np = None
         self.pixels_no = 0
@@ -560,6 +574,7 @@ class Application(QtWidgets.QMainWindow):
         self.gt_plane_mse = None
         self.plane_fit_mse = None
         self.true_distance = 0
+        self.gt_plane_rmse_arr = []
         self.ui = Ui_DepthTest()
         self.ui.setupUi(self)
         self.scene = Scene(self)
@@ -580,8 +595,8 @@ class Application(QtWidgets.QMainWindow):
         self.count = 0
         self.pass_count = 0
         self.fail_count = 0
-        self.max_error = 0
-        self.min_plane_error = 100
+        self.gt_plane_rmse_avg = 0
+        self.fill_plane_avg = 100
         self.set_result('')
         self.z_distance = 0
         self.plot_fit_plane = None
@@ -674,8 +689,8 @@ class Application(QtWidgets.QMainWindow):
             side = 'right'
         elif self.ui.r_center.isChecked():
             side = 'center'
-        file.write(f'{int(time.time())},{mx_id},{self.true_distance},{self.z_distance},{self.plane_fit_mse},\
-                     {self.gt_plane_mse},{self.plane_fit_rmse},{self.max_error},{self.min_plane_error},\
+        file.write(f'{int(time.time())},{mx_id},{self.true_distance},{self.plane_fit_mse_res},{self.gt_plane_mse_res},\
+                     {self.plane_fit_rmse_res},{self.gt_plane_rmse_res},{self.gt_plane_rmse_med},{self.fill_plane_res},\
                      {self.pixels_no},{self.ui.l_result.text()},{side}\n')
         file.close()
 
@@ -719,7 +734,7 @@ class Application(QtWidgets.QMainWindow):
         c, normal = fit_plane_LTSQ(sub_points3D)
         d = -np.array([0.0, 0.0, c]).dot(normal)
         plane_offset_error = 0
-        gt_offset_error = 0
+        absolute_error = 0
         planeR_ms_offset_rror = 0
         gtR_ms_offset_error = 0
         for roi_point in valid_cam_coords.transpose():
@@ -728,12 +743,12 @@ class Application(QtWidgets.QMainWindow):
             gt_plane = (gt_normal, -self.true_distance)
             gt_plane_dist = roi_point.dot(gt_plane[0]) + gt_plane[1]
             plane_offset_error += fitPlaneDist
-            gt_offset_error += gt_plane_dist
+            absolute_error += gt_plane_dist
             planeR_ms_offset_rror += fitPlaneDist ** 2
             gtR_ms_offset_error += gt_plane_dist ** 2
             
         self.plane_fit_mse = plane_offset_error / valid_cam_coords.shape[1]
-        self.gt_plane_mse = gt_offset_error / valid_cam_coords.shape[1]
+        self.gt_plane_mse = absolute_error / valid_cam_coords.shape[1]
         self.plane_fit_rmse = np.sqrt(planeR_ms_offset_rror / valid_cam_coords.shape[1])
         self.gt_plane_rmse = round(np.sqrt(gtR_ms_offset_error / valid_cam_coords.shape[1]), 3)
 
@@ -806,31 +821,42 @@ class Application(QtWidgets.QMainWindow):
 
         # if self.true_distance > 0 and self.z_distance > 0:
         if self.count < 30:
-            if self.max_error < self.gt_plane_rmse:
-                self.max_error = self.gt_plane_rmse
-            if self.min_plane_error > self.fill_rate:
-                self.min_plane_error = self.fill_rate
+            self.gt_plane_rmse_avg += self.gt_plane_rmse / 30
+            self.gt_plane_rmse_arr.append(self.gt_plane_rmse_avg)
+            self.fill_plane_avg += self.fill_rate/30
+            self.plane_fit_mse_avg += self.plane_fit_mse/30
+            self.gt_plane_mse_avg += self.gt_plane_mse/30
+            self.plane_fit_rmse_avg += self.plane_fit_rmse/30
             self.count += 1
         else:
-            self.ui.l_fill_rate.setText(f'{self.min_plane_error}')
-            self.ui.l_gt_plane_rmse.setText(f'{self.max_error}')
-            self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse}')
-            self.ui.l_gt_plane_mse.setText(f'{self.gt_plane_mse}')
-            self.ui.l_plane_fit_rmse.setText(f'{self.plane_fit_rmse}')
+            self.ui.l_fill_rate.setText(f'{self.fill_plane_avg}')
+            self.ui.l_gt_plane_rmse.setText(f'{self.gt_plane_rmse_avg}')
+            self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse_avg}')
+            self.ui.l_gt_plane_mse.setText(f'{self.gt_plane_mse_avg}')
+            self.ui.l_plane_fit_rmse.setText(f'{self.plane_fit_rmse_avg}')
             self.ui.l_pixels_no.setText(f'{self.pixels_no}')
+            self.gt_plane_rmse_res = self.gt_plane_rmse_avg
+            self.gt_plane_rmse_avg = 0
+            self.fill_plane_res = self.fill_plane_avg
+            self.fill_plane_avg = 0
+            self.plane_fit_mse_res = self.plane_fit_mse_avg
+            self.plane_fit_mse_avg = 0
+            self.gt_plane_mse_res = self.gt_plane_mse_avg
+            self.gt_plane_mse_avg = 0
+            self.plane_fit_rmse_res = self.plane_fit_rmse_avg
+            self.plane_fit_rmse_avg = 0
+            self.gt_plane_rmse_med = np.median(self.gt_plane_rmse_arr)
             if self.true_distance <= 1:
                 error_threshold = 0.03
             elif self.true_distance >= 2:
                 error_threshold = 0.06
             else:
                 error_threshold = self.true_distance*0.03
-            if self.max_error < error_threshold and self.min_plane_error > 0.98:
+            if self.gt_plane_rmse_res < error_threshold and self.fill_plane_res > 0.98:
                 self.set_result('PASS')
             else:
                 self.set_result('FAIL')
             self.count = 0
-            self.max_error = 0
-            self.min_plane_error = 100
 
 
 if __name__ == "__main__":
