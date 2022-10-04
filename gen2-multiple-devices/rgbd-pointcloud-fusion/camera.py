@@ -4,6 +4,7 @@ import numpy as np
 import open3d as o3d
 from typing import List
 import config
+from host_sysnc import HostSync
 
 class Camera:
     def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_point_cloud: bool = True):
@@ -18,6 +19,7 @@ class Camera:
 
         self.image_queue = self.device.getOutputQueue(name="image", maxSize=1, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=1, blocking=False)
+        self.host_sync = HostSync()
 
         self.image_frame = None
         self.depth_frame = None
@@ -125,34 +127,32 @@ class Camera:
         self.pipeline = pipeline
 
     def update(self):
-        depth_in = self.depth_queue.tryGet()
-        image_in = self.image_queue.tryGet()
+        for queue in [self.depth_queue, self.image_queue]:
+            new_msg = queue.tryGet()
+            if new_msg is not None:
+                msgs = self.host_sync.add_msg(queue.getName(), new_msg)
+                if msgs == False:
+                    break
 
-        if depth_in is not None:
-            self.depth_frame = depth_in.getFrame()
-            self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-            self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
-        
-        if image_in is not None:
-            self.image_frame = image_in.getCvFrame()
+                self.depth_frame = msgs["depth"].getFrame()
+                self.image_frame = msgs["image"].getCvFrame()
+                self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
+                self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
 
-        if self.depth_frame is None or self.image_frame is None:
-            return
+                if self.show_video:
+                    if self.show_detph:
+                        cv2.imshow(self.window_name, self.depth_visualization_frame)
+                    else:
+                        cv2.imshow(self.window_name, self.image_frame)
 
-        if self.show_video:
-            if self.show_detph:
-                cv2.imshow(self.window_name, self.depth_visualization_frame)
-            else:
-                cv2.imshow(self.window_name, self.image_frame)
+                rgb = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2RGB)
+                self.rgbd_to_point_cloud(self.depth_frame, rgb)
 
-        rgb = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2RGB)
-        self.rgbd_to_point_cloud(self.depth_frame, rgb)
-
-        if self.show_point_cloud:
-            self.point_cloud_window.update_geometry(self.point_cloud)
-            self.point_cloud_window.poll_events()
-            self.point_cloud_window.update_renderer()
+                if self.show_point_cloud:
+                    self.point_cloud_window.update_geometry(self.point_cloud)
+                    self.point_cloud_window.poll_events()
+                    self.point_cloud_window.update_renderer()
 
 
     def rgbd_to_point_cloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
