@@ -4,7 +4,7 @@ import numpy as np
 import open3d as o3d
 from typing import List
 import config
-from host_sysnc import HostSync
+from host_sync import HostSync
 
 class Camera:
     def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_point_cloud: bool = True):
