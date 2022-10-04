@@ -13,7 +13,7 @@ class PointCloudVisualizer():
         self.pcl = None
 
         self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
-            width, height, intrinsic_matrix[0][0], intrinsic_matrix[1][1], intrinsic_matrix[0][2], intrinsic_matrix[1][2]
+            *(width, height), intrinsic_matrix[0][0], intrinsic_matrix[1][1], intrinsic_matrix[0][2], intrinsic_matrix[1][2]
         )
 
         self.vis = o3d.visualization.Visualizer()

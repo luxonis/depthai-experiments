@@ -13,10 +13,8 @@ device_infos.sort(key=lambda x: x.getMxId(), reverse=True) # sort the cameras by
 
 cameras: List[Camera] = []
 
-friendly_id = 0
 for device_info in device_infos:
-    friendly_id += 1
-    cameras.append(Camera(device_info, friendly_id, show_video=True))
+    cameras.append(Camera(device_info, len(cameras)+1, show_video=True))
 
 
 while True:

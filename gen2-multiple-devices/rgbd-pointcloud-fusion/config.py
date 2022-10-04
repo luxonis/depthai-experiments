@@ -6,7 +6,7 @@ COLOR = True 		# Use color camera of mono camera
 lrcheck  = True   			# Better handling for occlusions
 extended = False  			# Closer-in minimum depth, disparity range is doubled
 subpixel = True   			# Better accuracy for longer distance, fractional disparity 32-levels
-confidence_threshold = 100 	# 0-255, 255 = low confidence, 0 = high confidence
+confidence_threshold = 150 	# 0-255, 255 = low confidence, 0 = high confidence
 min_range = 100 			# mm
 max_range = 1000			# mm
 
