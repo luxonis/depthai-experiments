@@ -6,18 +6,16 @@ import numpy as np
 import open3d as o3d
 
 class PointCloudVisualizer():
-    def __init__(self, intrinsic_matrix, width, height):
+    def __init__(self, intrinsic_matrix, extrinsic_matrix, width, height):
         self.R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
         self.depth_map = None
         self.rgb = None
         self.pcl = None
 
-        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(width,
-                                                                         height,
-                                                                         intrinsic_matrix[0][0],
-                                                                         intrinsic_matrix[1][1],
-                                                                         intrinsic_matrix[0][2],
-                                                                         intrinsic_matrix[1][2])
+        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
+            width, height, intrinsic_matrix[0][0], intrinsic_matrix[1][1], intrinsic_matrix[0][2], intrinsic_matrix[1][2]
+        )
+
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window()
         self.isstarted = False
@@ -38,7 +36,7 @@ class PointCloudVisualizer():
             if downsample:
                 pcd = pcd.voxel_down_sample(voxel_size=0.01)
             # Remove noise
-            # pcd = pcd.remove_statistical_outlier(30, 0.1)[0]
+            pcd = pcd.remove_statistical_outlier(30, 0.1)[0]
             self.pcl.points = pcd.points
             self.pcl.colors = pcd.colors
         self.pcl.rotate(self.R_camera_to_world, center=np.array([0,0,0],dtype=np.float64))

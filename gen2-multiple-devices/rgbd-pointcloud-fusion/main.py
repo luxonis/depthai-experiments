@@ -48,15 +48,16 @@ config.postProcessing.spatialFilter.numIterations = 1
 config.postProcessing.thresholdFilter.minRange = 50
 config.postProcessing.thresholdFilter.maxRange = 2000
 config.postProcessing.decimationFilter.decimationFactor = 1
+stereo.initialConfig.setConfidenceThreshold(0)
 stereo.initialConfig.set(config)
 
 xout_depth = pipeline.createXLinkOut()
 xout_depth.setStreamName('depth')
 stereo.depth.link(xout_depth.input)
 
-# xout_disparity = pipeline.createXLinkOut()
-# xout_disparity.setStreamName('disparity')
-# stereo.disparity.link(xout_disparity.input)
+xout_confidence = pipeline.createXLinkOut()
+xout_confidence.setStreamName('confidence')
+stereo.confidenceMap.link(xout_confidence.input)
 
 xout_colorize = pipeline.createXLinkOut()
 xout_colorize.setStreamName('colorize')
@@ -77,6 +78,7 @@ with dai.Device(pipeline) as device:
     device.setIrLaserDotProjectorBrightness(1200)
     depth_queue = device.getOutputQueue("depth", maxSize=1, blocking=False)
     rgb_queue = device.getOutputQueue("colorize", maxSize=1, blocking=False)
+    confidence_queue = device.getOutputQueue("confidence", maxSize=1, blocking=False)
 
 
     calibData = device.readCalibration()
@@ -86,10 +88,11 @@ with dai.Device(pipeline) as device:
     else:
         w, h = monoRight.getResolutionSize()
         intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, dai.Size2f(w, h))
-    pcl_converter = PointCloudVisualizer(intrinsics, w, h)
+    pcl_converter = PointCloudVisualizer(intrinsics, None, w, h)
 
     depth_frame = None
     rgb_frame = None
+    confidence_frame = None
     while True:
         key = cv2.waitKey(1)
 
@@ -98,6 +101,7 @@ with dai.Device(pipeline) as device:
 
         depth_in = depth_queue.tryGet()
         rgb_in = rgb_queue.tryGet()
+        confidence_in = confidence_queue.tryGet()
 
         if depth_in is not None:
             depth_frame = depth_in.getFrame()
@@ -105,14 +109,23 @@ with dai.Device(pipeline) as device:
         if rgb_in is not None:
             rgb_frame = rgb_in.getCvFrame()
 
+        if confidence_in is not None:
+            confidence_frame = confidence_in.getFrame()
+
         if depth_frame is None and rgb_frame is None:
             continue
 
         cv2.imshow("color", rgb_frame)
+
         depth_frame_color = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
         depth_frame_color = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_HOT)
         cv2.imshow("depth", depth_frame_color)
+
+        confidence_frame_color = cv2.normalize(confidence_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        confidence_frame_color = cv2.equalizeHist(confidence_frame_color)
+        confidence_frame_color = cv2.applyColorMap(confidence_frame_color, cv2.COLORMAP_HOT)
+        cv2.imshow("confidence", confidence_frame_color)
         rgb = cv2.cvtColor(rgb_frame, cv2.COLOR_BGR2RGB)
         pcl_converter.rgbd_to_projection(depth_frame, rgb)
         pcl_converter.visualize_pcd()
