@@ -2,7 +2,7 @@ import cv2
 import depthai as dai
 from camera import Camera
 from typing import List
-from pointcloud import Pointcloud
+from point_cloud_visualizer import PointCloudVisualizer
 
 device_infos = dai.Device.getAllAvailableDevices()
 if len(device_infos) == 0:
@@ -15,10 +15,10 @@ device_infos.sort(key=lambda x: x.getMxId(), reverse=True) # sort the cameras by
 cameras: List[Camera] = []
 
 for device_info in device_infos:
-    cameras.append(Camera(device_info, len(cameras)+1, show_video=True, show_pointcloud=False))
+    cameras.append(Camera(device_info, len(cameras)+1, show_video=True, show_point_cloud=False))
 
 
-pointcloud = Pointcloud(cameras)
+point_cloud_visualizer = PointCloudVisualizer(cameras)
 
 while True:
     key = cv2.waitKey(1)
@@ -35,4 +35,4 @@ while True:
     for camera in cameras:
         camera.update()
 
-    pointcloud.update()
+    point_cloud_visualizer.update()

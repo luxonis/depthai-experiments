@@ -6,9 +6,9 @@ from typing import List
 import config
 
 class Camera:
-    def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_pointcloud: bool = True):
+    def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_point_cloud: bool = True):
         self.show_video = show_video
-        self.show_pointcloud = show_pointcloud
+        self.show_point_cloud = show_point_cloud
         self.show_detph = False
         self.device_info = device_info
         self.friendly_id = friendly_id
@@ -30,10 +30,10 @@ class Camera:
             cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(self.window_name, 640, 360)
 
-        # pointcloud window
-        if show_pointcloud:
+        # point cloud window
+        if show_point_cloud:
             self.point_cloud_window = o3d.visualization.Visualizer()
-            self.point_cloud_window.create_window(window_name=f"[{self.friendly_id}] Pointcloud - mxid: {self.mxid}")
+            self.point_cloud_window.create_window(window_name=f"[{self.friendly_id}] Point Cloud - mxid: {self.mxid}")
             self.point_cloud_window.add_geometry(self.point_cloud)
             origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
             self.point_cloud_window.add_geometry(origin)
@@ -147,15 +147,15 @@ class Camera:
                 cv2.imshow(self.window_name, self.image_frame)
 
         rgb = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2RGB)
-        self.rgbd_to_pointcloud(self.depth_frame, rgb)
+        self.rgbd_to_point_cloud(self.depth_frame, rgb)
 
-        if self.show_pointcloud:
+        if self.show_point_cloud:
             self.point_cloud_window.update_geometry(self.point_cloud)
             self.point_cloud_window.poll_events()
             self.point_cloud_window.update_renderer()
 
 
-    def rgbd_to_pointcloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
+    def rgbd_to_point_cloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
         rgb_o3d = o3d.geometry.Image(image_frame)
         depth_o3d = o3d.geometry.Image(depth_frame)
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(

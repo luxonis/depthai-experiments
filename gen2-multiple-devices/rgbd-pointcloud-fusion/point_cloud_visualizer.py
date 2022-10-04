@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import config
 
-class Pointcloud:
+class PointCloudVisualizer:
 	def __init__(self, cameras: List[Camera]):
 		self.cameras = cameras
 		self.pointcloud = o3d.geometry.PointCloud()
