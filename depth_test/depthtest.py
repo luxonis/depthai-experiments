@@ -2,15 +2,24 @@ import os.path
 
 import depthai as dai
 import cv2
-import numpy
 import serial
 import numpy as np
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QDialog, QAbstractSpinBox
 import os
 import time
 from matplotlib import pyplot as plt
+
+
+def argument_parser():
+    import argparse
+    msg = "PyQT5 app for depth testing"
+    parser = argparse.ArgumentParser(description=msg)
+    msg = "Threshold error for 2m distance (in meters), default is 0.09"
+    parser.add_argument('-t', '--threshold', type=float, default=0.09, help=msg)
+    global THRESHOLD
+    THRESHOLD = parser.parse_args().threshold
+
 
 colorMode = QtGui.QImage.Format_RGB888
 try:
@@ -40,10 +49,10 @@ class Ui_DepthTest(object):
         font.setPointSize(18)
         self.l_info.setFont(font)
         self.l_info.setStyleSheet("QLabel {\n"
-"    .adjust-line-height {\n"
-"        line-height: 1em;\n"
-"    }\n"
-"}")
+                                  "    .adjust-line-height {\n"
+                                  "        line-height: 1em;\n"
+                                  "    }\n"
+                                  "}")
         self.l_info.setObjectName("l_info")
         self.l_result = QtWidgets.QLabel(self.centralwidget)
         self.l_result.setGeometry(QtCore.QRect(110, 280, 101, 51))
@@ -196,17 +205,17 @@ class Ui_DepthTest(object):
         _translate = QtCore.QCoreApplication.translate
         DepthTest.setWindowTitle(_translate("DepthTest", "Depth Test"))
         self.l_info.setText(_translate("DepthTest", "<html>\n"
-"<head/>\n"
-"<body>\n"
-"<div style=\"line-height:49px\">\n"
-"<p align=\"right\">\n"
-"LiDAR Depth:<br>\n"
-"fillRate:<br>\n"
-"gtPlaneRMSE:<br>\n"
-"planeFitMSE:<br>\n"
-"gtPlaneMSE:<br>\n"
-"planeFitRMSE:<br>\n"
-"pixelsNo:</span></p>"))
+                                                    "<head/>\n"
+                                                    "<body>\n"
+                                                    "<div style=\"line-height:49px\">\n"
+                                                    "<p align=\"right\">\n"
+                                                    "LiDAR Depth:<br>\n"
+                                                    "fillRate:<br>\n"
+                                                    "gtPlaneRMSE:<br>\n"
+                                                    "planeFitMSE:<br>\n"
+                                                    "gtPlaneMSE:<br>\n"
+                                                    "planeFitRMSE:<br>\n"
+                                                    "pixelsNo:</span></p>"))
         self.b_connect.setText(_translate("DepthTest", "Connect"))
         self.l_test.setText(_translate("DepthTest", "Depth Test"))
         self.l_lidar.setText(_translate("DepthTest", "-"))
@@ -313,7 +322,8 @@ class Camera:
             product = calib_obj.eepromToJson()['productMame']
         except KeyError:
             product = calib_obj.eepromToJson()['boardName']
-        M_right = np.array(calib_obj.getCameraIntrinsics(calib_obj.getStereoRightCameraId(), self.resolution[0], self.resolution[1]))
+        M_right = np.array(
+            calib_obj.getCameraIntrinsics(calib_obj.getStereoRightCameraId(), self.resolution[0], self.resolution[1]))
         R2 = np.array(calib_obj.getStereoRightRectificationRotation())
         H_right_inv = np.linalg.inv(np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right)))
         global inter_conv
@@ -407,8 +417,8 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         if self.p1 is None and self.p2 is None:
             return None, None
         resolution = self.camera.get_resolution()
-        sbox = [int(self.p1[0]*resolution[0]/self.width), int(self.p1[1]*resolution[1]/self.height)]
-        ebox = [int(self.p2[0]*resolution[0]/self.width), int(self.p2[1]*resolution[1]/self.height)]
+        sbox = [int(self.p1[0] * resolution[0] / self.width), int(self.p1[1] * resolution[1] / self.height)]
+        ebox = [int(self.p2[0] * resolution[0] / self.width), int(self.p2[1] * resolution[1] / self.height)]
         if sbox[0] > ebox[0]:
             sbox[0], ebox[0] = ebox[0], sbox[0]
         if sbox[1] > ebox[1]:
@@ -542,8 +552,8 @@ def search_depth(x, y, depth):
 def fit_plane_LTSQ(XYZ):
     (rows, cols) = XYZ.shape
     G = np.ones((rows, 3))
-    G[:, 0] = XYZ[:, 0]  #X
-    G[:, 1] = XYZ[:, 1]  #Y
+    G[:, 0] = XYZ[:, 0]  # X
+    G[:, 1] = XYZ[:, 1]  # Y
     Z = XYZ[:, 2]
     (a, b, c), resid, rank, s = np.linalg.lstsq(G, Z, rcond=None)
     normal = (a, b, -1)
@@ -587,7 +597,7 @@ class Application(QtWidgets.QMainWindow):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.timer_event)
         # self.timer.start(1000 // 30)
-        try: #TODO Find a way to scan for USB ports
+        try:  # TODO Find a way to scan for USB ports
             self.serial_reader = serial.Serial("/dev/ttyUSB0", 115200)
         except:
             self.serial_reader = None
@@ -637,7 +647,9 @@ class Application(QtWidgets.QMainWindow):
             self.ui.c_ir.setDisabled(True)
             self.ui.b_export.setDisabled(True)
         else:
-            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(), self.ui.c_extended.isChecked(), self.ui.c_distrotion.isChecked(), self.ui.combo_res.currentText())
+            self.scene.get_frame().enable_camera(self.ui.c_lrcheck.isChecked(), self.ui.c_subpixel.isChecked(),
+                                                 self.ui.c_extended.isChecked(), self.ui.c_distrotion.isChecked(),
+                                                 self.ui.combo_res.currentText())
             self.count = 0
             self.pass_count = 0
             self.fail_count = 0
@@ -699,7 +711,7 @@ class Application(QtWidgets.QMainWindow):
         sbox, ebox = self.scene.get_frame().get_roi()
         if sbox is None or ebox is None:
             return False
-        self.pixels_no = (ebox[0]-sbox[0])*(ebox[1]-sbox[1])
+        self.pixels_no = (ebox[0] - sbox[0]) * (ebox[1] - sbox[1])
         depth_roi = depth_frame[sbox[1]:ebox[1], sbox[0]:ebox[0]]
         coord = pixel_coord_np(*sbox, *ebox)
         # Removing Zeros from coordinates
@@ -708,8 +720,11 @@ class Application(QtWidgets.QMainWindow):
         # Removing outliers from Z coordinates. top and bottoom 0.5 percentile of valid depth
         try:
             valid_cam_coords = np.delete(cam_coords, np.where(cam_coords[2, :] == 0.0), axis=1)
-            valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] <= np.percentile(valid_cam_coords[2, :], 0.5)), axis=1)
-            valid_cam_coords = np.delete(valid_cam_coords, np.where(valid_cam_coords[2, :] >= np.percentile(valid_cam_coords[2, :], 99.5)), axis=1)
+            valid_cam_coords = np.delete(valid_cam_coords,
+                                         np.where(valid_cam_coords[2, :] <= np.percentile(valid_cam_coords[2, :], 0.5)),
+                                         axis=1)
+            valid_cam_coords = np.delete(valid_cam_coords, np.where(
+                valid_cam_coords[2, :] >= np.percentile(valid_cam_coords[2, :], 99.5)), axis=1)
         except IndexError:
             return
 
@@ -746,7 +761,7 @@ class Application(QtWidgets.QMainWindow):
             absolute_error += gt_plane_dist
             planeR_ms_offset_rror += fitPlaneDist ** 2
             gtR_ms_offset_error += gt_plane_dist ** 2
-            
+
         self.plane_fit_mse = plane_offset_error / valid_cam_coords.shape[1]
         self.gt_plane_mse = absolute_error / valid_cam_coords.shape[1]
         self.plane_fit_rmse = np.sqrt(planeR_ms_offset_rror / valid_cam_coords.shape[1])
@@ -823,10 +838,10 @@ class Application(QtWidgets.QMainWindow):
         if self.count < 30:
             self.gt_plane_rmse_avg += self.gt_plane_rmse / 30
             self.gt_plane_rmse_arr.append(self.gt_plane_rmse_avg)
-            self.fill_plane_avg += self.fill_rate/30
-            self.plane_fit_mse_avg += self.plane_fit_mse/30
-            self.gt_plane_mse_avg += self.gt_plane_mse/30
-            self.plane_fit_rmse_avg += self.plane_fit_rmse/30
+            self.fill_plane_avg += self.fill_rate / 30
+            self.plane_fit_mse_avg += self.plane_fit_mse / 30
+            self.gt_plane_mse_avg += self.gt_plane_mse / 30
+            self.plane_fit_rmse_avg += self.plane_fit_rmse / 30
             self.count += 1
         else:
             self.ui.l_fill_rate.setText(f'{self.fill_plane_avg}')
@@ -847,11 +862,11 @@ class Application(QtWidgets.QMainWindow):
             self.plane_fit_rmse_avg = 0
             self.gt_plane_rmse_med = np.median(self.gt_plane_rmse_arr)
             if self.true_distance <= 1:
-                error_threshold = 0.03
+                error_threshold = THRESHOLD/2
             elif self.true_distance >= 2:
-                error_threshold = 0.06
+                error_threshold = THRESHOLD
             else:
-                error_threshold = self.true_distance*0.03
+                error_threshold = self.true_distance * THRESHOLD/2
             if self.gt_plane_rmse_res < error_threshold and self.fill_plane_res > 0.98:
                 self.set_result('PASS')
             else:
@@ -861,7 +876,7 @@ class Application(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     import sys
-
+    argument_parser()
     app = QtWidgets.QApplication(sys.argv)
     class_instance = Application()
     class_instance.show()
