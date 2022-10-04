@@ -2,6 +2,7 @@ import cv2
 import depthai as dai
 from camera import Camera
 from typing import List
+from pointcloud import Pointcloud
 
 device_infos = dai.Device.getAllAvailableDevices()
 if len(device_infos) == 0:
@@ -17,6 +18,8 @@ for device_info in device_infos:
     cameras.append(Camera(device_info, len(cameras)+1, show_video=True, show_pointcloud=False))
 
 
+pointcloud = Pointcloud(cameras)
+
 while True:
     key = cv2.waitKey(1)
 
@@ -31,3 +34,5 @@ while True:
 
     for camera in cameras:
         camera.update()
+
+    pointcloud.update()

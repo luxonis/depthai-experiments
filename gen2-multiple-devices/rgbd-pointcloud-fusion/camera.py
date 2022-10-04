@@ -38,8 +38,6 @@ class Camera:
             origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
             self.pointcloud_window.add_geometry(origin)
             self.pointcloud_window.get_view_control().set_constant_z_far(config.max_range*2)
-            self.isstarted = False
-
 
         self._load_calibration()
 
@@ -54,6 +52,7 @@ class Camera:
         try:
             extrinsics = np.load(path)
             self.cam_to_world = extrinsics["cam_to_world"]
+            self.world_to_cam = extrinsics["world_to_cam"]
         except:
             raise RuntimeError(f"Could not load calibration data for camera {self.mxid} from {path}!")
 
@@ -163,7 +162,9 @@ class Camera:
             rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3)
         )
 
-        pointcloud = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
+        pointcloud = o3d.geometry.PointCloud.create_from_rgbd_image(
+            rgbd_image, self.pinhole_camera_intrinsic, self.world_to_cam
+        )
 
         if downsample:
             pointcloud = pointcloud.voxel_down_sample(voxel_size=0.01)
@@ -174,8 +175,8 @@ class Camera:
         self.pointcloud.points = pointcloud.points
         self.pointcloud.colors = pointcloud.colors
 
+        # correct upside down z axis
         R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
         self.pointcloud.rotate(R_camera_to_world, center=np.array([0,0,0],dtype=np.float64))
-
 
         return self.pointcloud
