@@ -25,6 +25,10 @@ The following list isn't exhaustive (as we randomly add experiments and we may f
 
 ![Demo](https://user-images.githubusercontent.com/18037362/146296930-9e7071f5-33b9-45f9-af21-cace7ffffc0f.gif)
 
+## Multi-camera spatial-detection-fusion ([here](./gen2-multiple-devices/spatial-detection-fusion))
+
+![demo](https://github.com/luxonis/depthai-experiments/blob/master/gen2-multiple-devices/spatial-detection-fusion/img/demo.gif?raw=true)
+
 ## Stereo Depth from Camera and From Host ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-camera-demo#gen2-camera-demo))
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
