@@ -6,8 +6,9 @@ from typing import List
 import config
 
 class Camera:
-    def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True):
+    def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_pointcloud: bool = True):
         self.show_video = show_video
+        self.show_pointcloud = show_pointcloud
         self.show_detph = False
         self.device_info = device_info
         self.friendly_id = friendly_id
@@ -30,13 +31,14 @@ class Camera:
             cv2.resizeWindow(self.window_name, 640, 360)
 
         # pointcloud window
-        self.vis = o3d.visualization.Visualizer()
-        self.vis.create_window(window_name=self.window_name)
-        self.vis.add_geometry(self.pointcloud)
-        origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
-        self.vis.add_geometry(origin)
-        self.vis.get_view_control().set_constant_z_far(config.max_range*2)
-        self.isstarted = False
+        if show_pointcloud:
+            self.pointcloud_window = o3d.visualization.Visualizer()
+            self.pointcloud_window.create_window(window_name=f"[{self.friendly_id}] Pointcloud - mxid: {self.mxid}")
+            self.pointcloud_window.add_geometry(self.pointcloud)
+            origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
+            self.pointcloud_window.add_geometry(origin)
+            self.pointcloud_window.get_view_control().set_constant_z_far(config.max_range*2)
+            self.isstarted = False
 
 
         self._load_calibration()
@@ -148,7 +150,10 @@ class Camera:
         rgb = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2RGB)
         self.rgbd_to_pointcloud(self.depth_frame, rgb)
 
-        self.visualize_pcd()
+        if self.show_pointcloud:
+            self.pointcloud_window.update_geometry(self.pointcloud)
+            self.pointcloud_window.poll_events()
+            self.pointcloud_window.update_renderer()
 
 
     def rgbd_to_pointcloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
@@ -174,8 +179,3 @@ class Camera:
 
 
         return self.pointcloud
-
-    def visualize_pcd(self):
-        self.vis.update_geometry(self.pointcloud)
-        self.vis.poll_events()
-        self.vis.update_renderer()

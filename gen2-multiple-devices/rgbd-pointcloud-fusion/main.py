@@ -14,7 +14,7 @@ device_infos.sort(key=lambda x: x.getMxId(), reverse=True) # sort the cameras by
 cameras: List[Camera] = []
 
 for device_info in device_infos:
-    cameras.append(Camera(device_info, len(cameras)+1, show_video=True))
+    cameras.append(Camera(device_info, len(cameras)+1, show_video=True, show_pointcloud=False))
 
 
 while True:
