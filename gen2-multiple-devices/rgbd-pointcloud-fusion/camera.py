@@ -22,7 +22,7 @@ class Camera:
         self.image_frame = None
         self.depth_frame = None
         self.depth_visualization_frame = None
-        self.pointcloud = o3d.geometry.PointCloud()
+        self.point_cloud = o3d.geometry.PointCloud()
 
         # camera window
         self.window_name = f"[{self.friendly_id}] Camera - mxid: {self.mxid}"
@@ -32,12 +32,12 @@ class Camera:
 
         # pointcloud window
         if show_pointcloud:
-            self.pointcloud_window = o3d.visualization.Visualizer()
-            self.pointcloud_window.create_window(window_name=f"[{self.friendly_id}] Pointcloud - mxid: {self.mxid}")
-            self.pointcloud_window.add_geometry(self.pointcloud)
+            self.point_cloud_window = o3d.visualization.Visualizer()
+            self.point_cloud_window.create_window(window_name=f"[{self.friendly_id}] Pointcloud - mxid: {self.mxid}")
+            self.point_cloud_window.add_geometry(self.point_cloud)
             origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
-            self.pointcloud_window.add_geometry(origin)
-            self.pointcloud_window.get_view_control().set_constant_z_far(config.max_range*2)
+            self.point_cloud_window.add_geometry(origin)
+            self.point_cloud_window.get_view_control().set_constant_z_far(config.max_range*2)
 
         self._load_calibration()
 
@@ -150,9 +150,9 @@ class Camera:
         self.rgbd_to_pointcloud(self.depth_frame, rgb)
 
         if self.show_pointcloud:
-            self.pointcloud_window.update_geometry(self.pointcloud)
-            self.pointcloud_window.poll_events()
-            self.pointcloud_window.update_renderer()
+            self.point_cloud_window.update_geometry(self.point_cloud)
+            self.point_cloud_window.poll_events()
+            self.point_cloud_window.update_renderer()
 
 
     def rgbd_to_pointcloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
@@ -162,21 +162,22 @@ class Camera:
             rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3)
         )
 
-        pointcloud = o3d.geometry.PointCloud.create_from_rgbd_image(
+        point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbd_image, self.pinhole_camera_intrinsic, self.world_to_cam
         )
 
         if downsample:
-            pointcloud = pointcloud.voxel_down_sample(voxel_size=0.01)
+            point_cloud = point_cloud.voxel_down_sample(voxel_size=0.01)
 
         if remove_noise:
-            pointcloud = pointcloud.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)[0]
+            point_cloud = point_cloud.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)[0]
 
-        self.pointcloud.points = pointcloud.points
-        self.pointcloud.colors = pointcloud.colors
+        self.point_cloud.points = point_cloud.points
+        self.point_cloud.colors = point_cloud.colors
 
         # correct upside down z axis
-        R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
-        self.pointcloud.rotate(R_camera_to_world, center=np.array([0,0,0],dtype=np.float64))
+        T = np.eye(4)
+        T[2,2] = -1
+        self.point_cloud.transform(T)
 
-        return self.pointcloud
+        return self.point_cloud

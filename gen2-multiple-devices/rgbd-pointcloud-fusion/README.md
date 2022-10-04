@@ -1,26 +1,21 @@
-## RGB-D projection Demo
+## Point cloud fusion
+This example demonstrates how point clouds from different cameras can be merged together.
 
-This example shows how to align depth to rgb camera frame and project depth map into 3D pointcloud. You can also choose to skip rgb-depth alignment and colorize the pointcloud with right mono frame.
+_For a single camera version check out [rgbd-pointcloud](https://github.com/luxonis/depthai-experiments/tree/master/gen2-pointcloud/rgbd-pointcloud)._
 
-## Demo
-
-![img](https://user-images.githubusercontent.com/18037362/158277114-f1676487-e214-4872-a1b3-aa14131b666b.png)
-
+![demo](img/demo.gif)
 ## Install project requirements
-
 ```
 python3 -m pip install -r requirements.txt
 ```
-Note: Running the command above also tries to install open3D which is required for this example.
-open3D is not supported by all platforms, but is required for pointcloud visualization.
+> Note: Running the command above also tries to install open3D which is required for this example. Open3D is not supported by all platforms, but is required for pointcloud visualization.
 
-## Run this example
+## Usage
+> Before you can run this demo you need to calibrate the cameras. Go to [multi-cam-calibration](../multi-cam-calibration) and generate a calibration file for each camera. Make sure that the `calibration_data_dir` in the [`config.py`](config.py) is set correctly.
 
+Run the [`main.py`](main.py) with Python 3.
 ```
 python3 main.py
 ```
 
 
-
-## TODO:
-- Fix z-axis

@@ -21,7 +21,7 @@ class Pointcloud:
 		self.pointcloud.clear()
 
 		for camera in self.cameras:
-			self.pointcloud += camera.pointcloud
+			self.pointcloud += camera.point_cloud
 
 		self.pointcloud_window.update_geometry(self.pointcloud)
 		self.pointcloud_window.poll_events()
