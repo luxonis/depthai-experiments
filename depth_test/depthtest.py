@@ -862,11 +862,11 @@ class Application(QtWidgets.QMainWindow):
             self.plane_fit_rmse_avg = 0
             self.gt_plane_rmse_med = np.median(self.gt_plane_rmse_arr)
             if self.true_distance <= 1:
-                error_threshold = THRESHOLD/2
+                error_threshold = 0.03
             elif self.true_distance >= 2:
                 error_threshold = THRESHOLD
             else:
-                error_threshold = self.true_distance * THRESHOLD/2
+                error_threshold = self.true_distance * (THRESHOLD-0.03)-THRESHOLD+0.06
             if self.gt_plane_rmse_res < error_threshold and self.fill_plane_res > 0.98:
                 self.set_result('PASS')
             else:
