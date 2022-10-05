@@ -21,6 +21,8 @@ Run the [`main.py`](main.py) with Python 3.
 python3 main.py
 ```
 
+![visualization](img/demo2.png)
+
 ## Config
 In the configuration file [`config.py`](config.py) you can set postprocessing parameters for depth data and point cloud. You might need to change `min_range`, `max_range`, and `point_cloud_range` variables. They specify how much point cloud is kept relative to the calibration board.
 

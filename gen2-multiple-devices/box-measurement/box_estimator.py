@@ -66,27 +66,25 @@ class BoxEstimator():
         self.vis.update_renderer()
         self.vis.remove_geometry(line_set, reset_bounding_box=False)
 
-    def vizualise_box_2d(self, intrinsic_mat, img):
+    def vizualise_box_2d(self, intrinsic_mat, world_to_cam, img):
         bounding_box = self.bounding_box
         points_floor = np.c_[bounding_box, np.zeros(4)]
         points_top = np.c_[bounding_box, self.height * np.ones(4)]
         box_points = np.concatenate((points_top, points_floor))
 
-        # reverse transformations:
-        inverse_translation = [-x for x in self.translate_vector]
-        inverse_rot_mat = np.linalg.inv(self.rotation_matrix)
-
+        T = np.eye(4)
+        T[2,2] = -1
         bbox_pcl = o3d.geometry.PointCloud()
         bbox_pcl.points = o3d.utility.Vector3dVector(box_points)
-        bbox_pcl.translate(inverse_translation)
-        bbox_pcl.rotate(inverse_rot_mat, center=(0,0,0))
+        bbox_pcl.transform(T)
+        bbox_pcl.transform(world_to_cam)
 
         lines = [[0,4], [1,5], [2,6], [3,7], [0,1], [1,2], [2,3], [3,0], [4,5], [5,6], [6,7], [7,4]]
         intrinsic_mat = np.array(intrinsic_mat)
 
         # object along negative z-axis so need to correct perspective when plotting using OpenCV
-        cord_change_mat = np.array([[1., 0., 0.], [0, -1., 0.], [0., 0., -1.]], dtype=np.float32)
-        box_points = np.array(bbox_pcl.points).dot(cord_change_mat.T)
+        # cord_change_mat = np.array([[1., 0., 0.], [0, -1., 0.], [0., 0., -1.]], dtype=np.float32)
+        box_points = np.array(bbox_pcl.points)
         img_points, _ = cv2.projectPoints(box_points, (0, 0, 0), (0, 0, 0), intrinsic_mat, np.zeros(4, dtype='float32'))
 
         # draw perspective correct point cloud back on the image

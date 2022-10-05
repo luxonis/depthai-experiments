@@ -17,7 +17,7 @@ device_infos.sort(key=lambda x: x.getMxId(), reverse=True) # sort the cameras by
 cameras: List[Camera] = []
 
 for device_info in device_infos:
-    cameras.append(Camera(device_info, len(cameras)+1, show_video=True, show_point_cloud=False))
+    cameras.append(Camera(device_info, len(cameras)+1, show_video=False, show_point_cloud=False))
 
 
 box_estimator = BoxEstimator(config.max_range/1000)
@@ -46,3 +46,8 @@ while True:
     if(l * w * h  > config.min_box_size):
         print(f"Length: {l:.2f}, Width: {w:.2f}, Height:{h:.2f}")
         box_estimator.vizualise_box()
+
+    for camera in cameras:
+        img = box_estimator.vizualise_box_2d(camera.intrinsics, camera.world_to_cam, camera.image_frame)
+        cv2.imshow(camera.window_name, img)
+    
