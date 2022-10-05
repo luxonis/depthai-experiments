@@ -47,6 +47,7 @@ class Camera:
         print("=== Closed " + self.device_info.getMxId())
 
     def _load_calibration(self):
+        # load extrinsics from a file
         path = f"{config.calibration_data_dir}/extrinsics_{self.mxid}.npz"
         try:
             extrinsics = np.load(path)
@@ -55,11 +56,15 @@ class Camera:
         except:
             raise RuntimeError(f"Could not load calibration data for camera {self.mxid} from {path}!")
 
+        # load intrinsics from the camera
         calibration = self.device.readCalibration()
         self.intrinsics = calibration.getCameraIntrinsics(
             dai.CameraBoardSocket.RGB if config.COLOR else dai.CameraBoardSocket.RIGHT, 
             dai.Size2f(*self.image_size)
         )
+
+        self.distortion_coeffs = np.array(calibration.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
+        print(self.distortion_coeffs)
 
         self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
             *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]

@@ -66,7 +66,7 @@ class BoxEstimator():
         self.vis.update_renderer()
         self.vis.remove_geometry(line_set, reset_bounding_box=False)
 
-    def vizualise_box_2d(self, intrinsic_mat, world_to_cam, img):
+    def vizualise_box_2d(self, intrinsic_mat, distortion_coeffs, world_to_cam, img):
         bounding_box = self.bounding_box
         points_floor = np.c_[bounding_box, np.zeros(4)]
         points_top = np.c_[bounding_box, self.height * np.ones(4)]
@@ -85,7 +85,7 @@ class BoxEstimator():
         # object along negative z-axis so need to correct perspective when plotting using OpenCV
         # cord_change_mat = np.array([[1., 0., 0.], [0, -1., 0.], [0., 0., -1.]], dtype=np.float32)
         box_points = np.array(bbox_pcl.points)
-        img_points, _ = cv2.projectPoints(box_points, (0, 0, 0), (0, 0, 0), intrinsic_mat, np.zeros(4, dtype='float32'))
+        img_points, _ = cv2.projectPoints(box_points, (0, 0, 0), (0, 0, 0), intrinsic_mat, distortion_coeffs)
 
         # draw perspective correct point cloud back on the image
         for line in lines:

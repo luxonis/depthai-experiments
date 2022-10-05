@@ -48,6 +48,6 @@ while True:
         box_estimator.vizualise_box()
 
     for camera in cameras:
-        img = box_estimator.vizualise_box_2d(camera.intrinsics, camera.world_to_cam, camera.image_frame)
+        img = box_estimator.vizualise_box_2d(camera.intrinsics, camera.distortion_coeffs, camera.world_to_cam, camera.image_frame)
         cv2.imshow(camera.window_name, img)
     
