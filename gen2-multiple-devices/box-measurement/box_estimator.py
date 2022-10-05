@@ -119,7 +119,7 @@ class BoxEstimator():
     def detect_ground_plane(self):
         points = o3d.utility.Vector3dVector(np.array([
             [config.point_cloud_range["x_min"], config.point_cloud_range["y_min"], config.point_cloud_range["z_min"]],
-            [config.point_cloud_range["x_max"], config.point_cloud_range["y_max"], 0.01]
+            [config.point_cloud_range["x_max"], config.point_cloud_range["y_max"], config.min_box_height]
         ]))
         
         self.plane_pcl = self.raw_pcl.crop(
@@ -127,7 +127,7 @@ class BoxEstimator():
         )
 
         points = o3d.utility.Vector3dVector(np.array([
-            [config.point_cloud_range["x_min"], config.point_cloud_range["y_min"], 0.01],
+            [config.point_cloud_range["x_min"], config.point_cloud_range["y_min"], config.min_box_height],
             [config.point_cloud_range["x_max"], config.point_cloud_range["y_max"], config.point_cloud_range["z_max"]]
         ]))
         self.plane_outliers_pcl = self.raw_pcl.crop(
@@ -154,7 +154,7 @@ class BoxEstimator():
 
     def get_box_top(self):
         points_np = np.asarray(self.box_pcl.points)
-        top_plane_eq, top_plane_inliers = self.fit_plane_vec_constraint([0, 0, 1], points_np, 0.03, 30)
+        top_plane_eq, top_plane_inliers = self.fit_plane_vec_constraint([0, 0, 1], points_np, 0.01, 30)
 
         top_plane = self.box_pcl.select_by_index(top_plane_inliers)
         self.top_side_pcl = top_plane

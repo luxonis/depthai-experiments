@@ -3,7 +3,7 @@ This example demonstrates box measurement on merged point clouds from different 
 
 _For a single camera version check out [gen2-box_measurement](https://github.com/luxonis/depthai-experiments/tree/master/gen2-box_measurement)._
 
-![demo](img/demo.png)
+![demo](img/demo.gif)
 ## Install project requirements
 ```
 python3 -m pip install -r requirements.txt

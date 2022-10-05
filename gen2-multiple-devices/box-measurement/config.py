@@ -34,3 +34,4 @@ calibration_data_dir = '../multi-cam-calibration/calibration_data' # Path to cam
 
 # BOX ESTIMATION
 min_box_size = 0.005**3 # m^3
+min_box_height = 0.03 # m
