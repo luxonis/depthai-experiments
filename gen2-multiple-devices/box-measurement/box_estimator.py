@@ -18,6 +18,7 @@ class BoxEstimator():
         self.plane_pcl = o3d.geometry.PointCloud()
         self.plane_outliers_pcl = o3d.geometry.PointCloud()
         self.box_pcl = o3d.geometry.PointCloud()
+        self.box_sides_pcl = o3d.geometry.PointCloud()
         self.top_side_pcl = o3d.geometry.PointCloud()
         self.visualization_pcl = o3d.geometry.PointCloud()
 
@@ -157,11 +158,21 @@ class BoxEstimator():
         top_plane = self.box_pcl.select_by_index(top_plane_inliers)
         self.top_side_pcl = top_plane
         self.height = abs(top_plane_eq[3])
+
+        points = o3d.utility.Vector3dVector(np.array([
+            [config.point_cloud_range["x_min"], config.point_cloud_range["y_min"], config.point_cloud_range["z_min"]],
+            [config.point_cloud_range["x_max"], config.point_cloud_range["y_max"], self.height - config.min_box_height]
+        ]))
+        self.box_sides_pcl = self.box_pcl.crop(
+            bounding_box = o3d.geometry.AxisAlignedBoundingBox.create_from_points(points)
+        )
+
         return self.height
 
     def get_dimensions(self):
-        upper_plane_points = np.asarray(self.top_side_pcl.points)
+        upper_plane_points = np.asarray(self.box_sides_pcl.points)
         coordinates = np.c_[upper_plane_points[:, 0], upper_plane_points[:, 1]].astype('float32')
+        # np.save("experiments/sample_data/coordinates.npy", coordinates)
         rect = cv2.minAreaRect(coordinates)
         self.bounding_box = cv2.boxPoints(rect)
         self.width, self.length = rect[1][0], rect[1][1]

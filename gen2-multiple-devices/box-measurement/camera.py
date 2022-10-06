@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import open3d as o3d
 from typing import List
-import config
+import config as config
 class Camera:
     def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_point_cloud: bool = True):
         self.show_video = show_video

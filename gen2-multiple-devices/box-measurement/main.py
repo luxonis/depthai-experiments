@@ -41,6 +41,8 @@ while True:
         camera.update()
         pointcloud += camera.point_cloud
 
+    # o3d.io.write_point_cloud("experiments/sample_data/pointcloud.ply", pointcloud)
+
 
     l, w, h = box_estimator.process_pcl(pointcloud)
     if(l * w * h  > config.min_box_size):
