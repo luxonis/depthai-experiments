@@ -21,17 +21,6 @@ for device_info in device_infos:
 point_cloud_visualizer = PointCloudVisualizer(cameras)
 
 while True:
-    key = cv2.waitKey(1)
-
-    # QUIT - press `q` to quit
-    if key == ord('q'):
-        break
-
-    # TOGGLE DEPTH VIEW - press `d` to toggle depth view
-    if key == ord('d'):
-        for camera in cameras:
-            camera.show_detph = not camera.show_detph
-
     for camera in cameras:
         camera.update()
 

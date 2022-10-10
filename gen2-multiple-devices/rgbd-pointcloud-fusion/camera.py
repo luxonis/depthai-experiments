@@ -10,12 +10,14 @@ class Camera:
     def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_point_cloud: bool = True):
         self.show_video = show_video
         self.show_point_cloud = show_point_cloud
-        self.show_detph = False
+        self.show_depth = False
         self.device_info = device_info
         self.friendly_id = friendly_id
         self.mxid = device_info.getMxId()
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
+
+        self.device.setIrLaserDotProjectorBrightness(1200)
 
         self.image_queue = self.device.getOutputQueue(name="image", maxSize=1, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=1, blocking=False)
@@ -141,7 +143,7 @@ class Camera:
                 self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
 
                 if self.show_video:
-                    if self.show_detph:
+                    if self.show_depth:
                         cv2.imshow(self.window_name, self.depth_visualization_frame)
                     else:
                         cv2.imshow(self.window_name, self.image_frame)
@@ -157,7 +159,9 @@ class Camera:
 
     def rgbd_to_point_cloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
         rgb_o3d = o3d.geometry.Image(image_frame)
-        depth_o3d = o3d.geometry.Image(depth_frame)
+        df = np.copy(depth_frame).astype(np.float32)
+        # df -= 20
+        depth_o3d = o3d.geometry.Image(df)
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
             rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3)
         )
