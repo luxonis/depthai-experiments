@@ -13,7 +13,7 @@ N_POINTS_SAMPLED_PLANE = 3 # Defines the number of points that are randomly samp
 
 class BoxEstimator():
 
-    def __init__(self, max_distance):
+    def __init__(self):
         self.raw_pcl = o3d.geometry.PointCloud()
         self.plane_pcl = o3d.geometry.PointCloud()
         self.plane_outliers_pcl = o3d.geometry.PointCloud()
@@ -30,71 +30,6 @@ class BoxEstimator():
         self.length = None
 
         self.bounding_box = None
-        self.rotation_matrix = None
-        self.translate_vector = None
-
-        self.max_distance = max_distance
-
-        self.vis = o3d.visualization.Visualizer()
-        self.vis.create_window()
-        self.vis.get_view_control().set_constant_z_far(config.max_range*2)
-        self.vis.add_geometry(self.visualization_pcl)
-        origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
-        self.vis.add_geometry(origin)
-
-    def vizualise_box(self):
-        bounding_box = self.bounding_box
-        points_floor = np.c_[bounding_box, np.zeros(4)]
-        points_top = np.c_[bounding_box, self.height * np.ones(4)]
-        box_points = np.concatenate((points_top, points_floor))
-
-        lines = [[0,4], [1,5], [2,6], [3,7], [0,1], [1,2], [2,3], [3,0], [4,5], [5,6], [6,7], [7,4]]
-
-        line_set = o3d.geometry.LineSet(
-            points = o3d.utility.Vector3dVector(box_points),
-            lines = o3d.utility.Vector2iVector(lines),
-        )
-
-        colors = [[1,0,0] for i in range(len(lines))]
-        line_set.colors = o3d.utility.Vector3dVector(colors)
-
-        self.visualization_pcl.points = self.raw_pcl.points
-        self.visualization_pcl.colors = self.raw_pcl.colors
-
-        self.vis.add_geometry(line_set, reset_bounding_box=False)
-        self.vis.update_geometry(self.visualization_pcl)
-        self.vis.poll_events()
-        self.vis.update_renderer()
-        self.vis.remove_geometry(line_set, reset_bounding_box=False)
-
-    def vizualise_box_2d(self, intrinsic_mat, distortion_coeffs, world_to_cam, img):
-        bounding_box = self.bounding_box
-        points_floor = np.c_[bounding_box, np.zeros(4)]
-        points_top = np.c_[bounding_box, self.height * np.ones(4)]
-        box_points = np.concatenate((points_top, points_floor))
-
-        T = np.eye(4)
-        T[2,2] = -1
-        bbox_pcl = o3d.geometry.PointCloud()
-        bbox_pcl.points = o3d.utility.Vector3dVector(box_points)
-        bbox_pcl.transform(T)
-        bbox_pcl.transform(world_to_cam)
-
-        lines = [[0,4], [1,5], [2,6], [3,7], [0,1], [1,2], [2,3], [3,0], [4,5], [5,6], [6,7], [7,4]]
-        intrinsic_mat = np.array(intrinsic_mat)
-
-        # object along negative z-axis so need to correct perspective when plotting using OpenCV
-        # cord_change_mat = np.array([[1., 0., 0.], [0, -1., 0.], [0., 0., -1.]], dtype=np.float32)
-        box_points = np.array(bbox_pcl.points)
-        img_points, _ = cv2.projectPoints(box_points, (0, 0, 0), (0, 0, 0), intrinsic_mat, distortion_coeffs)
-
-        # draw perspective correct point cloud back on the image
-        for line in lines:
-            p1 = [int(x) for x in img_points[line[0]][0]]
-            p2 = [int(x) for x in img_points[line[1]][0]]
-            cv2.line(img, p1, p2, (0, 0,255), 2)
-
-        return img
 
     def process_pcl(self, raw_pcl):
         self.raw_pcl = raw_pcl

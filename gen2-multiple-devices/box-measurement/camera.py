@@ -3,20 +3,25 @@ import cv2
 import numpy as np
 import open3d as o3d
 from typing import List
-import config as config
+import config
+from host_sync import HostSync
+
 class Camera:
     def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_point_cloud: bool = True):
         self.show_video = show_video
         self.show_point_cloud = show_point_cloud
-        self.show_detph = False
+        self.show_depth = False
         self.device_info = device_info
         self.friendly_id = friendly_id
         self.mxid = device_info.getMxId()
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
 
-        self.image_queue = self.device.getOutputQueue(name="image", maxSize=1, blocking=False)
-        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=1, blocking=False)
+        self.device.setIrLaserDotProjectorBrightness(1200)
+
+        self.image_queue = self.device.getOutputQueue(name="image", maxSize=10, blocking=False)
+        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=10, blocking=False)
+        self.host_sync = HostSync(["image", "depth"])
 
         self.image_frame = None
         self.depth_frame = None
@@ -47,7 +52,6 @@ class Camera:
         print("=== Closed " + self.device_info.getMxId())
 
     def _load_calibration(self):
-        # load extrinsics from a file
         path = f"{config.calibration_data_dir}/extrinsics_{self.mxid}.npz"
         try:
             extrinsics = np.load(path)
@@ -56,22 +60,31 @@ class Camera:
         except:
             raise RuntimeError(f"Could not load calibration data for camera {self.mxid} from {path}!")
 
-        # load intrinsics from the camera
         calibration = self.device.readCalibration()
-        self.intrinsics = calibration.getCameraIntrinsics(
+        self.intrinsics = np.array(calibration.getCameraIntrinsics(
             dai.CameraBoardSocket.RGB if config.COLOR else dai.CameraBoardSocket.RIGHT, 
             dai.Size2f(*self.image_size)
-        )
+        ))
 
-        self.distortion_coeffs = np.array(calibration.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
-        print(self.distortion_coeffs)
+        self.distortion_coeffs = np.array(calibration.getDistortionCoefficients(
+            dai.CameraBoardSocket.RGB if config.COLOR else dai.CameraBoardSocket.RIGHT
+        ))
 
         self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
             *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]
         )
 
+        try:
+            self.point_cloud_alignment = np.load(f"{config.calibration_data_dir}/point_cloud_alignment_{self.mxid}.npy")
+        except:
+            self.point_cloud_alignment = np.eye(4)
+
+
         print(self.pinhole_camera_intrinsic)
-            
+
+    def save_point_cloud_alignment(self):
+        np.save(f"{config.calibration_data_dir}/point_cloud_alignment_{self.mxid}.npy", self.point_cloud_alignment)
+    
 
     def _create_pipeline(self):
         pipeline = dai.Pipeline()
@@ -129,23 +142,24 @@ class Camera:
         self.pipeline = pipeline
 
     def update(self):
-        in_depth = self.depth_queue.tryGet()
-        in_image = self.image_queue.tryGet()
+        for queue in [self.depth_queue, self.image_queue]:
+            new_msgs = queue.tryGetAll()
+            if new_msgs is not None:
+                for new_msg in new_msgs:
+                    self.host_sync.add(queue.getName(), new_msg)
 
-        if in_depth is not None:
-            self.depth_frame = in_depth.getFrame()
-            self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-            self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
-            
-        if in_image is not None:
-            self.image_frame = in_image.getCvFrame()
-
-        if in_depth is None or in_image is None:
+        msg_sync = self.host_sync.get()
+        if msg_sync is None:
             return
+        
+        self.depth_frame = msg_sync["depth"].getFrame()
+        self.image_frame = msg_sync["image"].getCvFrame()
+        self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
+        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
 
         if self.show_video:
-            if self.show_detph:
+            if self.show_depth:
                 cv2.imshow(self.window_name, self.depth_visualization_frame)
             else:
                 cv2.imshow(self.window_name, self.image_frame)
@@ -192,6 +206,8 @@ class Camera:
                 nb_neighbors=config.remove_noise_nb_neighbors, std_ratio=config.remove_noise_std_ratio
             )[0]
 
+        # apply point cloud alignment transform
+        point_cloud.transform(self.point_cloud_alignment)
 
         self.point_cloud.points = point_cloud.points
         self.point_cloud.colors = point_cloud.colors

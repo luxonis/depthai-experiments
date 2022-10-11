@@ -26,12 +26,12 @@ crop_point_cloud = True
 point_cloud_range = {		# m; relative to calibration board
 	"x_min": -0.300, "x_max": 0.300,
 	"y_min": -0.300, "y_max": 0.300,
-	"z_min": -0.010, "z_max": 0.300
+	"z_min": -0.300, "z_max": 0.300
 }
 
 # CALIBRATION
 calibration_data_dir = '../multi-cam-calibration/calibration_data' # Path to camera extrinsics relative to main.py
 
 # BOX ESTIMATION
-min_box_size = 0.005**3 # m^3
+min_box_size = 0.002 # m^3
 min_box_height = 0.03 # m
