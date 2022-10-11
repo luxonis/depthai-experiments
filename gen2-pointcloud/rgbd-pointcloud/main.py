@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from sys import maxsize
 import cv2
 import depthai as dai
 
@@ -44,7 +45,7 @@ config.postProcessing.spatialFilter.enable = True
 config.postProcessing.spatialFilter.holeFillingRadius = 2
 config.postProcessing.spatialFilter.numIterations = 1
 config.postProcessing.thresholdFilter.minRange = 400
-config.postProcessing.thresholdFilter.maxRange = 15000
+config.postProcessing.thresholdFilter.maxRange = 2000
 config.postProcessing.decimationFilter.decimationFactor = 1
 stereo.initialConfig.set(config)
 
@@ -101,8 +102,8 @@ with dai.Device(pipeline) as device:
 
     device.setIrLaserDotProjectorBrightness(1200)
     qs = []
-    qs.append(device.getOutputQueue("depth", 1))
-    qs.append(device.getOutputQueue("colorize", 1))
+    qs.append(device.getOutputQueue("depth", maxSize=1, blocking=False))
+    qs.append(device.getOutputQueue("colorize", maxSize=1, blocking=False))
 
     try:
         from projector_3d import PointCloudVisualizer
