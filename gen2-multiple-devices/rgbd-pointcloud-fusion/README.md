@@ -18,4 +18,16 @@ Run the [`main.py`](main.py) with Python 3.
 python3 main.py
 ```
 
+The point clouds might not be aligned perfectly. To refine the alignment press the `a` key. The results will be saved to the `calibration_data_dir` set in the [`config.py`](config.py). To get the best results perform the alignment porcess on high contrast scene.
+
+The alignment is achieved with the Open3D library ([example](http://www.open3d.org/docs/latest/python_example/pipelines/index.html#colored-icp-registration-py)).
+
+## Controls
+| key 			| action
+| :---			| :---			|
+| `q`			| quit 			|
+| `a`			| align pointclouds and save the results |
+| `r`			| reset alignment |
+| `s`			| save pointclouds to `sample_data` |
+| `d`			| toggle depth view |
 

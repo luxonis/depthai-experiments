@@ -13,6 +13,7 @@ class PointCloudVisualizer:
         self.point_cloud_window.register_key_callback(ord('A'), lambda vis: self.align_point_clouds())
         self.point_cloud_window.register_key_callback(ord('D'), lambda vis: self.toggle_depth())
         self.point_cloud_window.register_key_callback(ord('S'), lambda vis: self.save_point_cloud())
+        self.point_cloud_window.register_key_callback(ord('R'), lambda vis: self.reset_alignment())
         self.point_cloud_window.register_key_callback(ord('Q'), lambda vis: self.quit())
         self.point_cloud_window.create_window(window_name="Pointcloud")
         self.point_cloud_window.add_geometry(self.point_cloud)
@@ -66,6 +67,11 @@ class PointCloudVisualizer:
 
                 camera.point_cloud_alignment = result_icp.transformation
 
+            camera.save_point_cloud_alignment()
+
+    def reset_alignment(self):
+        for camera in self.cameras:
+            camera.point_cloud_alignment = np.identity(4)
             camera.save_point_cloud_alignment()
 
 
