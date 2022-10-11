@@ -13,6 +13,7 @@ class PointCloudVisualizer:
         self.point_cloud_window.register_key_callback(ord('A'), lambda vis: self.align_point_clouds())
         self.point_cloud_window.register_key_callback(ord('D'), lambda vis: self.toggle_depth())
         self.point_cloud_window.register_key_callback(ord('S'), lambda vis: self.save_point_cloud())
+        self.point_cloud_window.register_key_callback(ord('Q'), lambda vis: self.quit())
         self.point_cloud_window.create_window(window_name="Pointcloud")
         self.point_cloud_window.add_geometry(self.point_cloud)
         origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
@@ -20,10 +21,16 @@ class PointCloudVisualizer:
         view = self.point_cloud_window.get_view_control()
         view.set_constant_z_far(config.max_range*2)
 
+        self.running = True
+
+        while self.running:
+            self.update()
+
     def update(self):
         self.point_cloud.clear()
 
         for camera in self.cameras:
+            camera.update()
             self.point_cloud += camera.point_cloud
 
         self.point_cloud_window.update_geometry(self.point_cloud)
@@ -69,3 +76,6 @@ class PointCloudVisualizer:
     def save_point_cloud(self):
         for camera in self.cameras:
             o3d.io.write_point_cloud(f"sample_data/pcl_{camera.mxid}.ply", camera.point_cloud)
+
+    def quit(self):
+        self.running = False

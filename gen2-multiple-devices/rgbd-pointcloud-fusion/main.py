@@ -18,10 +18,4 @@ for device_info in device_infos:
     cameras.append(Camera(device_info, len(cameras)+1, show_video=True, show_point_cloud=False))
 
 
-point_cloud_visualizer = PointCloudVisualizer(cameras)
-
-while True:
-    for camera in cameras:
-        camera.update()
-
-    point_cloud_visualizer.update()
+PointCloudVisualizer(cameras)
