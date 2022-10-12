@@ -9,7 +9,12 @@ class DepthTest:
 		self.plane_normal = np.array([0, 0, -1])
 		self.plane_distance = -config.camera_wall_distance
 		self.plane_coeffs = (0,0,-config.camera_wall_distance)
+
 		self.fitted = False
+
+		self.z_accuracy_medians = []
+		self.spatial_noise_rmses = []
+		self.samples = 0
 
 	def fit_plane(self, point_cloud: o3d.geometry.PointCloud):
 		points = np.asarray(point_cloud.points)
@@ -24,6 +29,8 @@ class DepthTest:
 		self.plane_normal = normal
 		self.plane_distance = k_z
 		self.plane_coeffs = (k_x, k_y, k_z)
+
+		self.fitted = True
 
 		return normal, k_z
 
@@ -59,9 +66,7 @@ class DepthTest:
 		return point_cloud_corrected
 
 	def measure(self, point_cloud: o3d.geometry.PointCloud):
-		print("=== Depth test ===")
-		if not self.fitted:
-			print("WARNING: Plane not fitted, using default values")
+		print(f"\rAdding measurements {'.'*self.samples}", end="")
 
 		plane_fit = self.project_on_plane(point_cloud)
 		plane_fit_corrected = self.correct_tilt(plane_fit)
@@ -69,6 +74,10 @@ class DepthTest:
 
 		spatial_noise = self.compute_spatial_noise(point_cloud_corrected, plane_fit_corrected)
 		z_accuracy = self.compute_z_accuracy(point_cloud_corrected)
+
+		self.z_accuracy_medians.append(z_accuracy)
+		self.spatial_noise_rmses.append(spatial_noise)
+		self.samples += 1
 
 		return spatial_noise, z_accuracy
 
@@ -81,7 +90,6 @@ class DepthTest:
 		# remove values below 0.5% and above 99.5%
 		z_error = z_error[int(len(z_error)*0.005):int(len(z_error)*0.995)]
 		RMSE = np.sqrt(np.mean(z_error**2))
-		print(f"Spatial noise (RMSE): {RMSE*1000} mm")
 
 		return RMSE
 
@@ -93,9 +101,20 @@ class DepthTest:
 		z_error = np.sort(z_error)
 		z_error = z_error[int(len(z_error)*0.005):int(len(z_error)*0.995)]
 		median = np.median(z_error)
-		print(f"Z-Accuracy (median): {median*1000} mm")
 
 		return median
+
+	def reset(self):
+		self.z_accuracy_medians = []
+		self.spatial_noise_rmses = []
+		self.samples = 0
+
+	def print_results(self):
+		print("=== Results ===")
+		print(f"{self.samples} measurements")
+		print(f"Z accuracy: {np.mean(self.z_accuracy_medians) / config.camera_wall_distance * 100:.2f}% of GT")
+		print(f"Spatial noise: {np.mean(self.spatial_noise_rmses)*1000:.2f} mm")
+		print()
 
 	def visualize_plane_fit(self, point_cloud: o3d.geometry.PointCloud):
 		# red - original fitted plane

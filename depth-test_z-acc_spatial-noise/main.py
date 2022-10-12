@@ -4,13 +4,16 @@ import depthai as dai
 from camera import Camera
 from utils import *
 from depth_test import DepthTest
-
+import config
 
 depth_test = DepthTest()
 camera = Camera(dai.DeviceInfo())
 
 ROI = (0, 0, 0, 0)
 ROI = (135, 64, 224, 220)
+
+testing = False
+
 while True:
 	key = cv2.waitKey(1)
 
@@ -45,4 +48,17 @@ while True:
 
 	# TEST DEPTH - press the `t` key
 	if key == ord('t'):
+		if not depth_test.fitted:
+			print("WARNING: Plane not fitted, using default values")
+
+		print("Testing started ...")
+		testing = True
+
+	if testing:
 		depth_test.measure(point_cloud)
+
+		if depth_test.samples >= config.n_samples:
+			print()
+			testing = False
+			depth_test.print_results()
+			depth_test.reset()
