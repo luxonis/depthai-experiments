@@ -1,0 +1,114 @@
+import open3d as o3d
+import numpy as np
+from utils import *
+import config
+
+class DepthTest:
+	def __init__(self):
+		self.camera_dir = np.array([0, 0, -1])
+		self.plane_normal = np.array([0, 0, -1])
+		self.plane_distance = -config.camera_wall_distance
+		self.plane_coeffs = (0,0,-config.camera_wall_distance)
+		self.fitted = False
+
+	def fit_plane(self, point_cloud: o3d.geometry.PointCloud):
+		points = np.asarray(point_cloud.points)
+		G = np.ones_like(points)
+		G[:, 0] = points[:, 0]
+		G[:, 1] = points[:, 1]
+		Z = points[:, 2]
+		(k_x, k_y, k_z), resid, rank, s = np.linalg.lstsq(G, Z, rcond=None)
+		normal = np.array([k_x, k_y, -1])
+		normal = normal / np.linalg.norm(normal)
+
+		self.plane_normal = normal
+		self.plane_distance = k_z
+		self.plane_coeffs = (k_x, k_y, k_z)
+
+		return normal, k_z
+
+	def compute_tilt(self):
+		horizontal_tilt = angle(self.camera_dir, self.plane_normal, np.array([0, 1, 0])) # in radians (- left, + right)
+		vertical_tilt = angle(self.camera_dir, self.plane_normal, np.array([1, 0, 0])) # in radians (- up, + down)
+
+		return horizontal_tilt, vertical_tilt
+
+	def print_tilt(self):
+		horizontal_tilt, vertical_tilt = self.compute_tilt()
+		print(
+			f"Horizontal tilt: {abs(horizontal_tilt) * 180/np.pi}° {'LEFT' if horizontal_tilt < 0 else 'RIGHT'}", 
+			f"Vertical tilt: {abs(vertical_tilt) * 180/np.pi}° {'UP' if vertical_tilt < 0 else 'DOWN'}"
+		)
+
+	def project_on_plane(self, point_cloud: o3d.geometry.PointCloud):
+		points = np.asarray(point_cloud.points)
+		G = np.ones_like(points)
+		G[:, 0] = points[:, 0]
+		G[:, 1] = points[:, 1]
+		plane_fit = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(np.hstack([points[:,0:2], G @ np.matrix(self.plane_coeffs).T])))
+		return plane_fit
+
+	def correct_tilt(self, point_cloud: o3d.geometry.PointCloud):
+		# Correct the point cloud tilt (isolating camera positioning errors)
+		# The plane is corrected with angle (acos(camera_dir @ normal)) and axis (np.cross(camera_dir, normal)) instad of the horizontal and vertical tilt to reduce numerical errors
+		# R = o3d.geometry.get_rotation_matrix_from_xyz(np.array([-vertical_tilt, -horizontal_tilt, 0]))
+		axis_angle = normalize(np.cross(self.plane_normal, self.camera_dir)) * np.arccos(np.dot(self.camera_dir, self.plane_normal))
+		R = o3d.geometry.get_rotation_matrix_from_axis_angle(axis_angle)
+		point_cloud_corrected = o3d.geometry.PointCloud(point_cloud)
+		point_cloud_corrected.rotate(R, center=(0, 0, 0))
+		return point_cloud_corrected
+
+	def measure(self, point_cloud: o3d.geometry.PointCloud):
+		print("=== Depth test ===")
+		if not self.fitted:
+			print("WARNING: Plane not fitted, using default values")
+
+		plane_fit = self.project_on_plane(point_cloud)
+		plane_fit_corrected = self.correct_tilt(plane_fit)
+		point_cloud_corrected = self.correct_tilt(point_cloud)
+
+		spatial_noise = self.compute_spatial_noise(point_cloud_corrected, plane_fit_corrected)
+		z_accuracy = self.compute_z_accuracy(point_cloud_corrected)
+
+		return spatial_noise, z_accuracy
+
+	def compute_spatial_noise(self, point_cloud_corrected: o3d.geometry.PointCloud, plane_fit_corrected: o3d.geometry.PointCloud):
+		plane_fit_corrected_points = np.asarray(plane_fit_corrected.points)
+		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
+
+		z_error = plane_fit_corrected_points[:,2] - point_cloud_corrected_points[:,2]
+		z_error = np.sort(z_error)
+		# remove values below 0.5% and above 99.5%
+		z_error = z_error[int(len(z_error)*0.005):int(len(z_error)*0.995)]
+		RMSE = np.sqrt(np.mean(z_error**2))
+		print(f"Spatial noise (RMSE): {RMSE*1000} mm")
+
+		return RMSE
+
+	def compute_z_accuracy(self, point_cloud_corrected: o3d.geometry.PointCloud):
+		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
+
+		z_error = -point_cloud_corrected_points[:, 2] - config.camera_wall_distance
+		# remove values below 0.5% and above 99.5%
+		z_error = np.sort(z_error)
+		z_error = z_error[int(len(z_error)*0.005):int(len(z_error)*0.995)]
+		median = np.median(z_error)
+		print(f"Z-Accuracy (median): {median*1000} mm")
+
+		return median
+
+	def visualize_plane_fit(self, point_cloud: o3d.geometry.PointCloud):
+		# red - original fitted plane
+		# green - corrected fitted plane
+		# colored - corrected point cloud
+		point_cloud_corrected = self.correct_tilt(point_cloud)
+		plane_fit = self.project_on_plane(point_cloud)
+		plane_fit.paint_uniform_color([1, 0, 0])
+		plane_fit_corrected = self.correct_tilt(plane_fit)
+		plane_fit_corrected.paint_uniform_color([0, 1, 0])
+
+		origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=(0,0,-config.camera_wall_distance))
+
+		o3d.visualization.draw_geometries([origin, point_cloud_corrected, plane_fit_corrected, plane_fit])
+
+
