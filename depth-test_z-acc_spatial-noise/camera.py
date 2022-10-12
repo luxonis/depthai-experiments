@@ -26,8 +26,6 @@ class Camera:
 
         self._load_calibration()
 
-        print("=== Connected to " + self.device_info.getMxId())
-
     def __del__(self):
         self.device.close()
         print("=== Closed " + self.device_info.getMxId())
