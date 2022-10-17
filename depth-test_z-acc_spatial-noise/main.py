@@ -53,12 +53,23 @@ def save_point_clouds_callback():
 
 	print("Point clouds saved")
 
+def visualize_plane_callback():
+	if depth_test.plane_fit_visualization:
+		depth_test.hide_plane_fit_visualization()
+	else:
+		print("Plane fit visualization")
+		print(" - red - original fitted plane")
+		print(" - green - corrected fitted plane")
+		print(" - colored - corrected point cloud")
+		depth_test.show_plane_fit_visualization(selected_camera.point_cloud)
+
 # point cloud visualization window
 point_cloud_window = o3d.visualization.VisualizerWithKeyCallback()
 point_cloud_window.create_window("Point Cloud")
 
 point_cloud_window.register_key_callback(ord('Q'), lambda vis: quit_callback())
 point_cloud_window.register_key_callback(ord('F'), lambda vis: fit_plane_callback())
+point_cloud_window.register_key_callback(ord('V'), lambda vis: visualize_plane_callback())
 point_cloud_window.register_key_callback(ord('T'), lambda vis: start_test_callback())
 point_cloud_window.register_key_callback(ord('S'), lambda vis: save_point_clouds_callback())
 point_cloud_window.register_key_callback(ord('1'), lambda vis: select_camera_callback(0))
@@ -66,6 +77,9 @@ point_cloud_window.register_key_callback(ord('2'), lambda vis: select_camera_cal
 
 for camera in cameras:
 	point_cloud_window.add_geometry(camera.point_cloud)
+point_cloud_window.add_geometry(depth_test.plane_fit_pcl)
+point_cloud_window.add_geometry(depth_test.plane_fit_corrected_pcl)
+point_cloud_window.add_geometry(depth_test.point_cloud_corrected)
 point_cloud_window.get_view_control().set_constant_z_far(15)
 origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
 point_cloud_window.add_geometry(origin)
@@ -76,6 +90,9 @@ while running:
 	for camera in cameras:
 		camera.update()
 		point_cloud_window.update_geometry(camera.point_cloud)
+	point_cloud_window.update_geometry(depth_test.plane_fit_pcl)
+	point_cloud_window.update_geometry(depth_test.plane_fit_corrected_pcl)
+	point_cloud_window.update_geometry(depth_test.point_cloud_corrected)
 
 	point_cloud_window.poll_events()
 	point_cloud_window.update_renderer()

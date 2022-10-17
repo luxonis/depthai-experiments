@@ -10,6 +10,11 @@ class DepthTest:
 		self.plane_distance = -config.camera_wall_distance
 		self.plane_coeffs = (0,0,-config.camera_wall_distance)
 
+		self.point_cloud_corrected = o3d.geometry.PointCloud()
+		self.plane_fit_corrected_pcl = o3d.geometry.PointCloud()
+		self.plane_fit_pcl = o3d.geometry.PointCloud()
+		self.plane_fit_visualization = False
+
 		self.fitted = False
 
 		self.z_accuracy_medians = []
@@ -118,7 +123,10 @@ class DepthTest:
 		print(f"Spatial noise: {np.mean(self.spatial_noise_rmses)*1000:.2f} mm")
 		print()
 
-	def visualize_plane_fit(self, point_cloud: o3d.geometry.PointCloud):
+	def show_plane_fit_visualization(self, point_cloud: o3d.geometry.PointCloud):
+		if not self.fitted:
+			print("Plane not fitted yet")
+			return
 		# red - original fitted plane
 		# green - corrected fitted plane
 		# colored - corrected point cloud
@@ -128,8 +136,28 @@ class DepthTest:
 		plane_fit_corrected = self.correct_tilt(plane_fit)
 		plane_fit_corrected.paint_uniform_color([0, 1, 0])
 
-		origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=(0,0,-config.camera_wall_distance))
 
-		o3d.visualization.draw_geometries([origin, point_cloud_corrected, plane_fit_corrected, plane_fit])
+		self.point_cloud_corrected.points = point_cloud_corrected.points
+		self.plane_fit_corrected_pcl.points =  plane_fit_corrected.points
+		self.plane_fit_pcl.points = plane_fit.points
+
+		self.point_cloud_corrected.colors = point_cloud_corrected.colors
+		self.plane_fit_corrected_pcl.colors =  plane_fit_corrected.colors
+		self.plane_fit_pcl.colors = plane_fit.colors
+
+		self.plane_fit_visualization = True
+
+	def hide_plane_fit_visualization(self):
+		empty_pcl = o3d.geometry.PointCloud()
+		self.point_cloud_corrected.points = empty_pcl.points
+		self.plane_fit_corrected_pcl.points =  empty_pcl.points
+		self.plane_fit_pcl.points = empty_pcl.points
+
+		self.point_cloud_corrected.colors = empty_pcl.colors
+		self.plane_fit_corrected_pcl.colors =  empty_pcl.colors
+		self.plane_fit_pcl.colors = empty_pcl.colors
+		
+		self.plane_fit_visualization = False
+
 
 
