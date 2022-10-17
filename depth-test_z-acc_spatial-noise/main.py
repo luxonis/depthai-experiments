@@ -47,6 +47,12 @@ def select_camera_callback(id: int):
 		selected_camera = cameras[id]
 		print(f"Selected camera: {selected_camera.window_name}")
 
+def save_point_clouds_callback():
+	for camera in cameras:
+		o3d.io.write_point_cloud(f"point-clouds/{camera.window_name}.ply", camera.point_cloud)
+
+	print("Point clouds saved")
+
 # point cloud visualization window
 point_cloud_window = o3d.visualization.VisualizerWithKeyCallback()
 point_cloud_window.create_window("Point Cloud")
@@ -54,6 +60,7 @@ point_cloud_window.create_window("Point Cloud")
 point_cloud_window.register_key_callback(ord('Q'), lambda vis: quit_callback())
 point_cloud_window.register_key_callback(ord('F'), lambda vis: fit_plane_callback())
 point_cloud_window.register_key_callback(ord('T'), lambda vis: start_test_callback())
+point_cloud_window.register_key_callback(ord('S'), lambda vis: save_point_clouds_callback())
 point_cloud_window.register_key_callback(ord('1'), lambda vis: select_camera_callback(0))
 point_cloud_window.register_key_callback(ord('2'), lambda vis: select_camera_callback(1))
 
