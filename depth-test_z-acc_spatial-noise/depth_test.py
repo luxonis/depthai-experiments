@@ -13,6 +13,7 @@ class DepthTest:
 		self.fitted = False
 
 		self.z_accuracy_medians = []
+		self.z_means = []
 		self.spatial_noise_rmses = []
 		self.samples = 0
 
@@ -95,6 +96,7 @@ class DepthTest:
 
 	def compute_z_accuracy(self, point_cloud_corrected: o3d.geometry.PointCloud):
 		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
+		self.z_means.append(np.mean(point_cloud_corrected_points[:,2]))
 
 		z_error = -point_cloud_corrected_points[:, 2] - config.camera_wall_distance
 		# remove values below 0.5% and above 99.5%
@@ -112,7 +114,7 @@ class DepthTest:
 	def print_results(self):
 		print("=== Results ===")
 		print(f"{self.samples} measurements")
-		print(f"Z accuracy: {np.mean(self.z_accuracy_medians) / config.camera_wall_distance * 100:.2f}% of GT")
+		print(f"Z accuracy: {np.mean(self.z_accuracy_medians) / config.camera_wall_distance * 100:.2f}% of GT (avg distance: {-np.mean(self.z_means)*1000:.2f}mm)")
 		print(f"Spatial noise: {np.mean(self.spatial_noise_rmses)*1000:.2f} mm")
 		print()
 

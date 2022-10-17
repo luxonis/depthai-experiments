@@ -16,5 +16,5 @@ median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 
 
 # CAMERA POSITION (ground truth)
-camera_wall_distance = 0.982 # m
+camera_wall_distance = 0.996 # m
 n_samples = 10

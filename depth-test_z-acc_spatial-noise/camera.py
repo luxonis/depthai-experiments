@@ -1,131 +1,75 @@
-import depthai as dai
-import cv2
 import numpy as np
 import open3d as o3d
-from typing import List
-import config
-from host_sync import HostSync
+import cv2
+from typing import Optional, Tuple
 
 class Camera:
-    def __init__(self, device_info: dai.DeviceInfo):
-        self.device_info = device_info
-        self.mxid = device_info.getMxId()
-        self._create_pipeline()
-        self.device = dai.Device(self.pipeline, self.device_info)
-
-        self.device.setIrLaserDotProjectorBrightness(1200)
-
-        self.image_queue = self.device.getOutputQueue(name="image", maxSize=10, blocking=False)
-        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=10, blocking=False)
-        self.host_sync = HostSync(["image", "depth"])
-
-        self.image_frame = None
-        self.depth_frame = None
-        self.depth_visualization_frame = None
+    def __init__(self, name=""):
+        self.image_frame: Optional[np.ndarray] = None
+        self.image_visualization_frame: Optional[np.ndarray] = None
+        self.depth_frame: Optional[np.ndarray] = None
+        self.depth_visualization_frame: Optional[np.ndarray] = None
         self.point_cloud = o3d.geometry.PointCloud()
+        self.ROI: Tuple[int, int, int, int] = (45, 41, 373, 285)
+        self.ROI_sorted: Tuple[int, int, int, int] = (45, 41, 373, 285)
 
-        self._load_calibration()
+        self.window_name = f"Camera: {name}"
+        cv2.namedWindow(self.window_name)
+        cv2.createButton("Back",lambda *args: print(args),None,cv2.QT_PUSH_BUTTON,1)
+        cv2.setMouseCallback(self.window_name, lambda e, x, y, flags, param: self.on_mouse(e, x,y, flags, param))
 
-    def __del__(self):
-        self.device.close()
-        print("=== Closed " + self.device_info.getMxId())
+        self.selecting_ROI = False
 
-    def _load_calibration(self):
-        calibration = self.device.readCalibration()
-        self.intrinsics = calibration.getCameraIntrinsics(
-            dai.CameraBoardSocket.RGB if config.COLOR else dai.CameraBoardSocket.RIGHT, 
-            dai.Size2f(*self.image_size)
-        )
-
-        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
-            *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]
-        )
-    
-
-    def _create_pipeline(self):
-        pipeline = dai.Pipeline()
-
-        # Depth cam -> 'depth'
-        mono_left = pipeline.createMonoCamera()
-        mono_right = pipeline.createMonoCamera()
-        mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-        cam_stereo = pipeline.createStereoDepth()
-        cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-        cam_stereo.initialConfig.setMedianFilter(config.median)
-        cam_stereo.initialConfig.setConfidenceThreshold(config.confidence_threshold)
-        cam_stereo.setLeftRightCheck(config.lrcheck)
-        cam_stereo.setExtendedDisparity(config.extended)
-        cam_stereo.setSubpixel(config.subpixel)
-        mono_left.out.link(cam_stereo.left)
-        mono_right.out.link(cam_stereo.right)
-
-        init_config = cam_stereo.initialConfig.get()
-        init_config.postProcessing.speckleFilter.enable = False
-        init_config.postProcessing.speckleFilter.speckleRange = 50
-        init_config.postProcessing.temporalFilter.enable = True
-        init_config.postProcessing.spatialFilter.enable = True
-        init_config.postProcessing.spatialFilter.holeFillingRadius = 2
-        init_config.postProcessing.spatialFilter.numIterations = 1
-        init_config.postProcessing.thresholdFilter.minRange = config.min_range
-        init_config.postProcessing.thresholdFilter.maxRange = config.max_range
-        init_config.postProcessing.decimationFilter.decimationFactor = 1
-        cam_stereo.initialConfig.set(init_config)
-
-        xout_depth = pipeline.createXLinkOut()
-        xout_depth.setStreamName("depth")
-        cam_stereo.depth.link(xout_depth.input)
-
-        
-        # RGB cam or mono right -> 'image'
-        xout_image = pipeline.createXLinkOut()
-        xout_image.setStreamName("image")
-        if config.COLOR:
-            cam_rgb = pipeline.createColorCamera()
-            cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-            cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-            cam_rgb.setIspScale(1, 3)
-            cam_rgb.initialControl.setManualFocus(130)
-            cam_stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-            cam_rgb.isp.link(xout_image.input)
-            self.image_size = cam_rgb.getIspSize()
-        else:
-            cam_stereo.rectifiedRight.link(xout_image.input)
-            self.image_size = mono_right.getResolutionSize()
-
-        self.pipeline = pipeline
+        self.extrinsic = np.eye(4)
+        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic()
 
     def update(self):
-        for queue in [self.depth_queue, self.image_queue]:
-            new_msgs = queue.tryGetAll()
-            if new_msgs is not None:
-                for new_msg in new_msgs:
-                    self.host_sync.add(queue.getName(), new_msg)
+        # capture image and depth frames
+        pass
 
-        msg_sync = self.host_sync.get()
-        if msg_sync is None:
-            return
+    def visualize_image_frame(self):
+        if self.image_frame is not None:
+            image_frame_roi = self.select_ROI(self.image_frame)
+            self.image_visualization_frame = (self.image_frame*0.5 + image_frame_roi*0.5).astype(np.uint8)
+            cv2.imshow(self.window_name, self.image_visualization_frame)
+
+    def on_mouse(self, event, x, y, flags, param):
+        x1, y1, x2, y2 = self.ROI
+        if self.selecting_ROI:
+            x2, y2 = x, y
+        if event == cv2.EVENT_LBUTTONDOWN:
+            x1, y1, x2, y2 = x, y, x, y
+            self.selecting_ROI = True
+        elif event == cv2.EVENT_LBUTTONUP and self.selecting_ROI:
+            self.selecting_ROI = False
+            if abs(x1 - x2) * abs(y1 - y2) == 0:
+                x1, y1, x2, y2 = (0, 0, self.image_frame.shape[1], self.image_frame.shape[0])
         
-        self.depth_frame = msg_sync["depth"].getFrame()
-        self.image_frame = msg_sync["image"].getCvFrame()
-        self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
+        self.ROI = (x1, y1, x2, y2)
+        self.ROI_sorted = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
+        
+
+    def select_ROI(self, frame: np.ndarray):
+        x1, y1, x2, y2 = self.ROI_sorted
+        ROI_mask = np.zeros_like(frame)
+        ROI_mask[y1 : y2, x1 : x2] = 1
+        
+        return frame * ROI_mask
 
 
-    def rgbd_to_point_cloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
-        rgb_o3d = o3d.geometry.Image(image_frame)
+    def rgbd_to_point_cloud(self, downsample=False, remove_noise=False):
+        image_frame = self.select_ROI(self.image_frame)
+        depth_frame = self.select_ROI(self.depth_frame)
+
+        rgb_o3d = o3d.geometry.Image(cv2.cvtColor(image_frame, cv2.COLOR_RGB2BGR))
         df = np.copy(depth_frame).astype(np.float32)
-        # df -= 20
         depth_o3d = o3d.geometry.Image(df)
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
             rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3)
         )
 
         point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
-            rgbd_image, self.pinhole_camera_intrinsic
+            rgbd_image, self.pinhole_camera_intrinsic, self.extrinsic
         )
 
         if downsample:
@@ -140,5 +84,6 @@ class Camera:
         # correct upside down z axis
         R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
         self.point_cloud.rotate(R_camera_to_world, center=(0, 0, 0))
+
 
         return self.point_cloud
