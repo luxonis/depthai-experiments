@@ -1,19 +1,25 @@
 # Depth test
 
 ## Controls
+> The "Point Cloud" window must be focused before using the key commands
+
 | key | action |
 | :--- | :--- |
 | `q` | quit |
-| `r` | relect ROI |
-| `f` | fit a plane to the point cloud |
-| `t` | start the test |
+| `f` | fit a plane to the point cloud of the selected camera |
+| `s` | save the point clouds to the `data` folder |
+| `t` | start the test for the selected camera |
+| `1` | select the OAK camera |
+| `2` | select the Astra camera |
 
 ## Usage
 Run `main.py` with Python 3.
 
-Point the camera perpendicular to the target plane (a wall or board with random noise). Press the `r` key and select the target plane on the image. Press any key to continue.
+Point the camera perpendicular to the target plane (a wall or board with random noise). 
 
- Press the `f` key to fit a plane to the point cloud of the selected region. A window showing original fitted plane in red and rotated one in green will appear. Close it to continue. The horizontal and vertical tilt of the camera will be printed to the console. Try to get those values close to zero.
+Select the ROI on both cameras by dragging on the image view window.
+
+Select a camera and press the `f` key to fit a plane to the point cloud of the selected region. The horizontal and vertical tilt of the camera will be printed to the console. Try to get those values close to zero.
 
 Measure the distance from the camera to the target plane and update the `camera_wall_distance` in [`config.py`](config.py). You can also change the number of samples taken during the test.
 
