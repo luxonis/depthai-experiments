@@ -10,8 +10,7 @@ class Camera:
         self.depth_frame: Optional[np.ndarray] = None
         self.depth_visualization_frame: Optional[np.ndarray] = None
         self.point_cloud = o3d.geometry.PointCloud()
-        self.ROI: Tuple[int, int, int, int] = (45, 41, 373, 285)
-        self.ROI_sorted: Tuple[int, int, int, int] = (45, 41, 373, 285)
+        self.ROI: Tuple[int, int, int, int] = (0, 0, 0, 0)
 
         self.window_name = f"Camera: {name}"
         cv2.namedWindow(self.window_name)
@@ -46,11 +45,12 @@ class Camera:
                 x1, y1, x2, y2 = (0, 0, self.image_frame.shape[1], self.image_frame.shape[0])
         
         self.ROI = (x1, y1, x2, y2)
-        self.ROI_sorted = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
         
 
     def select_ROI(self, frame: np.ndarray):
-        x1, y1, x2, y2 = self.ROI_sorted
+        x1, y1, x2, y2 = self.ROI
+        ROI_sorted = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
+        x1, y1, x2, y2 = ROI_sorted
         ROI_mask = np.zeros_like(frame)
         ROI_mask[y1 : y2, x1 : x2] = 1
         
