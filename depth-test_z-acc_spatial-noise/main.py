@@ -23,6 +23,7 @@ cameras = [oak_camera, astra_camera]
 selected_camera = cameras[0]
 testing = False
 running = True
+solid_color = False
 
 def quit_callback():
 	global running
@@ -63,6 +64,9 @@ def visualize_plane_callback():
 		print(" - colored - corrected point cloud")
 		depth_test.show_plane_fit_visualization(selected_camera.point_cloud)
 
+def toggle_color_callback():
+	global solid_color
+	solid_color = not solid_color
 # point cloud visualization window
 point_cloud_window = o3d.visualization.VisualizerWithKeyCallback()
 point_cloud_window.create_window("Point Cloud")
@@ -72,6 +76,7 @@ point_cloud_window.register_key_callback(ord('F'), lambda vis: fit_plane_callbac
 point_cloud_window.register_key_callback(ord('V'), lambda vis: visualize_plane_callback())
 point_cloud_window.register_key_callback(ord('T'), lambda vis: start_test_callback())
 point_cloud_window.register_key_callback(ord('S'), lambda vis: save_point_clouds_callback())
+point_cloud_window.register_key_callback(ord('C'), lambda vis: toggle_color_callback())
 point_cloud_window.register_key_callback(ord('1'), lambda vis: select_camera_callback(0))
 point_cloud_window.register_key_callback(ord('2'), lambda vis: select_camera_callback(1))
 
@@ -87,8 +92,10 @@ point_cloud_window.add_geometry(origin)
 while running:
 	key = cv2.waitKey(1)
 
-	for camera in cameras:
+	for camera, color in zip(cameras, [(1,0,0), (0,0,1)]):
 		camera.update()
+		if solid_color:
+			camera.point_cloud.paint_uniform_color(color)
 		point_cloud_window.update_geometry(camera.point_cloud)
 	point_cloud_window.update_geometry(depth_test.plane_fit_pcl)
 	point_cloud_window.update_geometry(depth_test.plane_fit_corrected_pcl)

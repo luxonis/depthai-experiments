@@ -11,7 +11,8 @@ from openni import openni2
 import open3d as o3d
 
 openni2.initialize()
-astra_camera = AstraCamera(openni2.Device.open_any())
+# camera = AstraCamera(openni2.Device.open_any())
+camera = OakCamera(dai.DeviceInfo())
 
 checkerboard_inner_size = (9, 6)
 square_size = 0.0252 # m
@@ -25,14 +26,14 @@ corners_image_list = []
 
 while True:
 	key = cv2.waitKey(1)
-	astra_camera.update()
+	camera.update()
 
 	if key == ord('q'):
 		break
 
 	if key == ord('c'):
 		print("Finding checkerboard corners ...")
-		gray = cv2.cvtColor(astra_camera.image_frame, cv2.COLOR_BGR2GRAY)
+		gray = cv2.cvtColor(camera.image_frame, cv2.COLOR_BGR2GRAY)
 		found, corners = cv2.findChessboardCorners(
 			gray, checkerboard_inner_size, 
 			cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
@@ -48,10 +49,10 @@ while True:
 		)
 
 		corners_visualization = cv2.drawChessboardCorners(
-			astra_camera.image_frame.copy(), checkerboard_inner_size, corners, found
+			camera.image_frame.copy(), checkerboard_inner_size, corners, found
 		)
 
-		cv2.imshow(astra_camera.window_name, corners_visualization)
+		cv2.imshow(camera.window_name, corners_visualization)
 		cv2.waitKey()
 
 		corners_world_list.append(corners_world)
@@ -62,7 +63,7 @@ while True:
 	if key == ord('s'):
 		print("Saving calibration ...")
 		ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
-			corners_world_list, corners_image_list, gray.shape[::-1], None, None
+			corners_world_list, corners_image_list, gray.shape[::-1], None, np.zeros((1, 5))
 		)
 
 		print("Camera matrix:")

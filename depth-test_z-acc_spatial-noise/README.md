@@ -8,6 +8,7 @@
 | `q` | quit |
 | `f` | fit a plane to the point cloud of the selected camera |
 | `s` | save the point clouds to the `point-clouds` folder |
+| `c` | toggle rgb / solid color pointcloud |
 | `v` | toggle plane fit visualization |
 | `t` | start the test for the selected camera |
 | `1` | select the OAK camera |

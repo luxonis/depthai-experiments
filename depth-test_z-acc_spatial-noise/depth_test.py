@@ -114,6 +114,7 @@ class DepthTest:
 	def reset(self):
 		self.z_accuracy_medians = []
 		self.spatial_noise_rmses = []
+		self.z_means = []
 		self.samples = 0
 
 	def print_results(self):
