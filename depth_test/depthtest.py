@@ -355,7 +355,7 @@ class Camera:
 
         if colorMode == QtGui.QImage.Format_RGB888:
             depth_frame_color = cv2.cvtColor(depth_frame_color, cv2.COLOR_BGR2RGB)
-            return depth_frame_color, depth_frame
+        return depth_frame_color, depth_frame
 
     def get_resolution(self):
         return self.resolution
