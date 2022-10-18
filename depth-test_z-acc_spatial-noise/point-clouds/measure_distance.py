@@ -10,7 +10,7 @@
 import open3d as o3d
 import numpy as np
 
-pcl = o3d.io.read_point_cloud("point-clouds/Camera: Astra.ply")
+pcl = o3d.io.read_point_cloud("point-clouds/Camera: OAK.ply")
 
 def pick_points(pcd):
     print("")
@@ -24,7 +24,6 @@ def pick_points(pcd):
     vis.destroy_window()
     print("")
     return vis.get_picked_points()
-
 
 points_ids = pick_points(pcl)
 
