@@ -408,6 +408,7 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.height = 0
         self.depth_roi = None
         self.depth_frame = None
+        self.changed_roi = True
 
     def get_depth_frame(self):
         self.update_frame()
@@ -415,6 +416,9 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
 
     def get_roi(self):
         if self.p1 is None and self.p2 is None:
+            return None, None
+        if self.changed_roi:
+            self.changed_roi = False
             return None, None
         resolution = self.camera.get_resolution()
         sbox = [int(self.p1[0] * resolution[0] / self.width), int(self.p1[1] * resolution[1] / self.height)]
@@ -461,6 +465,7 @@ class Frame(QtWidgets.QGraphicsPixmapItem):
         self.p2[0] = clamp(self.p2[0], 0, self.width)
         self.p2[1] = clamp(self.p2[1], 0, self.height)
         self.roi.update(self.p1, self.p2)
+        self.changed_roi = True
 
     def enable_camera(self, lrcheck, subpixel, extended, distortion, resolution):
         self.camera = Camera(lrcheck, subpixel, extended, distortion, resolution)
@@ -606,7 +611,7 @@ class Application(QtWidgets.QMainWindow):
         self.pass_count = 0
         self.fail_count = 0
         self.gt_plane_rmse_avg = 0
-        self.fill_plane_avg = 100
+        self.fill_plane_avg = 0
         self.set_result('')
         self.z_distance = 0
         self.plot_fit_plane = None
@@ -726,7 +731,7 @@ class Application(QtWidgets.QMainWindow):
             valid_cam_coords = np.delete(valid_cam_coords, np.where(
                 valid_cam_coords[2, :] >= np.percentile(valid_cam_coords[2, :], 99.5)), axis=1)
         except IndexError:
-            return
+            return False
 
         # Subsampling 4x4 grid points in the selected ROI
         subsampled_pixels = []
@@ -767,10 +772,9 @@ class Application(QtWidgets.QMainWindow):
         self.plane_fit_rmse = np.sqrt(planeR_ms_offset_rror / valid_cam_coords.shape[1])
         self.gt_plane_rmse = round(np.sqrt(gtR_ms_offset_error / valid_cam_coords.shape[1]), 3)
 
-        totalPixels = (ebox[0] - sbox[0]) * (ebox[1] - sbox[1])
         flatRoi = depth_roi.flatten()
         sampledPixels = np.delete(flatRoi, np.where(flatRoi == 0))
-        self.fill_rate = 100 * sampledPixels.shape[0] / totalPixels
+        self.fill_rate = 100 * sampledPixels.shape[0] / self.pixels_no
 
         if self.ui.c_matplot.isChecked():
             if self.plot_fit_plane is None:
@@ -807,6 +811,14 @@ class Application(QtWidgets.QMainWindow):
                 self.ir = self.ui.c_ir.isChecked()
                 self.scene.get_frame().set_ir(self.ir)
         if not self.calculate_errors():
+            self.count = 0
+            self.gt_plane_rmse_res = 0
+            self.fill_plane_res = 0
+            self.plane_fit_mse_res = 0
+            self.gt_plane_mse_res = 0
+            self.plane_fit_rmse_res = 0
+            self.gt_plane_rmse_med = 0
+            self.set_result('')
             return
 
         if self.ui.r_manual.isChecked():
@@ -833,8 +845,13 @@ class Application(QtWidgets.QMainWindow):
                     self.serial_reader = None
                 self.true_distance = 0
         self.ui.l_lidar.setText(f'{self.true_distance}')
-
-        # if self.true_distance > 0 and self.z_distance > 0:
+        if self.count == 0:
+            self.ui.l_fill_rate.setText(f'{self.fill_plane_res}')
+            self.ui.l_gt_plane_rmse.setText(f'{self.gt_plane_rmse_res}')
+            self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse_res}')
+            self.ui.l_gt_plane_mse.setText(f'{self.plane_fit_rmse_res}')
+            self.ui.l_plane_fit_rmse.setText(f'{self.plane_fit_rmse_res}')
+            self.ui.l_pixels_no.setText(f'{self.pixels_no}')
         if self.count < 30:
             self.gt_plane_rmse_avg += self.gt_plane_rmse / 30
             self.gt_plane_rmse_arr.append(self.gt_plane_rmse)
@@ -844,12 +861,6 @@ class Application(QtWidgets.QMainWindow):
             self.plane_fit_rmse_avg += self.plane_fit_rmse / 30
             self.count += 1
         else:
-            self.ui.l_fill_rate.setText(f'{self.fill_plane_avg}')
-            self.ui.l_gt_plane_rmse.setText(f'{self.gt_plane_rmse_avg}')
-            self.ui.l_plane_fit_mse.setText(f'{self.plane_fit_mse_avg}')
-            self.ui.l_gt_plane_mse.setText(f'{self.gt_plane_mse_avg}')
-            self.ui.l_plane_fit_rmse.setText(f'{self.plane_fit_rmse_avg}')
-            self.ui.l_pixels_no.setText(f'{self.pixels_no}')
             self.gt_plane_rmse_res = self.gt_plane_rmse_avg
             self.gt_plane_rmse_avg = 0
             self.fill_plane_res = self.fill_plane_avg
