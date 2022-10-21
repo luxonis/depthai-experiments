@@ -706,7 +706,7 @@ class Application(QtWidgets.QMainWindow):
             side = 'right'
         elif self.ui.r_center.isChecked():
             side = 'center'
-        file.write(f'{int(time.time())},{mx_id},{self.true_distance},{self.plane_fit_mse_res},{self.gt_plane_mse_res},\
+        file.write(f'{int(time.time())},"{mx_id}",{self.true_distance},{self.plane_fit_mse_res},{self.gt_plane_mse_res},\
                      {self.plane_fit_rmse_res},{self.gt_plane_rmse_res},{self.gt_plane_rmse_med},{self.fill_plane_res},\
                      {self.pixels_no},{self.ui.l_result.text()},{side}\n')
         file.close()
