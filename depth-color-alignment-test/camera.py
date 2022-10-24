@@ -26,10 +26,13 @@ class Camera:
         self.depth_visualization_frame = None
 
         # camera window
-        self.window_name = f"[{self.friendly_id}] Camera - mxid: {self.mxid}"
+        self.image_window_name = f"[{self.friendly_id}] Camera RGB - mxid: {self.mxid}"
+        self.depth_window_name = f"[{self.friendly_id}] Camera depth - mxid: {self.mxid}"
         if show_video:
-            cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow(self.window_name, 640, 360)
+            cv2.namedWindow(self.image_window_name, cv2.WINDOW_NORMAL)
+            cv2.namedWindow(self.depth_window_name, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(self.image_window_name, 640, 360)
+            cv2.resizeWindow(self.depth_window_name, 640, 360)
 
         self._load_calibration()
 
@@ -121,9 +124,8 @@ class Camera:
         self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
         self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
+        self.depth_visualization_frame[self.depth_frame <= 1] = np.array([255, 255, 0])
 
         if self.show_video:
-            if self.show_depth:
-                cv2.imshow(self.window_name, self.depth_visualization_frame)
-            else:
-                cv2.imshow(self.window_name, self.image_frame)
+            cv2.imshow(self.depth_window_name, self.depth_visualization_frame)
+            cv2.imshow(self.image_window_name, self.image_frame)
