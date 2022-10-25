@@ -818,6 +818,7 @@ class Application(QtWidgets.QMainWindow):
             self.gt_plane_mse_res = 0
             self.plane_fit_rmse_res = 0
             self.gt_plane_rmse_med = 0
+            self.fill_plane_avg = 0
             self.set_result('')
             return
 
