@@ -1,43 +1,61 @@
 import cv2
 import numpy as np
 from typing import Tuple, Optional
+from collections import deque
 
 class AlignmentTest:
 
 	def __init__(self):
-		self.alignments = []
+		self.alignments = deque(maxlen=20)
 		self.roi: Optional[Tuple[int, int, int, int]] = None
 
 	def add_frame(self, depth_frame, image_frame):
-		image_thresh = self.image_threshold(image_frame)
-		depth_thresh = self.depth_threshold(depth_frame)
+		image_elevated, image_floor = self.image_threshold(image_frame)
+		depth_elevated, depth_floor = self.depth_threshold(depth_frame)
 
-		unknow_pixels = (depth_frame == 0)
+		error = (image_elevated != depth_elevated) & (image_floor != depth_floor)
+		selection = (depth_elevated & image_elevated) | (depth_floor & image_floor)
 
-		overlap = (image_thresh == depth_thresh) & ~unknow_pixels
+		error_area = np.count_nonzero(error)
+		total_area = np.count_nonzero(selection)
 
-		overlap_area = np.count_nonzero(overlap)
-		total_area = np.count_nonzero(~unknow_pixels)
+		if total_area != 0:
+			error_ratio = error_area / total_area
+			self.alignments.append(error_ratio)
 
-		overlap_ratio = overlap_area / total_area
+		# visualization
+		image_segmentation = np.stack((image_floor, np.zeros_like(image_elevated), image_elevated), axis=-1).astype(np.uint8) * 255
+		depth_segmentation = np.stack((depth_floor, np.zeros_like(depth_elevated), depth_elevated), axis=-1).astype(np.uint8) * 255
+		
+		error_vis = np.stack((error, )*3, axis=-1).astype(np.uint8) * 255
+		selection_vis = np.stack((selection, )*3, axis=-1).astype(np.uint8) * 255
 
-		self.alignments.append(overlap_ratio)
-
-		return overlap_ratio
+		return image_segmentation, depth_segmentation, error_vis, selection_vis
 
 	def image_threshold(self, image_frame: np.ndarray):
-		if self.roi is None: return np.zeros(image_frame.shape[:2], dtype=np.bool)
+		zeros = np.zeros(image_frame.shape[:2], dtype=np.bool)
+		if self.roi is None: return zeros, zeros
 
 		hsv = cv2.cvtColor(image_frame, cv2.COLOR_RGB2HSV)
-		return ~((hsv[:,:,0] < (self.avg_hue + 10)) & (hsv[:,:,0] > (self.avg_hue - 10)))
+		hue = hsv[:,:,0]
+
+		elevated = (hue < (self.avg_hue + 10)) & (hue > (self.avg_hue - 10))
+		floor = ~elevated
+
+		return elevated, floor
 
 
 	def depth_threshold(self, depth_frame: np.ndarray):
-		if self.roi is None: return np.zeros(depth_frame.shape[:2], dtype=np.bool)
+		zeros = np.zeros(depth_frame.shape[:2], dtype=np.bool)
+		if self.roi is None: return zeros, zeros
 
-		thresh = depth_frame > (self.avg_depth + 50)
+		padding_top = 20 # mm
+		padding_bottom = 100 # mm
+		mid_depth = (self.avg_depth_elevated + self.avg_depth_floor) / 2
+		elevated = (mid_depth > depth_frame) & (depth_frame > (self.avg_depth_elevated - padding_top))
+		floor = ((self.avg_depth_floor + padding_bottom) > depth_frame) & (depth_frame > mid_depth)
 
-		return thresh
+		return elevated, floor
 
 	def reset(self):
 		self.alignments = []
@@ -49,23 +67,24 @@ class AlignmentTest:
 		avg_alignment = sum(self.alignments) / len(self.alignments)
 		return avg_alignment
 
-	def set_roi(self, roi, gray: np.ndarray, depth_frame: np.ndarray):
+	def set_roi(self, roi, image_frame: np.ndarray, depth_frame: np.ndarray):
 		self.roi = roi
 
-		hsv = cv2.cvtColor(gray, cv2.COLOR_RGB2HSV)
+		hsv = cv2.cvtColor(image_frame, cv2.COLOR_RGB2HSV)
 		hue = hsv[:,:,0]
 
 		# Crop image and depth frame
-		hue = hue[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
-		depth_frame = depth_frame[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
+		hue_elevated = hue[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
+		depth_elevated = depth_frame[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
 
-		self.min_depth = np.min(depth_frame)
-		self.max_depth = np.max(depth_frame)
-		self.avg_depth = np.mean(depth_frame)
 
-		self.min_hue = np.min(hue)
-		self.max_hue = np.max(hue)
-		self.avg_hue = np.mean(hue)
+		depth_elevated_sum = np.sum(depth_elevated)
+		depth_sum = np.sum(depth_frame)
+		depth_elevated_count = depth_elevated.shape[0] * depth_elevated.shape[1]
+		depth_count = depth_frame.shape[0] * depth_frame.shape[1]
 
-		print(f"ROI set: min_depth={self.min_depth}, max_depth={self.max_depth}, avg_depth={self.avg_depth}, min_hue={self.min_hue}, max_hue={self.max_hue}, avg_hue={self.avg_hue}")
+		self.avg_depth_elevated = depth_elevated_sum / depth_elevated_count
+		self.avg_depth_floor = (depth_sum - depth_elevated_sum) / (depth_count - depth_elevated_count)
 
+
+		self.avg_hue = np.mean(hue_elevated)

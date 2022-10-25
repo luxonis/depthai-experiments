@@ -25,19 +25,23 @@ while True:
 
 	if camera.image_frame is not None and camera.depth_visualization_frame is not None:
 
-		# alignmentTest.add_frame(camera.depth_frame, camera.image_frame)
+		image_segmentation, depth_segmentation, error, selection = alignmentTest.add_frame(camera.depth_frame, camera.image_frame)
 
-		depth_mask = alignmentTest.depth_threshold(camera.depth_frame)
-		depth_mask3 = np.stack((depth_mask, camera.depth_frame == 0, ~depth_mask), axis=-1)
+		cv2.putText(image_segmentation, "Image segmentation", (10, 20), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 255), 2)
+		cv2.putText(depth_segmentation, "Depth segmentation", (10, 20), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 255), 2)
+		cv2.putText(selection, "Selection", (10, 20), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 0), 2)
 
-		image_mask = alignmentTest.image_threshold(camera.image_frame)
-		image_mask3 = np.stack((image_mask, np.zeros_like(image_mask), ~image_mask), axis=-1)
+		res = alignmentTest.get_results()
+		if res is not None:
+			cv2.putText(error, f"Error: {res*100:.2f}%", (10, 20), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 0), 2)
+		else:
+			cv2.putText(error, "Error: N/A", (10, 20), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 0), 2)
 
-		cv2.imshow(camera.image_window_name, camera.image_frame)
-		cv2.imshow(camera.depth_window_name, camera.depth_visualization_frame)
-		cv2.imshow("depth_mask", (depth_mask3*255).astype(np.uint8))
-		cv2.imshow("image_mask", (image_mask3*255).astype(np.uint8))
-		cv2.imshow("mono", camera.mono_frame)
+		row1 = np.hstack((camera.image_frame, camera.depth_visualization_frame))
+		row2 = np.hstack((image_segmentation, depth_segmentation))
+		row3 = np.hstack((selection, error))
+		visualization = np.vstack((row1, row2, row3))
+		cv2.imshow("Visualization", visualization)
 
 
 	if key == ord('s'):
@@ -45,17 +49,6 @@ while True:
 		if(roi[2] > 0 and roi[3] > 0):
 			print(roi)
 			alignmentTest.set_roi(roi, camera.image_frame, camera.depth_frame)
-
-
-	if key == ord('c'):
-		alignmentTest.add_frame(camera.depth_frame, camera.image_frame)
-		print("Added frame to alignment test")
-
-	if key == ord('r'):
-		res = alignmentTest.get_results()
-		print(f"Alignment test results: {res}")
-
-		alignmentTest.reset()
 
 	if key == ord('q'):
 		break
