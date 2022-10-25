@@ -24,29 +24,28 @@ while True:
 	camera.update()
 
 	if camera.image_frame is not None and camera.depth_visualization_frame is not None:
-		# vis = (camera.image_frame * 0.5 + camera.depth_visualization_frame * 0.5).astype(np.uint8)
-		# thresh = alignmentTest.image_threshold(camera.image_frame)
-		# vis = (np.stack((thresh,)*3, axis=-1) * camera.image_frame).astype(np.uint8)
 
-		# hsv = cv2.cvtColor(camera.image_frame, cv2.COLOR_RGB2HSV)
-		# thresh = (min_hue < hsv[:,:,0]) & (hsv[:,:,0] < max_hue)
-		# vis = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-		# vis = camera.image_frame.copy()
-		# vis[thresh] = [0, 0, 255]
-		# cv2.imshow(camera.window_name, vis)
+		# alignmentTest.add_frame(camera.depth_frame, camera.image_frame)
 
 		depth_mask = alignmentTest.depth_threshold(camera.depth_frame)
-		depth_mask3 = np.stack((depth_mask,)*3, axis=-1)
+		depth_mask3 = np.stack((depth_mask, camera.depth_frame == 0, ~depth_mask), axis=-1)
+
+		image_mask = alignmentTest.image_threshold(camera.image_frame)
+		image_mask3 = np.stack((image_mask, np.zeros_like(image_mask), ~image_mask), axis=-1)
 
 		cv2.imshow(camera.image_window_name, camera.image_frame)
 		cv2.imshow(camera.depth_window_name, camera.depth_visualization_frame)
 		cv2.imshow("depth_mask", (depth_mask3*255).astype(np.uint8))
+		cv2.imshow("image_mask", (image_mask3*255).astype(np.uint8))
+		cv2.imshow("mono", camera.mono_frame)
 
-		pass
 
 	if key == ord('s'):
 		roi = cv2.selectROI(camera.image_window_name, camera.image_frame, False, False)
-		alignmentTest.set_roi(roi, camera.image_frame, camera.depth_frame)
+		if(roi[2] > 0 and roi[3] > 0):
+			print(roi)
+			alignmentTest.set_roi(roi, camera.image_frame, camera.depth_frame)
+
 
 	if key == ord('c'):
 		alignmentTest.add_frame(camera.depth_frame, camera.image_frame)

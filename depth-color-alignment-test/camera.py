@@ -15,11 +15,12 @@ class Camera:
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
 
-        self.device.setIrLaserDotProjectorBrightness(1200)
+        self.device.setIrLaserDotProjectorBrightness(600)
 
-        self.image_queue = self.device.getOutputQueue(name="image", maxSize=1, blocking=False)
-        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=1, blocking=False)
-        self.host_sync = HostSync(["image", "depth"])
+        self.image_queue = self.device.getOutputQueue(name="image", maxSize=10, blocking=False)
+        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=10, blocking=False)
+        self.mono_queue = self.device.getOutputQueue(name="mono", maxSize=10, blocking=False)
+        self.host_sync = HostSync(["image", "depth", "mono"])
 
         self.image_frame = None
         self.depth_frame = None
@@ -89,6 +90,10 @@ class Camera:
         xout_depth.setStreamName("depth")
         cam_stereo.depth.link(xout_depth.input)
 
+        xout_mono = pipeline.createXLinkOut()
+        xout_mono.setStreamName("mono")
+        mono_left.out.link(xout_mono.input)
+
         
         # RGB cam or mono right -> 'image'
         xout_image = pipeline.createXLinkOut()
@@ -109,7 +114,7 @@ class Camera:
         self.pipeline = pipeline
 
     def update(self):
-        for queue in [self.depth_queue, self.image_queue]:
+        for queue in [self.depth_queue, self.image_queue, self.mono_queue]:
             new_msgs = queue.tryGetAll()
             if new_msgs is not None:
                 for new_msg in new_msgs:
@@ -121,6 +126,7 @@ class Camera:
         
         self.depth_frame = msg_sync["depth"].getFrame()
         self.image_frame = msg_sync["image"].getCvFrame()
+        self.mono_frame = msg_sync["mono"].getCvFrame()
         self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
         self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
