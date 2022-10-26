@@ -1,26 +1,21 @@
-class HostSync:
-    def __init__(self):
-        self.arrays = {}
-    def add_msg(self, name, msg):
-        if not name in self.arrays:
-            self.arrays[name] = []
-        # Add msg to array
-        self.arrays[name].append({'msg': msg, 'seq': msg.getSequenceNum()})
+import numpy as np
+from functools import reduce
+from collections import deque
+from typing import List
 
-        synced = {}
-        for name, arr in self.arrays.items():
-            for i, obj in enumerate(arr):
-                if msg.getSequenceNum() == obj['seq']:
-                    synced[name] = obj['msg']
-                    break
-        # If there are 2 (all) synced msgs, remove all old msgs
-        # and return synced msgs
-        if len(synced) == 2: # color, depth
-            # Remove old msgs
-            for name, arr in self.arrays.items():
-                for i, obj in enumerate(arr):
-                    if obj['seq'] < msg.getSequenceNum():
-                        arr.remove(obj)
-                    else: break
-            return synced
-        return False
+class HostSync:
+    def __init__(self, streams: List[str], maxlen=50):
+        self.queues = {stream: deque(maxlen=maxlen) for stream in streams}
+
+    def add(self, stream: str, msg):
+        self.queues[stream].append({'msg': msg, 'seq': msg.getSequenceNum()})
+
+    def get(self):
+        seqs = [np.array([msg['seq'] for msg in msgs]) for msgs in self.queues.values()]
+        matching_seqs = reduce(np.intersect1d, seqs)
+        if len(matching_seqs) == 0:
+            return None
+        seq = np.max(matching_seqs)
+        res = {stream: next(msg['msg'] for msg in msgs if msg['seq'] == seq) for stream, msgs in self.queues.items()}
+        self.queues = {stream: deque([msg for msg in msgs if msg['seq'] > seq], maxlen=msgs.maxlen) for stream, msgs in self.queues.items()}
+        return res

@@ -18,21 +18,4 @@ for device_info in device_infos:
     cameras.append(Camera(device_info, len(cameras)+1, show_video=True, show_point_cloud=False))
 
 
-point_cloud_visualizer = PointCloudVisualizer(cameras)
-
-while True:
-    key = cv2.waitKey(1)
-
-    # QUIT - press `q` to quit
-    if key == ord('q'):
-        break
-
-    # TOGGLE DEPTH VIEW - press `d` to toggle depth view
-    if key == ord('d'):
-        for camera in cameras:
-            camera.show_detph = not camera.show_detph
-
-    for camera in cameras:
-        camera.update()
-
-    point_cloud_visualizer.update()
+PointCloudVisualizer(cameras)

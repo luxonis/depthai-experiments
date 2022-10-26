@@ -10,16 +10,18 @@ class Camera:
     def __init__(self, device_info: dai.DeviceInfo, friendly_id: int, show_video: bool = True, show_point_cloud: bool = True):
         self.show_video = show_video
         self.show_point_cloud = show_point_cloud
-        self.show_detph = False
+        self.show_depth = False
         self.device_info = device_info
         self.friendly_id = friendly_id
         self.mxid = device_info.getMxId()
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
 
-        self.image_queue = self.device.getOutputQueue(name="image", maxSize=1, blocking=False)
-        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=1, blocking=False)
-        self.host_sync = HostSync()
+        self.device.setIrLaserDotProjectorBrightness(1200)
+
+        self.image_queue = self.device.getOutputQueue(name="image", maxSize=10, blocking=False)
+        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=10, blocking=False)
+        self.host_sync = HostSync(["image", "depth"])
 
         self.image_frame = None
         self.depth_frame = None
@@ -68,8 +70,16 @@ class Camera:
             *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]
         )
 
+        try:
+            self.point_cloud_alignment = np.load(f"{config.calibration_data_dir}/point_cloud_alignment_{self.mxid}.npy")
+        except:
+            self.point_cloud_alignment = np.eye(4)
+
         print(self.pinhole_camera_intrinsic)
-            
+
+    def save_point_cloud_alignment(self):
+        np.save(f"{config.calibration_data_dir}/point_cloud_alignment_{self.mxid}.npy", self.point_cloud_alignment)
+    
 
     def _create_pipeline(self):
         pipeline = dai.Pipeline()
@@ -128,36 +138,41 @@ class Camera:
 
     def update(self):
         for queue in [self.depth_queue, self.image_queue]:
-            new_msg = queue.tryGet()
-            if new_msg is not None:
-                msgs = self.host_sync.add_msg(queue.getName(), new_msg)
-                if msgs == False:
-                    break
+            new_msgs = queue.tryGetAll()
+            if new_msgs is not None:
+                for new_msg in new_msgs:
+                    self.host_sync.add(queue.getName(), new_msg)
 
-                self.depth_frame = msgs["depth"].getFrame()
-                self.image_frame = msgs["image"].getCvFrame()
-                self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-                self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
+        msg_sync = self.host_sync.get()
+        if msg_sync is None:
+            return
+        
+        self.depth_frame = msg_sync["depth"].getFrame()
+        self.image_frame = msg_sync["image"].getCvFrame()
+        self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
+        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
 
-                if self.show_video:
-                    if self.show_detph:
-                        cv2.imshow(self.window_name, self.depth_visualization_frame)
-                    else:
-                        cv2.imshow(self.window_name, self.image_frame)
+        if self.show_video:
+            if self.show_depth:
+                cv2.imshow(self.window_name, self.depth_visualization_frame)
+            else:
+                cv2.imshow(self.window_name, self.image_frame)
 
-                rgb = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2RGB)
-                self.rgbd_to_point_cloud(self.depth_frame, rgb)
+        rgb = cv2.cvtColor(self.image_frame, cv2.COLOR_BGR2RGB)
+        self.rgbd_to_point_cloud(self.depth_frame, rgb)
 
-                if self.show_point_cloud:
-                    self.point_cloud_window.update_geometry(self.point_cloud)
-                    self.point_cloud_window.poll_events()
-                    self.point_cloud_window.update_renderer()
+        if self.show_point_cloud:
+            self.point_cloud_window.update_geometry(self.point_cloud)
+            self.point_cloud_window.poll_events()
+            self.point_cloud_window.update_renderer()
 
 
     def rgbd_to_point_cloud(self, depth_frame, image_frame, downsample=False, remove_noise=False):
         rgb_o3d = o3d.geometry.Image(image_frame)
-        depth_o3d = o3d.geometry.Image(depth_frame)
+        df = np.copy(depth_frame).astype(np.float32)
+        # df -= 20
+        depth_o3d = o3d.geometry.Image(df)
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
             rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3)
         )
@@ -179,5 +194,8 @@ class Camera:
         T = np.eye(4)
         T[2,2] = -1
         self.point_cloud.transform(T)
+
+        # apply point cloud alignment transform
+        self.point_cloud.transform(self.point_cloud_alignment)
 
         return self.point_cloud
