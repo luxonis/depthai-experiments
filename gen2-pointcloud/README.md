@@ -1,7 +1,10 @@
 # DepthAI Pointcloud generation
 
 We have two different pointcloud demos which generate the pointcloud either on the OAK device or on the host computer (using `open3d`).
+
 See [demo here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices/rgbd-pointcloud-fusion) for **pointcloud fusion from multiple OAKs**.
+
+![image](https://user-images.githubusercontent.com/18037362/198793604-22dd35a5-0cc0-4c5d-b3dc-b62c0ecbc35a.png)
 
 ### On-device Pointcloud NN model
 
