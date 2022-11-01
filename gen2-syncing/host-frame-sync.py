@@ -6,7 +6,8 @@ import numpy as np
 import time
 import argparse
 
-parser = argparse.ArgumentParser(epilog='Press C to capture a set of frames.')
+parser = argparse.ArgumentParser(epilog='Press C to capture a set of frames.',
+                                 formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
 parser.add_argument('-d', '--draw', default=False, action='store_true',
@@ -15,7 +16,16 @@ parser.add_argument('-v', '--verbose', default=0, action='count',
                     help='Verbose, -vv for more verbosity')
 parser.add_argument('-t', '--dev_timestamp', default=False, action='store_true',
                     help='Get device timestamps, not synced to host. For debug')
-
+parser.add_argument('-hw', '--hardware_sync', const='ext', choices={'ext', 'cam', 'gpio'}, nargs="?",
+                    help='Enable hardware sync (instead of software sync) for capture.\n'
+                    'Optional parameter to configure sync type:\n'
+                    '  ext  - external, signal rate should be less than configured FPS\n'
+                    '         [default option if unspecified]\n'
+                    '         Note: signal should be provided inverted on M8 connector,\n'
+                    '               ideally with a short active time (under 1ms)\n'
+                    '  cam  - sync signal outputted by Left camera, internally on device\n'
+                    '         (no output on PoE M8 connector)\n'
+                    '  gpio - generated internally on device by a SoC GPIO at about 5Hz rate')
 args = parser.parse_args()
 
 cam_list = ['left', 'rgb', 'right']
@@ -50,6 +60,52 @@ for c in cam_list:
     cam[c].setBoardSocket(cam_socket_opts[c])
     cam[c].setFps(args.fps)
 
+# Note1: IMX378 (RGB camera) doesn't support `setExternalTrigger`
+# Note2: `.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)` for OV9282
+#         (left, right cams) has very tight timing requirements
+if args.hardware_sync in ['ext', 'gpio']:
+    cam['rgb'  ].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
+    if 0:
+        cam['left' ].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
+        cam['right'].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
+    else:
+        cam['left' ].initialControl.setExternalTrigger(1, 0) # (2, 1)
+        cam['right'].initialControl.setExternalTrigger(1, 0)
+        print("WARNING: Configured FPS ignored for L/R...")
+        cam['left' ].setFps(60)
+        cam['right'].setFps(60)
+    if args.hardware_sync == 'gpio':
+        scriptTrigger = pipeline.create(dai.node.Script)
+        scriptTrigger.setProcessor(dai.ProcessorType.LEON_CSS)
+        scriptTrigger.setScript("""
+            import GPIO, time
+            gpioNum = 41  # FSIN pins connected to this SoC GPIO
+            activeLevel = GPIO.HIGH
+            timeActive   = 0.001
+            timeInactive = 0.199
+
+            GPIO.setup(gpioNum, GPIO.OUT)
+            if 0: 
+                # For NG9097 R1M1E1 only (just few samples, no mass production),
+                # no optocoupler and where bi-dir is possible
+                fsyncDirGpio = 39
+                GPIO.setup(fsyncDirGpio, GPIO.OUT)
+                GPIO.write(fsyncDirGpio, GPIO.HIGH) # FSYNC output on M8 connector
+            while True:
+                time.sleep(timeInactive)
+
+                GPIO.write(gpioNum, activeLevel)
+                time.sleep(timeActive)
+
+                GPIO.write(gpioNum, not activeLevel)
+        """)
+if args.hardware_sync == 'cam':
+    cam['rgb'  ].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
+    cam['left' ].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.OUTPUT)
+    cam['right'].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
+    cam['rgb'  ].setFps(args.fps + 0.1) # Note: slightly larger than for L/R
+    cam['left' ].setFps(args.fps)
+    cam['right'].setFps(args.fps)
 
 def get_seq(packet):
     return packet.getSequenceNum()

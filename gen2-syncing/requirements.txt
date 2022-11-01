@@ -1,4 +1,4 @@
-depthai==2.16.0.0
+depthai==2.19.0.0.dev+76c82793519dd65c219204d5b5c530c64c5d0f70
 blobconverter==1.2.9
 opencv-python==4.5.1.48
 argparse
