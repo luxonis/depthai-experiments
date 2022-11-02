@@ -12,7 +12,7 @@ class Camera:
         self.point_cloud = o3d.geometry.PointCloud()
         self.ROI: Tuple[int, int, int, int] = (0, 0, 0, 0)
 
-        self.window_name = f"Camera: {name}"
+        self.window_name = f"Camera_{name}"
         cv2.namedWindow(self.window_name)
         cv2.createButton("Back",lambda *args: print(args),None,cv2.QT_PUSH_BUTTON,1)
         cv2.setMouseCallback(self.window_name, lambda e, x, y, flags, param: self.on_mouse(e, x,y, flags, param))

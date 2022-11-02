@@ -10,7 +10,7 @@
 import open3d as o3d
 import numpy as np
 
-pcl = o3d.io.read_point_cloud("point-clouds/Camera: OAK.ply")
+pcl = o3d.io.read_point_cloud("point-clouds/Camera_OAK.ply")
 
 def pick_points(pcd):
     print("")
