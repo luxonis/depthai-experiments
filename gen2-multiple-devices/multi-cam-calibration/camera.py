@@ -107,7 +107,7 @@ class Camera:
 
         return still_rgb
 
-    def draw_origin(self, frame_rgb: cv2.Mat):
+    def draw_origin(self, frame_rgb: np.ndarray):
         points, _ = cv2.projectPoints(
             np.float64([[0, 0, 0], [0.1, 0, 0], [0, 0.1, 0], [0, 0, -0.1]]), 
             self.rot_vec, self.trans_vec, self.intrinsic_mat, self.distortion_coef
@@ -115,9 +115,9 @@ class Camera:
         [p_0, p_x, p_y, p_z] = points.astype(np.int64)
 
         reprojection = frame_rgb.copy()
-        reprojection = cv2.line(reprojection, p_0[0], p_x[0], (0, 0, 255), 5)
-        reprojection = cv2.line(reprojection, p_0[0], p_y[0], (0, 255, 0), 5)
-        reprojection = cv2.line(reprojection, p_0[0], p_z[0], (255, 0, 0), 5)
+        reprojection = cv2.line(reprojection, tuple(p_0[0]), tuple(p_x[0]), (0, 0, 255), 5)
+        reprojection = cv2.line(reprojection, tuple(p_0[0]), tuple(p_y[0]), (0, 255, 0), 5)
+        reprojection = cv2.line(reprojection, tuple(p_0[0]), tuple(p_z[0]), (255, 0, 0), 5)
 
         return reprojection
 
