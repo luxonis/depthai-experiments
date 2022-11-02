@@ -3,7 +3,6 @@
 from sys import maxsize
 import cv2
 import depthai as dai
-import open3d as o3d
 
 COLOR = True
 
@@ -32,8 +31,6 @@ monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 stereo = pipeline.createStereoDepth()
 stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 stereo.initialConfig.setMedianFilter(median)
-# stereo.initialConfig.setConfidenceThreshold(255)
-
 stereo.setLeftRightCheck(lrcheck)
 stereo.setExtendedDisparity(extended)
 stereo.setSubpixel(subpixel)
@@ -48,7 +45,7 @@ config.postProcessing.spatialFilter.enable = True
 config.postProcessing.spatialFilter.holeFillingRadius = 2
 config.postProcessing.spatialFilter.numIterations = 1
 config.postProcessing.thresholdFilter.minRange = 400
-config.postProcessing.thresholdFilter.maxRange = 200000
+config.postProcessing.thresholdFilter.maxRange = 2000
 config.postProcessing.decimationFilter.decimationFactor = 1
 stereo.initialConfig.set(config)
 
@@ -132,10 +129,7 @@ with dai.Device(pipeline) as device:
                 if msgs:
                     depth = msgs["depth"].getFrame()
                     color = msgs["colorize"].getCvFrame()
-                    depth_vis = cv2.normalize(depth, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                    depth_vis = cv2.equalizeHist(depth_vis)
-                    depth_vis = cv2.applyColorMap(depth_vis, cv2.COLORMAP_HOT)
-                    cv2.imshow("depth", depth_vis)
+
                     cv2.imshow("color", color)
                     rgb = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
                     pcl_converter.rgbd_to_projection(depth, rgb)
