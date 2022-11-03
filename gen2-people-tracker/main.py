@@ -1,34 +1,25 @@
 #!/usr/bin/env python3
 
-from depthai_sdk import Camera
+from depthai_sdk import OakCamera, TrackerPacket, Visualizer, TextPosition
 import depthai as dai
+from people_tracker import PeopleTracker
+import cv2
 
-with Camera() as cam:
-    rgb_camera = cam.create_camera(args=True, out=True) # args = True to enable option to stream from mp4
-    person_tracker = cam.create_nn('person-detection-retail-0013', rgb_camera, tracker=True, out=True) # Path to json
-    person_tracker.config_tracker([1], type=dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
-    
-    cam.start()
-    
-    visualizer = cam.create_visualizer(rgb_camera, person_tracker)
+pt = PeopleTracker()
 
-    data = ''
-    def calc_movement(msg: dai.Tracklets):
-        global data
-        # Calc whether person has gone up/down/left/right
-        up, down, left, right = utils.calculate_tracklet_movement(msg)
-        data = f"Up: {up}, Down: {down}"
+with OakCamera(replay='people-tracking-above-03') as oak:
+    color_cam = oak.create_camera('color')
+    tracker = oak.create_nn('person-detection-retail-0013', color_cam, tracker=True)
+    tracker.config_nn(confThreshold=0.6)
+    tracker.config_tracker(trackLabels=[1], type=dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
 
-    def vis_callback(frame):
-        global data
-        # Add some overlay to the frame
-        visualizer.print(data) # Write some stuff to the frame
-        visualizer.show(frame) # Now do the cv2.imshow
+    def cb(packet: TrackerPacket, vis: Visualizer):
+        left, right, up, down = pt.calculate_tracklet_movement(packet.daiTracklets)
 
-    cam.create_msg_callback(person_tracker, calc_movement)
+        vis.add_text(f"Up: {up}, Down: {down}", position=TextPosition.TOP_LEFT)
+        vis.draw(packet.frame)
 
-    while cam.running():
-        msgs = cam.get_synced_msgs()
-        visualizer.visualize(msgs, vis_callback) # Don't show frame just yet
+        cv2.imshow('People Tracker', packet.frame)
 
-        cam.poll() # name tbd (does its GUI stuff)
+    oak.visualize(tracker.out.tracker, callback=cb, record='demo.mp4')
+    oak.start(blocking=True)

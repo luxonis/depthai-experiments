@@ -1,19 +1,57 @@
-#!/usr/bin/env python3
 
-from depthai_sdk import Camera
+from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, TextPosition
+import numpy as np
+import cv2
+MIN_THRESHOLD = 15. # Degrees in yaw/pitch/roll to be considered as head movement
 
-with Camera() as cam:
-    rgb_camera = cam.create_camera(out=True)
-    face_det = cam.create_nn("face-detection-retail-0004", rgb_camera, spatials=True, out=True)
-    # If input from an object detection NN, crop around BB from HQ frames for new model
-    headpose_nn = cam.create_nn("head-pose-estimation-adas-0001", input=face_det, out=True)
+with OakCamera() as oak:
+    color = oak.create_camera('color')
+    det = oak.create_nn('face-detection-retail-0004', color)
+    # Passthrough is enabled for debugging purposes
+    # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
+    det.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
 
-    cam.start()
-    
-    two_stage_vis = cam.create_visualizer(rgb_camera, face_det, headpose_nn)
+    emotion_nn = oak.create_nn('head-pose-estimation-adas-0001', input=det)
+    # emotion_nn.config_multistage_nn(show_cropped_frames=True) # For debugging
 
-    while cam.running():
-        msgs = cam.get_synced_msgs()
-        two_stage_vis.visualize(msgs)
+    def cb(packet: TwoStagePacket, visualizer):
+        for det, rec in zip(packet.detections, packet.nnData):
+            yaw = rec.getLayerFp16('angle_y_fc')[0]
+            pitch = rec.getLayerFp16('angle_p_fc')[0]
+            roll = rec.getLayerFp16('angle_r_fc')[0]
+            print("pitch:{:.0f}, yaw:{:.0f}, roll:{:.0f}".format(pitch,yaw,roll))
 
-        cam.poll()
+            vals = np.array([abs(pitch),abs(yaw),abs(roll)])
+            max_index = np.argmax(vals)
+
+            if vals[max_index] < MIN_THRESHOLD: continue
+            """
+            pitch > 0 Head down, < 0 look up
+            yaw > 0 Turn right < 0 Turn left
+            roll > 0 Tilt right, < 0 Tilt left
+            """
+            if max_index == 0:
+                if pitch > 0: txt = "Look down"
+                else: txt = "Look up"
+            elif max_index == 1:
+                if yaw > 0: txt = "Turn right"
+                else: txt = "Turn left"
+            elif max_index == 2:
+                if roll > 0: txt = "Tilt right"
+                else: txt = "Tilt left"
+
+            visualizer.add_text(txt,
+                                bbox=(*det.top_left, *det.bottom_right),
+                                position=TextPosition.BOTTOM_MID)
+
+        visualizer.draw(packet.frame)
+        cv2.imshow(packet.name, packet.frame)
+
+
+    # Visualize detections on the frame. Also display FPS on the frame. Don't show the frame but send the packet
+    # to the callback function (where it will be displayed)
+    oak.visualize(emotion_nn, callback=cb, fps=True)
+    oak.visualize(det.out.passthrough)
+    # oak.show_graph() # Show pipeline graph, no need for now
+    oak.start(blocking=True) # This call will block until the app is stopped (by pressing 'Q' button)
+

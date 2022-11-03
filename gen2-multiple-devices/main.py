@@ -10,21 +10,15 @@ def getPipeline(stereo):
     pipeline = dai.Pipeline()
 
     # Define a source - color camera
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
-    # For the demo, just set a larger RGB preview size for OAK-D
-    if stereo:
-        cam_rgb.setPreviewSize(600, 300)
-    else:
-        cam_rgb.setPreviewSize(300, 300)
-    cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam_rgb.setInterleaved(False)
+    cam_left = pipeline.create(dai.node.ColorCamera)
+    cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-    # Create output
-    xout_rgb = pipeline.create(dai.node.XLinkOut)
-    xout_rgb.setStreamName("rgb")
-    cam_rgb.preview.link(xout_rgb.input)
-    return pipeline
+    cam_right = pipeline.create(dai.node.ColorCamera)
+    cam_right.setBoardSocket(dai.CameraBoardSocket.LEFT)
+
+    stereoDepth = pipeline.create(dai.node.StereoDepth)
+    cam_right.
+    stereoDepth.
 
 def worker(dev_info, stack, dic):
     openvino_version = dai.OpenVINO.Version.VERSION_2021_4
@@ -44,6 +38,8 @@ def worker(dev_info, stack, dic):
 
 device_infos = dai.Device.getAllAvailableDevices()
 print(f'Found {len(device_infos)} devices')
+
+
 
 with contextlib.ExitStack() as stack:
     queues = {}

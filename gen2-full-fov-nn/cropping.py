@@ -1,9 +1,8 @@
 from depthai_sdk import OakCamera, AspectRatioResizeMode
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', out='color')
-    nn = oak.create_nn('mobilenet-ssd', color, out='dets')
-    nn.config_nn(passthroughOut=True) # Also display passthrough frame
-    nn.set_aspect_ratio_resize_mode(AspectRatioResizeMode.CROP)
-    oak.create_visualizer([color, nn], fps=True)
+    color = oak.create_camera('color')
+    nn = oak.create_nn('mobilenet-ssd', color)
+    nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
+    oak.visualize([nn, nn.out.passthrough], fps=True)
     oak.start(blocking=True)
