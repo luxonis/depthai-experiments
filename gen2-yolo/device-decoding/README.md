@@ -2,7 +2,7 @@
 
 ![Yolo-on-device](https://user-images.githubusercontent.com/56075061/144863222-a52be87e-b1f0-4a0a-b39b-f865bbb6e4a4.png)
 
-This repository contains the code for running Yolo object detection with on-device decoding with DepthAI SDK (`main.py`)  or DepthAI API (`main_api.py`) directly. Currently, the supported versions are:
+This repository contains the code for running Yolo object detection with on-device decoding with [DepthAI SDK](https://docs.luxonis.com/projects/sdk/en/latest/) (`main.py`)  or [DepthAI API](https://docs.luxonis.com/projects/api/en/latest/) (`main_api.py`) directly. Currently, the supported versions are:
 
 * YoloV3 & YoloV3-tiny,
 * YoloV4 & YoloV4-tiny,
@@ -26,16 +26,33 @@ As the models have to be exported to OpenVINO IR in a certain way, we provide th
 	```
 2. Run the script
     ```
-    python3 main.py -m <model_name> -c <config_json>
+    python3 main.py --config <config_json>
     ```
     or
     ```
-    python3 main_api.py -m <model_name> -c <config_json>
+    python3 main_api.py -m <model_name> --config <config_json>
     ```
     where:
 
     * `<model_name>` is the **name of the model** from DepthAI model zoo (https://zoo.luxonis.com) or **relative path to the blob** file. Please check our model zoo to see which pre-trained models are available.
     * `<config_json>` is the **relative path** to the JSON with metadata (input shape, anchors, labels, ...) of the Yolo model.
+
+#### Usage example
+
+After downloading the .zip file from [tools.luxonis.com](https://tools.luxonis.com), extract them to the `model` folder, so you would have json file at `./model/yolo.json`:
+
+```
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----         11/4/2022   1:45 PM             28 .gitignore
+-a----         9/15/2022   4:54 AM        3525428 yolo.bin
+-a----         9/15/2022   4:54 AM           1001 yolo.json
+-a----         9/15/2022   4:54 AM         182902 yolo.xml
+-a----         9/15/2022   4:54 AM        3569472 yolo.4_6shave.blob
+```
+
+You can then run `python main.py --config model/yolo.json` to run your object detection model on the OAK camera. To configure the pipeline, you can edit `main.py` script, and SDK documentation can be [found here](https://docs.luxonis.com/projects/sdk/en/latest/).
+
 
 ## JSONs
 

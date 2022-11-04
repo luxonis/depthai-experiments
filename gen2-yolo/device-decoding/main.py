@@ -1,13 +1,13 @@
-from depthai_sdk import OakCamera, ArgsManager
+from depthai_sdk import OakCamera, ArgsParser
 import argparse
 
 # parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("-conf", "--config", help="Provide json config path for inference", default='json/yolov4-tiny.json', type=str)
-args = ArgsManager.parseArgs(parser)
+parser.add_argument("-conf", "--config", help="Trained YOLO json config path", default='model/yolo.json', type=str)
+args = ArgsParser.parseArgs(parser)
 
-with OakCamera() as oak:
-    color = oak.create_camera('color', out='color')
-    nn = oak.create_nn(args.config, color, out='yolo', type='yolo')
-    oak.create_visualizer([color, nn], fps=True)
+with OakCamera(args=args) as oak:
+    color = oak.create_camera('color')
+    nn = oak.create_nn(args['config'], color, nnType='yolo', spatial=True)
+    oak.visualize(nn, fps=True)
     oak.start(blocking=True)

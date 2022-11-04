@@ -1,0 +1,4 @@
+*.blob
+*.bin
+*.json
+*.xml
