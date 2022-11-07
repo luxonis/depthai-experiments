@@ -14,12 +14,6 @@ This experiment uses a [PaDiM model](https://arxiv.org/pdf/2011.08785.pdf) train
 pip install -r requirements.txt
 ```
 
-### Download Model
-
-```
-python3 download.py
-```
-
 ### Run the Demo
 
 ```
