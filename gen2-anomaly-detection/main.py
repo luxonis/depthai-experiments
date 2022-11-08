@@ -3,10 +3,6 @@ import depthai as dai
 import numpy as np
 import blobconverter
 from skimage.segmentation import mark_boundaries
-import os
-
-if not os.path.exists("models/padim_wood_256x256.blob"):
-    raise OSError("Blob does no exist! Please run download.py")
 
 # Create pipeline
 pipeline = dai.Pipeline()
