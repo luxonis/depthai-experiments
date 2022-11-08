@@ -23,7 +23,7 @@ scale_manip.initialConfig.setResize(256,256)
 camRgb.preview.link(scale_manip.inputImage)
 
 nn = pipeline.create(dai.node.NeuralNetwork)
-nn.setBlobPath("models/padim_wood_256x256.blob")
+nn.setBlobPath(blobconverter.from_zoo(name="padim_wood_256x256", zoo_type="depthai", shaves=6))
 scale_manip.out.link(nn.input)
 
 # Linking
