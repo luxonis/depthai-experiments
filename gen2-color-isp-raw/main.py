@@ -49,6 +49,10 @@ parser.add_argument('-fps', '--fps', default=15, type=int,
                     help="Camera FPS. Default: %(default)s")
 parser.add_argument('-lens', '--lens_position', default=-1, type=int,
                     help="Lens position for manual focus 0..255, or auto: -1. Default: %(default)s")
+parser.add_argument('-exp', '--exposure_time', default=-1, type=int,
+                    help="Exposure time [us] for manual exposure (together with -iso), or auto: -1. Default: %(default)s")
+parser.add_argument('-iso', '--sensitivity_iso', default=-1, type=int,
+                    help="Sensitivity ISO for manual exposure (together with -exp), or auto: -1. Default: %(default)s")
 parser.add_argument('-ds', '--isp_downscale', default=1, type=int,
                     help="Downscale the ISP output by this factor")
 parser.add_argument('-tun', '--camera_tuning', type=Path,
@@ -184,6 +188,8 @@ focus_name = 'af'
 if args.lens_position >= 0:
     cam.initialControl.setManualFocus(args.lens_position)
     focus_name = 'f' + str(args.lens_position)
+if args.exposure_time >= 0 and args.sensitivity_iso >= 0:
+    cam.initialControl.setManualExposure(args.exposure_time, args.sensitivity_iso)
 cam.setIspScale(1, args.isp_downscale)
 cam.setFps(args.fps)  # Default: 30
 if args.rotate:
@@ -223,19 +229,19 @@ LENS_STEP = 1
 WB_STEP = 100
 
 # Defaults and limits for manual focus/exposure controls
-lens_pos = 130
+lens_pos = args.lens_position if args.lens_position >= 0 else 130
 lens_min = 0
 lens_max = 255
 
-exp_time = 20000
+exp_time = args.exposure_time if args.exposure_time >= 0 else 20000
 exp_min = 1
 # Note: need to reduce FPS (see .setFps) to be able to set higher exposure time
 # With the custom FW, larger exposures can be set automatically (requirements not yet updated)
 exp_max = int(0.99 * 1000000 / args.fps)
 
-sens_iso = 800
+sens_iso = args.sensitivity_iso if args.sensitivity_iso >= 0 else 800
 sens_min = 100
-sens_max = 1600
+sens_max = 3200
 
 wb_manual = 4000
 wb_min = 1000
