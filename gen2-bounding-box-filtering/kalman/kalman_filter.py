@@ -111,7 +111,7 @@ with dai.Device(pipeline) as device:
 
     calibration_handler = device.readCalibration()
     baseline = calibration_handler.getBaselineDistance() * 10
-    focal_length = calibration_handler.getCameraIntrinsics(dai.CameraBoardSocket.RGB, 1920, 1080)[0][0]
+    focal_length = calibration_handler.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, 640, 400)[0][0]
 
     q_rgb  = device.getOutputQueue(name='rgb', maxSize=4, blocking=False)
     q_tracklets = device.getOutputQueue(name='tracklets', maxSize=4, blocking=False)
