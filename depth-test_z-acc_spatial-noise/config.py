@@ -32,8 +32,6 @@ mono_camera_resolution = getattr(dai.MonoCameraProperties.SensorResolution, args
 median = getattr(dai.StereoDepthProperties.MedianFilter, args.median)
 
 
-# CAMERA POSITION (ground truth)
-camera_wall_distance = 0.996 # m
 n_samples = args.n_samples
 
 # Astra intrinsic

@@ -64,6 +64,10 @@ def visualize_plane_callback():
 		print(" - colored - corrected point cloud")
 		depth_test.show_plane_fit_visualization(selected_camera.point_cloud)
 
+def set_ground_truth_callback():
+	distance = depth_test.set_ground_truth(selected_camera.point_cloud)
+	print(f"Ground truth set to {distance} m")
+
 def toggle_color_callback():
 	global solid_color
 	solid_color = not solid_color
@@ -75,6 +79,7 @@ point_cloud_window.register_key_callback(ord('Q'), lambda vis: quit_callback())
 point_cloud_window.register_key_callback(ord('F'), lambda vis: fit_plane_callback())
 point_cloud_window.register_key_callback(ord('V'), lambda vis: visualize_plane_callback())
 point_cloud_window.register_key_callback(ord('T'), lambda vis: start_test_callback())
+point_cloud_window.register_key_callback(ord('G'), lambda vis: set_ground_truth_callback())
 point_cloud_window.register_key_callback(ord('S'), lambda vis: save_point_clouds_callback())
 point_cloud_window.register_key_callback(ord('C'), lambda vis: toggle_color_callback())
 point_cloud_window.register_key_callback(ord('1'), lambda vis: select_camera_callback(0))
