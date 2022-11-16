@@ -6,6 +6,7 @@
 | key | action |
 | :--- | :--- |
 | `q` | quit |
+| `g` | set ground truth based (camera wall distance) on measurement from selected camera |
 | `f` | fit a plane to the point cloud of the selected camera |
 | `s` | save the point clouds to the `point-clouds` folder |
 | `c` | toggle rgb / solid color pointcloud |
@@ -14,16 +15,33 @@
 | `1` | select the OAK camera |
 | `2` | select the Astra camera |
 
+## Command line arguments
+- `-c`, `--color`: Use color camera for preview
+- `-lr`, `--lrcheck`: Left-rigth check for better handling for occlusions
+- `-e`, `--extended`: Closer-in minimum depth, disparity range is doubled
+- `-s`, `--subpixel`: Better accuracy for longer distance, fractional disparity 32-levels
+- `-ct`, `--confidence_threshold`: 0-255, 255 = low confidence, 0 = high confidence
+- `-mr`, `--min_range`: Min range in mm
+- `-xr`, `--max_range`: Max range in mm
+- `-ms`, `--mono_camera_resolution`: Mono camera resolution ("THE_400_P", "THE_480_P", "THE_720_P", "THE_800_P")
+- `-m`, `--median`: Media filter ("MEDIAN_OFF", "KERNEL_3x3", "KERNEL_5x5", "KERNEL_7x7")
+- `-n`, `--n_samples`: Number of samples in a single test
+- `--astra_intrinsic`: Path to astra intrinsic file (.np file containing 3x3 matrix)
+
 ## Usage
 Run `main.py` with Python 3.
+
+```
+python main.py -lr -s --astra_intrinsic <intrinsic_matrix.npy>
+```
 
 Point the camera perpendicular to the target plane (a wall or board with random noise). 
 
 Select the ROI on both cameras by dragging on the image view window.
 
-Select a camera and press the `f` key to fit a plane to the point cloud of the selected region. The horizontal and vertical tilt of the camera will be printed to the console. Try to get those values close to zero.
+Select a reference camera (Astra) and press the `g` key to set the ground truth based on the measurement.
 
-Measure the distance from the camera to the target plane and update the `camera_wall_distance` in [`config.py`](config.py). You can also change the number of samples taken during the test.
+Select a camera and press the `f` key to fit a plane to the point cloud of the selected region. The horizontal and vertical tilt of the camera will be printed to the console. Try to get those values close to zero.
 
 When satisfied with the camera position and ROI selection press the `t` key to start the tests. The test results will be printed to the console.
 
