@@ -35,12 +35,6 @@ class OakCamera(Camera):
             dai.Size2f(*self.image_size)
         )
 
-        # self.intrinsics = [
-        #     [524.73816835,   0.         ,325.1510094 ],
-        #     [  0.        , 524.37241047 ,183.91249817],
-        #     [  0.        ,   0.         ,  1.        ]
-        # ]
-
         self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
             *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]
         )

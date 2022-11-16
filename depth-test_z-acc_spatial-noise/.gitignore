@@ -1,1 +1,2 @@
-point-clouds/*.ply
+*.ply
+*.npy

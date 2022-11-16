@@ -1,18 +1,19 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parents[1])) # enable importing from parent directory
+
 import cv2
 import numpy as np
 import depthai as dai
-from camera import Camera
 from oak_camera import OakCamera
 from astra_camera import AstraCamera
 from utils import *
-from depth_test import DepthTest
-import config
 from openni import openni2
 import open3d as o3d
 
 openni2.initialize()
-# camera = AstraCamera(openni2.Device.open_any())
-camera = OakCamera(dai.DeviceInfo())
+camera = AstraCamera(openni2.Device.open_any())
+# camera = OakCamera(dai.DeviceInfo())
 
 checkerboard_inner_size = (9, 6)
 square_size = 0.0252 # m
@@ -70,6 +71,8 @@ while True:
 		print(mtx)
 		print("Distortion coefficients:")
 		print(dist)
+
+		np.save("astra_intrinsics.npy", mtx)
 
 		break
 

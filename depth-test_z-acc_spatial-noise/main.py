@@ -50,7 +50,7 @@ def select_camera_callback(id: int):
 
 def save_point_clouds_callback():
 	for camera in cameras:
-		o3d.io.write_point_cloud(f"point-clouds/{camera.window_name}.ply", camera.point_cloud)
+		o3d.io.write_point_cloud(f"utilities/{camera.window_name}.ply", camera.point_cloud)
 
 	print("Point clouds saved")
 
