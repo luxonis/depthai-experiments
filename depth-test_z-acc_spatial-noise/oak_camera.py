@@ -55,9 +55,9 @@ class OakCamera(Camera):
         # Depth cam -> 'depth'
         mono_left = pipeline.createMonoCamera()
         mono_right = pipeline.createMonoCamera()
-        mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        mono_left.setResolution(config.mono_camera_resolution)
         mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        mono_right.setResolution(config.mono_camera_resolution)
         mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         cam_stereo = pipeline.createStereoDepth()
         cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
