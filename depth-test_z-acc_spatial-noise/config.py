@@ -35,3 +35,6 @@ median = getattr(dai.StereoDepthProperties.MedianFilter, args.median)
 # CAMERA POSITION (ground truth)
 camera_wall_distance = 0.996 # m
 n_samples = args.n_samples
+
+# Astra intrinsic
+astra_intrinsic = args.astra_intrinsic # path to the astra intrinsic matrix
