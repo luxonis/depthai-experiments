@@ -18,11 +18,17 @@ def argument_parser():
     msg = "Threshold error for 2m distance (in meters), default is 0.09"
     parser.add_argument('-t', '--threshold', type=float, default=0.09, help=msg)
     parser.add_argument('--font_scale', type=float, default=1.0, help="Font scale") # on windows high dpi screen the font is to big so we need to scale it down (0.5)
+    parser.add_argument('-x', '--min_x', type=int, default=70, help="Min X")
+    parser.add_argument('-X', '--max_x', type=int, default=560, help="Max X")
+    parser.add_argument('-y', '--min_y', type=int, default=60, help="Min Y")
+    parser.add_argument('-Y', '--max_y', type=int, default=330, help="Max Y")
     global THRESHOLD
     global FONT_SCALE
+    global ROI_RANGE
     args = parser.parse_args()
     THRESHOLD = args.threshold
     FONT_SCALE = args.font_scale
+    ROI_RANGE = (args.min_x, args.max_x, args.min_y, args.max_y)
 
 
 colorMode = QtGui.QImage.Format_RGB888
@@ -43,14 +49,14 @@ class Ui_DepthTest(object):
         DepthTest.setObjectName("DepthTest")
         DepthTest.resize(1095, 762)
         font = QtGui.QFont()
-        font.setPointSize(14*FONT_SCALE)
+        font.setPointSize(int(14*FONT_SCALE))
         DepthTest.setFont(font)
         self.centralwidget = QtWidgets.QWidget(DepthTest)
         self.centralwidget.setObjectName("centralwidget")
         self.l_info = QtWidgets.QLabel(self.centralwidget)
         self.l_info.setGeometry(QtCore.QRect(20, 330, 221, 351))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_info.setFont(font)
         self.l_info.setStyleSheet("QLabel {\n"
                                   "    .adjust-line-height {\n"
@@ -61,7 +67,7 @@ class Ui_DepthTest(object):
         self.l_result = QtWidgets.QLabel(self.centralwidget)
         self.l_result.setGeometry(QtCore.QRect(110, 280, 101, 51))
         font = QtGui.QFont()
-        font.setPointSize(30*FONT_SCALE)
+        font.setPointSize(int(30*FONT_SCALE))
         self.l_result.setFont(font)
         self.l_result.setText("")
         self.l_result.setObjectName("l_result")
@@ -71,13 +77,13 @@ class Ui_DepthTest(object):
         self.l_test = QtWidgets.QLabel(self.centralwidget)
         self.l_test.setGeometry(QtCore.QRect(20, 40, 231, 81))
         font = QtGui.QFont()
-        font.setPointSize(30*FONT_SCALE)
+        font.setPointSize(int(30*FONT_SCALE))
         self.l_test.setFont(font)
         self.l_test.setObjectName("l_test")
         self.l_lidar = QtWidgets.QLabel(self.centralwidget)
         self.l_lidar.setGeometry(QtCore.QRect(270, 350, 71, 31))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_lidar.setFont(font)
         self.l_lidar.setObjectName("l_lidar")
         self.l_fill_rate = QtWidgets.QLabel(self.centralwidget)
@@ -85,38 +91,38 @@ class Ui_DepthTest(object):
         self.l_fill_rate.setSizeIncrement(QtCore.QSize(0, 0))
         font = QtGui.QFont()
         font.setFamily("Noto Sans")
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         font.setUnderline(False)
         self.l_fill_rate.setFont(font)
         self.l_fill_rate.setObjectName("l_fill_rate")
         self.l_gt_plane_rmse = QtWidgets.QLabel(self.centralwidget)
         self.l_gt_plane_rmse.setGeometry(QtCore.QRect(270, 450, 91, 31))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_gt_plane_rmse.setFont(font)
         self.l_gt_plane_rmse.setObjectName("l_gt_plane_rmse")
         self.spin_manual = QtWidgets.QDoubleSpinBox(self.centralwidget)
         self.spin_manual.setGeometry(QtCore.QRect(20, 140, 76, 36))
         font = QtGui.QFont()
-        font.setPointSize(14*FONT_SCALE)
+        font.setPointSize(int(14*FONT_SCALE))
         self.spin_manual.setFont(font)
         self.spin_manual.setObjectName("spin_manual")
         self.r_manual = QtWidgets.QRadioButton(self.centralwidget)
         self.r_manual.setGeometry(QtCore.QRect(110, 140, 201, 26))
         font = QtGui.QFont()
-        font.setPointSize(14*FONT_SCALE)
+        font.setPointSize(int(14*FONT_SCALE))
         self.r_manual.setFont(font)
         self.r_manual.setObjectName("r_manual")
         self.r_sensor = QtWidgets.QRadioButton(self.centralwidget)
         self.r_sensor.setGeometry(QtCore.QRect(110, 190, 201, 26))
         font = QtGui.QFont()
-        font.setPointSize(14*FONT_SCALE)
+        font.setPointSize(int(14*FONT_SCALE))
         self.r_sensor.setFont(font)
         self.r_sensor.setObjectName("r_sensor")
         self.l_sensor = QtWidgets.QLabel(self.centralwidget)
         self.l_sensor.setGeometry(QtCore.QRect(20, 190, 71, 31))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_sensor.setFont(font)
         self.l_sensor.setObjectName("l_sensor")
         self.preview_video = QtWidgets.QGraphicsView(self.centralwidget)
@@ -125,19 +131,19 @@ class Ui_DepthTest(object):
         self.l_plane_fit_mse = QtWidgets.QLabel(self.centralwidget)
         self.l_plane_fit_mse.setGeometry(QtCore.QRect(270, 500, 91, 31))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_plane_fit_mse.setFont(font)
         self.l_plane_fit_mse.setObjectName("l_plane_fit_mse")
         self.l_gt_plane_mse = QtWidgets.QLabel(self.centralwidget)
         self.l_gt_plane_mse.setGeometry(QtCore.QRect(270, 550, 91, 31))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_gt_plane_mse.setFont(font)
         self.l_gt_plane_mse.setObjectName("l_gt_plane_mse")
         self.l_plane_fit_rmse = QtWidgets.QLabel(self.centralwidget)
         self.l_plane_fit_rmse.setGeometry(QtCore.QRect(270, 600, 91, 31))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_plane_fit_rmse.setFont(font)
         self.l_plane_fit_rmse.setObjectName("l_plane_fit_rmse")
         self.board_group = QtWidgets.QGroupBox(self.centralwidget)
@@ -146,14 +152,17 @@ class Ui_DepthTest(object):
         self.r_left = QtWidgets.QRadioButton(self.board_group)
         self.r_left.setGeometry(QtCore.QRect(10, 30, 117, 26))
         self.r_left.setObjectName("r_left")
+        self.r_left.clicked.connect(lambda: DepthTest.set_roi_side("left"))
         self.r_right = QtWidgets.QRadioButton(self.board_group)
         self.r_right.setGeometry(QtCore.QRect(10, 90, 117, 26))
         self.r_right.setObjectName("r_right")
+        self.r_right.clicked.connect(lambda: DepthTest.set_roi_side("right"))
         self.r_center = QtWidgets.QRadioButton(self.board_group)
         self.r_center.setGeometry(QtCore.QRect(10, 60, 117, 26))
         self.r_center.setCheckable(True)
         self.r_center.setChecked(True)
         self.r_center.setObjectName("r_center")
+        self.r_center.clicked.connect(lambda: DepthTest.set_roi_side("center"))
         self.options_group = QtWidgets.QGroupBox(self.centralwidget)
         self.options_group.setGeometry(QtCore.QRect(800, 520, 251, 171))
         self.options_group.setObjectName("options_group")
@@ -174,7 +183,7 @@ class Ui_DepthTest(object):
         self.l_pixels_no = QtWidgets.QLabel(self.centralwidget)
         self.l_pixels_no.setGeometry(QtCore.QRect(270, 650, 91, 31))
         font = QtGui.QFont()
-        font.setPointSize(18*FONT_SCALE)
+        font.setPointSize(int(18*FONT_SCALE))
         self.l_pixels_no.setFont(font)
         self.l_pixels_no.setObjectName("l_pixels_no")
         self.c_matplot = QtWidgets.QCheckBox(self.centralwidget)
@@ -621,6 +630,22 @@ class Application(QtWidgets.QMainWindow):
         self.plot_fit_plane = None
         self.ui.c_ir.setDisabled(True)
         self.ui.b_export.setDisabled(True)
+
+    def set_roi(self, p1, p2):
+        self.scene.frame.p1 = p1
+        self.scene.frame.p2 = p2
+        self.scene.frame.roi.update(p1, p2)
+        self.scene.frame.changed_roi = True
+
+    def set_roi_side(self, side: str):
+        x, X, y, Y = ROI_RANGE
+        w = int((X - x)/3)
+        if side == "left":
+            self.set_roi((x,y), (x+w, Y))
+        elif side == "center":
+            self.set_roi((x+w,y), (x+w*2, Y))
+        elif side == "right":
+            self.set_roi((x+w*2,y), (X, Y))
 
     def set_plot(self):
         # Plot Setup
