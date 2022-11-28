@@ -1,0 +1,5 @@
+numpy==1.22 #Needed for numba
+numba
+opencv-python
+argparse
+depthai==2.16.0.0

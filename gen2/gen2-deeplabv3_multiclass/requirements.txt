@@ -1,0 +1,2 @@
+opencv-python
+depthai==2.16.0.0

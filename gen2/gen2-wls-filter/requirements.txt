@@ -1,0 +1,2 @@
+opencv-contrib-python==4.6.0.66
+depthai==2.16.0.0
