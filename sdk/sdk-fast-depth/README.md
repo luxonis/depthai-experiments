@@ -1,6 +1,8 @@
-## [Gen2] FastDepth on DepthAI
+## FastDepth
 
-This example shows an implementation of [FastDepth](https://github.com/dwofk/fast-depth) on DepthAI in the Gen2 API system.  Blob is created with ONNX from [PINTO's Model ZOO](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/146_FastDepth), which is then converted to OpenVINO IR with required flags and converted to blob.
+This example shows an implementation of [FastDepth](https://github.com/dwofk/fast-depth) using DepthAI SDK. Blob is
+created with ONNX from [PINTO's Model ZOO](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/146_FastDepth), which
+is then converted to OpenVINO IR with required flags and converted to blob.
 
 There are two available blob's for different input sizes:
 
@@ -12,6 +14,7 @@ There are two available blob's for different input sizes:
 ## Pre-requisites
 
 Install requirements:
+
 ```
 python3 -m pip install -r requirements.txt
 ```

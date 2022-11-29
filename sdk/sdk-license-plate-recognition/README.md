@@ -1,23 +1,28 @@
 [中文文档](README.zh-CN.md)
 
-# Gen2 License Plates Recognition
+# License Plates Recognition
 
-This example demonstrates how to run 2 stage inference on DepthAI using Gen2 Pipeline Builder.
-First, a license plate is detected on the image and then the cropped license frame is sent to text detection network, 
+This example demonstrates how to run 2 stage inference using DepthAI SDK.
+First, a license plate is detected on the image and then the cropped license frame is sent to text detection network,
 which tries to decode the license plates texts
 
 
-> :warning: **This demo is uses an object detector that is trained to detect and recognize chinese license plates**! It may not work with other license plates.  See roboflow's tutorial on training for other regions' plates, here: [https://blog.roboflow.com/oak-deploy-license-plate/](https://blog.roboflow.com/oak-deploy-license-plate/)
+> :warning: **This demo is uses an object detector that is trained to detect and recognize chinese license plates**! It
+> may not work with other license plates. See roboflow's tutorial on training for other regions' plates,
+> here: [https://blog.roboflow.com/oak-deploy-license-plate/](https://blog.roboflow.com/oak-deploy-license-plate/)
 
-Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis OAK](https://blog.roboflow.com/oak-deploy-license-plate/) tutorial for training a custom detector using the Roboflow platform.
+Take a look
+at [How to Train and Deploy a License Plate Detector to the Luxonis OAK](https://blog.roboflow.com/oak-deploy-license-plate/)
+tutorial for training a custom detector using the Roboflow platform.
 
 ## Demo
 
-[![Gen2 License Plates recognition](https://user-images.githubusercontent.com/5244214/111202991-c62f3980-85c4-11eb-8bce-a3c517abeca1.gif)](https://www.youtube.com/watch?v=tB_-mVVNIro "License Plates recognition on DepthAI")
+[![License Plates recognition](https://user-images.githubusercontent.com/5244214/111202991-c62f3980-85c4-11eb-8bce-a3c517abeca1.gif)](https://www.youtube.com/watch?v=tB_-mVVNIro "License Plates recognition on DepthAI")
 
 ## Pre-requisites
 
 Install requirements:
+
 ```
 python3 -m pip install -r requirements.txt
 ```

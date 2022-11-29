@@ -1,12 +1,12 @@
 [中文文档](README.zh-CN.md)
 
-## [Gen2] Text Detection + Optical Character Recognition (OCR) Pipeline
+## Text Detection + Optical Character Recognition (OCR) Pipeline
 
 This pipeline implements text detection (EAST) followed by optical character recognition of the detected text.  It implements issue [#124](https://github.com/luxonis/depthai/issues/124).
 
 ## How to Run
 
-This example uses the [Gen2 Pipeline Builder](https://github.com/luxonis/depthai/issues/136), so make sure to install the requirements below to make sure the appropriate Gen2 API version.
+This example uses the [Pipeline Builder](https://github.com/luxonis/depthai/issues/136), so make sure to install the requirements below to make sure the appropriate DepthAI version.
 
 `python3 -m pip install -r requirements.txt`
 

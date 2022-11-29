@@ -1,6 +1,6 @@
 [英文文档](README.md)
 
-# SDK Class Saver (JPEG)
+# Class Saver (JPEG)
 
 本示例演示如何运行MobilenetSSD并收集按检测标签分组的检测对象的图像。运行此脚本后，DepthAI将启动MobilenetSSD，并且每当检测到对象时，它将添加一个数据集条目。
 
@@ -42,7 +42,7 @@ timestamp,label,left,top,right,bottom,raw_frame,overlay_frame,cropped_frame
 
 ## 演示
 
-[![Gen2 Class Saver (JPEG)](https://user-images.githubusercontent.com/5244214/106964520-83b34b00-6742-11eb-8729-eff0a7584a46.gif)](https://youtu.be/gKawPaUcTi4 "Class Saver (JPEG) on DepthAI")
+[![Class Saver (JPEG)](https://user-images.githubusercontent.com/5244214/106964520-83b34b00-6742-11eb-8729-eff0a7584a46.gif)](https://youtu.be/gKawPaUcTi4 "Class Saver (JPEG) on DepthAI")
 
 ## 先决条件
 

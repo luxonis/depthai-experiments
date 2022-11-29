@@ -3,7 +3,7 @@
 手掌检测
 ================
 
-该示例演示了Gen2 Pipeline Builder运行的[手掌检测网络](https://google.github.io/mediapipe/solutions/hands#palm-detection-model)  
+该示例演示了 Pipeline Builder运行的[手掌检测网络](https://google.github.io/mediapipe/solutions/hands#palm-detection-model)  
 
 ## 演示:
 

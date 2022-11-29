@@ -4,7 +4,7 @@
 
 ### 背景
 
-这给出了一个使用DepthAI Gen2 API中的`rectified_right`和`depth`流进行主机端WLS过滤的示例。 
+这给出了一个使用DepthAI SDK 中的`rectified_right`和`depth`流进行主机端WLS过滤的示例。 
 
 在OAK-D上运行的示例:
 

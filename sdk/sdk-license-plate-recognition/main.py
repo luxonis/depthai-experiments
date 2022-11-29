@@ -48,7 +48,7 @@ def callback(ctx):
     cv2.imshow('Detections', packet.frame)
 
 
-with OakCamera(replay='still_vehicle.mp4') as oak:
+with OakCamera(replay='chinese_traffic.mp4') as oak:
     color = oak.create_camera('color', resolution='1080p', fps=30)
 
     det_nn_path = blobconverter.from_zoo(name='vehicle-license-plate-detection-barrier-0106', shaves=7, version='2021.4')

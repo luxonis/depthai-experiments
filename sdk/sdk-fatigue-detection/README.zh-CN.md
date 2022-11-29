@@ -1,8 +1,8 @@
 [英文文档](README.md)
 
-# Gen2 疲劳检测
+# 疲劳检测
 
-该示例演示了Gen2 Pipeline Builder运行的 [面部检测网络](https://docs.openvinotoolkit.org/2019_R1/_face_detection_retail_0004_description_face_detection_retail_0004.html)和头部检测网络
+该示例演示了 运行的 [面部检测网络](https://docs.openvinotoolkit.org/2019_R1/_face_detection_retail_0004_description_face_detection_retail_0004.html)和头部检测网络
 
 ## 演示:
 

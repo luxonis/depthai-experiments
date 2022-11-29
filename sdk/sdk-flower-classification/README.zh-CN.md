@@ -1,6 +1,6 @@
 [英文文档](README.md)
 
-# Gen2 Tensorflow 图像分类示例
+# Tensorflow 图像分类示例
 
 该示例演示了如何运行使用 [TensorFlow Image Classification tutorial](https://colab.research.google.com/drive/1oNxfvx5jOfcmk1Nx0qavjLN8KtWcLRn6?usp=sharing)创建的神经网络 （即使将OpenVINO转换为.blob，我们的社区成员之一也将其整合到了一个Colab Notebook中）
 

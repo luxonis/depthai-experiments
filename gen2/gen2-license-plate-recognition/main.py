@@ -16,6 +16,7 @@ parser.add_argument('-vid', '--video', type=str,
                     help="Path to video file to be used for inference (conflicts with -cam)")
 args = parser.parse_args()
 
+args.video = 'chinese_traffic.mp4'
 if not args.camera and not args.video:
     raise RuntimeError(
         "No source selected. Use either \"-cam\" to run on RGB camera as a source or \"-vid <path>\" to run on video"
@@ -159,6 +160,7 @@ def lic_thread(det_queue, rec_queue):
                 img.setData(to_planar(cropped_frame, (94, 24)))
                 img.setWidth(94)
                 img.setHeight(24)
+
                 rec_queue.send(img)
 
             fps.tick('lic')
@@ -319,6 +321,7 @@ with dai.Device(create_pipeline()) as device:
                 lic_frame.setType(dai.RawImgFrame.Type.BGR888p)
                 lic_frame.setWidth(300)
                 lic_frame.setHeight(300)
+
                 det_in.send(lic_frame)
                 veh_frame = dai.ImgFrame()
                 veh_frame.setData(to_planar(frame, (300, 300)))

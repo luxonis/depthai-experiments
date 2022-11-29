@@ -43,7 +43,7 @@ timestamp,label,left,top,right,bottom,raw_frame,overlay_frame,cropped_frame
 
 ## Demo
 
-[![Gen2 Class Saver (JPEG)](https://user-images.githubusercontent.com/5244214/106964520-83b34b00-6742-11eb-8729-eff0a7584a46.gif)](https://youtu.be/gKawPaUcTi4 "Class Saver (JPEG) on DepthAI")
+[![Class Saver (JPEG)](https://user-images.githubusercontent.com/5244214/106964520-83b34b00-6742-11eb-8729-eff0a7584a46.gif)](https://youtu.be/gKawPaUcTi4 "Class Saver (JPEG) on DepthAI")
 
 ## Install requirements
 
