@@ -100,7 +100,7 @@ class DepthTest:
 	def compute_spatial_noise(self, point_cloud_corrected: o3d.geometry.PointCloud):
 		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
 
-		z_error = point_cloud_corrected_points[:,2] - self.camera_wall_distance
+		z_error = -point_cloud_corrected_points[:,2] - self.camera_wall_distance
 		z_error = np.sort(z_error)
 		# remove values below 0.5% and above 99.5%
 		z_error = z_error[int(len(z_error)*0.005):int(len(z_error)*0.995)]

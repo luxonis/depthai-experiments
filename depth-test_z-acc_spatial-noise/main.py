@@ -18,7 +18,7 @@ cameras = []
 
 try:
 	device_info = dai.DeviceInfo()
-	oak_camera = OakCamera()
+	oak_camera = OakCamera(device_info)
 	cameras.append(oak_camera)
 except:
 	print("❗WARNING: OAK-D not found")
