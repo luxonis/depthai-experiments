@@ -1,6 +1,9 @@
 import open3d as o3d
 import numpy as np
 from utils import *
+import math
+from camera import Camera
+from oak_camera import OakCamera
 
 class DepthTest:
 	def __init__(self):
@@ -20,6 +23,7 @@ class DepthTest:
 		self.z_accuracy_medians = []
 		self.z_means = []
 		self.spatial_noise_rmses = []
+		self.subpixel_spatial_noise_rmses = []
 		self.samples = 0
 
 	def set_ground_truth(self, point_cloud: o3d.geometry.PointCloud):
@@ -83,19 +87,29 @@ class DepthTest:
 		point_cloud_corrected.rotate(R, center=(0, 0, 0))
 		return point_cloud_corrected
 
-	def measure(self, point_cloud: o3d.geometry.PointCloud):
+	def measure(self, camera: Camera):
+		point_cloud = camera.point_cloud
 		print(f"\rAdding measurements {'.'*self.samples}", end="")
 
 		point_cloud_corrected = self.correct_tilt(point_cloud)
 
 		spatial_noise = self.compute_spatial_noise(point_cloud_corrected)
-		z_accuracy = self.compute_z_accuracy(point_cloud_corrected)
-
-		self.z_accuracy_medians.append(z_accuracy)
 		self.spatial_noise_rmses.append(spatial_noise)
+
+		if isinstance(camera, OakCamera):
+			subpixel_spatial_noise = self.compute_subpixel_spatial_noise(
+				point_cloud_corrected, 
+				focal_length=camera.focal_length,
+				stereoscopic_baseline=camera.stereoscopic_baseline
+			)
+			self.subpixel_spatial_noise_rmses.append(subpixel_spatial_noise)
+
+		z_accuracy = self.compute_z_accuracy(point_cloud_corrected)
+		self.z_accuracy_medians.append(z_accuracy)
+
 		self.samples += 1
 
-		return spatial_noise, z_accuracy
+		return spatial_noise, subpixel_spatial_noise, z_accuracy
 
 	def compute_spatial_noise(self, point_cloud_corrected: o3d.geometry.PointCloud):
 		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
@@ -105,6 +119,21 @@ class DepthTest:
 		# remove values below 0.5% and above 99.5%
 		z_error = z_error[int(len(z_error)*0.005):int(len(z_error)*0.995)]
 		RMSE = np.sqrt(np.mean(z_error**2))
+
+		return RMSE
+
+	def compute_subpixel_spatial_noise(self, point_cloud_corrected: o3d.geometry.PointCloud, focal_length: float = math.nan, stereoscopic_baseline: float = math.nan):
+		if math.isnan(focal_length) or math.isnan(stereoscopic_baseline):
+			return math.nan
+		
+		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
+		z = -point_cloud_corrected_points[:,2]
+		disparity = (stereoscopic_baseline * focal_length) / z
+		disparity_ground_truth = (stereoscopic_baseline * focal_length) / self.camera_wall_distance
+		disparity_error = disparity - disparity_ground_truth
+		# remove values below 0.5% and above 99.5%
+		disparity_error = disparity_error[int(len(disparity_error)*0.005):int(len(disparity_error)*0.995)]
+		RMSE = np.sqrt(np.mean(disparity_error**2))
 
 		return RMSE
 
@@ -123,6 +152,7 @@ class DepthTest:
 	def reset(self):
 		self.z_accuracy_medians = []
 		self.spatial_noise_rmses = []
+		self.subpixel_spatial_noise_rmses = []
 		self.z_means = []
 		self.samples = 0
 
@@ -131,6 +161,7 @@ class DepthTest:
 		print(f"{self.samples} measurements")
 		print(f"Z accuracy: {np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f}% of GT (avg distance: {-np.mean(self.z_means)*1000:.2f}mm)")
 		print(f"Spatial noise: {np.mean(self.spatial_noise_rmses)*1000:.2f} mm")
+		print(f"Subpixel spatial noise: {np.mean(self.subpixel_spatial_noise_rmses):.2f} px")
 		print()
 
 	def show_plane_fit_visualization(self, point_cloud: o3d.geometry.PointCloud):

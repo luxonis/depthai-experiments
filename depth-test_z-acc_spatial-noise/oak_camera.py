@@ -39,6 +39,9 @@ class OakCamera(Camera):
             *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]
         )
 
+        self.focal_length = self.intrinsics[0][0] # in pixels
+        self.stereoscopic_baseline = calibration.getBaselineDistance()/100 # in m
+
         self.extrinsic = np.eye(4)
         self.extrinsic[0, 3] = -0.15
     
@@ -96,6 +99,7 @@ class OakCamera(Camera):
             cam_stereo.rectifiedRight.link(xout_image.input)
             self.image_size = mono_right.getResolutionSize()
 
+        self.mono_image_size = mono_right.getResolutionSize()
         self.pipeline = pipeline
 
     def update(self):

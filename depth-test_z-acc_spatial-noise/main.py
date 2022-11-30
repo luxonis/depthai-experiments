@@ -124,7 +124,7 @@ while running:
 	point_cloud_window.update_renderer()
 
 	if testing:
-		depth_test.measure(selected_camera.point_cloud)
+		depth_test.measure(selected_camera)
 
 		if depth_test.samples >= config.n_samples:
 			print()
