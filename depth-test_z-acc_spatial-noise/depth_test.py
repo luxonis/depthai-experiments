@@ -61,6 +61,11 @@ class DepthTest:
 		)
 
 	def project_on_plane(self, point_cloud: o3d.geometry.PointCloud):
+		"""
+		Project the `point_cloud` on the fitted plane **along the z-axis** and return the projected point cloud.
+
+		The only appropriate use of this function is for visualization purposes.
+		"""
 		points = np.asarray(point_cloud.points)
 		G = np.ones_like(points)
 		G[:, 0] = points[:, 0]
@@ -81,11 +86,9 @@ class DepthTest:
 	def measure(self, point_cloud: o3d.geometry.PointCloud):
 		print(f"\rAdding measurements {'.'*self.samples}", end="")
 
-		plane_fit = self.project_on_plane(point_cloud)
-		plane_fit_corrected = self.correct_tilt(plane_fit)
 		point_cloud_corrected = self.correct_tilt(point_cloud)
 
-		spatial_noise = self.compute_spatial_noise(point_cloud_corrected, plane_fit_corrected)
+		spatial_noise = self.compute_spatial_noise(point_cloud_corrected)
 		z_accuracy = self.compute_z_accuracy(point_cloud_corrected)
 
 		self.z_accuracy_medians.append(z_accuracy)
@@ -94,11 +97,10 @@ class DepthTest:
 
 		return spatial_noise, z_accuracy
 
-	def compute_spatial_noise(self, point_cloud_corrected: o3d.geometry.PointCloud, plane_fit_corrected: o3d.geometry.PointCloud):
-		plane_fit_corrected_points = np.asarray(plane_fit_corrected.points)
+	def compute_spatial_noise(self, point_cloud_corrected: o3d.geometry.PointCloud):
 		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
 
-		z_error = plane_fit_corrected_points[:,2] - point_cloud_corrected_points[:,2]
+		z_error = point_cloud_corrected_points[:,2] - self.camera_wall_distance
 		z_error = np.sort(z_error)
 		# remove values below 0.5% and above 99.5%
 		z_error = z_error[int(len(z_error)*0.005):int(len(z_error)*0.995)]
