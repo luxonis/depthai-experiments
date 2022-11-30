@@ -26,7 +26,7 @@ class DepthTest:
 		points = np.asarray(point_cloud.points)
 		Z = points[:, 2]
 
-		self.camera_wall_distance = -np.mean(Z)
+		self.camera_wall_distance = -np.median(Z)
 		return self.camera_wall_distance
 
 	def fit_plane(self, point_cloud: o3d.geometry.PointCloud):
