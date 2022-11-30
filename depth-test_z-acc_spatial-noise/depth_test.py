@@ -24,9 +24,6 @@ class DepthTest:
 
 	def set_ground_truth(self, point_cloud: o3d.geometry.PointCloud):
 		points = np.asarray(point_cloud.points)
-		G = np.ones_like(points)
-		G[:, 0] = points[:, 0]
-		G[:, 1] = points[:, 1]
 		Z = points[:, 2]
 
 		self.camera_wall_distance = -np.mean(Z)
