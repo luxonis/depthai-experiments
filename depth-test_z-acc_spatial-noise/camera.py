@@ -14,7 +14,6 @@ class Camera:
 
         self.window_name = f"Camera_{name}"
         cv2.namedWindow(self.window_name)
-        cv2.createButton("Back",lambda *args: print(args),None,cv2.QT_PUSH_BUTTON,1)
         cv2.setMouseCallback(self.window_name, lambda e, x, y, flags, param: self.on_mouse(e, x,y, flags, param))
 
         self.selecting_ROI = False

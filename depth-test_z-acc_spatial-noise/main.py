@@ -14,11 +14,25 @@ import open3d as o3d
 openni2.initialize()
 
 depth_test = DepthTest()
+cameras = []
 
-oak_camera = OakCamera(dai.DeviceInfo())
-astra_camera = AstraCamera(openni2.Device.open_any())
+try:
+	device_info = dai.DeviceInfo()
+	oak_camera = OakCamera()
+	cameras.append(oak_camera)
+except:
+	print("❗WARNING: OAK-D not found")
 
-cameras = [oak_camera, astra_camera]
+try:
+	device_info = openni2.Device.open_any()
+	astra_camera = AstraCamera(device_info)
+	cameras.append(astra_camera)
+except:
+	print("❗WARNING: Astra not found")
+
+if len(cameras) == 0:
+	print("❗ERROR: No cameras found")
+	exit()
 
 selected_camera = cameras[0]
 testing = False
