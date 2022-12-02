@@ -5,6 +5,7 @@ from openni import openni2
 from openni import _openni2 as c_api
 import open3d as o3d
 from camera import Camera
+import config
 
 class AstraCamera(Camera):
     def __init__(self, device: openni2.Device):
@@ -39,26 +40,23 @@ class AstraCamera(Camera):
         hfov = self.image_stream.get_horizontal_fov()
         vfov = self.image_stream.get_vertical_fov()
 
-        intrinsics = np.array([
-            [514.71248352,   0.,         315.62174629],
-            [  0.,         514.4009801,  253.73633358],
-            [  0.,           0.,           1.        ]
-        ])
+        try: # try to load intrinsic parameters from file (specified with --astra_intrinsic)
+            intrinsics = np.load(config.astra_intrinsic)
+            self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
+                self.width, self.height, intrinsics[0][0], intrinsics[1][1], intrinsics[0][2], intrinsics[1][2]
+            )
+            print("Astra camera intrinsics: ", intrinsics)
+        except:
+            self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
+                width=self.width,
+                height=self.height,
+                fx = self.width / (2 * np.tan(hfov / 2)),
+                fy = self.height / (2 * np.tan(vfov / 2)),
+                cx = self.width / 2,
+                cy = self.height / 2
+            )
 
-        distortion = [ 0.03988357, -0.25365261, 0.00293889, -0.00124293, 0.26644664]
 
-        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
-            width=self.width,
-            height=self.height,
-            fx = self.width / (2 * np.tan(hfov / 2)),
-            fy = self.height / (2 * np.tan(vfov / 2)),
-            cx = self.width / 2,
-            cy = self.height / 2
-        )
-
-        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
-            self.width, self.height, intrinsics[0][0], intrinsics[1][1], intrinsics[0][2], intrinsics[1][2]
-        )
 
     def update(self):
         # Get the rgb frame

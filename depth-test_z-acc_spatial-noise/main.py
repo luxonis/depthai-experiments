@@ -14,11 +14,25 @@ import open3d as o3d
 openni2.initialize()
 
 depth_test = DepthTest()
+cameras = []
 
-oak_camera = OakCamera(dai.DeviceInfo())
-astra_camera = AstraCamera(openni2.Device.open_any())
+try:
+	device_info = dai.DeviceInfo()
+	oak_camera = OakCamera(device_info)
+	cameras.append(oak_camera)
+except:
+	print("❗WARNING: OAK-D not found")
 
-cameras = [oak_camera, astra_camera]
+try:
+	device_info = openni2.Device.open_any()
+	astra_camera = AstraCamera(device_info)
+	cameras.append(astra_camera)
+except:
+	print("❗WARNING: Astra not found")
+
+if len(cameras) == 0:
+	print("❗ERROR: No cameras found")
+	exit()
 
 selected_camera = cameras[0]
 testing = False
@@ -50,7 +64,7 @@ def select_camera_callback(id: int):
 
 def save_point_clouds_callback():
 	for camera in cameras:
-		o3d.io.write_point_cloud(f"point-clouds/{camera.window_name}.ply", camera.point_cloud)
+		o3d.io.write_point_cloud(f"utilities/{camera.window_name}.ply", camera.point_cloud)
 
 	print("Point clouds saved")
 
@@ -64,6 +78,10 @@ def visualize_plane_callback():
 		print(" - colored - corrected point cloud")
 		depth_test.show_plane_fit_visualization(selected_camera.point_cloud)
 
+def set_ground_truth_callback():
+	distance = depth_test.set_ground_truth(selected_camera.point_cloud)
+	print(f"Ground truth set to {distance} m")
+
 def toggle_color_callback():
 	global solid_color
 	solid_color = not solid_color
@@ -75,6 +93,7 @@ point_cloud_window.register_key_callback(ord('Q'), lambda vis: quit_callback())
 point_cloud_window.register_key_callback(ord('F'), lambda vis: fit_plane_callback())
 point_cloud_window.register_key_callback(ord('V'), lambda vis: visualize_plane_callback())
 point_cloud_window.register_key_callback(ord('T'), lambda vis: start_test_callback())
+point_cloud_window.register_key_callback(ord('G'), lambda vis: set_ground_truth_callback())
 point_cloud_window.register_key_callback(ord('S'), lambda vis: save_point_clouds_callback())
 point_cloud_window.register_key_callback(ord('C'), lambda vis: toggle_color_callback())
 point_cloud_window.register_key_callback(ord('1'), lambda vis: select_camera_callback(0))
@@ -105,7 +124,7 @@ while running:
 	point_cloud_window.update_renderer()
 
 	if testing:
-		depth_test.measure(selected_camera.point_cloud)
+		depth_test.measure(selected_camera)
 
 		if depth_test.samples >= config.n_samples:
 			print()

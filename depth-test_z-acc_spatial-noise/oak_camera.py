@@ -35,15 +35,12 @@ class OakCamera(Camera):
             dai.Size2f(*self.image_size)
         )
 
-        # self.intrinsics = [
-        #     [524.73816835,   0.         ,325.1510094 ],
-        #     [  0.        , 524.37241047 ,183.91249817],
-        #     [  0.        ,   0.         ,  1.        ]
-        # ]
-
         self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
             *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]
         )
+
+        self.focal_length = self.intrinsics[0][0] # in pixels
+        self.stereoscopic_baseline = calibration.getBaselineDistance()/100 # in m
 
         self.extrinsic = np.eye(4)
         self.extrinsic[0, 3] = -0.15
@@ -55,9 +52,9 @@ class OakCamera(Camera):
         # Depth cam -> 'depth'
         mono_left = pipeline.createMonoCamera()
         mono_right = pipeline.createMonoCamera()
-        mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        mono_left.setResolution(config.mono_camera_resolution)
         mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        mono_right.setResolution(config.mono_camera_resolution)
         mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         cam_stereo = pipeline.createStereoDepth()
         cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
@@ -102,6 +99,7 @@ class OakCamera(Camera):
             cam_stereo.rectifiedRight.link(xout_image.input)
             self.image_size = mono_right.getResolutionSize()
 
+        self.mono_image_size = mono_right.getResolutionSize()
         self.pipeline = pipeline
 
     def update(self):
