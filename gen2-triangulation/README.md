@@ -1,15 +1,16 @@
-# Gen2 Triangulation 3D visualizer
+# Triangulation - Stereo neural inference demo
 
 Because there are often application-specific host-side filtering to be done on the stereo
 neural inference results, and because these calculations are lightweight
 (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
 
-This 3D visualizer is for the facial landmarks demo, and uses OpenGL and OpenCV.
-Consider it a draft/reference at this point.
+This 3D visualizer is for the facial landmarks demo, and uses OpenGL and OpenCV. Consider it a draft/reference at this point.
+
+Demo uses 2-stage inferencing; 1st NN model is [face-detection-retail-0004](https://docs.openvino.ai/2021.4/omz_models_model_face_detection_retail_0004.html) and 2nd NN model is [landmarks-regression-retail-0009](https://docs.openvino.ai/2021.4/omz_models_model_landmarks_regression_retail_0009.html).
 
 ## Demo
 
-[![Spatial AI](https://user-images.githubusercontent.com/18037362/116149182-bc2b4b00-a6d9-11eb-91a5-ad5359ca85ad.gif)](https://www.youtube.com/watch?v=YalHMcsZODs&feature=youtu.be "3D Facial Landmark visualization")
+![Stereo Inference GIF](https://user-images.githubusercontent.com/59799831/132098832-70a2d0b9-1a30-4994-8dad-dc880a803fb3.gif)
 
 ## Installation
 
@@ -17,8 +18,6 @@ Consider it a draft/reference at this point.
 sudo apt-get install python3-pygame
 python3 -m pip install -r requirements.txt
 ```
-
-Note that this experiment uses the `Script` node that is currently in alpha mode, so you have to install the latest `gen2-scripting` branch of the library (you get it by installing `requirements.txt`)
 
 ## Usage
 

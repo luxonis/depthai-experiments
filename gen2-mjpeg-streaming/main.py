@@ -12,6 +12,7 @@ import depthai as dai
 import numpy as np
 import cv2
 from PIL import Image
+import blobconverter
 
 HTTP_SERVER_PORT = 8090
 
@@ -74,86 +75,87 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 
 syncNN = True
 
-# Get argument first
-nnBlobPath = str((Path(__file__).parent / Path('mobilenet-ssd/model.blob')).resolve().absolute())
-if len(sys.argv) > 1:
-    nnBlobPath = sys.argv[1]
+def create_pipeline(depth):
+    # Start defining a pipeline
+    pipeline = dai.Pipeline()
+    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
+    # Define a source - color camera
+    colorCam = pipeline.create(dai.node.ColorCamera)
+    if depth:
+        mobilenet = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+        monoLeft = pipeline.create(dai.node.MonoCamera)
+        monoRight = pipeline.create(dai.node.MonoCamera)
+        stereo = pipeline.create(dai.node.StereoDepth)
+    else:
+        mobilenet = pipeline.create(dai.node.MobileNetDetectionNetwork)
 
-if not Path(nnBlobPath).exists():
-    import sys
-    raise FileNotFoundError(f'Required file/s not found, please run "{sys.executable} install_requirements.py"')
+    colorCam.setPreviewSize(300, 300)
+    colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    colorCam.setInterleaved(False)
+    colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-# Start defining a pipeline
-pipeline = dai.Pipeline()
+    mobilenet.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.2"))
+    mobilenet.setConfidenceThreshold(0.5)
+    mobilenet.input.setBlocking(False)
 
-# Define a source - color camera
-colorCam = pipeline.createColorCamera()
-spatialDetectionNetwork = pipeline.createMobileNetSpatialDetectionNetwork()
-monoLeft = pipeline.createMonoCamera()
-monoRight = pipeline.createMonoCamera()
-stereo = pipeline.createStereoDepth()
+    if depth:
+        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-xoutRgb = pipeline.createXLinkOut()
-xoutNN = pipeline.createXLinkOut()
-xoutBoundingBoxDepthMapping = pipeline.createXLinkOut()
-xoutDepth = pipeline.createXLinkOut()
+        # Setting node configs
+        stereo.initialConfig.setConfidenceThreshold(255)
+        stereo.depth.link(mobilenet.inputDepth)
+        stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 
-xoutRgb.setStreamName("rgb")
-xoutNN.setStreamName("detections")
-xoutBoundingBoxDepthMapping.setStreamName("boundingBoxDepthMapping")
-xoutDepth.setStreamName("depth")
+        mobilenet.setBoundingBoxScaleFactor(0.5)
+        mobilenet.setDepthLowerThreshold(100)
+        mobilenet.setDepthUpperThreshold(5000)
+
+        monoLeft.out.link(stereo.left)
+        monoRight.out.link(stereo.right)
+
+    xoutRgb = pipeline.create(dai.node.XLinkOut)
+    xoutRgb.setStreamName("rgb")
+    colorCam.preview.link(mobilenet.input)
+    if syncNN:
+        mobilenet.passthrough.link(xoutRgb.input)
+    else:
+        colorCam.preview.link(xoutRgb.input)
 
 
-colorCam.setPreviewSize(300, 300)
-colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-colorCam.setInterleaved(False)
-colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+    xoutNN = pipeline.create(dai.node.XLinkOut)
+    xoutNN.setStreamName("detections")
+    mobilenet.out.link(xoutNN.input)
 
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+    if depth:
+        xoutBoundingBoxDepthMapping = pipeline.create(dai.node.XLinkOut)
+        xoutBoundingBoxDepthMapping.setStreamName("boundingBoxDepthMapping")
+        mobilenet.boundingBoxMapping.link(xoutBoundingBoxDepthMapping.input)
 
-# Setting node configs
-stereo.setOutputDepth(True)
-stereo.setConfidenceThreshold(255)
+        xoutDepth = pipeline.create(dai.node.XLinkOut)
+        xoutDepth.setStreamName("depth")
+        mobilenet.passthroughDepth.link(xoutDepth.input)
 
-spatialDetectionNetwork.setBlobPath(nnBlobPath)
-spatialDetectionNetwork.setConfidenceThreshold(0.5)
-spatialDetectionNetwork.input.setBlocking(False)
-spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
-spatialDetectionNetwork.setDepthLowerThreshold(100)
-spatialDetectionNetwork.setDepthUpperThreshold(5000)
-
-# Create outputs
-
-monoLeft.out.link(stereo.left)
-monoRight.out.link(stereo.right)
-
-colorCam.preview.link(spatialDetectionNetwork.input)
-if syncNN:
-    spatialDetectionNetwork.passthrough.link(xoutRgb.input)
-else:
-    colorCam.preview.link(xoutRgb.input)
-
-spatialDetectionNetwork.out.link(xoutNN.input)
-spatialDetectionNetwork.boundingBoxMapping.link(xoutBoundingBoxDepthMapping.input)
-
-stereo.depth.link(spatialDetectionNetwork.inputDepth)
-spatialDetectionNetwork.passthroughDepth.link(xoutDepth.input)
+    return pipeline
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pipeline) as device:
+with dai.Device(dai.OpenVINO.Version.VERSION_2021_2) as device:
+    cams = device.getConnectedCameras()
+    depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+
     # Start pipeline
-    device.startPipeline()
+    device.startPipeline(create_pipeline(depth_enabled))
 
     print(f"DepthAI is up & running. Navigate to 'localhost:{str(HTTP_SERVER_PORT)}' with Chrome to see the mjpeg stream")
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     previewQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     detectionNNQueue = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
-    xoutBoundingBoxDepthMapping = device.getOutputQueue(name="boundingBoxDepthMapping", maxSize=4, blocking=False)
-    depthQueue = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+    if depth_enabled:
+        xoutBoundingBoxDepthMapping = device.getOutputQueue(name="boundingBoxDepthMapping", maxSize=4, blocking=False)
+        depthQueue = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
 
     frame = None
     detections = []
@@ -165,8 +167,10 @@ with dai.Device(pipeline) as device:
 
     while True:
         inPreview = previewQueue.get()
+        frame = inPreview.getCvFrame()
+
         inNN = detectionNNQueue.get()
-        depth = depthQueue.get()
+        detections = inNN.detections
 
         counter+=1
         current_time = time.monotonic()
@@ -175,28 +179,28 @@ with dai.Device(pipeline) as device:
             counter = 0
             startTime = current_time
 
-        frame = inPreview.getCvFrame()
-        depthFrame = depth.getFrame()
+        if depth_enabled:
+            depth = depthQueue.get()
+            depthFrame = depth.getFrame()
 
-        depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        depthFrameColor = cv2.equalizeHist(depthFrameColor)
-        depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
-        detections = inNN.detections
-        if len(detections) != 0:
-            boundingBoxMapping = xoutBoundingBoxDepthMapping.get()
-            roiDatas = boundingBoxMapping.getConfigData()
+            depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+            depthFrameColor = cv2.equalizeHist(depthFrameColor)
+            depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
+            if len(detections) != 0:
+                boundingBoxMapping = xoutBoundingBoxDepthMapping.get()
+                roiDatas = boundingBoxMapping.getConfigData()
 
-            for roiData in roiDatas:
-                roi = roiData.roi
-                roi = roi.denormalize(depthFrameColor.shape[1], depthFrameColor.shape[0])
-                topLeft = roi.topLeft()
-                bottomRight = roi.bottomRight()
-                xmin = int(topLeft.x)
-                ymin = int(topLeft.y)
-                xmax = int(bottomRight.x)
-                ymax = int(bottomRight.y)
+                for roiData in roiDatas:
+                    roi = roiData.roi
+                    roi = roi.denormalize(depthFrameColor.shape[1], depthFrameColor.shape[0])
+                    topLeft = roi.topLeft()
+                    bottomRight = roi.bottomRight()
+                    xmin = int(topLeft.x)
+                    ymin = int(topLeft.y)
+                    xmax = int(bottomRight.x)
+                    ymax = int(bottomRight.y)
 
-                cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                    cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
         # If the frame is available, draw bounding boxes on it and show the frame
         height = frame.shape[0]
@@ -213,19 +217,24 @@ with dai.Device(pipeline) as device:
                 label = detection.label
             cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.putText(frame, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            if depth_enabled:
+                cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
             server_TCP.datatosend = str(label) + "," + f"{int(detection.confidence * 100)}%"
 
 
         cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
-        new_width = int(depthFrameColor.shape[1] * (frame.shape[0] / depthFrameColor.shape[0]))
-        stacked = np.hstack([frame, cv2.resize(depthFrameColor, (new_width, frame.shape[0]))])
-        cv2.imshow("stacked", stacked)
-        server_HTTP.frametosend = stacked
+        if depth_enabled:
+            new_width = int(depthFrameColor.shape[1] * (frame.shape[0] / depthFrameColor.shape[0]))
+            stacked = np.hstack([frame, cv2.resize(depthFrameColor, (new_width, frame.shape[0]))])
+            cv2.imshow("stacked", stacked)
+            server_HTTP.frametosend = stacked
+        else:
+            cv2.imshow("frame", frame)
+            server_HTTP.frametosend = frame
 
 
         if cv2.waitKey(1) == ord('q'):

@@ -1,0 +1,4 @@
+opencv-python==4.5.5.62
+depthai==2.16.0.0
+depthai-sdk==1.1.8
+gdown==4.4.0

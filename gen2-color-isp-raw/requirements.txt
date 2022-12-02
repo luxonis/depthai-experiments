@@ -1,6 +1,5 @@
-numpy
+numpy==1.22 #Needed for numba
 numba
 opencv-python
-
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.0.0.1+e5e567383b92fd926fb5b71d02ed4ceda3db4a54
+argparse
+depthai==2.16.0.0

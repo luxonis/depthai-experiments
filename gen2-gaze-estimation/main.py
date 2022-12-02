@@ -4,10 +4,10 @@ import threading
 import signal
 from pathlib import Path
 
+import blobconverter
 import cv2
 import depthai
 import numpy as np
-from imutils.video import FPS
 from math import cos, sin
 
 
@@ -28,27 +28,33 @@ elif args.camera is False and args.video is None:
 
 
 def draw_3d_axis(image, head_pose, origin, size=50):
-    roll = head_pose[0] * np.pi / 180
-    pitch = head_pose[1] * np.pi / 180
-    yaw = -(head_pose[2] * np.pi / 180)
+    # From https://github.com/openvinotoolkit/open_model_zoo/blob/b1ff98b64a6222cf6b5f3838dc0271422250de95/demos/gaze_estimation_demo/cpp/src/results_marker.cpp#L50
+    origin_x,origin_y = origin
+    yaw,pitch, roll = np.array(head_pose)*np.pi / 180
 
+    sinY = sin(yaw )
+    sinP = sin(pitch )
+    sinR = sin(roll )
+
+    cosY = cos(yaw )
+    cosP = cos(pitch )
+    cosR = cos(roll )
     # X axis (red)
-    x1 = size * (cos(yaw) * cos(roll)) + origin[0]
-    y1 = size * (cos(pitch) * sin(roll) + cos(roll) * sin(pitch) * sin(yaw)) + origin[1]
-    cv2.line(image, (origin[0], origin[1]), (int(x1), int(y1)), (0, 0, 255), 3)
+    x1 = origin_x + size * (cosR * cosY + sinY * sinP * sinR)
+    y1 = origin_y + size * cosP * sinR
+    cv2.line(image, (origin_x, origin_y), (int(x1), int(y1)), (0, 0, 255), 3)
 
     # Y axis (green)
-    x2 = size * (-cos(yaw) * sin(roll)) + origin[0]
-    y2 = size * (-cos(pitch) * cos(roll) - sin(pitch) * sin(yaw) * sin(roll)) + origin[1]
-    cv2.line(image, (origin[0], origin[1]), (int(x2), int(y2)), (0, 255, 0), 3)
+    x2 = origin_x + size * (cosR * sinY * sinP + cosY * sinR)
+    y2 = origin_y - size * cosP * cosR
+    cv2.line(image, (origin_x, origin_y), (int(x2), int(y2)), (0, 255, 0), 3)
 
     # Z axis (blue)
-    x3 = size * (-sin(yaw)) + origin[0]
-    y3 = size * (cos(yaw) * sin(pitch)) + origin[1]
-    cv2.line(image, (origin[0], origin[1]), (int(x3), int(y3)), (255, 0, 0), 2)
+    x3 = origin_x + size * (sinY * cosP)
+    y3 = origin_y + size * sinP
+    cv2.line(image, (origin_x, origin_y), (int(x3), int(y3)), (255, 0, 0), 2)
 
     return image
-
 
 def frame_norm(frame, bbox):
     norm_vals = np.full(len(bbox), frame.shape[0])
@@ -96,69 +102,66 @@ def create_pipeline():
 
     if camera:
         print("Creating Color Camera...")
-        cam = pipeline.createColorCamera()
+        cam = pipeline.create(depthai.node.ColorCamera)
         cam.setPreviewSize(300, 300)
         cam.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
         cam.setBoardSocket(depthai.CameraBoardSocket.RGB)
 
-        cam_xout = pipeline.createXLinkOut()
+        cam_xout = pipeline.create(depthai.node.XLinkOut)
         cam_xout.setStreamName("cam_out")
         cam.preview.link(cam_xout.input)
 
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_nn = pipeline.createNeuralNetwork()
-    face_nn.setBlobPath(str(Path("models/face-detection-retail-0004/face-detection-retail-0004_openvino_2021.2_4shave.blob").resolve().absolute()))
+    face_nn = pipeline.create(depthai.node.NeuralNetwork)
+    face_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=4))
 
     if camera:
         cam.preview.link(face_nn.input)
     else:
-        face_in = pipeline.createXLinkIn()
+        face_in = pipeline.create(depthai.node.XLinkIn)
         face_in.setStreamName("face_in")
         face_in.out.link(face_nn.input)
 
-    face_nn_xout = pipeline.createXLinkOut()
+    face_nn_xout = pipeline.create(depthai.node.XLinkOut)
     face_nn_xout.setStreamName("face_nn")
     face_nn.out.link(face_nn_xout.input)
-    
+
     # NeuralNetwork
     print("Creating Landmarks Detection Neural Network...")
-    land_nn = pipeline.createNeuralNetwork()
-    land_nn.setBlobPath(
-        str(Path("models/landmarks-regression-retail-0009/landmarks-regression-retail-0009_openvino_2021.2_4shave.blob").resolve().absolute())
-    )
-    land_nn_xin = pipeline.createXLinkIn()
+    land_nn = pipeline.create(depthai.node.NeuralNetwork)
+    land_nn.setBlobPath(blobconverter.from_zoo(name="landmarks-regression-retail-0009", shaves=4))
+    land_nn_xin = pipeline.create(depthai.node.XLinkIn)
     land_nn_xin.setStreamName("landmark_in")
     land_nn_xin.out.link(land_nn.input)
-    land_nn_xout = pipeline.createXLinkOut()
+    land_nn_xout = pipeline.create(depthai.node.XLinkOut)
     land_nn_xout.setStreamName("landmark_nn")
     land_nn.out.link(land_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Head Pose Neural Network...")
-    pose_nn = pipeline.createNeuralNetwork()
-    pose_nn.setBlobPath(
-        str(Path("models/head-pose-estimation-adas-0001/head-pose-estimation-adas-0001_openvino_2021.2_4shave.blob").resolve().absolute())
-    )
-    pose_nn_xin = pipeline.createXLinkIn()
+    pose_nn = pipeline.create(depthai.node.NeuralNetwork)
+    pose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=4))
+    pose_nn_xin = pipeline.create(depthai.node.XLinkIn)
     pose_nn_xin.setStreamName("pose_in")
     pose_nn_xin.out.link(pose_nn.input)
-    pose_nn_xout = pipeline.createXLinkOut()
+    pose_nn_xout = pipeline.create(depthai.node.XLinkOut)
     pose_nn_xout.setStreamName("pose_nn")
     pose_nn.out.link(pose_nn_xout.input)
 
     # NeuralNetwork
     print("Creating Gaze Estimation Neural Network...")
-    gaze_nn = pipeline.createNeuralNetwork()
-    gaze_nn.setBlobPath(
-        str(Path("models/gaze-estimation-adas-0002/gaze-estimation-adas-0002_openvino_2021.2_4shave.blob").resolve().absolute())
+    gaze_nn = pipeline.create(depthai.node.NeuralNetwork)
+    path = blobconverter.from_zoo("gaze-estimation-adas-0002", shaves=4,
+        compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8'],
     )
-    gaze_nn_xin = pipeline.createXLinkIn()
+    gaze_nn.setBlobPath(path)
+    gaze_nn_xin = pipeline.create(depthai.node.XLinkIn)
     gaze_nn_xin.setStreamName("gaze_in")
     gaze_nn_xin.out.link(gaze_nn.input)
-    gaze_nn_xout = pipeline.createXLinkOut()
+    gaze_nn_xout = pipeline.create(depthai.node.XLinkOut)
     gaze_nn_xout.setStreamName("gaze_nn")
     gaze_nn.out.link(gaze_nn_xout.input)
 
@@ -188,8 +191,6 @@ class Main:
         self.gaze = None
 
         self.running = True
-        self.fps = FPS()
-        self.fps.start()
 
     def face_thread(self):
         face_nn = self.device.getOutputQueue("face_nn")
@@ -258,7 +259,16 @@ class Main:
             right_img = self.frame[self.right_bbox[1]:self.right_bbox[3], self.right_bbox[0]:self.right_bbox[2]]
 
             try:
-                self.pose = [val[0][0] for val in to_tensor_result(pose_nn.get()).values()]
+                # The output of  pose_nn is in YPR  format, which is the required sequence input for pose in  gaze
+                # https://docs.openvinotoolkit.org/2020.1/_models_intel_head_pose_estimation_adas_0001_description_head_pose_estimation_adas_0001.html
+                # https://docs.openvinotoolkit.org/latest/omz_models_model_gaze_estimation_adas_0002.html
+                # ... three head pose angles – (yaw, pitch, and roll) ...
+                values = to_tensor_result(pose_nn.get())
+                self.pose = [
+                        values['angle_y_fc'][0][0],
+                        values['angle_p_fc'][0][0],
+                        values['angle_r_fc'][0][0]
+                        ]
             except RuntimeError as ex:
                 continue
 
@@ -314,7 +324,6 @@ class Main:
             if not read_correctly:
                 break
 
-            self.fps.update()
             self.frame = new_frame
             self.debug_frame = self.frame.copy()
 
@@ -331,18 +340,18 @@ class Main:
                     le_y = (self.left_bbox[1] + self.left_bbox[3]) // 2
 
                     x, y = (self.gaze * 100).astype(int)[:2]
-                    
+
                     if args.lazer:
                         beam_img = np.zeros(self.debug_frame.shape, np.uint8)
                         for t in range(10)[::-2]:
                             cv2.line(beam_img, (re_x, re_y), ((re_x + x*100), (re_y - y*100)), (0, 0, 255-t*10), t*2)
                             cv2.line(beam_img, (le_x, le_y), ((le_x + x*100), (le_y - y*100)), (0, 0, 255-t*10), t*2)
                         self.debug_frame |= beam_img
-                        
+
                     else:
                         cv2.arrowedLine(self.debug_frame, (le_x, le_y), (le_x + x, le_y - y), (255, 0, 255), 3)
                         cv2.arrowedLine(self.debug_frame, (re_x, re_y), (re_x + x, re_y - y), (255, 0, 255), 3)
-                
+
                 if not args.lazer:
                     for raw_bbox in self.bboxes:
                         bbox = frame_norm(self.frame, raw_bbox)
@@ -355,7 +364,7 @@ class Main:
                         cv2.rectangle(self.debug_frame, (self.right_bbox[0], self.right_bbox[1]), (self.right_bbox[2], self.right_bbox[3]), (245, 10, 10), 2)
                     if self.pose is not None and self.nose is not None:
                         draw_3d_axis(self.debug_frame, self.pose, self.nose)
-    
+
                 if camera:
                     cv2.imshow("Camera view", self.debug_frame)
                 else:
@@ -365,8 +374,6 @@ class Main:
                     cv2.destroyAllWindows()
                     break
 
-        self.fps.stop()
-        print("FPS: {:.2f}".format(self.fps.fps()))
         if not camera:
             self.cap.release()
         cv2.destroyAllWindows()

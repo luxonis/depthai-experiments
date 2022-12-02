@@ -2,7 +2,7 @@
 
 You can read more about the EfficientDet model in [automl's repo](https://github.com/google/automl/tree/master/efficientdet).
 
-The NN model is taken from PINTO's [model-zoo](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/018_EfficientDet).
+The NN model is taken from PINTOs [model-zoo](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/018_EfficientDet).
 In this experiment we have used `EfficientDet-lite0`, which is the most lightweight one.
 
 Instructions on how to compile the model yourself:

@@ -33,7 +33,7 @@ out_depth      = False  # Disparity by default
 out_rectified  = True   # Output and display rectified streams
 lrcheck  = True   # Better handling for occlusions
 extended = False  # Closer-in minimum depth, disparity range is doubled
-subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
+subpixel = False   # Better accuracy for longer distance, fractional disparity 32-levels
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7
 median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 
@@ -65,9 +65,9 @@ def create_rgb_cam_pipeline():
     print("Creating pipeline: RGB CAM -> XLINK OUT")
     pipeline = dai.Pipeline()
 
-    cam          = pipeline.createColorCamera()
-    xout_preview = pipeline.createXLinkOut()
-    xout_video   = pipeline.createXLinkOut()
+    cam          = pipeline.create(dai.node.ColorCamera)
+    xout_preview = pipeline.create(dai.node.XLinkOut)
+    xout_video   = pipeline.create(dai.node.XLinkOut)
 
     cam.setPreviewSize(540, 540)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -88,10 +88,10 @@ def create_mono_cam_pipeline():
     print("Creating pipeline: MONO CAMS -> XLINK OUT")
     pipeline = dai.Pipeline()
 
-    cam_left   = pipeline.createMonoCamera()
-    cam_right  = pipeline.createMonoCamera()
-    xout_left  = pipeline.createXLinkOut()
-    xout_right = pipeline.createXLinkOut()
+    cam_left   = pipeline.create(dai.node.MonoCamera)
+    cam_right  = pipeline.create(dai.node.MonoCamera)
+    xout_left  = pipeline.create(dai.node.XLinkOut)
+    xout_right = pipeline.create(dai.node.XLinkOut)
 
     cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
     cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
@@ -118,18 +118,18 @@ def create_stereo_depth_pipeline(from_camera=True):
     pipeline = dai.Pipeline()
 
     if from_camera:
-        cam_left      = pipeline.createMonoCamera()
-        cam_right     = pipeline.createMonoCamera()
+        cam_left      = pipeline.create(dai.node.MonoCamera)
+        cam_right     = pipeline.create(dai.node.MonoCamera)
     else:
-        cam_left      = pipeline.createXLinkIn()
-        cam_right     = pipeline.createXLinkIn()
-    stereo            = pipeline.createStereoDepth()
-    xout_left         = pipeline.createXLinkOut()
-    xout_right        = pipeline.createXLinkOut()
-    xout_depth        = pipeline.createXLinkOut()
-    xout_disparity    = pipeline.createXLinkOut()
-    xout_rectif_left  = pipeline.createXLinkOut()
-    xout_rectif_right = pipeline.createXLinkOut()
+        cam_left      = pipeline.create(dai.node.XLinkIn)
+        cam_right     = pipeline.create(dai.node.XLinkIn)
+    stereo            = pipeline.create(dai.node.StereoDepth)
+    xout_left         = pipeline.create(dai.node.XLinkOut)
+    xout_right        = pipeline.create(dai.node.XLinkOut)
+    xout_depth        = pipeline.create(dai.node.XLinkOut)
+    xout_disparity    = pipeline.create(dai.node.XLinkOut)
+    xout_rectif_left  = pipeline.create(dai.node.XLinkOut)
+    xout_rectif_right = pipeline.create(dai.node.XLinkOut)
 
     if from_camera:
         cam_left .setBoardSocket(dai.CameraBoardSocket.LEFT)
@@ -141,11 +141,9 @@ def create_stereo_depth_pipeline(from_camera=True):
         cam_left .setStreamName('in_left')
         cam_right.setStreamName('in_right')
 
-    stereo.setOutputDepth(out_depth)
-    stereo.setOutputRectified(out_rectified)
-    stereo.setConfidenceThreshold(200)
+    stereo.initialConfig.setConfidenceThreshold(200)
     stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
-    stereo.setMedianFilter(median) # KERNEL_7x7 default
+    stereo.initialConfig.setMedianFilter(median) # KERNEL_7x7 default
     stereo.setLeftRightCheck(lrcheck)
     stereo.setExtendedDisparity(extended)
     stereo.setSubpixel(subpixel)
@@ -230,21 +228,24 @@ def convert_to_cv2_frame(name, image):
 
     else: # mono streams / single channel
         frame = np.array(data).reshape((h, w)).astype(np.uint8)
-        if name.startswith('rectified_'):
-            frame = cv2.flip(frame, 1)
         if name == 'rectified_right':
             last_rectif_right = frame
     return frame
 
-def test_pipeline():
-   #pipeline, streams = create_rgb_cam_pipeline()
-   #pipeline, streams = create_mono_cam_pipeline()
-    pipeline, streams = create_stereo_depth_pipeline(source_camera)
 
+def test_pipeline():
     print("Creating DepthAI device")
-    with dai.Device(pipeline) as device:
+    with dai.Device() as device:
+        cams = device.getConnectedCameras()
+        depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+        if depth_enabled:
+            pipeline, streams = create_stereo_depth_pipeline(source_camera)
+        else:
+            pipeline, streams = create_rgb_cam_pipeline()
+        #pipeline, streams = create_mono_cam_pipeline()
+
         print("Starting pipeline")
-        device.startPipeline()
+        device.startPipeline(pipeline)
 
         in_streams = []
         if not source_camera:

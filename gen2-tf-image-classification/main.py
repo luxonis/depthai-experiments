@@ -23,35 +23,35 @@ pipeline = dai.Pipeline()
 
 # NeuralNetwork
 print("Creating Neural Network...")
-detection_nn = pipeline.createNeuralNetwork()
+detection_nn = pipeline.create(dai.node.NeuralNetwork)
 detection_nn.setBlobPath(str(Path("flower.blob").resolve().absolute()))
 
 if camera:
     print("Creating Color Camera...")
-    cam_rgb = pipeline.createColorCamera()
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
     cam_rgb.setPreviewSize(480, 480)
     cam_rgb.setInterleaved(False)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
     cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
 
-    cam_xout = pipeline.createXLinkOut()
+    cam_xout = pipeline.create(dai.node.XLinkOut)
     cam_xout.setStreamName("rgb")
     cam_rgb.preview.link(cam_xout.input)
 
     print("Creating ImageManip node...")
-    manip = pipeline.createImageManip()
+    manip = pipeline.create(dai.node.ImageManip)
     manip.initialConfig.setResize(180, 180)
     cam_rgb.preview.link(manip.inputImage)
     manip.out.link(detection_nn.input)
 
 else:
-    face_in = pipeline.createXLinkIn()
+    face_in = pipeline.create(dai.node.XLinkIn)
     face_in.setStreamName("in_nn")
     face_in.out.link(detection_nn.input)
 
 # Create outputs
-xout_nn = pipeline.createXLinkOut()
+xout_nn = pipeline.create(dai.node.XLinkOut)
 xout_nn.setStreamName("nn")
 detection_nn.out.link(xout_nn.input)
 
@@ -86,8 +86,6 @@ def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
 
 # Pipeline defined, now the device is assigned and pipeline is started
 with dai.Device(pipeline) as device:
-    device.startPipeline()
-
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     if camera:
         q_rgb = device.getOutputQueue(name="rgb", maxSize=1, blocking=False)

@@ -1,22 +1,13 @@
-[中文文档](README.zh-CN.md)
+### Deprecated
 
-# Two Stage Inference
+This was an example using the gen1 `depthai` library, which has been deprected since 2021.
+### Alternatives
 
-This eample shows how to perform two stage inference using DepthAI.
+See these demos that implement two-stage (or more) inference:
 
-We'll use `face-detection-retail-0004` to detect face and `landmarks-regression-retail-0009` as 
-second stage inference which will detect facial landmarks on the detected face
-
-## Installation
-
-```
-python3 -m pip install -r requirements.txt
-```
-
-## Usage
-
-Run the application
-
-```
-python3 main.py
-```
+- [Age-gender recognition](../gen2-age-gender/)
+- [Emotion recognition](../gen2-emotion-recognition/)
+- [Gaze estimation](../gen2-gaze-estimation/)
+- [Face recognition](../gen2-face-detection/)
+- [Face mask classification](../gen2-mask-detection/)
+- [Triangulation demo](../gen2-triangulation/)

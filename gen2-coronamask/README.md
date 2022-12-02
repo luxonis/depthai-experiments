@@ -12,13 +12,11 @@ Our training was a quick weekend effort at it.
 
 [![COVID-19 mask-no-mask megaAI](https://user-images.githubusercontent.com/5244214/112673778-6a3a9f80-8e65-11eb-9b7b-e352beffe67a.gif)](https://youtu.be/c4KEFG2eR3M "COVID-19 mask detection")
 
-## Pre-requisites
+## Install requirements
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
+```
+python3 -m pip install -r requirements.txt
+```
 
 ## Usage
 

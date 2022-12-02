@@ -1,41 +1,67 @@
-#!/usr/bin/env python3
-
-import cv2
 import depthai as dai
+import threading
 import contextlib
+import cv2
+import time
 
-# Start defining a pipeline
-pipeline = dai.Pipeline()
+# This can be customized to pass multiple parameters
+def getPipeline(stereo):
+    # Start defining a pipeline
+    pipeline = dai.Pipeline()
 
-# Define a source - color camera
-cam_rgb = pipeline.createColorCamera()
-cam_rgb.setPreviewSize(600, 600)
-cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-cam_rgb.setInterleaved(False)
+    # Define a source - color camera
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
+    # For the demo, just set a larger RGB preview size for OAK-D
+    if stereo:
+        cam_rgb.setPreviewSize(600, 300)
+    else:
+        cam_rgb.setPreviewSize(300, 300)
+    cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam_rgb.setInterleaved(False)
 
-# Create output
-xout_rgb = pipeline.createXLinkOut()
-xout_rgb.setStreamName("rgb")
-cam_rgb.preview.link(xout_rgb.input)
+    # Create output
+    xout_rgb = pipeline.create(dai.node.XLinkOut)
+    xout_rgb.setStreamName("rgb")
+    cam_rgb.preview.link(xout_rgb.input)
+    return pipeline
 
-q_rgb_list = []
+def worker(dev_info, stack, dic):
+    openvino_version = dai.OpenVINO.Version.VERSION_2021_4
+    device: dai.Device = stack.enter_context(dai.Device(openvino_version, dev_info, False))
 
-# https://docs.python.org/3/library/contextlib.html#contextlib.ExitStack
+    # Note: currently on POE, DeviceInfo.getMxId() and Device.getMxId() are different!
+    print("=== Connected to " + dev_info.getMxId())
+    mxid = device.getMxId()
+    cameras = device.getConnectedCameras()
+    usb_speed = device.getUsbSpeed()
+    print("   >>> MXID:", mxid)
+    print("   >>> Cameras:", *[c.name for c in cameras])
+    print("   >>> USB speed:", usb_speed.name)
+
+    device.startPipeline(getPipeline(len(cameras)==3))
+    dic["rgb-" + mxid] = device.getOutputQueue(name="rgb")
+
+device_infos = dai.Device.getAllAvailableDevices()
+print(f'Found {len(device_infos)} devices')
+
 with contextlib.ExitStack() as stack:
-    for device_info in dai.Device.getAllAvailableDevices():
-        device = stack.enter_context(dai.Device(pipeline, device_info))
-        print("Conected to " + device_info.getMxId())
-        device.startPipeline()
-        # Output queue will be used to get the rgb frames from the output defined above
-        q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-        q_rgb_list.append(q_rgb)
+    queues = {}
+    threads = []
+    for dev in device_infos:
+        time.sleep(1) # Currently required due to XLink race issues
+        thread = threading.Thread(target=worker, args=(dev, stack, queues))
+        thread.start()
+        threads.append(thread)
+
+    for t in threads:
+        t.join() # Wait for all threads to finish
 
     while True:
-        for i, q_rgb in enumerate(q_rgb_list):
-            in_rgb = q_rgb.tryGet()
-            if in_rgb is not None:
-                cv2.imshow("rgb-" + str(i + 1), in_rgb.getCvFrame())
-
+        for name, queue in queues.items():
+            if queue.has():
+                cv2.imshow(name, queue.get().getCvFrame())
         if cv2.waitKey(1) == ord('q'):
             break
+
+print('Devices closed')

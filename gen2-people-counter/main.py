@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
+
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
@@ -7,12 +9,15 @@ import argparse
 from time import monotonic
 import itertools
 
+from depthai_sdk import PipelineManager, NNetManager, PreviewManager
+from depthai_sdk import cropToAspectRatio
+
 parentDir = Path(__file__).parent
 
 #=====================================================================================
 # To use a different NN, change `size` and `nnPath` here:
 size = (544, 320)
-nnPath = parentDir / Path(f"models/person-detection-retail-0013_2021.3_7shaves.blob")
+nnPath = blobconverter.from_zoo("person-detection-retail-0013", shaves=8)
 #=====================================================================================
 
 # Labels
@@ -29,112 +34,39 @@ args = parser.parse_args()
 
 # Whether we want to use images from host or rgb camera
 IMAGE = not args.camera
-
-def frameNorm(frame, bbox):
-    normVals = np.full(len(bbox), frame.shape[0])
-    normVals[::2] = frame.shape[1]
-    return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
-
-# Crop the frame to desired aspect ratio
-# size (width, heigth)
-def crop_frame(frame, size):
-    shape = frame.shape
-    h = shape[0]
-    w = shape[1]
-    current_ratio = w / h
-    new_ratio = size[0] / size[1]
-
-    # Crop width/heigth to match the aspect ratio needed by the NN
-    if new_ratio < current_ratio:  # Crop width
-        # Use full height, crop width
-        new_w = (new_ratio/current_ratio) * w
-        crop = int((w - new_w) / 2)
-        preview = frame[:, crop:w-crop]
-    else:  # Crop height
-        # Use full width, crop height
-        new_h = (current_ratio/new_ratio) * h
-        crop = int((h - new_h) / 2)
-        preview = frame[crop:h-crop, :]
-    return preview
-
-
-def to_planar(frame, shape):
-    return cv2.resize(frame, shape).transpose(2, 0, 1).flatten()
-
+nnSource = "host" if IMAGE else "color"
 
 # Start defining a pipeline
-pipeline = dai.Pipeline()
+pm = PipelineManager()
+if not IMAGE:
+    pm.createColorCam(previewSize=size, xout=True)
+    pv = PreviewManager(display=["color"], nnSource=nnSource)
 
-# Create and configure the detection network
-detectionNetwork = pipeline.createMobileNetDetectionNetwork()
-detectionNetwork.setBlobPath(str(Path(nnPath).resolve().absolute()))
-detectionNetwork.setConfidenceThreshold(0.5)
-detectionNetwork.input.setBlocking(False)
-
-if IMAGE:
-    # Configure XLinkIn - we will send img frames through it
-    imgIn = pipeline.createXLinkIn()
-    imgIn.setStreamName("img_in")
-    imgIn.out.link(detectionNetwork.input)
-
-else:
-    # Create and configure the color camera
-    colorCam = pipeline.createColorCamera()
-    colorCam.setPreviewSize(size[0], size[1])
-    colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    colorCam.setInterleaved(False)
-    colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    # Connect RGB preview to the detection network
-    colorCam.preview.link(detectionNetwork.input)
-
-    # Send send RGB preview frames to the host
-    rgbOut = pipeline.createXLinkOut()
-    rgbOut.setStreamName("preview")
-    detectionNetwork.passthrough.link(rgbOut.input)
-
-detOut = pipeline.createXLinkOut()
-detOut.setStreamName("detections")
-detectionNetwork.out.link(detOut.input)
+nm = NNetManager(inputSize=size, nnFamily="mobilenet", labels=labelMap, confidence=0.5)
+nn = nm.createNN(pm.pipeline, pm.nodes, blobPath=nnPath, source=nnSource)
+pm.setNnManager(nm)
+pm.addNn(nn)
 
 # Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device:
-    # Start the pipeline
-    device.startPipeline()
-    detectionQ = device.getOutputQueue("detections", maxSize=4, blocking=False)
-
+with dai.Device(pm.pipeline) as device:
+    nm.createQueues(device)
     if IMAGE:
-        imgQ = device.getInputQueue("img_in")
-        if args.image:
-            imgPaths = [args.image]
-        else:
-            imgPaths = list(parentDir.glob('images/*.jpeg'))
-        og_frames = itertools.cycle([crop_frame(cv2.imread(str(imgPath)), size) for imgPath in imgPaths])
+        imgPaths = [args.image] if args.image else list(parentDir.glob('images/*.jpeg'))
+        og_frames = itertools.cycle([cropToAspectRatio(cv2.imread(str(imgPath)), size) for imgPath in imgPaths])
     else:
-        rgbQ = device.getOutputQueue("preview", maxSize=4, blocking=False)
+        pv.createQueues(device)
 
     while True:
         if IMAGE:
             frame = next(og_frames).copy()
-
-            img = dai.ImgFrame()
-            img.setData(to_planar(frame, size))
-            img.setType(dai.RawImgFrame.Type.BGR888p)
-            img.setTimestamp(monotonic())
-            img.setWidth(size[0])
-            img.setHeight(size[1])
-            imgQ.send(img)
+            nm.sendInputFrame(frame)
         else:
-            frame = rgbQ.get().getCvFrame()
+            pv.prepareFrames(blocking=True)
+            frame = pv.get("color")
 
-        detIn = detectionQ.get()
-        for detection in detIn.detections:
-            bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-            cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-
-        cv2.putText(frame, f"People count: {len(detIn.detections)}", (5, 30), cv2.FONT_HERSHEY_TRIPLEX, 1, (0,0,255))
-
+        nn_data = nm.decode(nm.outputQueue.get())
+        nm.draw(frame, nn_data)
+        cv2.putText(frame, f"People count: {len(nn_data)}", (5, 30), cv2.FONT_HERSHEY_TRIPLEX, 1, (0,0,255))
         cv2.imshow("color", frame)
 
         if cv2.waitKey(3000 if IMAGE else 1) == ord('q'):

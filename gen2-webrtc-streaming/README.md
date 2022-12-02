@@ -8,12 +8,12 @@ This example demonstrates how to setup a WebRTC server to configure the device a
 
 ## Pre-requisites
 
-1. Purchase a DepthAI model (see [shop.luxonis.com](https://shop.luxonis.com/))
-2. Install requirements
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
-3. [Enable insecure origins to be treated as secure (Chrome)](https://stackoverflow.com/a/58449078/5494277)
+Install requirements:
+```
+python3 -m pip install -r requirements.txt
+```
+
+[Enable insecure origins to be treated as secure (Chrome)](https://stackoverflow.com/a/58449078/5494277)
 
    > To ignore Chrome’s secure origin policy, follow these steps. Navigate to chrome://flags/#unsafely-treat-insecure-origin-as-secure in Chrome.  
    > Find and enable the Insecure origins treated as secure section (see below). Add any addresses you want to ignore the secure origin policy for. Remember to include the port number too (if required). 
@@ -24,7 +24,7 @@ This example demonstrates how to setup a WebRTC server to configure the device a
 ## Usage
 
 ```
-python3 server.py
+python3 main.py
 ```
 
 And open [`http://0.0.0.0:8080`](http://0.0.0.0:8080)

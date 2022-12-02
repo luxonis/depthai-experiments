@@ -1,0 +1,6 @@
+depthai==2.18
+opencv-python==4.5.1.48
+gdown==4.5.1
+numpy==1.23.4
+blobconverter==1.3.0
+scikit-image==0.19.3

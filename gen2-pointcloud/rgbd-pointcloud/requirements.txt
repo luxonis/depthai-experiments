@@ -1,0 +1,5 @@
+opencv-python
+depthai==2.16.0.0
+numpy
+open3d==0.10.0.0; platform_machine != "armv7l" and python_version < "3.9"
+torch
