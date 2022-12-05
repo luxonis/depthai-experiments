@@ -13,6 +13,7 @@ parser.add_argument("-ms", "--mono_camera_resolution", type = str, default = "TH
 parser.add_argument("-m", "--median", type = str, default = "KERNEL_7x7", choices=["MEDIAN_OFF", "KERNEL_3x3", "KERNEL_5x5", "KERNEL_7x7"], help = "Median filter")
 parser.add_argument("-n", "--n_samples", type = int, default = 10, help = "Number of samples in a single test")
 parser.add_argument("--astra_intrinsic", type = str, default = None, help = "Path to astra intrinsic file (.np file containing 3x3 matrix)")
+parser.add_argument('-p', '--path', default = None, type = str, help = "Path to the recording folder")
 
 args = parser.parse_args()
 
@@ -36,3 +37,5 @@ n_samples = args.n_samples
 
 # Astra intrinsic
 astra_intrinsic = args.astra_intrinsic # path to the astra intrinsic matrix
+
+path = args.path # path to the recording folder
