@@ -12,7 +12,7 @@ https://github.com/zl548/MegaDepth
 
 Run as:
 python3 -m pip install -r requirements.txt
-python3 main.py
+python3 people-detection.py
 
 Onnx taken from PINTO0309, added scaling flag, and exported to blob:
 https://github.com/PINTO0309/PINTO_model_zoo/tree/main/153_MegaDepth

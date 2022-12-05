@@ -22,7 +22,7 @@
 ## 用法
 
 ```bash
-用法: main.py [-h] [-nd] [-cam] [-vid VIDEO]
+用法: people-detection.py [-h] [-nd] [-cam] [-vid VIDEO]
 
 可选参数:
   -h, --help            显示此帮助消息并退出
@@ -36,12 +36,12 @@
 要与视频文件一起使用，请使用以下参数运行脚本
 
 ```bash
-python main.py -vid <path>
+python people-detection.py -vid <path>
 ```
 
 要与DepthAI 4K RGB相机一起使用，请改用
 ```bash
-python main.py -cam
+python people-detection.py -cam
 ```
 
 > 按"q"退出程序。

@@ -22,5 +22,5 @@ python3 -m pip install -r requirements.txt
 ## Usage
 
 ```bash
-python main.py
+python people-detection.py
 ```

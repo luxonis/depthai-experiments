@@ -10,5 +10,5 @@ a custom CV model ([tutorial](https://docs.luxonis.com/en/latest/pages/tutorials
 ## Usage
 
 ```bash
-usage: main.py
+usage: people-detection.py
 ```

@@ -6,7 +6,7 @@ from depthai_sdk.callback_context import CallbackContext
 NN_HEIGHT, NN_WIDTH = 256, 456
 
 
-def scale(p1, p2, scale_factor, offset_w):
+def denormalize_keypoints(p1, p2, scale_factor, offset_w):
     return int(p1 * scale_factor) + offset_w, int(p2 * scale_factor)
 
 
@@ -20,14 +20,14 @@ def callback(ctx: CallbackContext):
     for person_landmarks in packet.img_detections.landmarks:
         for i, landmark in enumerate(person_landmarks):
             l1, l2 = landmark
-            x1, y1 = scale(*l1, scale_factor, offset_w)
-            x2, y2 = scale(*l2, scale_factor, offset_w)
+            x1, y1 = denormalize_keypoints(*l1, scale_factor, offset_w)
+            x2, y2 = denormalize_keypoints(*l2, scale_factor, offset_w)
             cv2.line(frame, (x1, y1), (x2, y2), packet.img_detections.colors[i], 3, cv2.LINE_AA)
 
     cv2.imshow('Human pose estimation', frame)
 
 
-with OakCamera(replay='input.mp4') as oak:
+with OakCamera(replay='ballet-man-1-720p.mp4') as oak:
     color = oak.create_camera('color')
 
     human_pose_nn = oak.create_nn('human-pose-estimation-0001', color)

@@ -1,0 +1,2 @@
+depthai-sdk==1.9.1
+gdown>=4.4
