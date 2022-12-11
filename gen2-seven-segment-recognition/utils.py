@@ -14,7 +14,7 @@ class BeamSearchDecoder:
 
     self.beam_len = beam_len
     self.blank = blank
-  
+
   def _create_new_beam(self):
     fn = lambda : (-float("inf"), -float("inf"))
     return collections.defaultdict(fn)
@@ -60,7 +60,7 @@ class BeamSearchDecoder:
             n_p_nb = self._log_sum_exp(n_p_nb, p_b + p, p_nb + p)
           else:
             n_p_nb = self._log_sum_exp(n_p_nb, p_b + p)
-            
+
           next_beam[n_prefix] = (n_p_b, n_p_nb)
 
           if s == end_t:
@@ -74,4 +74,4 @@ class BeamSearchDecoder:
       beam = beam[:self.beam_len]
 
     best = beam[0]
-    return "".join([self.vocab_dict[idx] for idx in best[0]]) 
+    return "".join([self.vocab_dict[idx] for idx in best[0]])
