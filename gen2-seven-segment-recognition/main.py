@@ -48,14 +48,14 @@ nn = pipeline.createNeuralNetwork()
 nn.setBlobPath(NN_PATH)
 manip2.out.link(nn.input)
 
-# Send class predictions from the NN to the host via XLink
+# Send class sequence predictions from the NN to the host via XLink
 nn_xout = pipeline.createXLinkOut()
 nn_xout.setStreamName("nn")
 nn.out.link(nn_xout.input)
 
-rgb_xout = pipeline.createXLinkOut()
-rgb_xout.setStreamName("rgb")
-manip2.out.link(rgb_xout.input)
+mono_xout = pipeline.createXLinkOut()
+mono_xout.setStreamName("mono")
+manip2.out.link(mono_xout.input)
 
 
 with dai.Device(pipeline) as device:
@@ -66,7 +66,7 @@ with dai.Device(pipeline) as device:
     thickness = 1
     
     qNn = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
-    qCam = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+    qCam = device.getOutputQueue(name="mono", maxSize=4, blocking=False)
     
     fps = 0
     fps_handler = FPSHandler()
@@ -80,7 +80,9 @@ with dai.Device(pipeline) as device:
         fps = fps_handler.tickFps("nn")
 
         out = qNn.get()
-        output = np.array(out.getFirstLayerFp16()).reshape(24,1,12)
+
+        output = np.array(out.getLayerFp16("845")).reshape(24,1,12)
+
         output = np.transpose(output, [1,0,2])
         classes_softmax = softmax(output, 2)[0]
 
