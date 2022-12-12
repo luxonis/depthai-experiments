@@ -27,7 +27,7 @@ def callback(ctx: CallbackContext):
     cv2.imshow('Human pose estimation', frame)
 
 
-with OakCamera(replay='ballet-man-1-720p.mp4') as oak:
+with OakCamera(replay='input.mp4') as oak:
     color = oak.create_camera('color')
 
     human_pose_nn = oak.create_nn('human-pose-estimation-0001', color)

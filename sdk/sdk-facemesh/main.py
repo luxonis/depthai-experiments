@@ -44,7 +44,7 @@ def callback(ctx: CallbackContext):
     else:
         applied_effect = frame
 
-    cv2.imshow("Demo", np.hstack([frame, applied_effect]))
+    cv2.imshow("FaceMesh", np.hstack([frame, applied_effect]))
 
 
 with OakCamera() as oak:
