@@ -29,7 +29,7 @@ with OakCamera(replay='people-construction-vest-01') as oak:
     person_det = oak.create_nn('person-detection-retail-0013', color)
     # Passthrough is enabled for debugging purposes
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    person_det.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
+    person_det.config_nn(aspect_ratio_resize_mode=AspectRatioResizeMode.CROP)
 
     oak.visualize([person_det, person_det.out.passthrough])
     oak.start(blocking=True)
