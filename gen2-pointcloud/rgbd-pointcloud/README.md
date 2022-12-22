@@ -20,7 +20,8 @@ open3D is not supported by all platforms, but is required for pointcloud visuali
 python3 main.py
 ```
 
-
+Press s to save the most recent depth/rgb/pcl to disk
+Press q to quit
 
 ## TODO:
 - Fix z-axis

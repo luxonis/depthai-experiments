@@ -42,6 +42,11 @@ If you would want to display detections on high-res frames (not 300x300), check 
 
 ![Demo image](https://user-images.githubusercontent.com/18037362/146223605-e4fd0fb3-7cf9-40a0-87e0-73d63a46eb2d.png)
 
+## MJPEG decoding (threaded) on multiple devices
+
+The [multi-device-mjpeg-decoding.py](multi-device-mjpeg-decoding.py) script will connect to multiple devices and stream encoded 4K JPEG frames from all devices to the host. On host computer we run a thread for each device, boot the device, get frames,
+decode them, and put them in a queue which the main thread reads and displays the frame on the main thread.
+
 ## Setup
 
 ```

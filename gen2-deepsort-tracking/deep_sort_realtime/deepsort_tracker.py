@@ -8,12 +8,12 @@ from deep_sort_realtime.deep_sort import nn_matching
 from deep_sort_realtime.deep_sort.detection import Detection
 from deep_sort_realtime.deep_sort.tracker import Tracker
 from deep_sort_realtime.utils.nms import non_max_suppression
-from deep_sort_realtime.embedder.embedder_pytorch import MobileNetv2_Embedder
+# from deep_sort_realtime.embedder.embedder_pytorch import MobileNetv2_Embedder
 
 logger = logging.getLogger(__name__)
 
 EMBEDDER_CHOICES = [
-    "mobilenet",
+    # "mobilenet",
     # "clip_RN50",
     # "clip_RN101",
     # "clip_RN50x4",
@@ -83,8 +83,8 @@ class DeepSort(object):
         if embedder is not None:
             if embedder not in EMBEDDER_CHOICES:
                 raise Exception(f"Embedder {embedder} is not a valid choice.")
-            if embedder == "mobilenet":
-                self.embedder = MobileNetv2_Embedder(embedder_wts, gpu=embedder_gpu, half=half, bgr=bgr)
+            # if embedder == "mobilenet":
+            #     self.embedder = MobileNetv2_Embedder(embedder_wts, gpu=embedder_gpu, half=half, bgr=bgr)
         else:
             self.embedder = None
         self.polygon = polygon
