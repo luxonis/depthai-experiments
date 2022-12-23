@@ -2,15 +2,12 @@ import cv2
 import numpy as np
 
 from depthai_sdk import OakCamera, AspectRatioResizeMode
-from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 
 CONFIDENCE = 0.7
 
 
-def callback(ctx: CallbackContext):
-    packet = ctx.packet
-
+def callback(packet, visualizer):
     nn_data = packet.img_detections
     bboxes = np.array(nn_data.getFirstLayerFp16())
     bboxes = bboxes.reshape((bboxes.size // 7, 7))

@@ -1,10 +1,8 @@
 import cv2
-import depthai
 import numpy as np
 from depthai import NNData
 
 from depthai_sdk import OakCamera, Detections
-from depthai_sdk.callback_context import CallbackContext
 
 CONF_THRESHOLD = 0.4
 SHAPE = 320
@@ -18,6 +16,7 @@ coco_90 = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train",
            "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "83",
            "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"]
 
+
 def decode(nn_data: NNData):
     bb = np.array(nn_data.getLayerFp16('Identity')).reshape(25, 4)
     label = nn_data.getLayerInt32('Identity_1')
@@ -27,9 +26,7 @@ def decode(nn_data: NNData):
     # for det in bb:
 
 
-def callback(ctx: CallbackContext):
-    packet = ctx.packet
-
+def callback(packet, visualizer):
     frame = packet.frame
     nn_data = packet.img_detections
 
