@@ -1,5 +1,3 @@
-import depthai as dai
-import cv2
 import argparse
 from pathlib import Path
 from depthai_sdk import OakCamera
@@ -15,7 +13,7 @@ args = parser.parse_args()
 with OakCamera(replay='cars-tracking-above-01') as oak:
     color = oak.create_camera('color')
 
-    nn = oak.create_nn(args.model, color, nnType='yolo')
+    nn = oak.create_nn(args.model, color, nn_type='yolo')
 
     with open(str(Path(args.config).resolve())) as file:
         conf = json.load(file)

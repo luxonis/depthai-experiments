@@ -1,4 +1,4 @@
-from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, Visualizer, TextPosition, BboxStyle
+from depthai_sdk import OakCamera, TwoStagePacket, Visualizer, TextPosition
 import numpy as np
 import cv2
 
@@ -11,7 +11,7 @@ with OakCamera() as oak:
 
     det = oak.create_nn('face-detection-retail-0004', color)
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    det.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
+    det.config_nn(resize_mode='crop')
 
     mask = oak.create_nn('sbd_mask_classification_224x224', input=det)
     # mask.config_multistage_nn(show_cropped_frames=True) # For debugging
@@ -27,7 +27,8 @@ with OakCamera() as oak:
 
             visualizer.add_text(text,
                                 bbox=(*det.top_left, *det.bottom_right),
-                                position=TextPosition.BOTTOM_MID)
+                                position=TextPosition.BOTTOM_MID,
+                                color=color)
 
         frame = visualizer.draw(packet.frame)
         cv2.imshow('Mask detection', frame)
@@ -37,5 +38,5 @@ with OakCamera() as oak:
     oak.visualize(mask, callback=cb).detections(fill_transparency=0.1)
     oak.visualize(det.out.passthrough)
 
-    # oak.show_graph() # Show pipeline graph, no need for now
+    # oak.show_graph() # Show pipeline graph
     oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)

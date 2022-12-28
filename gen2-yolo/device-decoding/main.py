@@ -8,6 +8,7 @@ args = ArgsParser.parseArgs(parser)
 
 with OakCamera(args=args) as oak:
     color = oak.create_camera('color')
-    nn = oak.create_nn(args['config'], color, nnType='yolo', spatial=True)
-    oak.visualize(nn, fps=True)
+    nn = oak.create_nn(args['config'], color, nn_type='yolo', spatial=True)
+    oak.visualize(nn, fps=True, scale=2/3)
+    oak.visualize(nn.out.passthrough, fps=True)
     oak.start(blocking=True)

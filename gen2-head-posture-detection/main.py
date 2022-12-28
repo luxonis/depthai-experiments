@@ -1,5 +1,5 @@
 
-from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, TextPosition
+from depthai_sdk import OakCamera, TwoStagePacket, TextPosition
 import numpy as np
 import cv2
 MIN_THRESHOLD = 15. # Degrees in yaw/pitch/roll to be considered as head movement
@@ -9,7 +9,7 @@ with OakCamera() as oak:
     det = oak.create_nn('face-detection-retail-0004', color)
     # Passthrough is enabled for debugging purposes
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    det.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
+    det.config_nn(resize_mode='crop')
 
     emotion_nn = oak.create_nn('head-pose-estimation-adas-0001', input=det)
     # emotion_nn.config_multistage_nn(show_cropped_frames=True) # For debugging

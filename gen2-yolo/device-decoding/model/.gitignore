@@ -2,3 +2,4 @@
 *.bin
 *.json
 *.xml
+*.onnx

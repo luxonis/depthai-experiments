@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-from depthai_sdk import OakCamera, AspectRatioResizeMode, TwoStagePacket, TextPosition, Visualizer
+from depthai_sdk import OakCamera, TwoStagePacket, TextPosition, Visualizer
 import numpy as np
 import cv2
-import time
 
 class PedestrianReId:
     def __init__(self) -> None:
@@ -30,7 +29,7 @@ with OakCamera(replay='people-construction-vest-01') as oak:
     person_det.node.setNumInferenceThreads(2)
     # Passthrough is enabled for debugging purposes
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    person_det.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
+    person_det.config_nn(resize_mode='crop')
 
     nn_reid = oak.create_nn('person-reidentification-retail-0288', input=person_det)
     nn_reid.node.setNumInferenceThreads(2)
@@ -52,5 +51,5 @@ with OakCamera(replay='people-construction-vest-01') as oak:
 
     oak.visualize(person_det.out.passthrough, fps=True)
     oak.visualize(nn_reid, callback=cb, scale=2/3, fps=True)
-    oak.show_graph()
+    # oak.show_graph()
     oak.start(blocking=True)
