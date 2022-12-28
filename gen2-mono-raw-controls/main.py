@@ -75,7 +75,7 @@ for c in cam_list:
         cam[c].setBoardSocket(dai.CameraBoardSocket.LEFT)
     else:
         cam[c].setBoardSocket(dai.CameraBoardSocket.RIGHT)
-    cam[c].setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+    cam[c].setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
     # Uncomment to be able to set a larger manual exposure, e.g: 10fps / 100ms
     # cam.setFps(10)
 

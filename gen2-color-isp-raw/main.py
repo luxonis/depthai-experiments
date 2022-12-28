@@ -37,7 +37,7 @@ For the 'Select control: ...' options, use these keys to modify the value:
 '''
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-res', '--resolution', default='12mp', choices={'1080', '4k', '12mp'},
+parser.add_argument('-res', '--resolution', default='1080', choices={'1080', '4k', '12mp'},
                     help="Select RGB resolution. Default: %(default)s")
 parser.add_argument('-raw', '--enable_raw', default=False, action="store_true",
                     help='Enable the color RAW stream')
