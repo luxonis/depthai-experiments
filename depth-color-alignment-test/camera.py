@@ -14,6 +14,8 @@ class Camera:
         self.mxid = device_info.getMxId()
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
+        # self.roi = (100, 100, 200, 400)
+        self.roi = None
 
         self.device.setIrLaserDotProjectorBrightness(600)
 
@@ -75,15 +77,15 @@ class Camera:
         mono_right.out.link(cam_stereo.right)
 
         init_config = cam_stereo.initialConfig.get()
-        init_config.postProcessing.speckleFilter.enable = False
-        init_config.postProcessing.speckleFilter.speckleRange = 50
-        init_config.postProcessing.temporalFilter.enable = True
-        init_config.postProcessing.spatialFilter.enable = True
-        init_config.postProcessing.spatialFilter.holeFillingRadius = 2
-        init_config.postProcessing.spatialFilter.numIterations = 1
-        init_config.postProcessing.thresholdFilter.minRange = config.min_range
-        init_config.postProcessing.thresholdFilter.maxRange = config.max_range
-        init_config.postProcessing.decimationFilter.decimationFactor = 1
+        # init_config.postProcessing.speckleFilter.enable = False
+        # init_config.postProcessing.speckleFilter.speckleRange = 50
+        # init_config.postProcessing.temporalFilter.enable = True
+        # init_config.postProcessing.spatialFilter.enable = True
+        # init_config.postProcessing.spatialFilter.holeFillingRadius = 2
+        # init_config.postProcessing.spatialFilter.numIterations = 1
+        # init_config.postProcessing.thresholdFilter.minRange = config.min_range
+        # init_config.postProcessing.thresholdFilter.maxRange = config.max_range
+        # init_config.postProcessing.decimationFilter.decimationFactor = 1
         cam_stereo.initialConfig.set(init_config)
 
         xout_depth = pipeline.createXLinkOut()
@@ -104,6 +106,10 @@ class Camera:
             cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
             cam_rgb.setIspScale(1, 3)
             cam_rgb.initialControl.setManualFocus(130)
+            cam_rgb.initialControl.setAutoWhiteBalanceLock(True)
+            cam_rgb.initialControl.setManualWhiteBalance(200)
+            cam_rgb.initialControl.setAutoExposureLock(True)
+            cam_rgb.initialControl.setManualExposure(10000, 1000)
             cam_stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
             cam_rgb.isp.link(xout_image.input)
             self.image_size = cam_rgb.getIspSize()
@@ -127,10 +133,15 @@ class Camera:
         self.depth_frame = msg_sync["depth"].getFrame()
         self.image_frame = msg_sync["image"].getCvFrame()
         self.mono_frame = msg_sync["mono"].getCvFrame()
-        self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
-        self.depth_visualization_frame[self.depth_frame <= 1] = np.array([255, 255, 0])
+        r = self.roi
+        if r is not None:
+            self.depth_frame = self.depth_frame[r[0]:(r[0]+r[2]), r[1]:(r[1]+r[3])]
+            self.image_frame = self.image_frame[r[0]:(r[0]+r[2]), r[1]:(r[1]+r[3]), :]
+            self.mono_frame = self.mono_frame[r[0]:(r[0]+r[2]), r[1]:(r[1]+r[3])]
+
+        # scale the depth frame from 0-2000 to 0-255
+        self.depth_visualization_frame = np.interp(self.depth_frame, [0, 1000], [0, 255]).astype(np.uint8)
+        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_MAGMA)
 
         if self.show_video:
             cv2.imshow(self.depth_window_name, self.depth_visualization_frame)

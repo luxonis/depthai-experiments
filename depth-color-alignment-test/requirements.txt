@@ -1,0 +1,5 @@
+depthai-sdk
+depthai
+numpy
+opencv-python
+av
