@@ -54,9 +54,9 @@ with dai.Device(pipeline) as device:
     print("Use WASD keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
 
     while True:
-        depthFrame = depthQueue.get().getFrame()
+        depthData = depthQueue.get()
         # Calculate spatial coordiantes from depth frame
-        spatials, centroid = hostSpatials.calc_spatials(depthFrame, (x,y)) # centroid == x/y in our case
+        spatials, centroid = hostSpatials.calc_spatials(depthData, (x,y)) # centroid == x/y in our case
 
         # Get disparity frame for nicer depth visualization
         disp = dispQ.get().getFrame()

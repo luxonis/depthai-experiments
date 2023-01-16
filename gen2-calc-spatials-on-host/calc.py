@@ -5,9 +5,7 @@ import depthai as dai
 class HostSpatialsCalc:
     # We need device object to get calibration data
     def __init__(self, device):
-        calibData = device.readCalibration()
-        # Required information for calculating spatial coordinates on the host
-        self.monoHFOV = np.deg2rad(calibData.getFov(dai.CameraBoardSocket.LEFT))
+        self.calibData = device.readCalibration()
 
         # Values
         self.DELTA = 5
@@ -30,17 +28,23 @@ class HostSpatialsCalc:
         y = min(max(roi[1], self.DELTA), frame.shape[0] - self.DELTA)
         return (x-self.DELTA,y-self.DELTA,x+self.DELTA,y+self.DELTA)
 
-    def _calc_angle(self, frame, offset):
-        return math.atan(math.tan(self.monoHFOV / 2.0) * offset / (frame.shape[1] / 2.0))
+    def _calc_angle(self, frame, offset, HFOV):
+        return math.atan(math.tan(HFOV / 2.0) * offset / (frame.shape[1] / 2.0))
 
     # roi has to be list of ints
-    def calc_spatials(self, depthFrame, roi, averaging_method=np.mean):
+    def calc_spatials(self, depthData, roi, averaging_method=np.mean):
+
+        depthFrame = depthData.getFrame()
+
         roi = self._check_input(roi, depthFrame) # If point was passed, convert it to ROI
         xmin, ymin, xmax, ymax = roi
 
         # Calculate the average depth in the ROI.
         depthROI = depthFrame[ymin:ymax, xmin:xmax]
         inRange = (self.THRESH_LOW <= depthROI) & (depthROI <= self.THRESH_HIGH)
+
+        # Required information for calculating spatial coordinates on the host
+        HFOV = np.deg2rad(self.calibData.getFov(dai.CameraBoardSocket(depthData.getInstanceNum())))
 
         averageDepth = averaging_method(depthROI[inRange])
 
@@ -54,8 +58,8 @@ class HostSpatialsCalc:
         bb_x_pos = centroid['x'] - midW
         bb_y_pos = centroid['y'] - midH
 
-        angle_x = self._calc_angle(depthFrame, bb_x_pos)
-        angle_y = self._calc_angle(depthFrame, bb_y_pos)
+        angle_x = self._calc_angle(depthFrame, bb_x_pos, HFOV)
+        angle_y = self._calc_angle(depthFrame, bb_y_pos, HFOV)
 
         spatials = {
             'z': averageDepth,
