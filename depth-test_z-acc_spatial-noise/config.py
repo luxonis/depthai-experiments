@@ -39,3 +39,4 @@ n_samples = args.n_samples
 astra_intrinsic = args.astra_intrinsic # path to the astra intrinsic matrix
 
 path = args.path # path to the recording folder
+real_depth = args.depth
