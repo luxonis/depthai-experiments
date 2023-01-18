@@ -4,7 +4,7 @@ This example shows how you perform MQTT publishing directly from OAK POE camera.
 
 For this demo I have used a public MQTT broker https://test.mosquitto.org with port 1883 which is unencrypted and unauthenticated. I have used MQTTLens to subscribe to messages that OAK POE camera is publishing.
 
-Note that publishing too fast (eg 10FPS) won't work. In this demo the OAK POE will just publish the average number of objects it detects every ~2 seconds.
+Note that publishing too fast (eg 10FPS) won't work with https://test.mosquitto.org. In this demo the OAK POE will just publish the average number of objects it detects every ~2 seconds.
 
 ## Demo
 
