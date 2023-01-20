@@ -1,4 +1,1 @@
-opencv-python
-blobconverter
-depthai-sdk
-numpy
+depthai-sdk==1.9.1.1

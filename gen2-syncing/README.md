@@ -38,6 +38,45 @@ Image captured running with `python3 host-frame-sync.py -d`
 
 ![demo](https://user-images.githubusercontent.com/60824841/125710596-f490d5f5-49c5-41b9-a318-d62046450665.png)
 
+## Host rgb-depth sync
+
+[host-rgb-depth-sync.py](host-rgb-depth-sync.py) demo is a version of [RGB-Depth alignment example](https://docs.luxonis.com/projects/api/en/latest/samples/StereoDepth/rgb_depth_aligned/#rgb-depth-alignment).
+
+It uses sequence number to sync rgb-aligned depth and rgb frames on the host, and displays depth overlay on rgb frame.
+
+## IMU + rgb + depth timestamp syncing
+
+Very similar to the above [Host rgb-depth sync](#host-rgb-depth-sync), the [imu-frames-timestamp-sync.py](imu-frames-timestamp-sync.py) demo uses **timestamps to sync IMU results with rgb and depth frames**. It also displays depth overlay on rgb frame.
+
+In case of **multiple streams having different FPS**, there are **2 options on how to sync** them:
+
+1. **Removing some messages** from faster streams to get the synced FPS of the slower stream
+2. **Duplicating some messages** from slower streams to get the synced FPS of the fastest stream
+
+This demo uses the 1st approach. Time difference between synced messages is below 22ms, `MS_THRESHOLD` * 2. We achieve 30FPS, which is the FPS of the slowest stream (rgb frames).
+
+```
+  FPS 29.97434628021179
+  [Seq 671] RGB timestamp: 2:24:30.721382
+  [Seq 1004] Disparity timestamp: 2:24:30.719322
+  [Seq 40] IMU timestamp: 2:24:30.716725
+  -----------
+  FPS 29.955986706189318
+  [Seq 672] RGB timestamp: 2:24:30.754712
+  [Seq 1005] Disparity timestamp: 2:24:30.741527
+  [Seq 44] IMU timestamp: 2:24:30.747808
+  -----------
+  FPS 29.979355533615596
+  [Seq 673] RGB timestamp: 2:24:30.788040
+  [Seq 1007] Disparity timestamp: 2:24:30.785932
+  [Seq 49] IMU timestamp: 2:24:30.786688
+  -----------
+  FPS 29.961037216176646
+  [Seq 674] RGB timestamp: 2:24:30.821369
+  [Seq 1009] Disparity timestamp: 2:24:30.830342
+  [Seq 54] IMU timestamp: 2:24:30.825577
+```
+
 #### Output with logging enabled
 
 ```
