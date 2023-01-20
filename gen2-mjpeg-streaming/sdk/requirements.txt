@@ -1,0 +1,5 @@
+Pillow
+opencv-python
+depthai
+depthai-sdk
+blobconverter

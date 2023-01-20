@@ -1,0 +1,6 @@
+imutils
+concurrent-log-handler
+opencv-python
+depthai
+depthai-sdk
+blobconverter

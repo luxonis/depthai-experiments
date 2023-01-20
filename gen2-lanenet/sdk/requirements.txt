@@ -1,0 +1,6 @@
+opencv-python
+depthai
+depthai-sdk
+gdown
+numpy
+scikit-learn

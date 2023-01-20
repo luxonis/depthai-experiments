@@ -1,0 +1,3 @@
+blobconverter
+depthai
+depthai-sdk

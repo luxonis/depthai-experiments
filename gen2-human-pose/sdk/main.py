@@ -1,0 +1,9 @@
+from depthai_sdk import OakCamera
+
+with OakCamera(replay='../input.mp4') as oak:
+    color = oak.create_camera('color')
+
+    human_pose_nn = oak.create_nn('human-pose-estimation-0001', color)
+
+    oak.visualize(human_pose_nn, fps=True)
+    oak.start(blocking=True)
