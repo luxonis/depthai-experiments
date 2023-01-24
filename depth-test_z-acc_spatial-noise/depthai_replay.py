@@ -119,7 +119,7 @@ class Replay:
         return pipeline, nodes
 
 
-    def resize(self, stream_name: str, size, mode: ResizeMode = ResizeMode.STRETCH):
+    def resize(self, stream_name: str, size, mode: ResizeMode = ResizeMode.FULL_CROP):
         """
         Resize color frames prior to sending them to the device.
 
@@ -150,7 +150,8 @@ class Replay:
                 return True
             ok, frame = self.cap[name].read()
             if ok:
-                frame = cv2.resize(frame, (1280, 780))
+                #frame = cv2.resize(frame, (1280, 720))
+                frame = frame[60:1140, 320:1600]
                 self.frames[name] = frame
         return len(self.frames) == 0
 
@@ -166,7 +167,7 @@ class Replay:
         return True
 
     def get_size(self, cap):
-        return (1280, 780)
+        return (1280, 1080)
     def get_max_size(self, name):
         total = self.size[name][0] * self.size[name][1]
         if name == 'color': total *= 3 # 3 channels
