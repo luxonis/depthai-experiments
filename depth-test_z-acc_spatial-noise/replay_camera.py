@@ -11,7 +11,7 @@ from depthai_replay import Replay
 
 class ReplayCamera(Camera):
     def __init__(self, device_info: dai.DeviceInfo):
-        super().__init__(name="OAK")
+        super().__init__(name="Replay")
 
         self.device_info = device_info
         self.mxid = device_info.getMxId()
@@ -20,13 +20,14 @@ class ReplayCamera(Camera):
         self.frames = []
         self.idx = 0
         self.depth_frames = []
+        self.removed_frames = False
 
-
-        # os.rename(config.path + '/cama,c.avi', config.path + '/rgb.avi')
-        # os.rename(config.path + '/camb,c.avi', config.path + '/left.avi')
-        # os.rename(config.path + '/camc,c.avi', config.path + '/right.avi')
-        self.replay = Replay(config.path)
+        if os.path.exists(config.path + '/cama,c.avi'):
+            os.rename(config.path + '/cama,c.avi', config.path + '/rgb.avi')
+            os.rename(config.path + '/camb,c.avi', config.path + '/left.avi')
+            os.rename(config.path + '/camc,c.avi', config.path + '/right.avi')
        
+        self.replay = Replay(config.path)
         self._create_pipeline()
 
         self.device = dai.Device(self.pipeline, self.device_info)
@@ -61,85 +62,111 @@ class ReplayCamera(Camera):
         self.stereoscopic_baseline = calibration.getBaselineDistance()/100 # in m
 
 
-    def get_mesh(self, mapX, mapY):
+    def getMesh(self, calibData, resolution, offset, rectificationScale):
+        print("------mesh res", resolution, "offset", offset) # TODO see if offset is needed here and implement...
+        width, height = resolution
+        offsetWidth, offsetHeight = offset
+        ## Top left and bottom right are from camera perspective where Top left corner is at (0,0) and bottom right is at (width, height)
+        topLeftPixel = dai.Point2f(offsetWidth, offsetHeight) 
+        bottomRightPixel = dai.Point2f(resolution[0] + offsetWidth , resolution[1] + offsetHeight)
+
+        print(topLeftPixel.x, topLeftPixel.y)
+        print(bottomRightPixel.x, bottomRightPixel.y)
+        def_m1, w, h = calibData.getDefaultIntrinsics(calibData.getStereoLeftCameraId())
+        """ def_m1 = np.array(def_m1) * 1.5
+        def_m1[0,2] -= (1920-1280) / 2 """
+
+        print("Def Intrins---")
+        print(w,h)
+        print(np.array(def_m1))
+        # we are using original height and width since we don't want to resize. But just crop based on the corner pixel positions
+        M1 = np.array(calibData.getCameraIntrinsics(calibData.getStereoLeftCameraId(), w, h, topLeftPixel, bottomRightPixel))
+        M2 = np.array(calibData.getCameraIntrinsics(calibData.getStereoRightCameraId(), w, h, topLeftPixel, bottomRightPixel))
+        print("cropped Intrins")
+        print(resolution)
+        print(M1)
+        
+        d1 = np.array(calibData.getDistortionCoefficients(calibData.getStereoLeftCameraId()))
+        d2 = np.array(calibData.getDistortionCoefficients(calibData.getStereoRightCameraId()))
+
+        R1 = np.array(calibData.getStereoLeftRectificationRotation())
+        R2 = np.array(calibData.getStereoRightRectificationRotation())
+
+        tranformation = np.array(calibData.getCameraExtrinsics(calibData.getStereoLeftCameraId(), calibData.getStereoRightCameraId()))
+        R = tranformation[:3, :3]
+        T = tranformation[:3, 3]
+
+        rectIntrinsics = M2.copy()
+
+        if rectificationScale > 0 and rectificationScale < 1:
+            rectIntrinsics[0][0] *= rectificationScale
+            rectIntrinsics[1][1] *= rectificationScale
+
+        mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, rectIntrinsics, resolution, cv2.CV_32FC1)
+        mapXR, mapYR = cv2.initUndistortRectifyMap(M2, d2, R2, rectIntrinsics, resolution, cv2.CV_32FC1)
+
         meshCellSize = 16
-        mesh0 = []
-        print(mapX.shape)
-        # Creates subsampled mesh which will be loaded on to device to undistort the image
-        for y in range(mapX.shape[0] + 1):  # iterating over height of the image
+        meshLeft = []
+        meshRight = []
+
+        for y in range(mapXL.shape[0] + 1):
             if y % meshCellSize == 0:
                 rowLeft = []
-                for x in range(mapX.shape[1]+ 1):  # iterating over width of the image
+                rowRight = []
+                for x in range(mapXL.shape[1] + 1):
                     if x % meshCellSize == 0:
-                        if y == mapX.shape[0] and x == mapX.shape[1]:
-                            rowLeft.append(mapY[y - 1, x - 1])
-                            rowLeft.append(mapX[y - 1, x - 1])
-                        elif y == mapX.shape[0]:
-                            rowLeft.append(mapY[y - 1, x])
-                            rowLeft.append(mapX[y - 1, x])
-                        elif x == mapX.shape[1]:
-                            rowLeft.append(mapY[y, x - 1])
-                            rowLeft.append(mapX[y, x - 1])
+                        if y == mapXL.shape[0] and x == mapXL.shape[1]:
+                            rowLeft.append(mapYL[y - 1, x - 1])
+                            rowLeft.append(mapXL[y - 1, x - 1])
+                            rowRight.append(mapYR[y - 1, x - 1])
+                            rowRight.append(mapXR[y - 1, x - 1])
+                        elif y == mapXL.shape[0]:
+                            rowLeft.append(mapYL[y - 1, x])
+                            rowLeft.append(mapXL[y - 1, x])
+                            rowRight.append(mapYR[y - 1, x])
+                            rowRight.append(mapXR[y - 1, x])
+                        elif x == mapXL.shape[1]:
+                            rowLeft.append(mapYL[y, x - 1])
+                            rowLeft.append(mapXL[y, x - 1])
+                            rowRight.append(mapYR[y, x - 1])
+                            rowRight.append(mapXR[y, x - 1])
                         else:
-                            rowLeft.append(mapY[y, x])
-                            rowLeft.append(mapX[y, x])
-                if (mapX.shape[1] % meshCellSize) % 2 != 0:
+                            rowLeft.append(mapYL[y, x])
+                            rowLeft.append(mapXL[y, x])
+                            rowRight.append(mapYR[y, x])
+                            rowRight.append(mapXR[y, x])
+                if (mapXL.shape[1] % meshCellSize) % 2 != 0:
                     rowLeft.append(0)
                     rowLeft.append(0)
+                    rowRight.append(0)
+                    rowRight.append(0)
 
-                mesh0.append(rowLeft)
-        mesh0 = np.array(mesh0)
+                meshLeft.append(rowLeft)
+                meshRight.append(rowRight)
 
-        return mesh0
+        meshLeft = np.array(meshLeft)
+        meshRight = np.array(meshRight)
 
-    def get_maps(self, width, height, calib):
-        imageSize = (width, height)
-        print(f'Image size is {imageSize}')
-        M1 = np.array(calib.getCameraIntrinsics(calib.getStereoLeftCameraId(), width, height))
-        M2 = np.array(calib.getCameraIntrinsics(calib.getStereoRightCameraId(), width, height))
-        d1 = np.array(calib.getDistortionCoefficients(calib.getStereoLeftCameraId()))
-        d2 = np.array(calib.getDistortionCoefficients(calib.getStereoRightCameraId()))
-        R1 = np.array(calib.getStereoLeftRectificationRotation())
-        R2 = np.array(calib.getStereoRightRectificationRotation())
-        
-        increaseOffset = 0
-        M2_focal = M2.copy()
-        M2_focal[0][0] += increaseOffset
-        M2_focal[1][1] += increaseOffset
-        kScaledL = M2_focal
-        kScaledR = kScaledL
-        
-        
-        M11, a = cv2.getOptimalNewCameraMatrix(M1, d1, (width, height), alpha=0)
+        meshLeft = list(meshLeft.tobytes())
+        meshRight = list(meshRight.tobytes())
 
-        fov_x = np.rad2deg(2 * np.arctan2(a[2], 2 * M11[0][0]))
-        fov_y = np.rad2deg(2 * np.arctan2(a[3], 2 * M11[1][1]))
-
-        print("Field of View (degrees):")
-        print(f"  {fov_x = :.1f}\N{DEGREE SIGN}")
-        print(f"  {fov_y = :.1f}\N{DEGREE SIGN}")
-
-        mapX_l, mapY_l = cv2.initUndistortRectifyMap(M1, d1, R1, kScaledL, imageSize, cv2.CV_32FC1)
-        mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, kScaledR, imageSize, cv2.CV_32FC1)
-
-        return mapX_l, mapY_l, mapX_r, mapY_r, M2    
+        return meshLeft, meshRight, rectIntrinsics
 
     def _create_pipeline(self):
         pipeline, nodes = self.replay.init_pipeline()
 
         calibData = self.replay.calibData
         self.image_size = self.replay.get_size(None)
-        print(self.image_size)
 
-        mapX_left, mapY_left, mapX_right, mapY_right, self.M2 = self.get_maps(self.image_size[0], self.image_size[1], calibData)
-        
-        mesh_l = self.get_mesh(mapX_left, mapY_left)
-        mesh_r = self.get_mesh(mapX_right, mapY_right)
-        meshLeft = list(mesh_l.tobytes())
-        meshRight = list(mesh_r.tobytes())
-        nodes.stereo.loadMeshData(meshLeft, meshRight)
+        originalRes = (1920, 1200)
+        res = (1280, 1080)
+    
+        centerCropOffset = ((originalRes[0] - res[0]) / 2, (originalRes[1] - res[1]) / 2)
+
+        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, centerCropOffset, 0.5)
+
+        nodes.stereo.loadMeshData(leftMesh, rightMesh)
         nodes.stereo.setSubpixel(True)
-        #nodes.stereo.setExtendedDisparity(True)
 
         xout_depth = pipeline.createXLinkOut()
         xout_depth.setStreamName("depth")
@@ -157,24 +184,26 @@ class ReplayCamera(Camera):
 
 
     def update(self):
-
         if not self.replay.send_frames(False):
             self.stop = True
             self.depth_frame = self.depth_frames[self.idx % len(self.depth_frames)]
             self.image_frame = self.frames[self.idx % len(self.frames)]
             self.idx = self.idx + 1
 
-        else:
-            
+        else:           
             disparity = self.depth_queue.get().getFrame()
 
             with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
                 self.depth_frame = (8 * self.M2[0][0] * self.replay.calibData.getBaselineDistance() * 10 / disparity).astype(np.uint16)
 
             self.image_frame = self.image_queue.get().getCvFrame()
-
             self.frames.append(self.image_frame)
             self.depth_frames.append(self.depth_frame)
+
+            if len(self.frames) > 6 and not self.removed_frames:
+                self.remove_frames = True
+                self.frames = []
+                self.depth_frames = []
 
         self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
@@ -182,6 +211,5 @@ class ReplayCamera(Camera):
 
         cv2.imshow('depth', self.depth_visualization_frame)
         
-
         self.visualize_image_frame()
         self.rgbd_to_point_cloud()
