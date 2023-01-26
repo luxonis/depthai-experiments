@@ -124,15 +124,9 @@ def create_pipeline(device):
     return pipeline
 
 
-ts_start = None
-def td2ms(td, exposure=False) -> int:
-    ts = int(td / timedelta(milliseconds=1))
-    if exposure:
-        return ts
-    global ts_start
-    if ts_start is None:
-        ts_start = ts
-    return ts - ts_start
+def td2ms(td) -> int:
+    # Convert timedelta to milliseconds
+    return int(td / timedelta(milliseconds=1))
 
 # Connect to device and start pipeline
 with dai.Device() as device:
@@ -153,11 +147,11 @@ with dai.Device() as device:
 
         fps.nextIter()
         print('FPS', fps.fps())
-        rgb_mid_td, rgb = synced['rgb']
-        stereo_mid_td, disp = synced['disp']
+        rgb_ts, rgb = synced['rgb']
+        stereo_ts, disp = synced['disp']
         imuTs, imu = synced['imu']
-        print(f"[Seq {rgb.getSequenceNum()}] Mid of RGB exposure ts: {td2ms(rgb_mid_td)}ms, RGB ts: {td2ms(rgb.getTimestamp())}ms, RGB exposure time: {td2ms(rgb.getExposureTime(), exposure=True)}ms")
-        print(f"[Seq {disp.getSequenceNum()}] Mid of Stereo exposure ts: {td2ms(stereo_mid_td)}ms, Disparity ts: {td2ms(disp.getTimestamp())}ms, Stereo exposure time: {td2ms(disp.getExposureTime(), exposure=True)}ms")
+        print(f"[Seq {rgb.getSequenceNum()}] Mid of RGB exposure ts: {td2ms(rgb_ts)}ms, RGB ts: {td2ms(rgb.getTimestampDevice())}ms, RGB exposure time: {td2ms(rgb.getExposureTime(), exposure=True)}ms")
+        print(f"[Seq {disp.getSequenceNum()}] Mid of Stereo exposure ts: {td2ms(stereo_ts)}ms, Disparity ts: {td2ms(disp.getTimestampDevice())}ms, Stereo exposure time: {td2ms(disp.getExposureTime(), exposure=True)}ms")
         print(f"[Seq {imu.acceleroMeter.sequence}] IMU ts: {td2ms(imuTs)}ms")
         print('-----------')
 
@@ -182,12 +176,13 @@ with dai.Device() as device:
             if msg is not None:
                 if name == 'imu':
                     for imuPacket in msg.packets:
-                        ts = imuPacket.acceleroMeter.timestamp.get()
+                        imuPacket: dai.IMUPacket
+                        ts = imuPacket.acceleroMeter.getTimestampDevice()
                         new_msg(imuPacket, name, ts)
                 else:
                     msg: dai.ImgFrame
-                    mid_of_exposure = msg.getTimestamp() - msg.getExposureTime() / 2
-                    new_msg(msg, name, mid_of_exposure)
+                    ts = msg.getTimestampDevice(dai.CameraExposureOffset.MIDDLE)
+                    new_msg(msg, name, ts)
 
         if cv2.waitKey(1) == ord('q'):
             break
