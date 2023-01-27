@@ -4,6 +4,8 @@ from utils import *
 import math
 from camera import Camera
 from oak_camera import OakCamera
+from replay_camera import ReplayCamera
+import config
 
 class DepthTest:
 	def __init__(self):
@@ -30,7 +32,7 @@ class DepthTest:
 		points = np.asarray(point_cloud.points)
 		Z = points[:, 2]
 
-		self.camera_wall_distance = -np.median(Z)
+		self.camera_wall_distance = config.real_depth
 		return self.camera_wall_distance
 
 	def fit_plane(self, point_cloud: o3d.geometry.PointCloud):
@@ -96,7 +98,7 @@ class DepthTest:
 		spatial_noise = self.compute_spatial_noise(point_cloud_corrected)
 		self.spatial_noise_rmses.append(spatial_noise)
 
-		if isinstance(camera, OakCamera):
+		if isinstance(camera, OakCamera) or isinstance(camera, ReplayCamera):
 			subpixel_spatial_noise = self.compute_subpixel_spatial_noise(
 				point_cloud_corrected, 
 				focal_length=camera.focal_length,
