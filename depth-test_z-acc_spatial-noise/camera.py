@@ -60,25 +60,31 @@ class Camera:
         image_frame = self.select_ROI(self.image_frame)
         depth_frame = self.select_ROI(self.depth_frame)
 
+        #print(np.average(depth_frame))
+
+        #print(depth_frame)
+
         rgb_o3d = o3d.geometry.Image(cv2.cvtColor(image_frame, cv2.COLOR_RGB2BGR))
         df = np.copy(depth_frame).astype(np.float32)
         depth_o3d = o3d.geometry.Image(df)
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-            rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3)
+            rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3), depth_trunc=20000, depth_scale=1000.0
         )
+        #print(np.asarray(rgbd_image))
 
         point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbd_image, self.pinhole_camera_intrinsic, self.extrinsic
         )
 
-        if downsample:
-            point_cloud = point_cloud.voxel_down_sample(voxel_size=0.01)
+        # if downsample:
+        #     point_cloud = point_cloud.voxel_down_sample(voxel_size=0.01)
 
-        if remove_noise:
-            point_cloud = point_cloud.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)[0]
+        # if remove_noise:
+        #     point_cloud = point_cloud.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)[0]
 
         self.point_cloud.points = point_cloud.points
         self.point_cloud.colors = point_cloud.colors
+        #print(np.asarray(point_cloud.points))
 
         # correct upside down z axis
         R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
