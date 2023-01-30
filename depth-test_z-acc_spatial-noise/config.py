@@ -14,6 +14,7 @@ parser.add_argument("-m", "--median", type = str, default = "KERNEL_7x7", choice
 parser.add_argument("-n", "--n_samples", type = int, default = 10, help = "Number of samples in a single test")
 parser.add_argument("--astra_intrinsic", type = str, default = None, help = "Path to astra intrinsic file (.np file containing 3x3 matrix)")
 parser.add_argument('-p', '--path', default = None, type = str, help = "Path to the recording folder")
+parser.add_argument('-d', '--depth', default = None, type = int, help = "Actual depth")
 
 args = parser.parse_args()
 
