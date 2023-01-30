@@ -201,7 +201,7 @@ class ReplayCamera(Camera):
             self.depth_frames.append(self.depth_frame)
 
             if len(self.frames) > 6 and not self.removed_frames:
-                self.remove_frames = True
+                self.removed_frames = True
                 self.frames = []
                 self.depth_frames = []
 
