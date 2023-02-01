@@ -15,7 +15,7 @@ def get_sync(target_seq):
         seq_remove.append(seq) # Will get removed from dict if we find synced sync pair
     return None
 def find_frame(target_seq):
-    if str(target_seq) in sync:
+    if str(target_seq) in sync and "frame" in sync[str(target_seq)]:
         return sync[str(target_seq)]["frame"]
 def add_detections(det, seq):
     # No detections, we can remove saved frame
