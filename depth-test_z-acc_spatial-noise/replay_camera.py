@@ -62,7 +62,7 @@ class ReplayCamera(Camera):
         self.stereoscopic_baseline = calibration.getBaselineDistance()/100 # in m
 
 
-    def getMesh(self, calibData, resolution, offset, rectificationScale):
+    def getMesh(self, calibData, resolution, offset, rectificationScale, useOptimalNewCameraMatrix):
         print("------mesh res", resolution, "offset", offset) # TODO see if offset is needed here and implement...
         width, height = resolution
         offsetWidth, offsetHeight = offset
@@ -96,14 +96,21 @@ class ReplayCamera(Camera):
         R = tranformation[:3, :3]
         T = tranformation[:3, 3]
 
-        rectIntrinsics = M2.copy()
+        rectIntrinsicsL = M2.copy()
+        rectIntrinsicsR = M2.copy()
 
-        if rectificationScale > 0 and rectificationScale < 1:
-            rectIntrinsics[0][0] *= rectificationScale
-            rectIntrinsics[1][1] *= rectificationScale
+        if useOptimalNewCameraMatrix :
+            # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsL, d1, resolution, alpha = 0)
+            # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsR, d2, resolution, alpha = 0)
+            R1, R2, rectIntrinsicsL, rectIntrinsicsR, _, _, _ = cv2.stereoRectify(M1, d1, M2, d2, resolution, R, T, alpha = 0)
+        elif rectificationScale > 0 and rectificationScale < 1:
+            rectIntrinsicsL[0][0] *= rectificationScale
+            rectIntrinsicsL[1][1] *= rectificationScale
+            rectIntrinsicsR[0][0] *= rectificationScale
+            rectIntrinsicsR[1][1] *= rectificationScale
 
-        mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, rectIntrinsics, resolution, cv2.CV_32FC1)
-        mapXR, mapYR = cv2.initUndistortRectifyMap(M2, d2, R2, rectIntrinsics, resolution, cv2.CV_32FC1)
+        mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, rectIntrinsicsL, resolution, cv2.CV_32FC1)
+        mapXR, mapYR = cv2.initUndistortRectifyMap(M2, d2, R2, rectIntrinsicsR, resolution, cv2.CV_32FC1)
 
         meshCellSize = 16
         meshLeft = []
@@ -150,7 +157,7 @@ class ReplayCamera(Camera):
         meshLeft = list(meshLeft.tobytes())
         meshRight = list(meshRight.tobytes())
 
-        return meshLeft, meshRight, rectIntrinsics
+        return meshLeft, meshRight, rectIntrinsicsR
 
     def _create_pipeline(self):
         pipeline, nodes = self.replay.init_pipeline()
@@ -163,7 +170,7 @@ class ReplayCamera(Camera):
     
         centerCropOffset = ((originalRes[0] - res[0]) / 2, (originalRes[1] - res[1]) / 2)
 
-        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, centerCropOffset, 0.5)
+        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, centerCropOffset, 0.5, True)
 
         nodes.stereo.loadMeshData(leftMesh, rightMesh)
         nodes.stereo.setSubpixel(True)
