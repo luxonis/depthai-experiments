@@ -150,8 +150,8 @@ class Replay:
                 return True
             ok, frame = self.cap[name].read()
             if ok:
-                #frame = cv2.resize(frame, (1280, 720))
-                frame = frame[60:1140, 320:1600]
+                # frame = frame[60:1140, 320:1600] middle
+                frame = frame[60:1140, 0:1280] # left
                 self.frames[name] = frame
         return len(self.frames) == 0
 

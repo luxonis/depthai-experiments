@@ -67,8 +67,14 @@ class ReplayCamera(Camera):
         width, height = resolution
         offsetWidth, offsetHeight = offset
         ## Top left and bottom right are from camera perspective where Top left corner is at (0,0) and bottom right is at (width, height)
-        topLeftPixel = dai.Point2f(offsetWidth, offsetHeight) 
-        bottomRightPixel = dai.Point2f(resolution[0] + offsetWidth , resolution[1] + offsetHeight)
+
+        # middle
+        # topLeftPixel = dai.Point2f(offsetWidth, offsetHeight) 
+        # bottomRightPixel = dai.Point2f(resolution[0] + offsetWidth , resolution[1] + offsetHeight)
+
+        # left
+        topLeftPixel = dai.Point2f(0, offsetHeight)
+        bottomRightPixel = dai.Point2f(resolution[0], resolution[1] + offsetHeight)
 
         print(topLeftPixel.x, topLeftPixel.y)
         print(bottomRightPixel.x, bottomRightPixel.y)
