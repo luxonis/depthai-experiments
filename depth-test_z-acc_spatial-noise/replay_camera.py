@@ -9,6 +9,16 @@ from host_sync import HostSync
 import os
 from depthai_replay import Replay
 
+cv2.namedWindow("depth")
+points = None
+def cb(event, x, y, flags, param):
+    global points
+    if event == cv2.EVENT_LBUTTONUP:
+        if points == (x, y):
+            points = None # Clear
+        else:
+            points = (x, y)
+cv2.setMouseCallback("depth", cb)
 class ReplayCamera(Camera):
     def __init__(self, device_info: dai.DeviceInfo):
         super().__init__(name="Replay")
@@ -108,7 +118,7 @@ class ReplayCamera(Camera):
         if useOptimalNewCameraMatrix :
             # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsL, d1, resolution, alpha = 0)
             # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsR, d2, resolution, alpha = 0)
-            R1, R2, rectIntrinsicsL, rectIntrinsicsR, _, _, _ = cv2.stereoRectify(M1, d1, M2, d2, resolution, R, T, alpha = 0)
+            R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q, _, _ = cv2.stereoRectify(M1, d1, M2, d2, resolution, R, T, alpha = 0)
         elif rectificationScale > 0 and rectificationScale < 1:
             rectIntrinsicsL[0][0] *= rectificationScale
             rectIntrinsicsL[1][1] *= rectificationScale
@@ -117,6 +127,12 @@ class ReplayCamera(Camera):
 
         mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, rectIntrinsicsL, resolution, cv2.CV_32FC1)
         mapXR, mapYR = cv2.initUndistortRectifyMap(M2, d2, R2, rectIntrinsicsR, resolution, cv2.CV_32FC1)
+        print('Left intrinsic resized')
+        print(rectIntrinsicsL)
+        print('Right intrinsic resized')
+        print(rectIntrinsicsR)
+        print('Q matrix is ->')
+        print(self.Q)
 
         meshCellSize = 16
         meshLeft = []
@@ -197,6 +213,7 @@ class ReplayCamera(Camera):
 
 
     def update(self):
+        dispairty_point = None
         if not self.replay.send_frames(False):
             self.stop = True
             self.depth_frame = self.depth_frames[self.idx % len(self.depth_frames)]
@@ -205,13 +222,15 @@ class ReplayCamera(Camera):
 
         else:           
             disparity = self.depth_queue.get().getFrame()
-
+            # print(f'Frame baseline is  {self.replay.calibData.getBaselineDistance()}')
             with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
                 self.depth_frame = (8 * self.M2[0][0] * self.replay.calibData.getBaselineDistance() * 10 / disparity).astype(np.uint16)
 
             self.image_frame = self.image_queue.get().getCvFrame()
             self.frames.append(self.image_frame)
             self.depth_frames.append(self.depth_frame)
+            if points is not None:
+                dispairty_point = disparity[points[1]][points[0]] / 8 # 8 because of disparity bits
 
             if len(self.frames) > 6 and not self.removed_frames:
                 self.removed_frames = True
@@ -221,6 +240,25 @@ class ReplayCamera(Camera):
         self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
         self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
+        baseline_q = 1/self.Q[3,2]
+        
+        if points is not None and dispairty_point is not None:
+
+            cv2.circle(self.depth_visualization_frame, points, 3, (255, 255, 255), -1)
+
+            text = "{:.3f} Disparity".format(dispairty_point)
+            cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
+            cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+
+            depth_point = self.depth_frame[points[1]][points[0]] / 1000
+            text = "{:.3f}m Depth value".format(depth_point)
+            cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
+            cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
+            
+            depth_point = (self.M2[0][0] * baseline_q / dispairty_point) / 100
+            text = "{:.3f}m Depth from Q".format(depth_point)
+            cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 55), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
+            cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 55), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
 
         cv2.imshow('depth', self.depth_visualization_frame)
         
