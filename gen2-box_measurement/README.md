@@ -1,6 +1,10 @@
-## [Gen2] Box measurement
+Box measurement
 
 This experiment showcases one possible approach for measuring the size of a box using DepthAI.
+
+![demo](https://github.com/luxonis/depthai-experiments/blob/master/gen2-multiple-devices/box-measurement/img/demo.gif)
+
+_For a more accurate version of multi-cam box measurement check out the [demo here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices/box-measurement)._
 
 ## Installation
 ```

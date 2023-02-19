@@ -55,26 +55,23 @@ In case of **multiple streams having different FPS**, there are **2 options on h
 
 This demo uses the 1st approach. Time difference between synced messages is below 22ms, `MS_THRESHOLD` * 2. We achieve 30FPS, which is the FPS of the slowest stream (rgb frames).
 
+For VIO/SLAM solutions, you would want to sync IMU messages with the middle of the exposure. For exposure timings and timestamps, see [Frame capture graphs](https://docs.luxonis.com/projects/hardware/en/latest/pages/guides/sync_frames.html#frame-capture-graphs). Some more advance algorithms weight multiple IMU messages (before/after exposure) and interpolate the final value.
+
 ```
-  FPS 29.97434628021179
-  [Seq 671] RGB timestamp: 2:24:30.721382
-  [Seq 1004] Disparity timestamp: 2:24:30.719322
-  [Seq 40] IMU timestamp: 2:24:30.716725
-  -----------
-  FPS 29.955986706189318
-  [Seq 672] RGB timestamp: 2:24:30.754712
-  [Seq 1005] Disparity timestamp: 2:24:30.741527
-  [Seq 44] IMU timestamp: 2:24:30.747808
-  -----------
-  FPS 29.979355533615596
-  [Seq 673] RGB timestamp: 2:24:30.788040
-  [Seq 1007] Disparity timestamp: 2:24:30.785932
-  [Seq 49] IMU timestamp: 2:24:30.786688
-  -----------
-  FPS 29.961037216176646
-  [Seq 674] RGB timestamp: 2:24:30.821369
-  [Seq 1009] Disparity timestamp: 2:24:30.830342
-  [Seq 54] IMU timestamp: 2:24:30.825577
+FPS 29.850746268518403
+[Seq 46] Mid of RGB exposure ts: 1400ms, RGB ts: 1415ms, RGB exposure time: 29ms
+[Seq 65] Mid of Stereo exposure ts: 1391ms, Disparity ts: 1396ms, Stereo exposure time: 9ms
+[Seq 189] IMU ts: 1390ms
+-----------
+FPS 29.271613342173193
+[Seq 47] Mid of RGB exposure ts: 1433ms, RGB ts: 1448ms, RGB exposure time: 29ms
+[Seq 67] Mid of Stereo exposure ts: 1435ms, Disparity ts: 1440ms, Stereo exposure time: 9ms
+[Seq 212] IMU ts: 1435ms
+-----------
+FPS 29.629629629327667
+[Seq 48] Mid of RGB exposure ts: 1466ms, RGB ts: 1481ms, RGB exposure time: 29ms
+[Seq 68] Mid of Stereo exposure ts: 1457ms, Disparity ts: 1462ms, Stereo exposure time: 9ms
+[Seq 223] IMU ts: 1457ms
 ```
 
 #### Output with logging enabled

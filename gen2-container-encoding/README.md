@@ -4,7 +4,7 @@ This demo shows how you can stream encoded frames from the device to the host an
 
 This demo uses [PyAV](https://github.com/PyAV-Org/PyAV) library, which is just a binding library for the [FFmpeg](http://ffmpeg.org/) library.
 
-This demo will use `H265` codec by default.
+This demo will use `H265` codec by default. Note that some video players (eg. Quicktime) might not supprot this codec. We suggest using [VLC](https://www.videolan.org/vlc/).
 
 ## Demo
 

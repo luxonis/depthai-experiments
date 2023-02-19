@@ -176,7 +176,7 @@ print("Creating face recognition ImageManip/NN")
 
 face_rec_manip = pipeline.create(dai.node.ImageManip)
 face_rec_manip.initialConfig.setResize(112, 112)
-face_rec_manip.setWaitForConfigInput(True)
+face_rec_manip.inputConfig.setWaitForMessage(True)
 
 script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
 script.outputs['manip2_img'].link(face_rec_manip.inputImage)

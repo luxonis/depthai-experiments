@@ -41,7 +41,7 @@ cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 manip = pipeline.create(dai.node.ImageManip)
 manip.initialConfig.setResize(NN_WIDTH, NN_HEIGHT)
 manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
-manip.setWaitForConfigInput(False)
+manip.inputConfig.setWaitForMessage(False)
 
 # Create outputs
 xout_cam = pipeline.create(dai.node.XLinkOut)

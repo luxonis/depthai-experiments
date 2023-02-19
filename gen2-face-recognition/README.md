@@ -30,6 +30,17 @@ This example demonstrates the DepthAI running [face detection network](https://d
 
 [DepthAI Pipeline Graph](https://github.com/geaxgx/depthai_pipeline_graph#depthai-pipeline-graph-experimental) was used to generate this image.
 
+
+## Potential improvements
+
+This is a demo app showcasing the capability of depthai, not a production-ready solution. A few potential improvements:
+
+- Use scalable DB system for comparing face embeddings. If you have a large DB (eg. thousands of people), this will be extremely important, as comparing numpy arrays in python `for` loop isn't very fast/efficient.
+- Trying a different face recognition model that could potentially be more accurate. A few other pretrained models: [Sphereface](https://docs.openvino.ai/2021.4/omz_models_model_Sphereface.html), [face_recognition_resnet100_arcface_onnx](https://docs.openvino.ai/2021.4/omz_models_model_face_recognition_resnet100_arcface_onnx.html), [face_reidentification_retail_0095](https://docs.openvino.ai/2021.4/omz_models_model_face_reidentification_retail_0095.html), [facenet-20180408-102900](https://docs.openvino.ai/2021.4/omz_models_model_facenet_20180408_102900.html).
+- Use a different (potentially more accurate) comparison technique to compare face embeddings. We currently use cosine distance.
+- Use depth as well to increase face recognition accuracy. We haven't found any opensource/pretrained NN models that would accept color+depth frames for better accuracy, but Varun from LearnOpenCv used depth in the [anti-spoofing face recognition system](https://learnopencv.com/anti-spoofing-face-recognition-system-using-oak-d-and-depthai/) to determine whether the image is flat (2D image, eg. from aphone).
+- Use anti-spoofing model, an example would be [Silent-Face-Anti-Spoofing](https://github.com/minivision-ai/Silent-Face-Anti-Spoofing) repo.
+
 ## Usage
 
 ```bash
