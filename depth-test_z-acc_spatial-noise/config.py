@@ -1,5 +1,6 @@
 import depthai as dai
 from argparse import ArgumentParser
+from pathlib import Path
 parser = ArgumentParser(prog = "Depth test", description = "Test test z-accuracy and spatial noise")
 
 parser.add_argument("-c", "--color", action = "store_true", help = "Use color camera for preview")
@@ -12,6 +13,8 @@ parser.add_argument("-xr", "--max_range", type = int, default = 2000, help = "mm
 parser.add_argument("-ms", "--mono_camera_resolution", type = str, default = "THE_400_P", choices=["THE_400_P", "THE_480_P", "THE_720_P", "THE_800_P"], help = "Mono camera resolution")
 parser.add_argument("-m", "--median", type = str, default = "KERNEL_7x7", choices=["MEDIAN_OFF", "KERNEL_3x3", "KERNEL_5x5", "KERNEL_7x7"], help = "Median filter")
 parser.add_argument("-n", "--n_samples", type = int, default = 10, help = "Number of samples in a single test")
+parser.add_argument("-gt", "--ground_truth", type = float, default = 1, help = "Ground truth depth in m (camera wall distance)")
+parser.add_argument("--astra_gt", action="store_true", default = None, help = "Use astra pro as ground truth")
 parser.add_argument("--astra_intrinsic", type = str, default = None, help = "Path to astra intrinsic file (.np file containing 3x3 matrix)")
 
 args = parser.parse_args()
@@ -34,5 +37,11 @@ median = getattr(dai.StereoDepthProperties.MedianFilter, args.median)
 
 n_samples = args.n_samples
 
-# Astra intrinsic
+gt = args.ground_truth
+
+resuls_file = Path(__file__).parent / "results" / "results.txt"
+resuls_file.parent.mkdir(parents=True, exist_ok=True)
+
+# Astra
+astra_gt = args.astra_gt # use astra pro as ground truth
 astra_intrinsic = args.astra_intrinsic # path to the astra intrinsic matrix

@@ -4,12 +4,13 @@ from utils import *
 import math
 from camera import Camera
 from oak_camera import OakCamera
+import config
 
 class DepthTest:
 	def __init__(self):
 		self.camera_dir = np.array([0, 0, -1])
 		self.plane_normal = np.array([0, 0, -1])
-		self.camera_wall_distance = 1 # m
+		self.camera_wall_distance = config.gt # m
 		self.plane_distance = -self.camera_wall_distance
 		self.plane_coeffs = (0,0,-self.camera_wall_distance)
 
@@ -159,10 +160,24 @@ class DepthTest:
 	def print_results(self):
 		print("=== Results ===")
 		print(f"{self.samples} measurements")
-		print(f"Z accuracy: {np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f}% of GT (avg distance: {-np.mean(self.z_means)*1000:.2f}mm)")
-		print(f"Spatial noise: {np.mean(self.spatial_noise_rmses)*1000:.2f} mm")
-		print(f"Subpixel spatial noise: {np.mean(self.subpixel_spatial_noise_rmses):.2f} px")
+		z_accuracy = np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100
+		print(f"Z accuracy: {z_accuracy:.2f}% of GT (avg distance: {-np.mean(self.z_means)*1000:.2f}mm)")
+		spatial_noise = np.mean(self.spatial_noise_rmses)*1000
+		print(f"Spatial noise: {spatial_noise:.2f} mm")
+		subpixel_spatial_noise = np.mean(self.subpixel_spatial_noise_rmses)
+		print(f"Subpixel spatial noise: {subpixel_spatial_noise:.2f} px")
 		print()
+
+
+
+	def save_results(self, name):
+		horizontal_tilt, vertical_tilt = self.compute_tilt()
+		if not config.resuls_file.exists():
+			with open(config.resuls_file, "w") as f:
+				f.write("name,ground_truth,z_accuracy,spatial_noise,subpixel_spatial_noise,vertical_tilt,horizontal_tilt\n")
+		with open(config.resuls_file, "a") as f:
+			f.write(f"{name},{self.camera_wall_distance},{np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f},{np.mean(self.spatial_noise_rmses)*1000:.2f},{np.mean(self.subpixel_spatial_noise_rmses):.2f},{vertical_tilt * 180/np.pi},{horizontal_tilt  * 180/np.pi}\n")
+
 
 	def show_plane_fit_visualization(self, point_cloud: o3d.geometry.PointCloud):
 		if not self.fitted:

@@ -8,7 +8,7 @@
 | `q` | quit |
 | `g` | set ground truth based (camera wall distance) on measurement from selected camera |
 | `f` | fit a plane to the point cloud of the selected camera |
-| `s` | save the point clouds to the `point-clouds` folder |
+| `p` | save the point clouds to the `point-clouds` folder |
 | `c` | toggle rgb / solid color pointcloud |
 | `v` | toggle plane fit visualization |
 | `t` | start the test for the selected camera |

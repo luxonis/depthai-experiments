@@ -7,28 +7,29 @@ from astra_camera import AstraCamera
 from utils import *
 from depth_test import DepthTest
 import config
-from openni import openni2
 import open3d as o3d
 
-
-openni2.initialize()
+if config.astra_gt:
+	from openni import openni2
+	openni2.initialize()
 
 depth_test = DepthTest()
 cameras = []
 
 try:
-	device_info = dai.DeviceInfo()
+	found, device_info = dai.Device.getFirstAvailableDevice()
 	oak_camera = OakCamera(device_info)
 	cameras.append(oak_camera)
 except:
 	print("❗WARNING: OAK-D not found")
 
-try:
-	device_info = openni2.Device.open_any()
-	astra_camera = AstraCamera(device_info)
-	cameras.append(astra_camera)
-except:
-	print("❗WARNING: Astra not found")
+if config.astra_gt:
+	try:
+		device_info = openni2.Device.open_any()
+		astra_camera = AstraCamera(device_info)
+		cameras.append(astra_camera)
+	except:
+		print("❗WARNING: Astra not found")
 
 if len(cameras) == 0:
 	print("❗ERROR: No cameras found")
@@ -85,6 +86,12 @@ def set_ground_truth_callback():
 def toggle_color_callback():
 	global solid_color
 	solid_color = not solid_color
+
+
+def save_results_callback():
+	name = selected_camera.mxid if hasattr(selected_camera, "mxid") else "unknown"
+	depth_test.save_results(name)
+
 # point cloud visualization window
 point_cloud_window = o3d.visualization.VisualizerWithKeyCallback()
 point_cloud_window.create_window("Point Cloud")
@@ -94,7 +101,7 @@ point_cloud_window.register_key_callback(ord('F'), lambda vis: fit_plane_callbac
 point_cloud_window.register_key_callback(ord('V'), lambda vis: visualize_plane_callback())
 point_cloud_window.register_key_callback(ord('T'), lambda vis: start_test_callback())
 point_cloud_window.register_key_callback(ord('G'), lambda vis: set_ground_truth_callback())
-point_cloud_window.register_key_callback(ord('S'), lambda vis: save_point_clouds_callback())
+point_cloud_window.register_key_callback(ord('P'), lambda vis: save_point_clouds_callback())
 point_cloud_window.register_key_callback(ord('C'), lambda vis: toggle_color_callback())
 point_cloud_window.register_key_callback(ord('1'), lambda vis: select_camera_callback(0))
 point_cloud_window.register_key_callback(ord('2'), lambda vis: select_camera_callback(1))
@@ -130,4 +137,5 @@ while running:
 			print()
 			testing = False
 			depth_test.print_results()
+			save_results_callback()
 			depth_test.reset()
