@@ -12,9 +12,9 @@ class OakCamera(Camera):
         super().__init__(name="OAK")
 
         self.device_info = device_info
-        self.mxid = device_info.getMxId()
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
+        self.mxid = self.device.getDeviceInfo().getMxId()
 
         self.device.setIrLaserDotProjectorBrightness(1200)
 
