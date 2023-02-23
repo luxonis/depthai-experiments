@@ -1,11 +1,8 @@
-import json
 import socketserver
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from io import BytesIO
-from pathlib import Path
-import sys
 from socketserver import ThreadingMixIn
 from time import sleep
 import depthai as dai
@@ -81,6 +78,7 @@ def create_pipeline(depth):
     pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
     # Define a source - color camera
     colorCam = pipeline.create(dai.node.ColorCamera)
+
     if depth:
         mobilenet = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
         monoLeft = pipeline.create(dai.node.MonoCamera)
@@ -94,7 +92,7 @@ def create_pipeline(depth):
     colorCam.setInterleaved(False)
     colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-    mobilenet.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.2"))
+    mobilenet.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.4"))
     mobilenet.setConfidenceThreshold(0.5)
     mobilenet.input.setBlocking(False)
 
@@ -116,6 +114,10 @@ def create_pipeline(depth):
         monoLeft.out.link(stereo.left)
         monoRight.out.link(stereo.right)
 
+        xoutDepth = pipeline.create(dai.node.XLinkOut)
+        xoutDepth.setStreamName("depth")
+        mobilenet.passthroughDepth.link(xoutDepth.input)
+
     xoutRgb = pipeline.create(dai.node.XLinkOut)
     xoutRgb.setStreamName("rgb")
     colorCam.preview.link(mobilenet.input)
@@ -129,19 +131,10 @@ def create_pipeline(depth):
     xoutNN.setStreamName("detections")
     mobilenet.out.link(xoutNN.input)
 
-    if depth:
-        xoutBoundingBoxDepthMapping = pipeline.create(dai.node.XLinkOut)
-        xoutBoundingBoxDepthMapping.setStreamName("boundingBoxDepthMapping")
-        mobilenet.boundingBoxMapping.link(xoutBoundingBoxDepthMapping.input)
-
-        xoutDepth = pipeline.create(dai.node.XLinkOut)
-        xoutDepth.setStreamName("depth")
-        mobilenet.passthroughDepth.link(xoutDepth.input)
-
     return pipeline
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(dai.OpenVINO.Version.VERSION_2021_2) as device:
+with dai.Device() as device:
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
@@ -154,10 +147,10 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_2) as device:
     previewQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
     detectionNNQueue = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
     if depth_enabled:
-        xoutBoundingBoxDepthMapping = device.getOutputQueue(name="boundingBoxDepthMapping", maxSize=4, blocking=False)
         depthQueue = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
 
     frame = None
+    depthFrame = None
     detections = []
 
     startTime = time.monotonic()
@@ -180,27 +173,11 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_2) as device:
             startTime = current_time
 
         if depth_enabled:
-            depth = depthQueue.get()
-            depthFrame = depth.getFrame()
+            depthFrame = depthQueue.get().getFrame()
 
-            depthFrameColor = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            depthFrameColor = cv2.equalizeHist(depthFrameColor)
-            depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
-            if len(detections) != 0:
-                boundingBoxMapping = xoutBoundingBoxDepthMapping.get()
-                roiDatas = boundingBoxMapping.getConfigData()
-
-                for roiData in roiDatas:
-                    roi = roiData.roi
-                    roi = roi.denormalize(depthFrameColor.shape[1], depthFrameColor.shape[0])
-                    topLeft = roi.topLeft()
-                    bottomRight = roi.bottomRight()
-                    xmin = int(topLeft.x)
-                    ymin = int(topLeft.y)
-                    xmax = int(bottomRight.x)
-                    ymax = int(bottomRight.y)
-
-                    cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+            depthFrame = cv2.normalize(depthFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+            depthFrame = cv2.equalizeHist(depthFrame)
+            depthFrame = cv2.applyColorMap(depthFrame, cv2.COLORMAP_HOT)
 
         # If the frame is available, draw bounding boxes on it and show the frame
         height = frame.shape[0]
@@ -225,11 +202,22 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_2) as device:
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
             server_TCP.datatosend = str(label) + "," + f"{int(detection.confidence * 100)}%"
 
+            if depthFrame is not None:
+                roi = detection.boundingBoxMapping.roi
+                roi = roi.denormalize(depthFrame.shape[1], depthFrame.shape[0])
+                topLeft = roi.topLeft()
+                bottomRight = roi.bottomRight()
+                xmin = int(topLeft.x)
+                ymin = int(topLeft.y)
+                xmax = int(bottomRight.x)
+                ymax = int(bottomRight.y)
+                cv2.rectangle(depthFrame, (xmin, ymin), (xmax, ymax), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+
 
         cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
         if depth_enabled:
-            new_width = int(depthFrameColor.shape[1] * (frame.shape[0] / depthFrameColor.shape[0]))
-            stacked = np.hstack([frame, cv2.resize(depthFrameColor, (new_width, frame.shape[0]))])
+            new_width = int(depthFrame.shape[1] * (frame.shape[0] / depthFrame.shape[0]))
+            stacked = np.hstack([frame, cv2.resize(depthFrame, (new_width, frame.shape[0]))])
             cv2.imshow("stacked", stacked)
             server_HTTP.frametosend = stacked
         else:

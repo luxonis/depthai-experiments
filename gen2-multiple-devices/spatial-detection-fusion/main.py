@@ -39,7 +39,3 @@ while True:
         camera.update()
 
     birds_eye_view.render()
-
-
-
-        

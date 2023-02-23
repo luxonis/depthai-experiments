@@ -1,7 +1,6 @@
 import depthai as dai
 import blobconverter
 import cv2
-import time
 import numpy as np
 from typing import List
 from detection import Detection
@@ -24,7 +23,6 @@ class Camera:
         self.rgb_queue = self.device.getOutputQueue(name="rgb", maxSize=1, blocking=False)
         self.still_queue = self.device.getOutputQueue(name="still", maxSize=1, blocking=False)
         self.control_queue = self.device.getInputQueue(name="control")
-        self.mapping_queue = self.device.getOutputQueue(name="mapping", maxSize=1, blocking=False)
         self.nn_queue = self.device.getOutputQueue(name="nn", maxSize=1, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=1, blocking=False)
 
@@ -33,7 +31,7 @@ class Camera:
             cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(self.window_name, 640, 360)
 
-        self.frame_rgb = None 
+        self.frame_rgb = None
         self.detected_objects: List[Detection] = []
 
         self._load_calibration()
@@ -51,7 +49,6 @@ class Camera:
             self.cam_to_world = extrinsics["cam_to_world"]
         except:
             raise RuntimeError(f"Could not load calibration data for camera {self.mxid} from {path}!")
-            
 
     def _create_pipeline(self):
         pipeline = dai.Pipeline()
@@ -83,10 +80,6 @@ class Camera:
         xout_depth = pipeline.create(dai.node.XLinkOut)
         xout_depth.setStreamName("depth")
 
-        # Bounding box maping from depth to RGB -> 'mapping'
-        xout_bounding_box_bepth_mapping = pipeline.create(dai.node.XLinkOut)
-        xout_bounding_box_bepth_mapping.setStreamName("mapping")
-
         # Spatial detection network -> 'nn'
         spatial_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
         spatial_nn.setBlobPath(blobconverter.from_zoo(name='mobilenet-ssd', shaves=6))
@@ -103,7 +96,6 @@ class Camera:
         cam_stereo.depth.link(spatial_nn.inputDepth)
         spatial_nn.passthrough.link(xout_rgb.input)
         spatial_nn.passthroughDepth.link(xout_depth.input)
-        spatial_nn.boundingBoxMapping.link(xout_bounding_box_bepth_mapping.input)
         spatial_nn.out.link(xout_nn.input)
 
 
@@ -129,7 +121,7 @@ class Camera:
 
         if in_rgb is None or in_depth is None:
             return
-        
+
         depth_frame = in_depth.getFrame() # depthFrame values are in millimeters
         depth_frame_color = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
@@ -150,46 +142,42 @@ class Camera:
         if in_nn is not None:
             detections = in_nn.detections
 
-        mapping = self.mapping_queue.tryGet()
         self.detected_objects = []
-        if len(detections) > 0 and mapping is not None:
-            roi_datas = mapping.getConfigData()
 
-            for roi_data, detection in zip(roi_datas, detections):
-                roi = roi_data.roi
-                roi = roi.denormalize(width, height)
-                top_left = roi.topLeft()
-                bottom_right = roi.bottomRight()
-                xmin = int(top_left.x)
-                ymin = int(top_left.y)
-                xmax = int(bottom_right.x)
-                ymax = int(bottom_right.y)
+        for detection in detections:
+            roi = detection.boundingBoxMapping.roi
+            roi = roi.denormalize(width, height)
+            top_left = roi.topLeft()
+            bottom_right = roi.bottomRight()
+            xmin = int(top_left.x)
+            ymin = int(top_left.y)
+            xmax = int(bottom_right.x)
+            ymax = int(bottom_right.y)
 
-                x1 = int(detection.xmin * width)
-                x2 = int(detection.xmax * width)
-                y1 = int(detection.ymin * height)
-                y2 = int(detection.ymax * height)
+            x1 = int(detection.xmin * width)
+            x2 = int(detection.xmax * width)
+            y1 = int(detection.ymin * height)
+            y2 = int(detection.ymax * height)
 
-                try:
-                    label = self.label_map[detection.label]
-                except:
-                    label = detection.label
-                
-                if self.cam_to_world is not None:
-                    pos_camera_frame = np.array([[detection.spatialCoordinates.x / 1000, -detection.spatialCoordinates.y / 1000, detection.spatialCoordinates.z / 1000, 1]]).T
-                    # pos_camera_frame = np.array([[0, 0, detection.spatialCoordinates.z/1000, 1]]).T
-                    pos_world_frame = self.cam_to_world @ pos_camera_frame
+            try:
+                label = self.label_map[detection.label]
+            except:
+                label = detection.label
 
-                    self.detected_objects.append(Detection(label, detection.confidence, pos_world_frame, self.friendly_id))
+            if self.cam_to_world is not None:
+                pos_camera_frame = np.array([[detection.spatialCoordinates.x / 1000, -detection.spatialCoordinates.y / 1000, detection.spatialCoordinates.z / 1000, 1]]).T
+                # pos_camera_frame = np.array([[0, 0, detection.spatialCoordinates.z/1000, 1]]).T
+                pos_world_frame = self.cam_to_world @ pos_camera_frame
 
+                self.detected_objects.append(Detection(label, detection.confidence, pos_world_frame, self.friendly_id))
 
-                cv2.rectangle(visualization, (xmin, ymin), (xmax, ymax), (100, 0, 0), 2)
-                cv2.rectangle(visualization, (x1, y1), (x2, y2), (255, 0, 0), 2)
-                cv2.putText(visualization, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(visualization, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(visualization, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(visualization, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(visualization, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.rectangle(visualization, (xmin, ymin), (xmax, ymax), (100, 0, 0), 2)
+            cv2.rectangle(visualization, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            cv2.putText(visualization, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
 
 
         if self.show_video:
