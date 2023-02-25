@@ -1,0 +1,6 @@
+blobconverter>=1.2.9
+onnx-simplifier
+torch
+kornia
+onnx
+depthai==2.16.0.0

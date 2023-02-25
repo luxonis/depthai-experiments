@@ -4,4 +4,4 @@ This was an example using the gen1 `depthai` library, which has been deprected s
 
 ### Updated demo
 
-Check the updated demo here: [DepthAI Pointcloud](../gen2-pointcloud/)
+Check the updated demo here: [DepthAI Pointcloud](../pointcloud/)

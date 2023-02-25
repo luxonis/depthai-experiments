@@ -1,4 +1,4 @@
-# Gen2 Human-Machine safety
+# Human-Machine safety
 
 This example demonstrates how to detect dangerous objects and calculates distance to a human hand (palm).
 It uses mobilenet spatial detection netork node to get spatial coordinates of dangerous objects and palm

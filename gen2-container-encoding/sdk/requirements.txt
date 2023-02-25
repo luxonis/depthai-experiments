@@ -1,3 +1,0 @@
-av
-depthai
-depthai-sdk

@@ -1,0 +1,3 @@
+depthai-sdk==1.9.4.1
+blobconverter==1.3.0
+depthai==2.20.2

@@ -1,4 +1,0 @@
-opencv-python
-depthai
-deothai-sdk
-blobconverter

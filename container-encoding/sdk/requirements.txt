@@ -1,0 +1,2 @@
+av
+depthai-sdk==1.9.4.1

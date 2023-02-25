@@ -1,3 +1,0 @@
-opencv-python
-blobconverter==1.2.8
-depthai==2.16.0.0

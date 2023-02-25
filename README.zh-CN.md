@@ -7,36 +7,36 @@
 
 以下列表并不详尽(由于我们随机添加实验，可能会忘记更新此列表):
 
-## [Gen2] 凝视估计 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-gaze-estimation))
+##  凝视估计 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gaze-estimation))
 
-该示例演示了如何使用 [Gen2 Pipeline Builder](https://github.com/luxonis/depthai/issues/136) 在DepthAI上运行3个模型(3序列，2并行)推理。
+该示例演示了如何使用 [Pipeline Builder](https://github.com/luxonis/depthai/issues/136) 在DepthAI上运行3个模型(3序列，2并行)推理。
 
 [![Gaze Example Demo](https://user-images.githubusercontent.com/5244214/96713680-426c7a80-13a1-11eb-81e6-238e3decb7be.gif)](https://www.youtube.com/watch?v=OzgK5-APxBU)
 
 制作此示例的Origina OpenVINO演示在[这里](https://github.com/LCTyrell/Gaze_pointer_controller)
 
-## [Gen2] 亚像素和LR检查视差深度 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-camera-demo))
+##  亚像素和LR检查视差深度 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/camera-demo))
 
-此示例显示了如何进行亚像素，LR检查或扩展视差，以及如何将这些测量值投影到点云中以进行可视化。这将使用 [Gen2 Pipeline Builder](https://github.com/luxonis/depthai/issues/136)。
+此示例显示了如何进行亚像素，LR检查或扩展视差，以及如何将这些测量值投影到点云中以进行可视化。这将使用 [Pipeline Builder](https://github.com/luxonis/depthai/issues/136)。
 
 ![image](https://user-images.githubusercontent.com/32992551/99454609-e59eaa00-28e3-11eb-8858-e82fd8e6eaac.png)
 ![image](https://user-images.githubusercontent.com/32992551/99454680-fea75b00-28e3-11eb-80bc-2004016d75e2.png)
 
-## [Gen2] 年龄与性别检测 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-age-gender#gen2-age--gender-recognition))
+##  年龄与性别检测 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/age-gender#age--gender-recognition))
 
 这显示了一个简单的两阶段神经推理示例，先进行面部检测，然后根据面部进行年龄/性别估计。
 
-[![Gen2 Age & Gender recognition](https://user-images.githubusercontent.com/5244214/106005496-954a8200-60b4-11eb-923e-b84df9de9fff.gif)](https://www.youtube.com/watch?v=PwnVrPaF-vs "Age/Gender recognition on DepthAI")
+[![Age & Gender recognition](https://user-images.githubusercontent.com/5244214/106005496-954a8200-60b4-11eb-923e-b84df9de9fff.gif)](https://www.youtube.com/watch?v=PwnVrPaF-vs "Age/Gender recognition on DepthAI")
 
-## [Gen2] 文本检测+光学字符识别(OCR)管道 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-ocr#gen2-text-detection--optical-character-recognition-ocr-pipeline))
+##  文本检测+光学字符识别(OCR)管道 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/ocr#text-detection--optical-character-recognition-ocr-pipeline))
 
 该管道执行文本检测(EAST)，然后对检测到的文本进行光学字符识别。
 
-[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749667-f6315900-5f00-11eb-92bd-a297590adedc.png)](https://www.youtube.com/watch?v=YWIZYeixQjc "Gen2 OCR Pipeline")
+[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749667-f6315900-5f00-11eb-92bd-a297590adedc.png)](https://www.youtube.com/watch?v=YWIZYeixQjc "OCR Pipeline")
 
-## [Gen2] 行人识别 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification))
+##  行人识别 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/pedestrian-reidentification))
 
-该示例演示了如何使用Gen2 Pipeline Builder在DepthAI上进行两阶段推理，以识别和重新识别具有唯一ID的行人。
+Pipeline Builder在DepthAI上进行两阶段推理，以识别和重新识别具有唯一ID的行人。
 
 [![Pedestrian Re-Identification](https://user-images.githubusercontent.com/32992551/108567421-71e6b180-72c5-11eb-8af0-c6e5c3382874.png)](https://www.youtube.com/watch?v=QlXGtMWVV18 "Person Re-ID on DepthAI")
 
@@ -54,13 +54,13 @@
 
 [![COVID-19 Social Distancing with DepthAI](https://user-images.githubusercontent.com/5244214/90741333-73f89500-e2cf-11ea-919b-b1f47dc55c4a.gif)](https://www.youtube.com/watch?v=-Ut9TemGZ8I "DepthAI Social Distancing Proof of Concept")
 
-## 演示界面 ([点击查看详情](https://github.com/luxonis/depthai-python/tree/gen2_develop/examples))
+## 演示界面 ([点击查看详情](https://github.com/luxonis/depthai-python/tree/main/examples))
 
 该应用程序用于演示DepthAI平台的各种功能。包含带有说明，控制台输出和预览窗口的示例。
 
 ![DemoUI](./demo-ui/preview.png)
 
-## MJPEG和JSON流式传输 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-mjpeg-streaming))
+## MJPEG和JSON流式传输 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/mjpeg-streaming))
 
 [![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)](https://www.youtube.com/watch?v=695o0EO1Daw "DepthAI on Mac")
 
@@ -80,7 +80,7 @@
 
 [![Watch the demo](https://user-images.githubusercontent.com/5244214/90751105-fc7a3400-e2d5-11ea-82fe-3c7797e99e3e.gif)](https://youtu.be/M0xQI1kXju4)
 
-## 人物追踪器 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker))
+## 人物追踪器 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/people-tracker))
 
 此应用程序统计视频流中有多少人向上/向下/向左/向右移动，从而使您可以接收有关多少人进入房间或​​经过走廊的信息。
 
@@ -104,7 +104,7 @@
 ![rgbd-pcl](https://media.giphy.com/media/UeAlkPpeHaxItO0NJ6/giphy.gif)
 
 
-## 主机端WLS过滤器 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/gen2-wls-filter))
+## 主机端WLS过滤器 ([点击查看详情](https://github.com/luxonis/depthai-experiments/tree/master/wls-filter))
 
 这给出了一个使用DepthAI的`rectified_right`和`depth`流进行主机端WLS过滤的示例。 
 

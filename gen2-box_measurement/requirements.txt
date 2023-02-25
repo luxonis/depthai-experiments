@@ -1,5 +1,0 @@
-opencv-python==4.6.0.66
-depthai==2.17.3.1
-numpy
-open3d==0.13.0.0
-matplotlib

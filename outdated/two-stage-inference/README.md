@@ -5,9 +5,9 @@ This was an example using the gen1 `depthai` library, which has been deprected s
 
 See these demos that implement two-stage (or more) inference:
 
-- [Age-gender recognition](../gen2-age-gender/)
-- [Emotion recognition](../gen2-emotion-recognition/)
-- [Gaze estimation](../gen2-gaze-estimation/)
-- [Face recognition](../gen2-face-detection/)
-- [Face mask classification](../gen2-mask-detection/)
-- [Triangulation demo](../gen2-triangulation/)
+- [Age-gender recognition](../age-gender/)
+- [Emotion recognition](../emotion-recognition/)
+- [Gaze estimation](../gaze-estimation/)
+- [Face recognition](../face-detection/)
+- [Face mask classification](../mask-detection/)
+- [Triangulation demo](../triangulation/)

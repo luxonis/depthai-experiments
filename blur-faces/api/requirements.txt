@@ -1,0 +1,4 @@
+opencv-python
+depthai==2.20.2
+numpy
+blobconverter==1.2.9

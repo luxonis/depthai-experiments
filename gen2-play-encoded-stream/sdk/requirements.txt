@@ -1,3 +1,0 @@
-depthai
-depthai-sdk
-pyav

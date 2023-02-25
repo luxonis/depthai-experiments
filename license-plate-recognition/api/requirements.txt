@@ -1,0 +1,4 @@
+opencv-python==4.5.1.48
+depthai==2.20.2
+blobconverter==1.2.8
+depthai-sdk==1.9.4.1

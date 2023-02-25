@@ -1,1 +1,1 @@
-Moved to https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification
+Moved to https://github.com/luxonis/depthai-experiments/tree/master/pedestrian-reidentification

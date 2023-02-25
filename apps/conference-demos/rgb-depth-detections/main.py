@@ -192,7 +192,7 @@ with dai.Device(pipeline) as device:
     display = None
 
     cv2.namedWindow("Luxonis", cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty("Luxonis",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+    # cv2.setWindowProperty("Luxonis",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
     while True:
         sync.add_msg("rgb", previewQueue.get())

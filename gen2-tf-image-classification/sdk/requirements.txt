@@ -1,3 +1,0 @@
-opencv-python
-depthai
-depthai-sdk

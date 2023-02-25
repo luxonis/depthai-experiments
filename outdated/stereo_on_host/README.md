@@ -4,4 +4,4 @@ This was an example using the gen1 `depthai` library, which has been deprected s
 
 ### Updated demo
 
-Check the updated demo here: [Stereo on host](../gen2-stereo-on-host/)
+Check the updated demo here: [Stereo on host](../stereo-on-host/)
