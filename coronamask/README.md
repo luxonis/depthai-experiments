@@ -24,7 +24,7 @@ python3 -m pip install -r requirements.txt
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Launch the script
