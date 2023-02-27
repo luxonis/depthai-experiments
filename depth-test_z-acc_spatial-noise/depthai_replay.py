@@ -3,7 +3,6 @@ import os
 import cv2
 import types
 import depthai as dai
-from depthai_sdk.classes.enum import ResizeMode
 
 class Replay:
     def __init__(self, path):
@@ -119,18 +118,6 @@ class Replay:
         return pipeline, nodes
 
 
-    def resize(self, stream_name: str, size, mode: ResizeMode = ResizeMode.FULL_CROP):
-        """
-        Resize color frames prior to sending them to the device.
-
-        Args:
-            stream_name (str): Name of the stream we want to resize
-            size (Tuple(width, heigth)): Size of color frames that are sent to the camera
-            mode (ResizeMode): How to actually resize the stream
-        """
-        self.cap[stream_name].resize = size
-        self.streams[stream_name].resize_mode = mode
-
     def create_queues(self, device):
         self.queues = {}
         for name in self.cap:
@@ -150,8 +137,9 @@ class Replay:
                 return True
             ok, frame = self.cap[name].read()
             if ok:
-                # frame = frame[60:1140, 320:1600] middle
-                frame = frame[60:1140, 0:1280] # left
+                # frame = frame[60:1140, 320:1600] # middle
+                frame = frame[60:1140, 0:1280] # left¸
+                # frame = frame[60:1140, 640:1920] # right
                 self.frames[name] = frame
         return len(self.frames) == 0
 

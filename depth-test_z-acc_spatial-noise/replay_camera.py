@@ -68,13 +68,17 @@ class ReplayCamera(Camera):
         offsetWidth, offsetHeight = offset
         ## Top left and bottom right are from camera perspective where Top left corner is at (0,0) and bottom right is at (width, height)
 
-        # middle
+        # # middle
         # topLeftPixel = dai.Point2f(offsetWidth, offsetHeight) 
         # bottomRightPixel = dai.Point2f(resolution[0] + offsetWidth , resolution[1] + offsetHeight)
 
         # left
         topLeftPixel = dai.Point2f(0, offsetHeight)
         bottomRightPixel = dai.Point2f(resolution[0], resolution[1] + offsetHeight)
+
+        # # right
+        # topLeftPixel = dai.Point2f(640, offsetHeight)
+        # bottomRightPixel = dai.Point2f(resolution[0] +640, resolution[1] + offsetHeight)
 
         print(topLeftPixel.x, topLeftPixel.y)
         print(bottomRightPixel.x, bottomRightPixel.y)
@@ -108,15 +112,16 @@ class ReplayCamera(Camera):
         if useOptimalNewCameraMatrix :
             # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsL, d1, resolution, alpha = 0)
             # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsR, d2, resolution, alpha = 0)
-            R1, R2, rectIntrinsicsL, rectIntrinsicsR, _, _, _ = cv2.stereoRectify(M1, d1, M2, d2, resolution, R, T, alpha = 0)
+            R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q = cv2.fisheye.stereoRectify(M1, d1[:4], M2, d2[:4], resolution, R, T, flags=cv2.CALIB_ZERO_DISPARITY, balance=1)
+            
         elif rectificationScale > 0 and rectificationScale < 1:
             rectIntrinsicsL[0][0] *= rectificationScale
             rectIntrinsicsL[1][1] *= rectificationScale
             rectIntrinsicsR[0][0] *= rectificationScale
             rectIntrinsicsR[1][1] *= rectificationScale
 
-        mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, rectIntrinsicsL, resolution, cv2.CV_32FC1)
-        mapXR, mapYR = cv2.initUndistortRectifyMap(M2, d2, R2, rectIntrinsicsR, resolution, cv2.CV_32FC1)
+        mapXL, mapYL = cv2.fisheye.initUndistortRectifyMap(M1, d1[:4], R1, rectIntrinsicsL, resolution, cv2.CV_32FC1)
+        mapXR, mapYR = cv2.fisheye.initUndistortRectifyMap(M2, d2[:4], R2, rectIntrinsicsR, resolution, cv2.CV_32FC1)
 
         meshCellSize = 16
         meshLeft = []
@@ -180,6 +185,7 @@ class ReplayCamera(Camera):
 
         nodes.stereo.loadMeshData(leftMesh, rightMesh)
         nodes.stereo.setSubpixel(True)
+        nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
 
         xout_depth = pipeline.createXLinkOut()
         xout_depth.setStreamName("depth")
