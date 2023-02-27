@@ -18,7 +18,7 @@ ROI**. Also note that to maximize spatial coordinates accuracy, you should defin
 ### Navigate to the directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

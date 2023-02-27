@@ -15,7 +15,7 @@ This example demonstrates the Gen2 Pipeline Builder running [fire detection netw
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

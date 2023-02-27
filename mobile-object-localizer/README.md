@@ -12,7 +12,7 @@ Input video is resized to 192 x 192 (W x H). Output is a list of 100 scores and 
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

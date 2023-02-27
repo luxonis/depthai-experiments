@@ -46,7 +46,7 @@ This is a demo app showcasing the capability of depthai, not a production-ready 
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

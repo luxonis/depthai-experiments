@@ -15,7 +15,7 @@ uses function `def calc_spatials(self, bbox, depth):` to calculate spatial coord
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

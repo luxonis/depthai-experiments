@@ -13,7 +13,7 @@ This example demonstrates the Gen2 Pipeline Builder running [face detection netw
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

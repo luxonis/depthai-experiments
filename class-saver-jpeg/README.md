@@ -50,7 +50,7 @@ timestamp,label,left,top,right,bottom,raw_frame,overlay_frame,cropped_frame
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

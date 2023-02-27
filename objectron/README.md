@@ -13,7 +13,7 @@ We use the two-stage architecture, so it is specialized for certain classes. Thi
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

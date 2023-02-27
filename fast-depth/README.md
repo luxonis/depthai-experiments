@@ -14,7 +14,7 @@ There are two available blob's for different input sizes:
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

@@ -14,7 +14,7 @@ Script works without any extra dependencies.
 Navigate to `api` folder:
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 Then, run the following command:

@@ -33,7 +33,7 @@ PyTorch/Kornia, convert them and run them on the DepthAI.
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

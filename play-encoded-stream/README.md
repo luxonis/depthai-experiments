@@ -9,7 +9,7 @@ These demos show how you can play H264/H265 OAK-encoded streams on the host comp
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

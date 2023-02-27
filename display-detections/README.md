@@ -50,7 +50,7 @@ displays bounding boxes on whole FOV `video` frames.
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

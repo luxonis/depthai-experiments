@@ -13,7 +13,7 @@ Image is taken from [here](https://www.pexels.com/photo/multi-cultural-people-31
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

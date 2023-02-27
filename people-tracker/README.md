@@ -14,7 +14,7 @@ Demo uses [person_detection_retail_0013](https://docs.openvinotoolkit.org/latest
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

@@ -15,7 +15,7 @@ Note that publishing too fast (eg 10FPS) won't work with https://test.mosquitto.
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

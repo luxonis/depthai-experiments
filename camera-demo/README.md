@@ -12,7 +12,7 @@ Unfiltered subpixel disparity depth results from a [BW1092 board](https://shop.l
 ### Navigate to directory
 
 ```bash
-  cd ./old-sdk
+  cd ./api
 ```
 
 ### Install Dependencies

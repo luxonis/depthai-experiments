@@ -19,7 +19,7 @@ Instructions on how to compile the model yourself:
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

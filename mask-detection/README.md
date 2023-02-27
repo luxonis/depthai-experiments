@@ -34,7 +34,7 @@ https://user-images.githubusercontent.com/18037362/171852659-2b0d127d-5b45-4c8f-
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

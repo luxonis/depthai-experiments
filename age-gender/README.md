@@ -31,7 +31,7 @@ It recognizes age and gender of all detected faces on the frame. Demo uses [face
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

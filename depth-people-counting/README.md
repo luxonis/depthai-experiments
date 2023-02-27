@@ -13,7 +13,7 @@ This demo contains many hard-coded values specific to [depth-people-counting-01]
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

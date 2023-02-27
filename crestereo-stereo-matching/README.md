@@ -21,7 +21,7 @@ CREStereo: Practical Stereo Matching via Cascaded Recurrent Network with Adaptiv
 
 ### Navigate to directory
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

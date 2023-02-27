@@ -19,7 +19,7 @@ This example demonstrates how to run [Human Pose Estimation Network](https://doc
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk

@@ -8,7 +8,7 @@ This example shows you how to use OAK camera for streaming to ``Foxglove Studio`
 ### Navigate to directory
 
 ```bash
-cd ./old-sdk
+cd ./api
 ```
 
 ### Pre-requisites

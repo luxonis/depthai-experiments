@@ -18,7 +18,7 @@ Example shows input video with overlay density map input. Example video taken fr
 Choose one of the following options:
 ```bash
 # For DepthAI API
-cd ./old-sdk
+cd ./api
 
 # For DepthAI SDK
 cd ./sdk
