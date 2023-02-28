@@ -38,7 +38,11 @@ cd ./sdk
 ### Launch the script
 
 ```
+# DepthAI API
 python3 main.py [options]
+
+# DepthAI SDK
+python3 main.py
 ```
 
 Options:

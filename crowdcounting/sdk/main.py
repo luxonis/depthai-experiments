@@ -24,9 +24,9 @@ def callback(packet):
     cv2.imshow('Crowd counting', packet.frame)
 
 
-with OakCamera(replay='../vids/vid1.mp4') as oak:
+with OakCamera(replay='vids/vid1.mp4') as oak:
     color = oak.create_camera('color', fps=5)
-    nn = oak.create_nn('../models/vgg_openvino_2021.4_6shave.blob', color)
+    nn = oak.create_nn('models/vgg_openvino_2021.4_6shave.blob', color)
 
     oak.callback(nn.out.main, callback=callback)
     oak.start(blocking=True)
