@@ -1,4 +1,4 @@
-Box measurement
+# Box measurement
 
 This experiment showcases one possible approach for measuring the size of a box using DepthAI.
 
