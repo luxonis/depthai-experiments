@@ -4,7 +4,6 @@ import cv2
 import depthai as dai
 import numpy as np
 import blobconverter
-from datetime import timedelta
 
 class TextHelper:
     def __init__(self) -> None:
@@ -42,23 +41,25 @@ jet_custom[0] = [0, 0, 0]
 
 class HostSync:
     def __init__(self):
-        self.arrays = {}
+        self.dict = {}
+
     def add_msg(self, name, msg):
-        if not name in self.arrays:
-            self.arrays[name] = []
-        self.arrays[name].append(msg)
-    def get_msgs(self, timestamp):
-        ret = {}
-        for name, arr in self.arrays.items():
-            for i, msg in enumerate(arr):
-                time_diff = abs(msg.getTimestamp() - timestamp)
-                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
-                # time difference is below 20ms, it's considered as synced
-                if time_diff < timedelta(milliseconds=20):
-                    ret[name] = msg
-                    self.arrays[name] = arr[i:]
-                    break
-        return ret
+        seq = str(msg.getSequenceNum())
+        if seq not in self.dict:
+            self.dict[seq] = {}
+        # print(f"Adding {name} with seq `{seq}`")
+        self.dict[seq][name] = msg
+
+    def get_msgs(self):
+        remove = []
+        for name in self.dict:
+            remove.append(name)
+            if len(self.dict[name]) == 3:
+                ret = self.dict[name]
+                for rm in remove:
+                    del self.dict[rm]
+                return ret
+        return None
 
 def create_bird_frame():
     fov = 68.3
@@ -172,11 +173,6 @@ xoutDepth = pipeline.create(dai.node.XLinkOut)
 xoutDepth.setStreamName("depth")
 spatialDetectionNetwork.passthroughDepth.link(xoutDepth.input)
 
-xpass = pipeline.create(dai.node.XLinkOut)
-xpass.setStreamName("pass")
-xpass.setMetadataOnly(True)
-spatialDetectionNetwork.passthrough.link(xpass.input)
-
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
 
@@ -184,7 +180,6 @@ with dai.Device(pipeline) as device:
     previewQueue = device.getOutputQueue(name="rgb")
     detectionNNQueue = device.getOutputQueue(name="detections")
     depthQueue = device.getOutputQueue(name="depth")
-    passQ = device.getOutputQueue(name="pass")
 
     text = TextHelper()
     title = TitleHelper()
@@ -195,17 +190,17 @@ with dai.Device(pipeline) as device:
     cv2.setWindowProperty("Luxonis",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
     while True:
-        sync.add_msg("rgb", previewQueue.get())
-        sync.add_msg("depth", depthQueue.get())
-
-        birds = birdseyeframe.copy()
-
+        if previewQueue.has():
+            sync.add_msg("rgb", previewQueue.get())
+        if depthQueue.has():
+            sync.add_msg("depth", depthQueue.get())
         if detectionNNQueue.has():
-            detections = detectionNNQueue.get().detections
+            sync.add_msg("detections", detectionNNQueue.get())
 
-            timestamp = passQ.get().getTimestamp()
-            msgs = sync.get_msgs(timestamp)
-
+        msgs = sync.get_msgs()
+        if msgs is not None:
+            birds = birdseyeframe.copy()
+            detections = msgs["detections"].detections
             #print(msgs)
             #if msgs.get("rgb") is None or msgs.get("depth") is None:
             #    continue
