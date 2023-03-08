@@ -8,7 +8,7 @@ tracked_objects = {}
 counter = {'up': 0, 'down': 0, 'left': 0, 'right': 0}
 
 ROI_POS = 0.5
-AXIS = 1
+AXIS = 0  # 0 - vertical, 1 - horizontal
 
 
 class TrackableObject:
@@ -75,29 +75,21 @@ def callback(packet, visualizer):
 
         tracked_objects[t.id] = to
 
-        if t.status != Tracklet.TrackingStatus.LOST and t.status != Tracklet.TrackingStatus.REMOVED:
-            text = 'ID {}'.format(t.id)
-
-            cv2.putText(packet.frame, text, (centroid[0] - 10, centroid[1] - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-            cv2.circle(packet.frame, (centroid[0], centroid[1]), 4, (255, 255, 255), -1)
-
         counter_str = f'Up: {counter["up"]}\nDown: {counter["down"]}\n' \
             if AXIS == 1 \
             else f'Left: {counter["left"]}\nRight: {counter["right"]}'
 
-        visualizer.add_line(pt1=(0, int(ROI_POS * height)),
-                            pt2=(width, int(ROI_POS * height)),
-                            color=(255, 255, 255),
-                            thickness=2)
+        pt1 = (0, int(ROI_POS * height)) if AXIS==1 else (int(ROI_POS * width), 0)
+        pt2 = (width, int(ROI_POS * height)) if AXIS==1 else (int(ROI_POS * width), height)
+        visualizer.add_line(pt1=pt1, pt2=pt2, color=(255, 255, 255), thickness=2)
 
-        visualizer.add_text(counter_str, position=TextPosition.BOTTOM_LEFT)
+        visualizer.add_text(counter_str, position=TextPosition.MID_LEFT, size=1.2)
         frame = visualizer.draw(packet.frame)
 
         cv2.imshow('People tracking', frame)
 
 
-with OakCamera(replay='../demo/example_01.mp4') as oak:
+with OakCamera() as oak:
     color = oak.create_camera('color')
     nn = oak.create_nn('mobilenet-ssd', color, nn_type='mobilenet', tracker=True)
 
