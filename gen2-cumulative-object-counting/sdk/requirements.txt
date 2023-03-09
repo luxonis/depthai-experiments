@@ -1,6 +1,0 @@
-numpy>=1.21
-opencv_python
-depthai
-depthai-sdk
-scipy
-blobconverter
