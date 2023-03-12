@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-import cv2
 import depthai as dai
+import threading
 import contextlib
+import cv2
+import time
 import blobconverter
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
@@ -37,6 +39,21 @@ def getPipeline():
 
     return pipeline
 
+def worker(device_info, stack, devices):
+    openvino_version = dai.OpenVINO.Version.VERSION_2021_4
+    usb2_mode = False
+    device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
+
+    # Note: currently on POE, DeviceInfo.getMxId() and Device.getMxId() are different!
+    print("=== Connected to " + device_info.getMxId())
+    device.startPipeline(getPipeline())
+
+    # Output queue will be used to get the rgb frames from the output defined above
+    devices[device.getMxId()] = {
+        'rgb': device.getOutputQueue(name="rgb"),
+        'nn': device.getOutputQueue(name="nn"),
+    }
+
 
 # https://docs.python.org/3/library/contextlib.html#contextlib.ExitStack
 with contextlib.ExitStack() as stack:
@@ -46,30 +63,16 @@ with contextlib.ExitStack() as stack:
     else:
         print("Found", len(device_infos), "devices")
     devices = {}
+    threads = []
 
     for device_info in device_infos:
-        # Note: the pipeline isn't set here, as we don't know yet what device it is.
-        # The extra arguments passed are required by the existing overload variants
-        openvino_version = dai.OpenVINO.Version.VERSION_2021_4
-        usb2_mode = False
-        device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
+        time.sleep(1) # Currently required due to XLink race issues
+        thread = threading.Thread(target=worker, args=(device_info, stack, devices))
+        thread.start()
+        threads.append(thread)
 
-        # Note: currently on POE, DeviceInfo.getMxId() and Device.getMxId() are different!
-        print("=== Connected to " + device_info.getMxId())
-        mxid = device.getMxId()
-        cameras = device.getConnectedCameras()
-        usb_speed = device.getUsbSpeed()
-
-        # Get a customized pipeline based on identified device type
-        pipeline = getPipeline()
-        device.startPipeline(pipeline)
-
-        # Output queue will be used to get the rgb frames from the output defined above
-        devices[mxid] = {
-            'rgb': device.getOutputQueue(name="rgb"),
-            'nn': device.getOutputQueue(name="nn"),
-        }
-
+    for t in threads:
+        t.join() # Wait for all threads to finish (to connect to devices)
 
     while True:
         for mxid, q in devices.items():
