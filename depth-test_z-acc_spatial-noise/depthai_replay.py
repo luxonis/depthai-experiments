@@ -3,6 +3,7 @@ import os
 import cv2
 import types
 import depthai as dai
+import config
 
 class Replay:
     def __init__(self, path):
@@ -32,7 +33,7 @@ class Replay:
 
         # Read basic info about the straems (resolution of streams etc.)
         for name in self.cap:
-            self.size[name] = self.get_size(self.cap[name])
+            self.size[name] = self.get_size()
 
         self.color_size = None
         # By default crop image as needed to keep the aspect ratio
@@ -137,10 +138,14 @@ class Replay:
                 return True
             ok, frame = self.cap[name].read()
             if ok:
-                # frame = frame[60:1140, 320:1600] # middle
-                frame = frame[60:1140, 0:1280] # left¸
-                # frame = frame[60:1140, 640:1920] # right
+                if config.area == 'center':
+                    frame = frame[60:1140, 320:1600]
+                if config.area == 'left':
+                    frame = frame[60:1140, 0:1280]
+                if config.area == 'right':
+                    frame = frame[60:1140, 640:1920]
                 self.frames[name] = frame
+                cv2.imshow('frame', frame)
         return len(self.frames) == 0
 
     def send_frames(self, pause):
@@ -154,7 +159,7 @@ class Replay:
 
         return True
 
-    def get_size(self, cap):
+    def get_size(self):
         return (1280, 1080)
     def get_max_size(self, name):
         total = self.size[name][0] * self.size[name][1]
@@ -198,14 +203,6 @@ class Replay:
         q.send(frame)
 
     def send_depth(self, q, depth):
-        # TODO refactor saving depth. Reading will be from ROS bags.
-
-        # print("depth size", type(depth))
-        # depth_frame = np.array(depth).astype(np.uint8).view(np.uint16).reshape((400, 640))
-        # depthFrameColor = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        # depthFrameColor = cv2.equalizeHist(depthFrameColor)
-        # depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
-        # cv2.imshow("depth", depthFrameColor)
         frame = dai.ImgFrame()
         frame.setType(dai.RawImgFrame.Type.RAW16)
         frame.setData(depth)

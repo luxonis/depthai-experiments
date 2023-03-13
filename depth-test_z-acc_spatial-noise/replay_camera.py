@@ -78,17 +78,17 @@ class ReplayCamera(Camera):
         offsetWidth, offsetHeight = offset
         ## Top left and bottom right are from camera perspective where Top left corner is at (0,0) and bottom right is at (width, height)
 
-        # # middle
-        # topLeftPixel = dai.Point2f(offsetWidth, offsetHeight) 
-        # bottomRightPixel = dai.Point2f(resolution[0] + offsetWidth , resolution[1] + offsetHeight)
+        if config.area == 'center':
+            topLeftPixel = dai.Point2f(offsetWidth, offsetHeight) 
+            bottomRightPixel = dai.Point2f(resolution[0] + offsetWidth , resolution[1] + offsetHeight)
 
-        # left
-        topLeftPixel = dai.Point2f(0, offsetHeight)
-        bottomRightPixel = dai.Point2f(resolution[0], resolution[1] + offsetHeight)
+        if config.area == 'left':
+            topLeftPixel = dai.Point2f(0, offsetHeight)
+            bottomRightPixel = dai.Point2f(resolution[0], resolution[1] + offsetHeight)
 
-        # # right
-        # topLeftPixel = dai.Point2f(640, offsetHeight)
-        # bottomRightPixel = dai.Point2f(resolution[0] +640, resolution[1] + offsetHeight)
+        if config.area == 'right':
+            topLeftPixel = dai.Point2f(640, offsetHeight)
+            bottomRightPixel = dai.Point2f(resolution[0] +640, resolution[1] + offsetHeight)
 
         print(topLeftPixel.x, topLeftPixel.y)
         print(bottomRightPixel.x, bottomRightPixel.y)
@@ -116,12 +116,10 @@ class ReplayCamera(Camera):
         R = tranformation[:3, :3]
         T = tranformation[:3, 3]
 
-        rectIntrinsicsL = M2.copy()
+        rectIntrinsicsL = M1.copy()
         rectIntrinsicsR = M2.copy()
 
         if useOptimalNewCameraMatrix :
-            # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsL, d1, resolution, alpha = 0)
-            # ret, _ = cv2.getOptimalNewCameraMatrix(rectIntrinsicsR, d2, resolution, alpha = 0)
             R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q = cv2.fisheye.stereoRectify(M1, d1[:4], M2, d2[:4], resolution, R, T, flags=cv2.CALIB_ZERO_DISPARITY, balance=1)
             
         elif rectificationScale > 0 and rectificationScale < 1:
@@ -132,6 +130,7 @@ class ReplayCamera(Camera):
 
         mapXL, mapYL = cv2.fisheye.initUndistortRectifyMap(M1, d1[:4], R1, rectIntrinsicsL, resolution, cv2.CV_32FC1)
         mapXR, mapYR = cv2.fisheye.initUndistortRectifyMap(M2, d2[:4], R2, rectIntrinsicsR, resolution, cv2.CV_32FC1)
+
         print('Left intrinsic resized')
         print(rectIntrinsicsL)
         print('Right intrinsic resized')
@@ -190,7 +189,7 @@ class ReplayCamera(Camera):
         pipeline, nodes = self.replay.init_pipeline()
 
         calibData = self.replay.calibData
-        self.image_size = self.replay.get_size(None)
+        self.image_size = self.replay.get_size()
 
         originalRes = (1920, 1200)
         res = (1280, 1080)
@@ -213,7 +212,7 @@ class ReplayCamera(Camera):
 
         nodes.stereo.rectifiedRight.link(xout_image.input)
 
-        self.mono_image_size = self.replay.get_size(None)
+        self.mono_image_size = self.replay.get_size()
         self.pipeline = pipeline
         self.nodes = nodes
 
@@ -236,7 +235,7 @@ class ReplayCamera(Camera):
             self.frames.append(self.image_frame)
             self.depth_frames.append(self.depth_frame)
             if points is not None:
-                dispairty_point = disparity[points[1]][points[0]] / 8 # 8 because of disparity bits
+                disparity_point = disparity[points[1]][points[0]] / 8 # 8 because of disparity bits
 
             if len(self.frames) > 6 and not self.removed_frames:
                 self.removed_frames = True
@@ -248,7 +247,7 @@ class ReplayCamera(Camera):
         self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
         baseline_q = 1/self.Q[3,2]
         
-        if points is not None and dispairty_point is not None:
+        if points is not None and disparity_point is not None:
 
             cv2.circle(self.depth_visualization_frame, points, 3, (255, 255, 255), -1)
 

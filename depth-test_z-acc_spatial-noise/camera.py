@@ -49,20 +49,19 @@ class Camera:
     def select_ROI(self, frame: np.ndarray):
         x1, y1, x2, y2 = self.ROI
         ROI_sorted = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
-        x1, y1, x2, y2 = ROI_sorted
+        self.x1, self.y1, self.x2, self.y2 = ROI_sorted
         ROI_mask = np.zeros_like(frame)
-        ROI_mask[y1 : y2, x1 : x2] = 1
+        ROI_mask[self.y1 : self.y2, self.x1 : self.x2] = 1
         
         return frame * ROI_mask
 
 
-    def rgbd_to_point_cloud(self, downsample=False, remove_noise=False):
+    def rgbd_to_point_cloud(self):
         image_frame = self.select_ROI(self.image_frame)
         depth_frame = self.select_ROI(self.depth_frame)
 
-        #print(np.average(depth_frame))
-
-        #print(depth_frame)
+        if self.x2 > self.x1 and self.y2 > self.y1:
+            self.fill_rate1 = np.count_nonzero(depth_frame[self.y1 : self.y2, self.x1 : self.x2]) / (self.x2 - self.x1) / (self.y2 - self.y1)
 
         rgb_o3d = o3d.geometry.Image(cv2.cvtColor(image_frame, cv2.COLOR_RGB2BGR))
         df = np.copy(depth_frame).astype(np.float32)
@@ -70,25 +69,16 @@ class Camera:
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
             rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3), depth_trunc=20000, depth_scale=1000.0
         )
-        #print(np.asarray(rgbd_image))
 
         point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbd_image, self.pinhole_camera_intrinsic, self.extrinsic
         )
 
-        # if downsample:
-        #     point_cloud = point_cloud.voxel_down_sample(voxel_size=0.01)
-
-        # if remove_noise:
-        #     point_cloud = point_cloud.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)[0]
-
         self.point_cloud.points = point_cloud.points
         self.point_cloud.colors = point_cloud.colors
-        #print(np.asarray(point_cloud.points))
 
         # correct upside down z axis
         R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
         self.point_cloud.rotate(R_camera_to_world, center=(0, 0, 0))
-
 
         return self.point_cloud

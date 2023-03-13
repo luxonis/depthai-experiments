@@ -27,6 +27,7 @@ class DepthTest:
 		self.spatial_noise_rmses = []
 		self.subpixel_spatial_noise_rmses = []
 		self.samples = 0
+		self.fill_rate = []
 
 	def set_ground_truth(self, point_cloud: o3d.geometry.PointCloud):
 		points = np.asarray(point_cloud.points)
@@ -108,6 +109,7 @@ class DepthTest:
 
 		z_accuracy = self.compute_z_accuracy(point_cloud_corrected)
 		self.z_accuracy_medians.append(z_accuracy)
+		self.fill_rate.append(camera.fill_rate1 * 100)
 
 		self.samples += 1
 
@@ -141,7 +143,6 @@ class DepthTest:
 
 	def compute_z_accuracy(self, point_cloud_corrected: o3d.geometry.PointCloud):
 		point_cloud_corrected_points = np.asarray(point_cloud_corrected.points)
-		self.fill_rate = len(point_cloud_corrected_points[:,2]) / 1280 / 1080 * 100
 		self.z_means.append(np.mean(point_cloud_corrected_points[:,2]))
 
 		z_error = -point_cloud_corrected_points[:, 2] - self.camera_wall_distance
@@ -154,6 +155,7 @@ class DepthTest:
 
 	def reset(self):
 		self.z_accuracy_medians = []
+		self.fill_rate = []
 		self.spatial_noise_rmses = []
 		self.subpixel_spatial_noise_rmses = []
 		self.z_means = []
@@ -165,7 +167,7 @@ class DepthTest:
 		print(f"Z accuracy: {np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f}% of GT (avg distance: {-np.mean(self.z_means)*1000:.2f}mm)")
 		print(f"Spatial noise: {np.mean(self.spatial_noise_rmses)*1000:.2f} mm")
 		print(f"Subpixel spatial noise: {np.mean(self.subpixel_spatial_noise_rmses):.2f} px")
-		print(f'Fill rate: {self.fill_rate:.2f}%')
+		print(f'Fill rate: {np.mean(self.fill_rate):.2f}%')
 		print()
 
 	def show_plane_fit_visualization(self, point_cloud: o3d.geometry.PointCloud):

@@ -3,22 +3,17 @@ import numpy as np
 import depthai as dai
 from camera import Camera
 from oak_camera import OakCamera
-from astra_camera import AstraCamera
 from replay_camera import ReplayCamera
 from utils import *
 from depth_test import DepthTest
 import config
-# from openni import openni2
 import open3d as o3d
 import re
 
 
-# openni2.initialize()
-
 depth_test = DepthTest()
 cameras = []
 
-# try:
 device_info = dai.DeviceInfo()
 if config.path is not None:
 	replay_camera = ReplayCamera(device_info)
@@ -26,15 +21,7 @@ if config.path is not None:
 else:
 	oak_camera = OakCamera(device_info)
 	cameras.append(oak_camera)
-# except:
-	# print("❗WARNING: OAK-D not found")
 
-# try:
-# 	device_info = openni2.Device.open_any()
-# 	astra_camera = AstraCamera(device_info)
-# 	cameras.append(astra_camera)
-# except:
-# 	print("❗WARNING: Astra not found")
 
 if len(cameras) == 0:
 	print("❗ERROR: No cameras found")
