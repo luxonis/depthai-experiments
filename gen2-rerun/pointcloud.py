@@ -107,10 +107,7 @@ def create_xyz(device, width, height):
 
 
 async def main():
-    seq = 0
-    stereo.getOutputs()
     with dai.Device(pipeline) as device:
-        device.setIrLaserDotProjectorBrightness(670)
         print("Opening device", resolution)
         q_depth = device.getOutputQueue("depth", maxSize=1, blocking=False)
         q_colorize = device.getOutputQueue(
