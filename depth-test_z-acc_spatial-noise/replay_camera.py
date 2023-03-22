@@ -196,7 +196,7 @@ class ReplayCamera(Camera):
     
         centerCropOffset = ((originalRes[0] - res[0]) / 2, (originalRes[1] - res[1]) / 2)
 
-        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, centerCropOffset, 0.5, True)
+        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, centerCropOffset, 1, True)
 
         nodes.stereo.loadMeshData(leftMesh, rightMesh)
         nodes.stereo.setSubpixel(True)
@@ -218,7 +218,7 @@ class ReplayCamera(Camera):
 
 
     def update(self):
-        dispairty_point = None
+        disparity_point = None
         if not self.replay.send_frames(False):
             self.stop = True
             self.depth_frame = self.depth_frames[self.idx % len(self.depth_frames)]
@@ -251,7 +251,7 @@ class ReplayCamera(Camera):
 
             cv2.circle(self.depth_visualization_frame, points, 3, (255, 255, 255), -1)
 
-            text = "{:.3f} Disparity".format(dispairty_point)
+            text = "{:.3f} Disparity".format(disparity_point)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
 
@@ -260,7 +260,7 @@ class ReplayCamera(Camera):
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
             
-            depth_point = (self.M2[0][0] * baseline_q / dispairty_point) / 100
+            depth_point = (self.M2[0][0] * baseline_q / disparity_point) / 100
             text = "{:.3f}m Depth from Q".format(depth_point)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 55), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 55), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
