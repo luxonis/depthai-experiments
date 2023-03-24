@@ -183,7 +183,7 @@ class Replay:
         self.lastFrame['right' if right else 'left'] = img
         h, w = img.shape
         frame = dai.ImgFrame()
-        frame.setData(img)
+        frame.setData(img.flatten())
         frame.setType(dai.RawImgFrame.Type.RAW8)
         frame.setWidth(w)
         frame.setHeight(h)
