@@ -38,6 +38,9 @@ Video example:
 python main.py -m models/mobilenet-ssd.blob -v demo/example_01.mp4 -a
 ```
 
+Standalone example available in standalone/
+
+
 ## Inspired by / Based on
 * [Tensorflow 2 Object Counting](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
 * [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/) 
