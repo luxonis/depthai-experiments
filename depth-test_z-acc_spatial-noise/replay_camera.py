@@ -120,7 +120,7 @@ class ReplayCamera(Camera):
         rectIntrinsicsR = M2.copy()
 
         if useOptimalNewCameraMatrix :
-            R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q = cv2.fisheye.stereoRectify(M1, d1[:4], M2, d2[:4], resolution, R, T, flags=cv2.CALIB_ZERO_DISPARITY, balance=1)
+            R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q = cv2.fisheye.stereoRectify(M1, d1[:4], M2, d2[:4], resolution, R, T, flags=cv2.CALIB_ZERO_DISPARITY, balance=0)
             
         elif rectificationScale > 0 and rectificationScale < 1:
             rectIntrinsicsL[0][0] *= rectificationScale

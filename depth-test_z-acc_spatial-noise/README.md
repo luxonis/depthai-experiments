@@ -6,44 +6,29 @@
 | key | action |
 | :--- | :--- |
 | `q` | quit |
-| `g` | set ground truth based (camera wall distance) on measurement from selected camera |
-| `f` | fit a plane to the point cloud of the selected camera |
+| `g` | set ground truth distance |
+| `f` | fit a plane to the point cloud |
 | `s` | save the point clouds to the `point-clouds` folder |
 | `c` | toggle rgb / solid color pointcloud |
 | `v` | toggle plane fit visualization |
-| `t` | start the test for the selected camera |
-| `1` | select the OAK camera |
-| `2` | select the Astra camera |
+| `t` | start the test |
 
 ## Command line arguments
-- `-c`, `--color`: Use color camera for preview
-- `-lr`, `--lrcheck`: Left-rigth check for better handling for occlusions
-- `-e`, `--extended`: Closer-in minimum depth, disparity range is doubled
-- `-s`, `--subpixel`: Better accuracy for longer distance, fractional disparity 32-levels
-- `-ct`, `--confidence_threshold`: 0-255, 255 = low confidence, 0 = high confidence
-- `-mr`, `--min_range`: Min range in mm
-- `-xr`, `--max_range`: Max range in mm
-- `-ms`, `--mono_camera_resolution`: Mono camera resolution ("THE_400_P", "THE_480_P", "THE_720_P", "THE_800_P")
-- `-m`, `--median`: Media filter ("MEDIAN_OFF", "KERNEL_3x3", "KERNEL_5x5", "KERNEL_7x7")
 - `-n`, `--n_samples`: Number of samples in a single test
-- `--astra_intrinsic`: Path to astra intrinsic file (.np file containing 3x3 matrix)
+- `-p`, `--path`: Path to the recording folder
+- `-d`, `--depth`: Ground truth distance in meters
+- `-a`, `--area`: Choose the area you want to test: center, left or right
 
 ## Usage
 Run `main.py` with Python 3.
 
-```
-python main.py -lr -s --astra_intrinsic <intrinsic_matrix.npy>
-```
+Select the ROI by dragging on the image view window.
 
-Point the camera perpendicular to the target plane (a wall or board with random noise). 
+Press the `g` key to set the ground truth distance.
 
-Select the ROI on both cameras by dragging on the image view window.
+Press the `f` key to fit a plane to the point cloud of the selected region. The horizontal and vertical tilt of the camera will be printed to the console. Try to get those values close to zero.
 
-Select a reference camera (Astra) and press the `g` key to set the ground truth based on the measurement.
-
-Select a camera and press the `f` key to fit a plane to the point cloud of the selected region. The horizontal and vertical tilt of the camera will be printed to the console. Try to get those values close to zero.
-
-When satisfied with the camera position and ROI selection press the `t` key to start the tests. The test results will be printed to the console.
+When satisfied with the ROI selection press the `t` key to start the tests. The test results will be printed to the console.
 
 ## How it works
 
