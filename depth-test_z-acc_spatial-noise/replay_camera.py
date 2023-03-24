@@ -194,7 +194,7 @@ class ReplayCamera(Camera):
         self.image_size = self.replay.get_size()
 
         originalRes = (1920, 1200)
-        res = (1280, 1080)
+        res = (1280, 800)
 
    
         centerCropOffset = ((originalRes[0] - res[0]) / 2, (originalRes[1] - res[1]) / 2)

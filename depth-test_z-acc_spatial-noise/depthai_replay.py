@@ -138,12 +138,13 @@ class Replay:
                 return True
             ok, frame = self.cap[name].read()
             if ok:
+                offset = (1280-800)//2
                 if config.area == 'center':
-                    frame = frame[60:1140, 320:1600]
+                    frame = frame[offset:(1200-offset), 320:1600]
                 if config.area == 'left':
-                    frame = frame[60:1140, 0:1280]
+                    frame = frame[offset:(1200-offset), 0:1280]
                 if config.area == 'right':
-                    frame = frame[60:1140, 640:1920]
+                    frame = frame[offset:(1200-offset), 640:1920]
                 self.frames[name] = frame
                 cv2.imshow('frame', frame)
         return len(self.frames) == 0
@@ -160,7 +161,7 @@ class Replay:
         return True
 
     def get_size(self):
-        return (1280, 1080)
+        return (1280, 800)
     def get_max_size(self, name):
         total = self.size[name][0] * self.size[name][1]
         if name == 'color': total *= 3 # 3 channels
