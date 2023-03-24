@@ -72,7 +72,7 @@ class ReplayCamera(Camera):
         self.stereoscopic_baseline = calibration.getBaselineDistance()/100 # in m
 
 
-    def getMesh(self, calibData, resolution, offset, rectificationScale, useOptimalNewCameraMatrix):
+    def getMesh(self, calibData, resolution, originalRes, offset, rectificationScale, useOptimalNewCameraMatrix):
         print("------mesh res", resolution, "offset", offset) # TODO see if offset is needed here and implement...
         width, height = resolution
         offsetWidth, offsetHeight = offset
@@ -93,12 +93,14 @@ class ReplayCamera(Camera):
         print(topLeftPixel.x, topLeftPixel.y)
         print(bottomRightPixel.x, bottomRightPixel.y)
         def_m1, w, h = calibData.getDefaultIntrinsics(calibData.getStereoLeftCameraId())
+        w = originalRes[0]
+        h = originalRes[1]
         """ def_m1 = np.array(def_m1) * 1.5
         def_m1[0,2] -= (1920-1280) / 2 """
 
         print("Def Intrins---")
         print(w,h)
-        print(np.array(def_m1))
+        # print(np.array(def_m1))
         # we are using original height and width since we don't want to resize. But just crop based on the corner pixel positions
         M1 = np.array(calibData.getCameraIntrinsics(calibData.getStereoLeftCameraId(), w, h, topLeftPixel, bottomRightPixel))
         M2 = np.array(calibData.getCameraIntrinsics(calibData.getStereoRightCameraId(), w, h, topLeftPixel, bottomRightPixel))
@@ -193,10 +195,11 @@ class ReplayCamera(Camera):
 
         originalRes = (1920, 1200)
         res = (1280, 1080)
-    
+
+   
         centerCropOffset = ((originalRes[0] - res[0]) / 2, (originalRes[1] - res[1]) / 2)
 
-        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, centerCropOffset, 1, True)
+        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, originalRes, centerCropOffset, 1, True)
 
         nodes.stereo.loadMeshData(leftMesh, rightMesh)
         nodes.stereo.setSubpixel(True)
