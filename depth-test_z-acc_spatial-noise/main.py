@@ -3,25 +3,30 @@ import numpy as np
 import depthai as dai
 from camera import Camera
 from oak_camera import OakCamera
-from astra_camera import AstraCamera
+from numpy_replay_camera import NumpyReplayCamera
 from utils import *
 from depth_test import DepthTest
 import config
 import open3d as o3d
+from pathlib import Path
 
 if config.astra_gt:
+	from astra_camera import AstraCamera
 	from openni import openni2
 	openni2.initialize()
 
 depth_test = DepthTest()
 cameras = []
 
-try:
-	found, device_info = dai.Device.getFirstAvailableDevice()
-	oak_camera = OakCamera(device_info)
-	cameras.append(oak_camera)
-except:
-	print("❗WARNING: OAK-D not found")
+
+
+replay_camera = NumpyReplayCamera(
+	Path("data/depthRecording.npy"),
+	Path("data/colorRecording.npy"),
+	Path("data/vermeer1.json")
+)
+
+cameras.append(replay_camera)
 
 if config.astra_gt:
 	try:

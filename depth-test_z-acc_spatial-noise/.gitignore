@@ -1,3 +1,4 @@
 *.ply
 *.npy
 results
+data
