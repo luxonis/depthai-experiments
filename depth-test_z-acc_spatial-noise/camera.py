@@ -54,6 +54,14 @@ class Camera:
         ROI_mask[y1 : y2, x1 : x2] = 1
         
         return frame * ROI_mask
+    
+    def get_fillrate(self):
+        x1, y1, x2, y2 = self.ROI
+        ROI_sorted = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
+        x1, y1, x2, y2 = ROI_sorted
+        depth_roi = self.depth_frame[y1 : y2, x1 : x2]
+        depth_roi = depth_roi.flatten()
+        return np.count_nonzero(depth_roi) / len(depth_roi)
 
 
     def rgbd_to_point_cloud(self, downsample=False, remove_noise=False):
