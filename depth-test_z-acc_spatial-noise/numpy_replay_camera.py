@@ -32,7 +32,7 @@ class NumpyReplayCamera(Camera):
     def _load_calibration(self):
         calibration = dai.CalibrationHandler(self.calibration_path)
         self.intrinsics = calibration.getCameraIntrinsics(
-            dai.CameraBoardSocket.RIGHT, 
+            dai.CameraBoardSocket.RIGHT,
             dai.Size2f(*self.image_size)
         )
 
