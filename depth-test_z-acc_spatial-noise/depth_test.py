@@ -25,6 +25,7 @@ class DepthTest:
 		self.z_means = []
 		self.spatial_noise_rmses = []
 		self.subpixel_spatial_noise_rmses = []
+		self.fillrate_values = []
 		self.samples = 0
 
 	def set_ground_truth(self, point_cloud: o3d.geometry.PointCloud):
@@ -91,6 +92,8 @@ class DepthTest:
 	def measure(self, camera: Camera):
 		point_cloud = camera.point_cloud
 		print(f"\rAdding measurements {'.'*self.samples}", end="")
+
+		self.fillrate_values.append(camera.get_fillrate())
 
 		point_cloud_corrected = self.correct_tilt(point_cloud)
 
@@ -170,6 +173,7 @@ class DepthTest:
 		print(f"Spatial noise: {spatial_noise:.2f} mm")
 		subpixel_spatial_noise = np.mean(self.subpixel_spatial_noise_rmses)
 		print(f"Subpixel spatial noise: {subpixel_spatial_noise:.2f} px")
+		print(f"Fillrate: {np.mean(self.fillrate_values)*100:.2f}%")
 		print()
 
 
@@ -178,9 +182,9 @@ class DepthTest:
 		horizontal_tilt, vertical_tilt = self.compute_tilt()
 		if not config.resuls_file.exists():
 			with open(config.resuls_file, "w") as f:
-				f.write("name,ground_truth,z_measured_mean,z_measured_median,z_accuracy,spatial_noise,subpixel_spatial_noise,vertical_tilt,horizontal_tilt\n")
+				f.write("name,ground_truth,z_measured_mean,z_measured_median,z_accuracy,spatial_noise,fillrate,subpixel_spatial_noise,vertical_tilt,horizontal_tilt\n")
 		with open(config.resuls_file, "a") as f:
-			f.write(f"{name},{self.camera_wall_distance},{self.avg_distance},{self.median_distance},{np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f},{np.mean(self.spatial_noise_rmses)*1000:.2f},{np.mean(self.subpixel_spatial_noise_rmses):.2f},{vertical_tilt * 180/np.pi},{horizontal_tilt  * 180/np.pi}\n")
+			f.write(f"{name},{self.camera_wall_distance},{self.avg_distance},{self.median_distance},{np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f},{np.mean(self.spatial_noise_rmses)*1000:.2f},{np.mean(self.subpixel_spatial_noise_rmses):.2f},{np.mean(self.fillrate_values)*100:.2f},{vertical_tilt * 180/np.pi},{horizontal_tilt  * 180/np.pi}\n")
 
 
 	def show_plane_fit_visualization(self, point_cloud: o3d.geometry.PointCloud):
