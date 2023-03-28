@@ -16,6 +16,10 @@ parser.add_argument("-n", "--n_samples", type = int, default = 10, help = "Numbe
 parser.add_argument("-gt", "--ground_truth", type = float, default = 1, help = "Ground truth depth in m (camera wall distance)")
 parser.add_argument("--astra_gt", action="store_true", default = None, help = "Use astra pro as ground truth")
 parser.add_argument("--astra_intrinsic", type = str, default = None, help = "Path to astra intrinsic file (.np file containing 3x3 matrix)")
+parser.add_argument('-calib', type=str, required=True, default=None, help="Path to calibration file in json")
+parser.add_argument('-depth', type=str, required=True, default=None, help="Path to depth numpy file")
+parser.add_argument('-rectified', type=str, required=True, default=None, help="Path to the rectified nu")
+parser.add_argument('-out_results_f', type=str, required=False, default=None, help="Path to the output results file")
 
 args = parser.parse_args()
 
@@ -40,6 +44,8 @@ n_samples = args.n_samples
 gt = args.ground_truth
 
 resuls_file = Path(__file__).parent / "results" / "results.txt"
+if args.out_results_f:
+    resuls_file = Path(args.out_results_f)
 resuls_file.parent.mkdir(parents=True, exist_ok=True)
 
 # Astra

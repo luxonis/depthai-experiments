@@ -30,6 +30,11 @@ class Camera:
             image_frame_roi = self.select_ROI(self.image_frame)
             self.image_visualization_frame = (self.image_frame*0.5 + image_frame_roi*0.5).astype(np.uint8)
             cv2.imshow(self.window_name, self.image_visualization_frame)
+    def visualize_depth_frame(self):
+        if self.depth_frame is not None:
+            depth_frame_roi = self.select_ROI(self.depth_frame)
+            self.depth_visualization_frame = (self.depth_frame*0.5 + depth_frame_roi*0.5).astype(np.uint8)
+            cv2.imshow(self.window_name + "depth", self.depth_visualization_frame)
 
     def on_mouse(self, event, x, y, flags, param):
         x1, y1, x2, y2 = self.ROI
@@ -64,8 +69,7 @@ class Camera:
         df = np.copy(depth_frame).astype(np.float32)
         depth_o3d = o3d.geometry.Image(df)
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-            rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3)
-        )
+            rgb_o3d, depth_o3d, convert_rgb_to_intensity=(len(image_frame.shape) != 3), depth_trunc=20000, depth_scale=1000.0)
 
         point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbd_image, self.pinhole_camera_intrinsic, self.extrinsic

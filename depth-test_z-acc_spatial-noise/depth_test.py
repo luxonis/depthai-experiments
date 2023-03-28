@@ -161,8 +161,12 @@ class DepthTest:
 		print("=== Results ===")
 		print(f"{self.samples} measurements")
 		z_accuracy = np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100
+		self.avg_distance = -np.mean(self.z_means)*1000
+		self.median_distance = -np.median(self.z_means)*1000
 		print(f"Z accuracy: {z_accuracy:.2f}% of GT (avg distance: {-np.mean(self.z_means)*1000:.2f}mm)")
 		spatial_noise = np.mean(self.spatial_noise_rmses)*1000
+		print(f"Median distance: {self.median_distance:.2f}mm")
+		print(f"Average distance: {self.avg_distance:.2f}mm")
 		print(f"Spatial noise: {spatial_noise:.2f} mm")
 		subpixel_spatial_noise = np.mean(self.subpixel_spatial_noise_rmses)
 		print(f"Subpixel spatial noise: {subpixel_spatial_noise:.2f} px")
@@ -174,9 +178,9 @@ class DepthTest:
 		horizontal_tilt, vertical_tilt = self.compute_tilt()
 		if not config.resuls_file.exists():
 			with open(config.resuls_file, "w") as f:
-				f.write("name,ground_truth,z_accuracy,spatial_noise,subpixel_spatial_noise,vertical_tilt,horizontal_tilt\n")
+				f.write("name,ground_truth,z_measured_mean,z_measured_median,z_accuracy,spatial_noise,subpixel_spatial_noise,vertical_tilt,horizontal_tilt\n")
 		with open(config.resuls_file, "a") as f:
-			f.write(f"{name},{self.camera_wall_distance},{np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f},{np.mean(self.spatial_noise_rmses)*1000:.2f},{np.mean(self.subpixel_spatial_noise_rmses):.2f},{vertical_tilt * 180/np.pi},{horizontal_tilt  * 180/np.pi}\n")
+			f.write(f"{name},{self.camera_wall_distance},{self.avg_distance},{self.median_distance},{np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100:.2f},{np.mean(self.spatial_noise_rmses)*1000:.2f},{np.mean(self.subpixel_spatial_noise_rmses):.2f},{vertical_tilt * 180/np.pi},{horizontal_tilt  * 180/np.pi}\n")
 
 
 	def show_plane_fit_visualization(self, point_cloud: o3d.geometry.PointCloud):

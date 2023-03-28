@@ -19,11 +19,10 @@ depth_test = DepthTest()
 cameras = []
 
 
-
 replay_camera = NumpyReplayCamera(
-	Path("data/depthRecording.npy"),
-	Path("data/colorRecording.npy"),
-	Path("data/vermeer1.json")
+	Path(config.args.depth),
+	Path(config.args.rectified),
+	Path(config.args.calib)
 )
 
 cameras.append(replay_camera)
@@ -139,7 +138,6 @@ while running:
 		depth_test.measure(selected_camera)
 
 		if depth_test.samples >= config.n_samples:
-			print()
 			testing = False
 			depth_test.print_results()
 			save_results_callback()

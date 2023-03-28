@@ -54,10 +54,11 @@ class NumpyReplayCamera(Camera):
             self.frame_index += 1
         else:
             self.frame_index = 0
-        
+
         self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
         self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
 
+        self.visualize_depth_frame()
         self.visualize_image_frame()
         self.rgbd_to_point_cloud()
