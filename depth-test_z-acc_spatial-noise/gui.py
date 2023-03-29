@@ -166,7 +166,7 @@ class App(QWidget):
             error_message.setStandardButtons(QMessageBox.Ok)
             error_message.exec_()
 
-        self.transform_depth_button.setEnabled(True)
+        self.run_measurement_button.setEnabled(True)
 
     def get_test_params(self):
         camera_id = self.camera_id_input.text()
