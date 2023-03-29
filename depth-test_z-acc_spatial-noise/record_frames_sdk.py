@@ -5,7 +5,7 @@ FPS=10
 
 
 def record_frames_sdk(path = './'):
-    with OakCamera() as oak:
+    with OakCamera(args=False) as oak:
         # color = oak.create_camera('color', resolution='1080P', fps=30, encode='MJPEG')
         # color.config_color_camera(isp_scale=(2, 3)) # 720P
         left = oak.create_camera(source="camb,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=FPS)
@@ -14,7 +14,7 @@ def record_frames_sdk(path = './'):
 
         # Sync & save all streams
         recorder = oak.record([left, right, vertical], path, RecordType.VIDEO)
-        oak.visualize([left, right, vertical])
+        oak.visualize([left, right, vertical], scale=0.3)
         oak.start(blocking=True)
 
 
