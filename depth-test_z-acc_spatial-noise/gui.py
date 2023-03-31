@@ -112,10 +112,13 @@ class App(QWidget):
         capture_settings_layout.addWidget(fps_label)
         capture_settings_layout.addWidget(self.fps_input)
 
-        # Move the run_button to the capture_settings_group
-        self.run_button = QPushButton('Record frames')
-        self.run_button.clicked.connect(self.record_frames)
-        capture_settings_layout.addWidget(self.run_button)
+        self.run_button1 = QPushButton('Record frames')
+        self.run_button1.clicked.connect(lambda: self.record_frames(True))
+        capture_settings_layout.addWidget(self.run_button1)
+
+        self.run_button2 = QPushButton('Preview frames')
+        self.run_button2.clicked.connect(lambda: self.record_frames(False))
+        capture_settings_layout.addWidget(self.run_button2)
 
         capture_settings_group.setLayout(capture_settings_layout)
         layout.addWidget(capture_settings_group)
@@ -295,8 +298,9 @@ class App(QWidget):
             raise RuntimeError("No recordings found")
         return f"{target_dir}/{latest_dir}"
 
-    def record_frames(self):
-        self.run_button.setEnabled(False)
+    def record_frames(self, record = False):
+        self.run_button1.setEnabled(False)
+        self.run_button2.setEnabled(False)
         self.extra_button.setEnabled(False)
         QApplication.processEvents()
         try:
@@ -313,23 +317,24 @@ class App(QWidget):
             # Example: custom_script(camera_id, direction, distance)
             print(f"Camera ID: {camera_id}, Direction: {direction}, Distance: {distance}m")
             if iso_num == "" or exposure_num == "":
-                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=True)
+                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=True, record=record)
             else:
                 print("Using manual exposure!")
-                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=False, iso=int(iso_num), manualExposure=int(exposure_num))
+                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=False, iso=int(iso_num), manualExposure=int(exposure_num), record=record)
 
-            target_dir_final = self.get_latest_recording_dir(target_dir)
-            print(f"Checking if files are in {target_dir_final}...")
-            if not self.check_files(target_dir_final):
-                shutil.rmtree(target_dir_final)
-                raise RuntimeError(
-                    f"Not all files were found in {target_dir_final}, was expecting {self.required_vids}. Deleting {target_dir_final}")
+            if record:
+                target_dir_final = self.get_latest_recording_dir(target_dir)
+                print(f"Checking if files are in {target_dir_final}...")
+                if not self.check_files(target_dir_final):
+                    shutil.rmtree(target_dir_final)
+                    raise RuntimeError(
+                        f"Not all files were found in {target_dir_final}, was expecting {self.required_vids}. Deleting {target_dir_final}")
 
-            sizes = self.get_file_sizes(target_dir_final, self.required_vids)
-            print(f"File sizes: {sizes}")
-            if min(sizes) < args.minFileSize:
-                raise RuntimeError(
-                    f"File size is too small. Minimum size is {args.minFileSize} bytes, got {min(sizes)} bytes.")
+                sizes = self.get_file_sizes(target_dir_final, self.required_vids)
+                print(f"File sizes: {sizes}")
+                if min(sizes) < args.minFileSize:
+                    raise RuntimeError(
+                        f"File size is too small. Minimum size is {args.minFileSize} bytes, got {min(sizes)} bytes.")
         except Exception as e:
             error_message = QMessageBox()
             error_message.setIcon(QMessageBox.Critical)
@@ -339,7 +344,8 @@ class App(QWidget):
             error_message.exec_()
             print(e)
 
-        self.run_button.setEnabled(True)
+        self.run_button1.setEnabled(True)
+        self.run_button2.setEnabled(True)
         self.extra_button.setEnabled(True)
 
     def check_files(self, subdir):
@@ -358,7 +364,8 @@ class App(QWidget):
         return sizes
 
     def run_live_depth(self):
-        self.run_button.setEnabled(False)
+        self.run_button1.setEnabled(False)
+        self.run_button2.setEnabled(False)
         self.extra_button.setEnabled(False)
         self.extra_button_stop.setEnabled(True)
         QApplication.processEvents()
@@ -369,7 +376,8 @@ class App(QWidget):
         self.live_depth_thread.start()
 
     def on_live_depth_stopped(self):
-        self.run_button.setEnabled(True)
+        self.run_button1.setEnabled(True)
+        self.run_button2.setEnabled(True)
         self.extra_button.setEnabled(True)
         self.extra_button_stop.setEnabled(False)
 
