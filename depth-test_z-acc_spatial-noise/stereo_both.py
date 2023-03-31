@@ -209,6 +209,7 @@ if enableRectified:
     xoutRectifiedVertical = pipeline.create(dai.node.XLinkOut)
     xoutRectifiedRight = pipeline.create(dai.node.XLinkOut)
     xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
+    xoutRectifiedRightHor = pipeline.create(dai.node.XLinkOut)
 xoutDisparityVertical = pipeline.create(dai.node.XLinkOut)
 xoutDisparityHorizontal = pipeline.create(dai.node.XLinkOut)
 stereoVertical = pipeline.create(dai.node.StereoDepth)
@@ -219,6 +220,7 @@ if enableRectified:
     xoutRectifiedVertical.setStreamName("rectified_vertical")
     xoutRectifiedRight.setStreamName("rectified_right")
     xoutRectifiedLeft.setStreamName("rectified_left")
+    xoutRectifiedRightHor.setStreamName("rectified_right_hor")
 xoutDisparityVertical.setStreamName("disparity_vertical")
 xoutDisparityHorizontal.setStreamName("disparity_horizontal")
 
@@ -267,8 +269,21 @@ else:
 stereoHorizontal.disparity.link(xoutDisparityHorizontal.input)
 if enableRectified:
     stereoHorizontal.rectifiedLeft.link(xoutRectifiedLeft.input)
-# stereoHorizontal.rectifiedRight.link(xoutRectifiedRight.input)
+    stereoHorizontal.rectifiedRight.link(xoutRectifiedRightHor.input)
+
 stereoHorizontal.setVerticalStereo(False)
+
+
+# config = stereoHorizontal.initialConfig.get()
+# config.algorithmControl.enableLeftRightCheck = True
+# config.algorithmControl.leftRightCheckThreshold = 10
+# config.algorithmControl.replaceInvalidDisparity = False
+# config.algorithmControl.outlierRemoveThreshold = 15
+# config.algorithmControl.outlierCensusThreshold = 32
+# config.algorithmControl.outlierDiffThreshold = 4
+# config.costMatching.confidenceThreshold = 245
+# config.costAggregation.localAggregationMode = dai.StereoDepthConfig.CostAggregation.LocalAggregationMode.CLAMP3x3 #CLAMP3x3, PASS3x3
+# stereoHorizontal.initialConfig.set(config)
 
 stereoHorizontal.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
 stereoVertical.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
@@ -416,6 +431,7 @@ with device:
         qRectifiedVertical = device.getOutputQueue("rectified_vertical", 4, blockingOutputs)
         qRectifiedRight = device.getOutputQueue("rectified_right", 4, blockingOutputs)
         qRectifiedLeft = device.getOutputQueue("rectified_left", 4, blockingOutputs)
+        qRectifiedRightHor = device.getOutputQueue("rectified_right_hor", 4, blockingOutputs)
 
     if staticInput or args.vid:
         qInLeft = device.getInputQueue("inLeft")
@@ -535,6 +551,13 @@ with device:
             frameRLeft = inRectifiedLeft.getCvFrame()
             leftRectifiedHor.append(inRectifiedLeft.getFrame())
             cv2.imshow("rectified_left", frameRLeft)
+            # cv2.imwrite("rectified_left.png", frameRLeft)
+
+            inRectifiedRightHor = qRectifiedRightHor.get()
+            frameRRightHor = inRectifiedRightHor.getCvFrame()
+            cv2.imshow("rectified_right_hor", frameRRightHor)
+            # cv2.imwrite("rectified_right.png", frameRRightHor)
+
 
         inDisparityVertical = qDisparityVertical.get()
         frameDepth = inDisparityVertical.getFrame()

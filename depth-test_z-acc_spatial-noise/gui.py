@@ -39,7 +39,7 @@ class LiveDepthThread(QThread):
 parser = argparse.ArgumentParser()
 parser.add_argument('--directions', nargs='+',
                     default=['left', 'right', 'center'])
-parser.add_argument('--distances', nargs='+', default=['1m', '2m', '4m'])
+parser.add_argument('--distances', nargs='+', default=['1', '2', '4'])
 parser.add_argument('--resultsPath', type=str, required=False, default="./recordings",
                     help="Path to the folder containing the results to merge")
 parser.add_argument('--minFileSize', type=int, required=False,
@@ -81,7 +81,7 @@ class App(QWidget):
         self.distance_button_group = QButtonGroup()
         distance_group = QHBoxLayout()  # Change QVBoxLayout to QHBoxLayout
         for distance in self.distances:
-            button = QRadioButton(distance)
+            button = QRadioButton(distance + "m")
             self.distance_buttons.append(button)
             distance_group.addWidget(button)
             self.distance_button_group.addButton(button)
@@ -149,7 +149,6 @@ class App(QWidget):
             # Transform the following bash to something that looks like below.
             # Bash: $SOURCE_DIR/main.py -calib $CALIB_DIR/$cam/vermeer.json -depth $dDir/outDepthVer.npy -rectified $dDir/outLeftRectVer.npy -gt $dist -out_results_f $dDir/results_ver.txt
             # Python:
-            distance = 3
             self.run_measurement_proc = subprocess.Popen(["python3", f"{script_dir}/main.py", "-calib", f"{final_dir}/calib.json", "-depth", f"{final_dir}/outDepthVer.npy",
                                                          "-rectified", f"{final_dir}/outLeftRectVer.npy", "-gt", f"{distance}", "-out_results_f", f"{final_dir}/results_ver.txt"])
 
@@ -167,6 +166,7 @@ class App(QWidget):
             error_message.exec_()
 
         self.run_measurement_button.setEnabled(True)
+        QApplication.processEvents()
 
     def get_test_params(self):
         camera_id = self.camera_id_input.text()
@@ -180,6 +180,10 @@ class App(QWidget):
         for i, button in enumerate(self.distance_buttons):
             if button.isChecked():
                 distance = self.distances[i]
+                try:
+                    distance = int(distance)
+                except ValueError:
+                    raise RuntimeError(f"Distance {distance} not an integer")
         if not camera_id:
             raise RuntimeError("Camera ID is not set")
 
@@ -188,7 +192,7 @@ class App(QWidget):
 
         if not distance:
             raise RuntimeError("Distance is not set")
-        subdir = f"{args.resultsPath}/camera_{camera_id}/{distance}/{direction}"
+        subdir = f"{args.resultsPath}/camera_{camera_id}/{distance}m/{direction}"
         return camera_id, direction, distance, subdir
 
     def get_latest_recording_dir(self, target_dir):
@@ -215,8 +219,7 @@ class App(QWidget):
             camera_id, direction, distance, target_dir = self.get_test_params()
             # Add your custom script logic here
             # Example: custom_script(camera_id, direction, distance)
-            print(
-                f"Camera ID: {camera_id}, Direction: {direction}, Distance: {distance}")
+            print(f"Camera ID: {camera_id}, Direction: {direction}, Distance: {distance}m")
             record_frames_sdk.record_frames_sdk(target_dir)
 
             target_dir_final = self.get_latest_recording_dir(target_dir)
