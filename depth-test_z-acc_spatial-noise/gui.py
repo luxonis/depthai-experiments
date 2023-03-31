@@ -231,15 +231,15 @@ class App(QWidget):
             raise RuntimeError(f"Target dir {target_dir} does not exist")
         recordings = os.listdir(target_dir)
         latest_id = 0
+        latest_dir = None
         for dir in recordings:
-            if "xlinkserver" not in dir:
-                continue
             id = int(dir.split("-")[0])
             if id > latest_id:
                 latest_id = id
-        if latest_id == 0:
+                latest_dir = dir
+        if latest_id == 0 or latest_dir is None:
             raise RuntimeError("No recordings found")
-        return f"{target_dir}/{latest_id}-xlinkserver"
+        return f"{target_dir}/{latest_dir}"
 
     def record_frames(self):
         self.run_button.setEnabled(False)
