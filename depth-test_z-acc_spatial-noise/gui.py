@@ -1,7 +1,7 @@
 import record_frames_sdk
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton, QButtonGroup, QMessageBox, QGroupBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton, QButtonGroup, QMessageBox, QGroupBox, QCheckBox
 from PyQt5.QtGui import QIntValidator
 import subprocess
 import time
@@ -38,8 +38,8 @@ class LiveDepthThread(QThread):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--directions', nargs='+',
-                    default=['left', 'right', 'center'])
-parser.add_argument('--distances', nargs='+', default=['1', '2', '4'])
+                    default=['left', 'right', 'center', 'top', 'bottom'])
+parser.add_argument('--distances', nargs='+', default=['1', '2', '4', '7', '15'])
 parser.add_argument('--resultsPath', type=str, required=False, default="./recordings",
                     help="Path to the folder containing the results to merge")
 parser.add_argument('--minFileSize', type=int, required=False,
@@ -121,6 +121,31 @@ class App(QWidget):
         layout.addWidget(capture_settings_group)
 
 
+        # Create a new group box for "frames to depth"
+        frames_to_depth_group = QGroupBox('Frames to Depth')
+        frames_to_depth_layout = QVBoxLayout()
+
+        # Add a tick box to run at the full resolution
+        self.full_resolution_checkbox = QCheckBox('Run at Full Resolution')
+        frames_to_depth_layout.addWidget(self.full_resolution_checkbox)
+
+        # Add the existing "frames to depth" button to the group
+        self.transform_depth_button = QPushButton('Frames to depth')
+        self.transform_depth_button.clicked.connect(
+            self.transform_depth_frames)
+        frames_to_depth_layout.addWidget(self.transform_depth_button)
+
+        # Set the layout for the group box
+        frames_to_depth_group.setLayout(frames_to_depth_layout)
+
+        # Add the group box to the main layout
+        layout.addWidget(frames_to_depth_group)
+
+        self.run_measurement_button = QPushButton('Run measurement')
+        self.run_measurement_button.clicked.connect(
+            self.run_measurement_script)
+        layout.addWidget(self.run_measurement_button)
+
         self.extra_button = QPushButton('Run live depth')
         self.extra_button.clicked.connect(self.run_live_depth)
         layout.addWidget(self.extra_button)
@@ -130,23 +155,52 @@ class App(QWidget):
         layout.addWidget(self.extra_button_stop)
         self.extra_button_stop.setEnabled(False)
 
-        self.transform_depth_button = QPushButton('Frames to depth')
-        self.transform_depth_button.clicked.connect(
-            self.transform_depth_frames)
-        layout.addWidget(self.transform_depth_button)
-
-        self.run_measurement_button = QPushButton('Run measurement')
-        self.run_measurement_button.clicked.connect(
-            self.run_measurement_script)
-        layout.addWidget(self.run_measurement_button)
-
         self.setLayout(layout)
 
     def transform_depth_frames(self):
         self.transform_depth_button.setEnabled(False)
         QApplication.processEvents()
+        fullRes = self.full_resolution_checkbox.isChecked()
         try:
             camera_id, direction, distance, target_dir = self.get_test_params()
+            additionalParams = []
+            fullWidth = 1920
+            fullHeight = 1200
+            targetWidth = 1280
+            targetHeight = 800
+            cropLength = 1024 # RVC3 stereo limitation for vertical output
+            if fullRes:
+                xStart = 0
+                yStart = 0
+                cs = 0
+                if direction == "left":
+                    xStart = 0
+                    yStart = (fullHeight - targetHeight) // 2
+                    cs = 0
+                elif direction == "right":
+                    xStart = (fullWidth - targetWidth)
+                    yStart = (fullHeight - targetHeight) // 2
+                    cs = targetWidth - cropLength
+                elif direction == "center":
+                    xStart = (fullWidth - targetWidth) // 2
+                    yStart = (fullHeight - targetHeight) // 2
+                    cs = (targetWidth - cropLength) // 2
+                elif direction == "top":
+                    xStart = (fullWidth - targetWidth) // 2
+                    yStart = 0
+                    cs = (targetWidth - cropLength) // 2
+                elif direction == "bottom":
+                    xStart = (fullWidth - targetWidth) // 2
+                    yStart = (fullHeight - targetHeight)
+                    cs = (targetWidth - cropLength) // 2
+                additionalParams.append("-fullResolution")
+                additionalParams.append("-xStart")
+                additionalParams.append(str(xStart))
+                additionalParams.append("-yStart")
+                additionalParams.append(str(yStart))
+                additionalParams.append("-cs")
+                additionalParams.append(str(cs))
+            print(additionalParams)
             final_dir = self.get_latest_recording_dir(target_dir)
             if not self.check_files(final_dir):
                 raise RuntimeError("Not all files prenesent.")
@@ -155,7 +209,7 @@ class App(QWidget):
                                                     f"{final_dir}/camb,c.avi", "-right", f"{final_dir}/camc,c.avi",
                                                      "-bottom", f"{final_dir}/camd,c.avi",  "-calib", f"{final_dir}/calib.json",
                                                      "-rect", "-outVer", f"{final_dir}/outDepthVer.npy",  "-outHor",  f"{final_dir}/outDepthHor.npy",
-                                                     "-outLeftRectVer", f"{final_dir}/outLeftRectVer.npy", "-outLeftRectHor",  f"{final_dir}/outLeftRectHor.npy"])
+                                                     "-outLeftRectVer", f"{final_dir}/outLeftRectVer.npy", "-outLeftRectHor",  f"{final_dir}/outLeftRectHor.npy"] + additionalParams)
             self.live_depth_proc.wait()
         except Exception as e:
             error_message = QMessageBox()

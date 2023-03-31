@@ -24,9 +24,24 @@ parser.add_argument('-outHor', type=str, default="outDepthHorizontalNumpy.npy", 
 parser.add_argument('-outLeftRectVer', type=str, default="outLeftRectVerticalNumpy.npy")
 parser.add_argument('-outLeftRectHor', type=str, default="outLeftRectHorizontalNumpy.npy")
 parser.add_argument('-saveFiles', action="store_true", default=False, help="Save output files.")
-
+parser.add_argument('-fullResolution', action="store_true", default=False, help="Use full resolution for depth maps.")
+parser.add_argument('-xStart', type=int, default=None, help="X start coordinate for depth map.")
+parser.add_argument('-yStart', type=int, default=None, help="Y start coordinate for depth map.")
+parser.add_argument('-cs', type=int, default=0, help="Crop start.")
 
 args = parser.parse_args()
+
+imageWidth = 1920
+imageHeight = 1200
+
+cropWidth = 1280
+cropHeight = 800
+
+cropLength = 1024
+cropstart = args.cs
+if cropstart + cropLength > cropWidth:
+    cropstart = cropWidth - cropLength
+
 
 staticInput = args.si
 
@@ -36,7 +51,27 @@ blockingOutputs = False
 
 if staticInput and args.vid:
     print("Static input and video input cannot be used at the same time.")
-    exit()
+    exit(1)
+
+if (args.fullResolution and not staticInput) and (args.fullResolution and not args.vid):
+    print("Full resolution can only be used with static input or video input.")
+    exit(1)
+
+if args.fullResolution:
+    if args.xStart is not None and args.yStart is not None:
+        cropXStart = args.xStart
+        cropXEnd = cropWidth + cropXStart
+        cropYStart = args.yStart
+        cropYEnd = cropHeight + cropYStart
+    else:
+        cropXStart = (imageWidth - cropWidth) // 2
+        cropXEnd = imageWidth - cropXStart
+        cropYStart = (imageHeight - cropHeight) // 2
+        cropYEnd = imageHeight - cropYStart
+
+    print(f"cropXStart {cropXStart} - cropXEnd {cropXEnd}")
+    print(f"cropYStart {cropYStart} - cropYEnd {cropYEnd}")
+
 
 if staticInput:
     left = args.left
@@ -56,7 +91,7 @@ if staticInput:
         cv2.imshow("bottomImg", bottomImg)
         cv2.waitKey(1)
 
-elif args.vid:
+if args.vid:
     leftVideo = cv2.VideoCapture(args.left)
     rightVideo = cv2.VideoCapture(args.right)
     bottomVideo = cv2.VideoCapture(args.bottom)
@@ -192,9 +227,11 @@ else:
 
 if staticInput or args.vid:
     monoLeft = pipeline.create(dai.node.XLinkIn)
+    monoLeft2 = pipeline.create(dai.node.XLinkIn)
     monoRight = pipeline.create(dai.node.XLinkIn)
     monoVertical = pipeline.create(dai.node.XLinkIn)
     monoLeft.setStreamName("inLeft")
+    monoLeft2.setStreamName("inLeft2")
     monoRight.setStreamName("inRight")
     monoVertical.setStreamName("inVertical")
 else:
@@ -248,14 +285,18 @@ if not staticInput and not args.vid:
     monoLeft.video.link(stereoVertical.left) # left input is bottom camera
     monoVertical.video.link(stereoVertical.right) # right input is right camera
 else:
-    monoLeft.out.link(stereoVertical.left) # left input is bottom camera
+    monoLeft2.out.link(stereoVertical.left) # left input is bottom camera
     monoVertical.out.link(stereoVertical.right) # right input is right camera
 
 stereoVertical.disparity.link(xoutDisparityVertical.input)
 if enableRectified:
     stereoVertical.rectifiedLeft.link(xoutRectifiedVertical.input)
     stereoVertical.rectifiedRight.link(xoutRectifiedRight.input)
-stereoVertical.setVerticalStereo(True)
+if args.fullResolution:
+    stereoVertical.setVerticalStereo(False)
+    stereoVertical.setRectification(False)
+else:
+    stereoVertical.setVerticalStereo(True)
 
 # syncNode.output2.link(stereoHorizontal.left)
 # syncNode.output1.link(stereoHorizontal.right)
@@ -272,25 +313,20 @@ if enableRectified:
     stereoHorizontal.rectifiedRight.link(xoutRectifiedRightHor.input)
 
 stereoHorizontal.setVerticalStereo(False)
+if args.fullResolution:
+    stereoHorizontal.setRectification(False)
 
-
-# config = stereoHorizontal.initialConfig.get()
-# config.algorithmControl.enableLeftRightCheck = True
-# config.algorithmControl.leftRightCheckThreshold = 10
-# config.algorithmControl.replaceInvalidDisparity = False
-# config.algorithmControl.outlierRemoveThreshold = 15
-# config.algorithmControl.outlierCensusThreshold = 32
-# config.algorithmControl.outlierDiffThreshold = 4
-# config.costMatching.confidenceThreshold = 245
-# config.costAggregation.localAggregationMode = dai.StereoDepthConfig.CostAggregation.LocalAggregationMode.CLAMP3x3 #CLAMP3x3, PASS3x3
-# stereoHorizontal.initialConfig.set(config)
 
 stereoHorizontal.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
 stereoVertical.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
 
 if 1:
-    width = 1280
-    height = 800
+    if args.fullResolution:
+        width = 1920
+        height = 1200
+    else:
+        width = 1280
+        height = 800
     resolution = (width, height)
 
     # vertical
@@ -327,10 +363,11 @@ if 1:
         M1_focal = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(M1, d1, resolution, R1)
         print(calc_fov_D_H_V(M1_focal[0][0], width, height))
         focalVer = M1_focal[1][1]
-
+        mapXL_v, mapYL_v = cv2.fisheye.initUndistortRectifyMap(M1, d1, R1, M1_focal, resolution, cv2.CV_32FC1)
         mapXL, mapYL = cv2.fisheye.initUndistortRectifyMap(M1, d1, R1, M1_focal, resolution, cv2.CV_32FC1)
         mapXV, mapYV = cv2.fisheye.initUndistortRectifyMap(M2, d2, R2, M1_focal, resolution, cv2.CV_32FC1)
     else:
+        mapXL_v, mapYL_v = cv2.initUndistortRectifyMap(M1, d1, R1, M1, resolution, cv2.CV_32FC1)
         mapXL, mapYL = cv2.initUndistortRectifyMap(M1, d1, R1, M1, resolution, cv2.CV_32FC1)
         mapXV, mapYV = cv2.initUndistortRectifyMap(M2, d2, R2, M1, resolution, cv2.CV_32FC1)
 
@@ -339,18 +376,20 @@ if 1:
 
     mapXL_rot, mapYL_rot = rotate_mesh_90_ccw(mapXL, mapYL)
     mapXV_rot, mapYV_rot = rotate_mesh_90_ccw(mapXV, mapYV)
+    if not args.fullResolution:
+        #clip for now due to HW limit
+        mapXV_rot = mapXV_rot[:1024,:]
+        mapYV_rot = mapYV_rot[:1024,:]
+        mapXL_rot = mapXL_rot[:1024,:]
+        mapYL_rot = mapYL_rot[:1024,:]
 
-    #clip for now due to HW limit
-    mapXV_rot = mapXV_rot[:1024,:]
-    mapYV_rot = mapYV_rot[:1024,:]
-    mapXL_rot = mapXL_rot[:1024,:]
-    mapYL_rot = mapYL_rot[:1024,:]
+        leftMeshRot, verticalMeshRot = downSampleMesh(mapXL_rot, mapYL_rot, mapXV_rot, mapYV_rot)
 
-    leftMeshRot, verticalMeshRot = downSampleMesh(mapXL_rot, mapYL_rot, mapXV_rot, mapYV_rot)
-
-    meshLeft = list(leftMeshRot.tobytes())
-    meshVertical = list(verticalMeshRot.tobytes())
-    stereoVertical.loadMeshData(meshLeft, meshVertical)
+        meshLeft = list(leftMeshRot.tobytes())
+        meshVertical = list(verticalMeshRot.tobytes())
+        stereoVertical.loadMeshData(meshLeft, meshVertical)
+    else:
+        stereoVertical.setRectification(False)
 
     # horizontal
 
@@ -367,7 +406,11 @@ if 1:
 
     baselineHor = abs(T2[0])*10
     focalHor = M1[0][0]
-
+    if args.fullResolution:
+        pt1 = dai.Point2f(cropXStart, cropYStart)
+        pt2 = dai.Point2f(cropXEnd, cropYEnd)
+        M1_ = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.CAM_B, width, height, pt1, pt2))
+        print(f"orig {M1[0][0]}, {M1_[0][0]}")
 
     print(f"baseline {baselineHor}, focal {focalHor}")
 
@@ -379,7 +422,7 @@ if 1:
     if forceFisheye or (len(d1) == 4 and len(d2) == 4): 
         def calc_fov_D_H_V(f, w, h):
             return np.degrees(2*np.arctan(np.sqrt(w*w+h*h)/(2*f))), np.degrees(2*np.arctan(w/(2*f))), np.degrees(2*np.arctan(h/(2*f)))
-        
+
         print(M1)
         M1_focal = M1
         M1_focal = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(M1, d1, resolution, R1)
@@ -396,9 +439,10 @@ if 1:
 
     leftMesh, rightMesh = downSampleMesh(mapXL, mapYL, mapXR, mapYR)
 
-    meshLeft = list(leftMesh.tobytes())
-    meshRight = list(rightMesh.tobytes())
-    stereoHorizontal.loadMeshData(meshLeft, meshRight)
+    if not args.fullResolution:
+        meshLeft = list(leftMesh.tobytes())
+        meshRight = list(rightMesh.tobytes())
+        stereoHorizontal.loadMeshData(meshLeft, meshRight)
 
     horScaleFactor = baselineHor * focalHor * 32
 
@@ -423,6 +467,81 @@ horizontalDepths = []
 leftRectifiedVer = []
 leftRectifiedHor = []
 
+def sendFrames(leftImg, rightImg, bottomImg, qInLeft, qInLeft2, qInRight, qInVertical, width, height, args):
+    ts = dai.Clock.now()
+    if not args.fullResolution:
+        data = cv2.resize(leftImg, (width, height), interpolation = cv2.INTER_AREA)
+        data = data.reshape(height*width)
+        sendFrame(data, qInLeft, width, height, ts, 1)
+
+        data = cv2.resize(leftImg, (width, height), interpolation = cv2.INTER_AREA)
+        data = data.reshape(height*width)
+        sendFrame(data, qInLeft2, width, height, ts, 1)
+
+        data = cv2.resize(rightImg, (width, height), interpolation = cv2.INTER_AREA)
+        data = data.reshape(height*width)
+        sendFrame(data, qInRight, width, height, ts, 2)
+        # print("right send")
+
+        data = cv2.resize(bottomImg, (width, height), interpolation = cv2.INTER_AREA)
+        data = data.reshape(height*width)
+        sendFrame(data, qInVertical, width, height, ts, 3)
+        # print("vertical send")
+    else:
+        # data = cv2.resize(leftImg, (width, height), interpolation = cv2.INTER_AREA)
+        data = cv2.remap(leftImg, mapXL, mapYL, cv2.INTER_LINEAR)
+        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
+        print(data.shape)
+        data = data.flatten()
+        sendFrame(data, qInLeft, cropWidth, cropHeight, ts, 1)
+
+
+
+        # data = cv2.resize(rightImg, (width, height), interpolation = cv2.INTER_AREA)
+        data = cv2.remap(rightImg, mapXR, mapYR, cv2.INTER_LINEAR)
+        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
+        data = data.flatten()
+        sendFrame(data, qInRight, cropWidth, cropHeight, ts, 2)
+
+
+        data = cv2.remap(bottomImg, mapXV, mapYV, cv2.INTER_LINEAR)
+        print(data.shape)
+
+        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
+        print(data.shape)
+
+        data = data[:,cropstart:cropstart+cropLength]
+        data = cv2.rotate(data, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        print(data.shape)
+        vertHeight = data.shape[0]
+        vertWidth = data.shape[1]
+
+        data = data.reshape(vertWidth*vertHeight)
+        sendFrame(data, qInVertical, vertWidth, vertHeight, ts, 3)
+
+        data = cv2.remap(leftImg, mapXL_v, mapYL_v, cv2.INTER_LINEAR)
+        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
+        data = data[:,cropstart:cropstart+cropLength]
+        data = cv2.rotate(data, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        vertHeight = data.shape[0]
+        vertWidth = data.shape[1]
+
+        data = data.reshape(vertWidth*vertHeight)
+        sendFrame(data, qInLeft2, vertWidth, vertHeight, ts, 1)
+
+
+def sendFrame(data, qIn, width, height, ts, instanceNum):
+    img = dai.ImgFrame()
+    img.setData(data)
+    img.setInstanceNum(instanceNum)
+    img.setType(dai.ImgFrame.Type.RAW8)
+    img.setWidth(width)
+    img.setHeight(height)
+    img.setTimestamp(ts)
+    qIn.send(img)
+
+
+
 with device:
     device.startPipeline(pipeline)
     qDisparityHorizontal = device.getOutputQueue("disparity_horizontal", 4, blockingOutputs)
@@ -436,47 +555,12 @@ with device:
     if staticInput or args.vid:
         qInLeft = device.getInputQueue("inLeft")
         qInRight = device.getInputQueue("inRight")
+        qInLeft2 = device.getInputQueue("inLeft2")
         qInVertical = device.getInputQueue("inVertical")
 
     while True:
         if staticInput:
-            ts = dai.Clock.now()
-
-            data = cv2.resize(leftImg, (width, height), interpolation = cv2.INTER_AREA)
-            data = data.reshape(height*width)
-            img = dai.ImgFrame()
-            img.setData(data)
-            img.setInstanceNum(1)
-            img.setType(dai.ImgFrame.Type.RAW8)
-            img.setWidth(width)
-            img.setHeight(height)
-            img.setTimestamp(ts)
-            # print("left send")
-            qInLeft.send(img)
-
-            data = cv2.resize(rightImg, (width, height), interpolation = cv2.INTER_AREA)
-            data = data.reshape(height*width)
-            img = dai.ImgFrame()
-            img.setData(data)
-            img.setInstanceNum(2)
-            img.setType(dai.ImgFrame.Type.RAW8)
-            img.setWidth(width)
-            img.setHeight(height)
-            img.setTimestamp(ts)
-            qInRight.send(img)
-            # print("right send")
-
-            data = cv2.resize(bottomImg, (width, height), interpolation = cv2.INTER_AREA)
-            data = data.reshape(height*width)
-            img = dai.ImgFrame()
-            img.setData(data)
-            img.setInstanceNum(3)
-            img.setType(dai.ImgFrame.Type.RAW8)
-            img.setWidth(width)
-            img.setHeight(height)
-            img.setTimestamp(ts)
-            qInVertical.send(img)
-            # print("vertical send")
+            sendFrames(leftImg, rightImg, bottomImg, qInLeft, qInLeft2, qInRight, qInVertical, width, height, args)
 
         elif args.vid:
             if not leftVideo.isOpened() or not rightVideo.isOpened() or not bottomVideo.isOpened():
@@ -501,42 +585,7 @@ with device:
             rightImg = cv2.cvtColor(rightImg, cv2.COLOR_BGR2GRAY)
             bottomImg = cv2.cvtColor(bottomImg, cv2.COLOR_BGR2GRAY)
 
-            ts = dai.Clock.now()
-            data = cv2.resize(leftImg, (width, height), interpolation = cv2.INTER_AREA)
-            data = data.reshape(height*width)
-            img = dai.ImgFrame()
-            img.setData(data)
-            img.setInstanceNum(1)
-            img.setType(dai.ImgFrame.Type.RAW8)
-            img.setWidth(width)
-            img.setHeight(height)
-            img.setTimestamp(ts)
-            # print("left send")
-            qInLeft.send(img)
-
-            data = cv2.resize(rightImg, (width, height), interpolation = cv2.INTER_AREA)
-            data = data.reshape(height*width)
-            img = dai.ImgFrame()
-            img.setData(data)
-            img.setInstanceNum(2)
-            img.setType(dai.ImgFrame.Type.RAW8)
-            img.setWidth(width)
-            img.setHeight(height)
-            img.setTimestamp(ts)
-            qInRight.send(img)
-            # print("right send")
-
-            data = cv2.resize(bottomImg, (width, height), interpolation = cv2.INTER_AREA)
-            data = data.reshape(height*width)
-            img = dai.ImgFrame()
-            img.setData(data)
-            img.setInstanceNum(3)
-            img.setType(dai.ImgFrame.Type.RAW8)
-            img.setWidth(width)
-            img.setHeight(height)
-            img.setTimestamp(ts)
-            qInVertical.send(img)
-            # print("vertical send")
+            sendFrames(leftImg, rightImg, bottomImg, qInLeft, qInLeft2, qInRight, qInVertical, width, height, args)
         if enableRectified:
             inRectifiedVertical = qRectifiedVertical.get()
             frameRVertical = inRectifiedVertical.getCvFrame()
@@ -630,3 +679,5 @@ if args.saveFiles:
     if enableRectified:
         np.save(args.outLeftRectVer, stackedRectifiedLeftVer)
         np.save(args.outLeftRectHor, stackedRectifiedLeftHor)
+
+
