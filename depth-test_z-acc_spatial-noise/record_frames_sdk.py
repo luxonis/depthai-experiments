@@ -4,17 +4,19 @@ import depthai
 FPS=10
 
 
-def record_frames_sdk(path = './'):
+def record_frames_sdk(path = './', fps=FPS, autoExposure=True, manualExposure=1000, iso=200):
     with OakCamera(args=False) as oak:
-        # color = oak.create_camera('color', resolution='1080P', fps=30, encode='MJPEG')
-        # color.config_color_camera(isp_scale=(2, 3)) # 720P
-        left = oak.create_camera(source="camb,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=FPS)
-        right = oak.create_camera(source="camc,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=FPS)
-        vertical = oak.create_camera(source="camd,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=FPS)
+        left = oak.create_camera(source="camb,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=fps)
+        right = oak.create_camera(source="camc,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=fps)
+        vertical = oak.create_camera(source="camd,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=fps)
+        if autoExposure is False:
+            left.node.initialControl.setManualExposure(manualExposure, iso)
+            right.node.initialControl.setManualExposure(manualExposure, iso)
+            vertical.node.initialControl.setManualExposure(manualExposure, iso)
 
         # Sync & save all streams
         recorder = oak.record([left, right, vertical], path, RecordType.VIDEO)
-        oak.visualize([left, right, vertical], scale=0.3)
+        oak.visualize([left, right, vertical], scale=0.7)
         oak.start(blocking=True)
 
 

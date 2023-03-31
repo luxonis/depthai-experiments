@@ -1,7 +1,7 @@
 import record_frames_sdk
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton, QButtonGroup, QMessageBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton, QButtonGroup, QMessageBox, QGroupBox
 from PyQt5.QtGui import QIntValidator
 import subprocess
 import time
@@ -87,9 +87,39 @@ class App(QWidget):
             self.distance_button_group.addButton(button)
         layout.addLayout(distance_group)
 
+        # Add a new group box to contain exposure time, ISO, and record frames button
+        capture_settings_group = QGroupBox('Capture Settings - if exposure time/iso is not set, auto exposure will be used')
+        capture_settings_layout = QVBoxLayout()
+
+        # Add exposure time input
+        exposure_time_label = QLabel('Exposure Time:')
+        self.exposure_time_input = QLineEdit()
+        self.exposure_time_input.setValidator(QIntValidator())
+        capture_settings_layout.addWidget(exposure_time_label)
+        capture_settings_layout.addWidget(self.exposure_time_input)
+
+        # Add ISO input
+        iso_label = QLabel('ISO:')
+        self.iso_input = QLineEdit()
+        self.iso_input.setValidator(QIntValidator())
+        capture_settings_layout.addWidget(iso_label)
+        capture_settings_layout.addWidget(self.iso_input)
+
+        # Add FPS input
+        fps_label = QLabel('FPS:')
+        self.fps_input = QLineEdit()
+        self.fps_input.setValidator(QIntValidator())
+        capture_settings_layout.addWidget(fps_label)
+        capture_settings_layout.addWidget(self.fps_input)
+
+        # Move the run_button to the capture_settings_group
         self.run_button = QPushButton('Record frames')
         self.run_button.clicked.connect(self.record_frames)
-        layout.addWidget(self.run_button)
+        capture_settings_layout.addWidget(self.run_button)
+
+        capture_settings_group.setLayout(capture_settings_layout)
+        layout.addWidget(capture_settings_group)
+
 
         self.extra_button = QPushButton('Run live depth')
         self.extra_button.clicked.connect(self.run_live_depth)
@@ -217,10 +247,22 @@ class App(QWidget):
         QApplication.processEvents()
         try:
             camera_id, direction, distance, target_dir = self.get_test_params()
+            iso_num = self.iso_input.text()
+            exposure_num = self.exposure_time_input.text()
+            fps_num = self.fps_input.text()
+            if fps_num == "":
+                fps_num = 10
+            else:
+                fps_num = int(fps_num)
+            print("Test print", iso_num, exposure_num)
             # Add your custom script logic here
             # Example: custom_script(camera_id, direction, distance)
             print(f"Camera ID: {camera_id}, Direction: {direction}, Distance: {distance}m")
-            record_frames_sdk.record_frames_sdk(target_dir)
+            if iso_num == "" or exposure_num == "":
+                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=True)
+            else:
+                print("Using manual exposure!")
+                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=False, iso=int(iso_num), manualExposure=int(exposure_num))
 
             target_dir_final = self.get_latest_recording_dir(target_dir)
             print(f"Checking if files are in {target_dir_final}...")
