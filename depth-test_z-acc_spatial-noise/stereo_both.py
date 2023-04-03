@@ -18,7 +18,7 @@ parser.add_argument('-right', type=str, default="right.png", help="right static 
 parser.add_argument('-bottom', type=str, default="bottom.png", help="bottom static input image")
 parser.add_argument('-debug', action="store_true", default=False, help="Debug code.")
 parser.add_argument('-rect', '--rectified', action="store_true", default=False, help="Generate and display rectified streams.")
-parser.add_argument('-fps', type=int, default=15, help="Set camera FPS.")
+parser.add_argument('-fps', type=int, default=10, help="Set camera FPS.")
 parser.add_argument('-outVer', type=str, default="outDepthVerticalNumpy.npy", help="Output vertical depth numpy file.")
 parser.add_argument('-outHor', type=str, default="outDepthHorizontalNumpy.npy", help="Output horizontal depth numpy file.")
 parser.add_argument('-outLeftRectVer', type=str, default="outLeftRectVerticalNumpy.npy")
