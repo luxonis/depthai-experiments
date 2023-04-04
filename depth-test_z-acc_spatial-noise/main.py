@@ -52,12 +52,13 @@ def start_test_callback():
 	global testing
 	if not depth_test.fitted:
 		print("❗WARNING: Plane not fitted, using default values")
-	
+
 	print("Testing started ...")
 	testing = True
 
 def fit_plane_callback():
-	depth_test.fit_plane(selected_camera.point_cloud)
+	# depth_test.fit_plane(selected_camera.point_cloud)
+	depth_test.fit_plane_o3d(selected_camera.point_cloud)
 	depth_test.print_tilt()
 	# depth_test.visualize_plane_fit(point_cloud)
 
@@ -141,4 +142,5 @@ while running:
 			testing = False
 			depth_test.print_results()
 			save_results_callback()
+			selected_camera.save_roi()
 			depth_test.reset()

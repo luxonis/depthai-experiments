@@ -20,6 +20,7 @@ parser.add_argument('-calib', type=str, required=True, default=None, help="Path 
 parser.add_argument('-depth', type=str, required=True, default=None, help="Path to depth numpy file")
 parser.add_argument('-rectified', type=str, required=True, default=None, help="Path to the rectified nu")
 parser.add_argument('-out_results_f', type=str, required=False, default=None, help="Path to the output results file")
+parser.add_argument('-roi_file', type=str, default=None, help = "Output ROI to a file")
 
 args = parser.parse_args()
 
@@ -33,6 +34,7 @@ confidence_threshold = args.confidence_threshold 	# 0-255, 255 = low confidence,
 min_range = args.min_range 			# mm
 max_range = args.max_range			# mm
 mono_camera_resolution = getattr(dai.MonoCameraProperties.SensorResolution, args.mono_camera_resolution)
+
 
 # Median filter
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7

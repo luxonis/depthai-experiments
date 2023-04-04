@@ -44,6 +44,8 @@ parser.add_argument('--resultsPath', type=str, required=False, default="./record
                     help="Path to the folder containing the results to merge")
 parser.add_argument('--minFileSize', type=int, required=False,
                     default=100e6, help="Minimum file size to not throw an warning")
+
+parser.add_argument('--device_id', type=str, required=False, default=None, help="Device id of the camera")
 args = parser.parse_args()
 
 
@@ -56,7 +58,10 @@ class App(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle('Camera Control')
+        title = "Depth testing"
+        if args.device_id:
+            title += f" (Device ID: {args.device_id})"
+        self.setWindowTitle(title)
         # self.setGeometry(100, 100, 400, 200)
 
         layout = QVBoxLayout()
@@ -66,6 +71,14 @@ class App(QWidget):
         self.camera_id_input.setValidator(QIntValidator())
         layout.addWidget(camera_id_label)
         layout.addWidget(self.camera_id_input)
+
+
+        camera_device_id_label = QLabel('Device ID (optional):')
+        self.camera_device_id_input = QLineEdit()
+        layout.addWidget(camera_device_id_label)
+        layout.addWidget(self.camera_device_id_input)
+        if args.device_id:
+            self.camera_device_id_input.setEnabled(False)
 
         self.direction_buttons = []
         self.direction_button_group = QButtonGroup()
@@ -173,36 +186,7 @@ class App(QWidget):
             targetHeight = 800
             cropLength = 1024 # RVC3 stereo limitation for vertical output
             if fullRes:
-                xStart = 0
-                yStart = 0
-                cs = 0
-                if direction == "left":
-                    xStart = 0
-                    yStart = (fullHeight - targetHeight) // 2
-                    cs = 0
-                elif direction == "right":
-                    xStart = (fullWidth - targetWidth)
-                    yStart = (fullHeight - targetHeight) // 2
-                    cs = targetWidth - cropLength
-                elif direction == "center":
-                    xStart = (fullWidth - targetWidth) // 2
-                    yStart = (fullHeight - targetHeight) // 2
-                    cs = (targetWidth - cropLength) // 2
-                elif direction == "top":
-                    xStart = (fullWidth - targetWidth) // 2
-                    yStart = 0
-                    cs = (targetWidth - cropLength) // 2
-                elif direction == "bottom":
-                    xStart = (fullWidth - targetWidth) // 2
-                    yStart = (fullHeight - targetHeight)
-                    cs = (targetWidth - cropLength) // 2
                 additionalParams.append("-fullResolution")
-                additionalParams.append("-xStart")
-                additionalParams.append(str(xStart))
-                additionalParams.append("-yStart")
-                additionalParams.append(str(yStart))
-                additionalParams.append("-cs")
-                additionalParams.append(str(cs))
             print(additionalParams)
             final_dir = self.get_latest_recording_dir(target_dir)
             if not self.check_files(final_dir):
@@ -211,8 +195,7 @@ class App(QWidget):
             self.live_depth_proc = subprocess.Popen(["python3", f"{script_dir}/stereo_both.py", "-vid", "-saveFiles", "-left",
                                                     f"{final_dir}/camb,c.avi", "-right", f"{final_dir}/camc,c.avi",
                                                      "-bottom", f"{final_dir}/camd,c.avi",  "-calib", f"{final_dir}/calib.json",
-                                                     "-rect", "-outVer", f"{final_dir}/outDepthVer.npy",  "-outHor",  f"{final_dir}/outDepthHor.npy",
-                                                     "-outLeftRectVer", f"{final_dir}/outLeftRectVer.npy", "-outLeftRectHor",  f"{final_dir}/outLeftRectHor.npy"] + additionalParams)
+                                                     "-rect", "-outDir", f"{final_dir}/out", "-cropImage", direction] + additionalParams)
             self.live_depth_proc.wait()
         except Exception as e:
             error_message = QMessageBox()
@@ -268,7 +251,7 @@ class App(QWidget):
             if button.isChecked():
                 distance = self.distances[i]
                 try:
-                    distance = int(distance)
+                    distance = float(distance)
                 except ValueError:
                     raise RuntimeError(f"Distance {distance} not an integer")
         if not camera_id:
@@ -307,6 +290,7 @@ class App(QWidget):
             camera_id, direction, distance, target_dir = self.get_test_params()
             iso_num = self.iso_input.text()
             exposure_num = self.exposure_time_input.text()
+            device_id = self.camera_device_id_input.text()
             fps_num = self.fps_input.text()
             if fps_num == "":
                 fps_num = 10
@@ -316,11 +300,13 @@ class App(QWidget):
             # Add your custom script logic here
             # Example: custom_script(camera_id, direction, distance)
             print(f"Camera ID: {camera_id}, Direction: {direction}, Distance: {distance}m")
+            if args.device_id:
+                device_id = args.device_id
             if iso_num == "" or exposure_num == "":
-                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=True, record=record)
+                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=True, record=record, device_id=device_id)
             else:
                 print("Using manual exposure!")
-                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=False, iso=int(iso_num), manualExposure=int(exposure_num), record=record)
+                record_frames_sdk.record_frames_sdk(target_dir, fps=fps_num, autoExposure=False, iso=int(iso_num), manualExposure=int(exposure_num), record=record, device_id=device_id)
 
             if record:
                 target_dir_final = self.get_latest_recording_dir(target_dir)

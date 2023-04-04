@@ -18,8 +18,8 @@ class NumpyReplayCamera(Camera):
         self.depth_frames = np.load(depth_recording_path)
         self.color_frames = np.load(color_recording_path).astype(np.uint8)
         # use only last 3 frames
-        self.depth_frames = self.depth_frames[-3:]
-        self.color_frames = self.color_frames[-3:]
+        self.depth_frames = self.depth_frames[-10:]
+        self.color_frames = self.color_frames[-10:]
         self.frame_index = 0
         self.no_frames = min(len(self.depth_frames), len(self.color_frames))
         self.image_size = self.depth_frames[0].shape

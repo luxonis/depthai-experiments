@@ -19,6 +19,7 @@ parser.add_argument('-bottom', type=str, default="bottom.png", help="bottom stat
 parser.add_argument('-debug', action="store_true", default=False, help="Debug code.")
 parser.add_argument('-rect', '--rectified', action="store_true", default=False, help="Generate and display rectified streams.")
 parser.add_argument('-fps', type=int, default=10, help="Set camera FPS.")
+parser.add_argument('-outDir', type=str, default="out", help="Output directory for depth maps and rectified files.")
 parser.add_argument('-outVer', type=str, default="outDepthVerticalNumpy.npy", help="Output vertical depth numpy file.")
 parser.add_argument('-outHor', type=str, default="outDepthHorizontalNumpy.npy", help="Output horizontal depth numpy file.")
 parser.add_argument('-outLeftRectVer', type=str, default="outLeftRectVerticalNumpy.npy")
@@ -27,7 +28,9 @@ parser.add_argument('-saveFiles', action="store_true", default=False, help="Save
 parser.add_argument('-fullResolution', action="store_true", default=False, help="Use full resolution for depth maps.")
 parser.add_argument('-xStart', type=int, default=None, help="X start coordinate for depth map.")
 parser.add_argument('-yStart', type=int, default=None, help="Y start coordinate for depth map.")
-parser.add_argument('-cs', type=int, default=0, help="Crop start.")
+parser.add_argument('-cs', type=int, default=128, help="Crop start.")
+parser.add_argument('-imageCrop', default=None, choices=['center', 'right', 'left', 'top', 'down'], help="Select default crop for a part of the image")
+parser.add_argument('-numLastFrames', type=int, default=None, help="Number of frames (last frames are used) for calculating the average depth.")
 
 args = parser.parse_args()
 
@@ -49,6 +52,12 @@ enableRectified = args.rectified
 cameraFPS = args.fps
 blockingOutputs = False
 
+if args.imageCrop == "left":
+    cropstart = 0
+elif args.imageCrop == "right":
+    cropstart = cropWidth - cropLength
+print(f"Setting crop start to {cropstart}")
+
 if staticInput and args.vid:
     print("Static input and video input cannot be used at the same time.")
     exit(1)
@@ -57,18 +66,40 @@ if (args.fullResolution and not staticInput) and (args.fullResolution and not ar
     print("Full resolution can only be used with static input or video input.")
     exit(1)
 
+# if args.imageCrop and not args.fullResolution:
+#     print("Image crop can only be used with full resolution.")
+#     exit(1)
+
+
 if args.fullResolution:
+    if args.xStart is not None and args.yStart is not None and args.imageCrop:
+        print("xStart and yStart will override imageCrop setting")
     if args.xStart is not None and args.yStart is not None:
         cropXStart = args.xStart
-        cropXEnd = cropWidth + cropXStart
         cropYStart = args.yStart
-        cropYEnd = cropHeight + cropYStart
-    else:
-        cropXStart = (imageWidth - cropWidth) // 2
-        cropXEnd = imageWidth - cropXStart
+    elif args.imageCrop == "left":
+        cropXStart = 0
         cropYStart = (imageHeight - cropHeight) // 2
-        cropYEnd = imageHeight - cropYStart
+        cropstart = 0
+    elif args.imageCrop == "right":
+        cropXStart = (imageWidth - cropWidth)
+        cropYStart = (imageHeight - cropHeight) // 2
+        cropstart = cropWidth - cropLength
+    elif args.imageCrop == "center":
+        cropXStart = (imageWidth - cropWidth) // 2
+        cropYStart = (imageHeight - cropHeight) // 2
+        cropstart = (cropWidth - cropLength) // 2
+    elif args.imageCrop == "top":
+        cropXStart = (imageWidth - cropWidth) // 2
+        cropYStart = 0
+        cropstart = (cropWidth - cropLength) // 2
+    elif args.imageCrop == "bottom":
+        cropXStart = (imageWidth - cropWidth) // 2
+        cropYStart = (imageHeight - cropHeight)
+        cropstart = (cropWidth - cropLength) // 2
 
+    cropXEnd = cropWidth + cropXStart
+    cropYEnd = cropHeight + cropYStart
     print(f"cropXStart {cropXStart} - cropXEnd {cropXEnd}")
     print(f"cropYStart {cropYStart} - cropYEnd {cropYEnd}")
 
@@ -95,6 +126,16 @@ if args.vid:
     leftVideo = cv2.VideoCapture(args.left)
     rightVideo = cv2.VideoCapture(args.right)
     bottomVideo = cv2.VideoCapture(args.bottom)
+    numFramesLeft = int(leftVideo.get(cv2.CAP_PROP_FRAME_COUNT))
+    if args.numLastFrames is not None:
+
+        print(f"Using last {args.numLastFrames} frames for calculating the average depth.")
+        for video in [leftVideo, rightVideo, bottomVideo]:
+            if args.numLastFrames > numFramesLeft:
+                print(f"numLastFrames {args.numLastFrames} is greater than number of images in the left video {numFramesLeft}.")
+                break
+            video.set(cv2.CAP_PROP_POS_FRAMES, numFramesLeft - args.numLastFrames)
+
 
 forceFisheye = False
 
@@ -591,21 +632,27 @@ with device:
             frameRVertical = inRectifiedVertical.getCvFrame()
             leftRectifiedVer.append(inRectifiedVertical.getFrame())
             cv2.imshow("rectified_vertical", frameRVertical)
+            if args.saveFiles:
+                cv2.imwrite(str(Path(args.outDir) / "ver_rectified_vertical_camb.png"), frameRVertical)
 
             inRectifiedRight = qRectifiedRight.get()
             frameRRight = inRectifiedRight.getCvFrame()
             cv2.imshow("rectified_right", frameRRight)
+            if args.saveFiles:
+                cv2.imwrite(str(Path(args.outDir) / "ver_rectified_right_camd.png"), frameRRight)
 
             inRectifiedLeft = qRectifiedLeft.get()
             frameRLeft = inRectifiedLeft.getCvFrame()
             leftRectifiedHor.append(inRectifiedLeft.getFrame())
             cv2.imshow("rectified_left", frameRLeft)
-            # cv2.imwrite("rectified_left.png", frameRLeft)
+            if args.saveFiles:
+                cv2.imwrite(str(Path(args.outDir) / "hor_rectified_left_camb.png"), frameRLeft)
 
             inRectifiedRightHor = qRectifiedRightHor.get()
             frameRRightHor = inRectifiedRightHor.getCvFrame()
             cv2.imshow("rectified_right_hor", frameRRightHor)
-            # cv2.imwrite("rectified_right.png", frameRRightHor)
+            if args.saveFiles:
+               cv2.imwrite(str(Path(args.outDir) / "hor_rectified_right_camc.png"), frameRRightHor)
 
 
         inDisparityVertical = qDisparityVertical.get()
@@ -635,7 +682,7 @@ with device:
         disp = cv2.applyColorMap(disp, cvColorMap)
         cv2.imshow("depth_vertical", cv2.rotate(disp, cv2.ROTATE_90_CLOCKWISE))
         if args.saveFiles:
-            cv2.imwrite("frameDepthVertical.png", cv2.rotate(disp, cv2.ROTATE_90_CLOCKWISE))
+            cv2.imwrite(str(Path(args.outDir)/"frameDepthVertical.png"), cv2.rotate(disp, cv2.ROTATE_90_CLOCKWISE))
         inDisparityHorizontal = qDisparityHorizontal.get()
         frameDepth = inDisparityHorizontal.getFrame()
 
@@ -662,7 +709,7 @@ with device:
         disp = cv2.applyColorMap(disp, cvColorMap)
         cv2.imshow("depth_horizontal", disp)
         if args.saveFiles:
-            cv2.imwrite("frameDepthHorizontal.png", disp)
+            cv2.imwrite(str(Path(args.outDir)/"frameDepthHorizontal.png"), disp)
 
 
         if cv2.waitKey(1) == ord('q'):
@@ -674,10 +721,10 @@ if enableRectified:
     stackedRectifiedLeftHor = np.stack(leftRectifiedHor, axis=0)
     stackedRectifiedLeftVer = np.stack(leftRectifiedVer, axis=0)
 if args.saveFiles:
-    np.save(args.outHor, stackedHorizontalDepths)
-    np.save(args.outVer, stackedVerticalDepths)
+    np.save(Path(args.outDir)/"horizontalDepth.npy", stackedHorizontalDepths)
+    np.save(Path(args.outDir)/"verticalDepth.npy", stackedVerticalDepths)
     if enableRectified:
-        np.save(args.outLeftRectVer, stackedRectifiedLeftVer)
-        np.save(args.outLeftRectHor, stackedRectifiedLeftHor)
+        np.save(Path(args.outDir)/"leftRectifiedVertical.npy", stackedRectifiedLeftVer)
+        np.save(Path(args.outDir)/"leftRectifiedHorizontal.npy", stackedRectifiedLeftHor)
 
 

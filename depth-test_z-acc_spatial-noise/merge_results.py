@@ -13,6 +13,7 @@ parser.add_argument('--pathTo', type=str, required=True, default=None, help="Pat
 parser.add_argument('--type', type=str, required=True, default=None, help="Vertical or horizontal")
 parser.add_argument('--camId', type=int, required=True, default=None, help="Camera ID")
 parser.add_argument('--side', type=str, required=True, default=None, help="Left or right or center")
+parser.add_argument('--resolution', type=str, required=True, default=None, help="Resolution of the camera")
 
 args = parser.parse_args()
 fromFile = Path(args.pathFrom)
@@ -20,7 +21,7 @@ toFile = Path(args.pathTo)
 
 if not toFile.exists():
     with open(toFile, "w") as f:
-        f.write("cam_id,type,side,ground_truth,z_measured_mean,z_measured_median,z_accuracy,spatial_noise,subpixel_spatial_noise,vertical_tilt,horizontal_tilt")
+        f.write("cam_id,type,resolution,side,ground_truth,z_measured_mean,z_measured_median,z_accuracy,spatial_noise,subpixel_spatial_noise,vertical_tilt,horizontal_tilt")
 
 if not fromFile.exists():
     print("Skipping file:", fromFile.absolute(), "because it does not exist")
@@ -39,4 +40,4 @@ vertical_tilt = fromFileSplit[7]
 horizontal_tilt = fromFileSplit[8]
 
 with open(toFile, "a") as f:
-    f.write(f"\n{args.camId},{args.type},{args.side},{ground_truth},{z_measured_mean},{z_measured_meadian},{z_accuracy},{space_noise},{subpixel_space_noise},{vertical_tilt},{horizontal_tilt}")
+    f.write(f"\n{args.camId},{args.type},{args.resolution},{args.side},{ground_truth},{z_measured_mean},{z_measured_meadian},{z_accuracy},{space_noise},{subpixel_space_noise},{vertical_tilt},{horizontal_tilt}")

@@ -4,8 +4,8 @@ import depthai
 FPS=10
 
 
-def record_frames_sdk(path = './', fps=FPS, autoExposure=True, manualExposure=1000, iso=200, record=False):
-    with OakCamera(args=False) as oak:
+def record_frames_sdk(path = './', fps=FPS, autoExposure=True, manualExposure=1000, iso=200, record=False, device_id=None):
+    with OakCamera(device_id, args=False) as oak:
         left = oak.create_camera(source="camb,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=fps)
         right = oak.create_camera(source="camc,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=fps)
         vertical = oak.create_camera(source="camd,c" , resolution=depthai.ColorCameraProperties.SensorResolution.THE_1200_P, fps=fps)

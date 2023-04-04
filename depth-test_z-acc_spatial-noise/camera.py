@@ -2,6 +2,7 @@ import numpy as np
 import open3d as o3d
 import cv2
 from typing import Optional, Tuple
+import config
 
 class Camera:
     def __init__(self, name=""):
@@ -98,3 +99,10 @@ class Camera:
 
 
         return self.point_cloud
+
+    def save_roi(self):
+        if config.args.roi_file:
+            with open(config.args.roi_file, "w") as f:
+                f.write(str(self.ROI))
+        else:
+            print("Not saving ROI, no file specified")
