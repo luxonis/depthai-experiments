@@ -58,6 +58,9 @@ elif args.imageCrop == "right":
     cropstart = cropWidth - cropLength
 print(f"Setting crop start to {cropstart}")
 
+if args.saveFiles:
+    Path(args.outDir).mkdir(parents=True, exist_ok=True)
+
 if staticInput and args.vid:
     print("Static input and video input cannot be used at the same time.")
     exit(1)

@@ -6,6 +6,7 @@ from PyQt5.QtGui import QIntValidator
 import subprocess
 import time
 import shutil
+from pathlib import Path
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
@@ -195,7 +196,7 @@ class App(QWidget):
             self.live_depth_proc = subprocess.Popen(["python3", f"{script_dir}/stereo_both.py", "-vid", "-saveFiles", "-left",
                                                     f"{final_dir}/camb,c.avi", "-right", f"{final_dir}/camc,c.avi",
                                                      "-bottom", f"{final_dir}/camd,c.avi",  "-calib", f"{final_dir}/calib.json",
-                                                     "-rect", "-outDir", f"{final_dir}/out", "-cropImage", direction] + additionalParams)
+                                                     "-rect", "-outDir", f"{final_dir}/out", "-imageCrop", direction] + additionalParams)
             self.live_depth_proc.wait()
         except Exception as e:
             error_message = QMessageBox()
@@ -213,19 +214,20 @@ class App(QWidget):
         try:
             camera_id, direction, distance, target_dir = self.get_test_params()
             final_dir = self.get_latest_recording_dir(target_dir)
+            out_dir = Path(final_dir) / "out"
             if not self.check_files(final_dir):
-                raise RuntimeError("Not all files prenes")
+                raise RuntimeError("Not all files present")
             script_dir = os.path.dirname(os.path.realpath(__file__))
             # Transform the following bash to something that looks like below.
             # Bash: $SOURCE_DIR/main.py -calib $CALIB_DIR/$cam/vermeer.json -depth $dDir/outDepthVer.npy -rectified $dDir/outLeftRectVer.npy -gt $dist -out_results_f $dDir/results_ver.txt
             # Python:
-            self.run_measurement_proc = subprocess.Popen(["python3", f"{script_dir}/main.py", "-calib", f"{final_dir}/calib.json", "-depth", f"{final_dir}/outDepthVer.npy",
-                                                         "-rectified", f"{final_dir}/outLeftRectVer.npy", "-gt", f"{distance}", "-out_results_f", f"{final_dir}/results_ver.txt"])
+            self.run_measurement_proc = subprocess.Popen(["python3", f"{script_dir}/main.py", "-calib", f"{final_dir}/calib.json", "-depth", f"{out_dir}/verticalDepth.npy",
+                                                         "-rectified", f"{out_dir}/leftRectifiedVertical.npy", "-gt", f"{distance}", "-out_results_f", f"{out_dir}/results_ver.txt"])
 
             self.run_measurement_proc.wait()
 
-            self.run_measurement_proc = subprocess.Popen(["python3", f"{script_dir}/main.py", "-calib", f"{final_dir}/calib.json", "-depth", f"{final_dir}/outDepthHor.npy",
-                                                         "-rectified", f"{final_dir}/outLeftRectHor.npy", "-gt", f"{distance}", "-out_results_f", f"{final_dir}/results_hor.txt"])
+            self.run_measurement_proc = subprocess.Popen(["python3", f"{script_dir}/main.py", "-calib", f"{final_dir}/calib.json", "-depth", f"{out_dir}/horizontalDepth.npy",
+                                                         "-rectified", f"{out_dir}/leftRectifiedHorizontal.npy", "-gt", f"{distance}", "-out_results_f", f"{out_dir}/results_hor.txt"])
             self.run_measurement_proc.wait()
         except Exception as e:
             error_message = QMessageBox()
