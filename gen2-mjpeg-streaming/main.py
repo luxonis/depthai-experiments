@@ -35,15 +35,14 @@ class VideoStreamHandler(BaseHTTPRequestHandler):
         while True:
             sleep(0.1)
             if hasattr(self.server, 'frametosend'):
-                image = Image.fromarray(cv2.cvtColor(self.server.frametosend, cv2.COLOR_BGR2RGB))
-                stream_file = BytesIO()
-                image.save(stream_file, 'JPEG')
+                ok, encoded = cv2.imencode('.jpg', self.server.frametosend)
                 self.wfile.write("--jpgboundary".encode())
-
                 self.send_header('Content-type', 'image/jpeg')
-                self.send_header('Content-length', str(stream_file.getbuffer().nbytes))
+                self.send_header('Content-length', str(len(encoded)))
                 self.end_headers()
-                image.save(self.wfile, 'JPEG')
+                self.wfile.write(encoded)
+                self.end_headers()
+
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -75,7 +74,6 @@ syncNN = True
 def create_pipeline(depth):
     # Start defining a pipeline
     pipeline = dai.Pipeline()
-    pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
     # Define a source - color camera
     colorCam = pipeline.create(dai.node.ColorCamera)
 
@@ -92,7 +90,7 @@ def create_pipeline(depth):
     colorCam.setInterleaved(False)
     colorCam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-    mobilenet.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=6, version="2021.4"))
+    mobilenet.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=6))
     mobilenet.setConfidenceThreshold(0.5)
     mobilenet.input.setBlocking(False)
 
