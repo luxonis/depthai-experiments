@@ -13,9 +13,10 @@ class Camera:
         self.point_cloud = o3d.geometry.PointCloud()
         self.ROI: Tuple[int, int, int, int] = (0, 0, 0, 0)
 
-        self.window_name = f"Camera_{name}"
-        cv2.namedWindow(self.window_name)
-        cv2.setMouseCallback(self.window_name, lambda e, x, y, flags, param: self.on_mouse(e, x,y, flags, param))
+        if config.mode == "interactive":
+            self.window_name = f"Camera_{name}"
+            cv2.namedWindow(self.window_name)
+            cv2.setMouseCallback(self.window_name, lambda e, x, y, flags, param: self.on_mouse(e, x,y, flags, param))
 
         self.selecting_ROI = False
 
@@ -99,6 +100,9 @@ class Camera:
 
 
         return self.point_cloud
+
+    def set_roi(self, roi):
+        self.ROI = roi
 
     def save_roi(self):
         if config.args.roi_file:

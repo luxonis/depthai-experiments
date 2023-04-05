@@ -27,7 +27,7 @@ class NumpyReplayCamera(Camera):
         self._load_calibration()
 
     def __del__(self):
-        print("=== Closed " + self.depth_recording_path)
+        print("=== Closed " + str(self.depth_recording_path))
 
     def _load_calibration(self):
         calibration = dai.CalibrationHandler(self.calibration_path)
@@ -49,16 +49,14 @@ class NumpyReplayCamera(Camera):
     def update(self):
         self.depth_frame = self.depth_frames[self.frame_index]
         self.image_frame = self.color_frames[self.frame_index]
-
         if self.frame_index < self.no_frames - 1:
             self.frame_index += 1
         else:
             self.frame_index = 0
-
-        self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
-
-        self.visualize_depth_frame()
-        self.visualize_image_frame()
+        if config.mode == "interactive":
+            self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+            self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
+            self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
+            self.visualize_depth_frame()
+            self.visualize_image_frame()
         self.rgbd_to_point_cloud()

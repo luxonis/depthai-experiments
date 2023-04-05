@@ -1,6 +1,7 @@
 import depthai as dai
 from argparse import ArgumentParser
 from pathlib import Path
+import ast
 parser = ArgumentParser(prog = "Depth test", description = "Test test z-accuracy and spatial noise")
 
 parser.add_argument("-c", "--color", action = "store_true", help = "Use color camera for preview")
@@ -21,12 +22,27 @@ parser.add_argument('-depth', type=str, required=True, default=None, help="Path 
 parser.add_argument('-rectified', type=str, required=True, default=None, help="Path to the rectified nu")
 parser.add_argument('-out_results_f', type=str, required=False, default=None, help="Path to the output results file")
 parser.add_argument('-roi_file', type=str, default=None, help = "Output ROI to a file")
+parser.add_argument('-set_roi_file', type=str, default=None, help = "Set ROI from a file")
+parser.add_argument('-mode', type=str, default="interactive", choices=["interactive", "measure"], help = "Mode to run the test in" )
 
 args = parser.parse_args()
 
 COLOR = args.color 				# Use color camera or mono camera for preview
 
 # DEPTH CONFIG
+mode = args.mode
+if mode == "measure":
+    if not Path(args.set_roi_file).exists():
+        print("ROI file not found: ", args.set_roi_file)
+        exit(1)
+
+    with open(args.set_roi_file, 'r') as f:
+        roi = ast.literal_eval(f.read().strip())
+
+    if len(roi) != 4:
+        print("ROI file should contain 4 values: ", args.set_roi_file)
+        exit(1)
+
 lrcheck  = args.lrcheck   			# Better handling for occlusions
 extended = args.extended  			# Closer-in minimum depth, disparity range is doubled
 subpixel = args.subpixel   			# Better accuracy for longer distance, fractional disparity 32-levels
