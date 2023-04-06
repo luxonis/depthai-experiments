@@ -15,8 +15,7 @@
     * Move the camera to the starting position
     * Click Record frames (press `q` to stop recording)
     * Click Frames to depth, to transform the frames to depth map
-    * Click measure to open the depth in pointcloud for distance measurement
-    * Click measure to measure the distance (the script will run twice, once for vertical and once for horizontal)
+    * Click measure to measure the distance from the ROI (the script will run twice, once for vertical and once for horizontal)
         * Click on the gray image and select the ROI
         * Click on the pointcloud, press `f` to fit a plane and `t` to measure the distance
         * The distance is printed out in the console where GUI was started
