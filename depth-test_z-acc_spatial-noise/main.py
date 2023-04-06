@@ -98,6 +98,7 @@ def save_results_callback():
 
 
 def run_interaticve():
+    global testing
     # point cloud visualization window
     point_cloud_window = o3d.visualization.VisualizerWithKeyCallback()
     point_cloud_window.create_window("Point Cloud")
