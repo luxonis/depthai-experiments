@@ -20,9 +20,8 @@ class LiveDepthThread(QThread):
         try:
             # Get this script's directory
             script_dir = os.path.dirname(os.path.realpath(__file__))
-            self.live_depth_proc = subprocess.Popen(
-                ["python3", f"{script_dir}/stereo_both.py"])
-            self.live_depth_proc.wait()
+            subprocess.run([sys.executable, os.path.join(script_dir, "stereo_both.py")], check=True)
+
         except Exception as e:
             error_message = QMessageBox()
             error_message.setIcon(QMessageBox.Critical)
@@ -181,11 +180,6 @@ class App(QWidget):
         try:
             camera_id, direction, distance, target_dir = self.get_test_params()
             additionalParams = []
-            fullWidth = 1920
-            fullHeight = 1200
-            targetWidth = 1280
-            targetHeight = 800
-            cropLength = 1024 # RVC3 stereo limitation for vertical output
             if fullRes:
                 additionalParams.append("-fullResolution")
             print(additionalParams)
@@ -193,11 +187,12 @@ class App(QWidget):
             if not self.check_files(final_dir):
                 raise RuntimeError("Not all files prenesent.")
             script_dir = os.path.dirname(os.path.realpath(__file__))
-            self.live_depth_proc = subprocess.Popen(["python3", f"{script_dir}/stereo_both.py", "-vid", "-saveFiles", "-left",
-                                                    f"{final_dir}/camb,c.avi", "-right", f"{final_dir}/camc,c.avi",
-                                                     "-bottom", f"{final_dir}/camd,c.avi",  "-calib", f"{final_dir}/calib.json",
-                                                     "-rect", "-outDir", f"{final_dir}/out", "-imageCrop", direction] + additionalParams)
-            self.live_depth_proc.wait()
+
+            subprocess.run([sys.executable, os.path.join(script_dir, "stereo_both.py"), "-vid", "-saveFiles", "-left",
+                            os.path.join(final_dir, "camb,c.avi"), "-right", os.path.join(final_dir, "camc,c.avi"),
+                            "-bottom", os.path.join(final_dir, "camd,c.avi"),  "-calib", os.path.join(final_dir, "calib.json"),
+                            "-rect", "-outDir", os.path.join(final_dir, "out"), "-imageCrop", direction] + additionalParams, check=True)
+
         except Exception as e:
             error_message = QMessageBox()
             error_message.setIcon(QMessageBox.Critical)
@@ -218,17 +213,13 @@ class App(QWidget):
             if not self.check_files(final_dir):
                 raise RuntimeError("Not all files present")
             script_dir = os.path.dirname(os.path.realpath(__file__))
-            # Transform the following bash to something that looks like below.
-            # Bash: $SOURCE_DIR/main.py -calib $CALIB_DIR/$cam/vermeer.json -depth $dDir/outDepthVer.npy -rectified $dDir/outLeftRectVer.npy -gt $dist -out_results_f $dDir/results_ver.txt
-            # Python:
-            self.run_measurement_proc = subprocess.Popen(["python3", f"{script_dir}/main.py", "-calib", f"{final_dir}/calib.json", "-depth", f"{out_dir}/verticalDepth.npy",
-                                                         "-rectified", f"{out_dir}/leftRectifiedVertical.npy", "-gt", f"{distance}", "-out_results_f", f"{out_dir}/results_ver.txt"])
 
-            self.run_measurement_proc.wait()
+            subprocess.run([sys.executable, os.path.join(script_dir, "main.py"), "-calib", os.path.join(final_dir, "calib.json"), "-depth", os.path.join(out_dir, "verticalDepth.npy"),
+                            "-rectified", os.path.join(out_dir, "leftRectifiedVertical.npy"), "-gt", str(distance), "-out_results_f", os.path.join(out_dir, "results_ver.txt")], check=True)
 
-            self.run_measurement_proc = subprocess.Popen(["python3", f"{script_dir}/main.py", "-calib", f"{final_dir}/calib.json", "-depth", f"{out_dir}/horizontalDepth.npy",
-                                                         "-rectified", f"{out_dir}/leftRectifiedHorizontal.npy", "-gt", f"{distance}", "-out_results_f", f"{out_dir}/results_hor.txt"])
-            self.run_measurement_proc.wait()
+            subprocess.run([sys.executable, os.path.join(script_dir, "main.py"), "-calib", os.path.join(final_dir, "calib.json"), "-depth", os.path.join(out_dir, "horizontalDepth.npy"),
+                            "-rectified", os.path.join(out_dir, "leftRectifiedHorizontal.npy"), "-gt", str(distance), "-out_results_f", os.path.join(out_dir, "results_hor.txt")], check=True)
+
         except Exception as e:
             error_message = QMessageBox()
             error_message.setIcon(QMessageBox.Critical)
@@ -270,7 +261,7 @@ class App(QWidget):
     def get_latest_recording_dir(self, target_dir):
         # Check if target dir exists
         if not os.path.isdir(target_dir):
-            raise RuntimeError(f"Target dir {target_dir} does not exist")
+            raise RuntimeError(f"Target dir {target_dir} does not exist, the frames have not been recorded/transformed to depth yet.")
         recordings = os.listdir(target_dir)
         latest_id = 0
         latest_dir = None
