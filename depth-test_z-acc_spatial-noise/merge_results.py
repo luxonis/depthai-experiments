@@ -41,3 +41,4 @@ horizontal_tilt = fromFileSplit[8]
 
 with open(toFile, "a") as f:
     f.write(f"\n{args.camId},{args.type},{args.resolution},{args.side},{ground_truth},{z_measured_mean},{z_measured_meadian},{z_accuracy},{space_noise},{subpixel_space_noise},{vertical_tilt},{horizontal_tilt}")
+print("Done")
