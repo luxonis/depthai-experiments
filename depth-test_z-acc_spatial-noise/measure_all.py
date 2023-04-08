@@ -34,8 +34,9 @@ def main():
 
     print(f"Calibration directory is {calibration_directory}")
 
-    camera_names = [f"camera_{i}" for i in range(5, 7)]
-    positions = ["center", "left", "right", "top", "bottom"]
+    camera_names = [f"camera_{i}" for i in [10, 11]]
+    # positions = ["center", "left", "right", "top", "bottom"]
+    positions = ["left", "right"]
 
     for camera in camera_names:
         for path in (calibration_directory / camera).glob('*'):
@@ -46,13 +47,15 @@ def main():
                 continue
 
             ground_truth = float(re.findall(r'[+-]?\d+(?:\.\d+)?', path_basename)[0])
+            if ground_truth < 3.0:
+                continue
             print(f"Last directory is {path_basename}")
             print(f"Ground truth is {ground_truth}")
 
             for i, calibration_file in enumerate((calibration_directory / camera / 'calibrations').glob('*')):
-                if i > 0 and args.mode == "interactive":
-                    print("Skipping calibration file", calibration_file)
-                    break
+                print(calibration_file.name)
+                if "calib.json" not in calibration_file.name:
+                    continue
                 for position in positions:
                     print(f"Running in {camera} {path} m {position}")
                     depth_dir = path / position
@@ -96,8 +99,10 @@ def main():
                             else:
                                 cmd +=["-mode", "measure"]
                                 cmd +=["-set_roi_file", str(latest_directory / resolution_type / f"roi_{prefix}.txt")]
-                            result = subprocess.run(cmd, capture_output=True)
+                            result = subprocess.run(cmd, capture_output=False)
                             if result.returncode != 0:
+                                command = " ".join(cmd)
+                                print(command)
                                 print(f"Error running the script: {result.stderr.decode('utf-8'), result.stdout.decode('utf-8')}")
 
 if __name__ == "__main__":

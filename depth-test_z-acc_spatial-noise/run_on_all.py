@@ -58,7 +58,7 @@ def main():
         with open(errors_file, 'a') as f:
             f.write(f"{cam},{path},{calib_file},{position}")
 
-    cams = [f"camera_{i}" for i in range(5, 7)]
+    cams = [f"camera_{i}" for i in [10, 11]]
     positions = ["center", "left", "right", "top", "bottom"]
 
     last_checkpoint = read_checkpoint()
@@ -113,6 +113,9 @@ def main():
 
                         for res_type, res_arg in [("fullRes", "-fullResolution"), ("resizedRes", "")]:
                             out_dir = os.path.join(latest_dir, res_type, calib_name_no_ext)
+                            if Path(out_dir).exists():
+                                print("Skipping existing directory")
+                                continue
                             os.makedirs(out_dir, exist_ok=True)
 
                             print(f"Running {res_type}")
