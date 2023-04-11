@@ -59,7 +59,7 @@ def main():
 
     target_file = calibration_directory / "merged_depth_results_all_2.csv"
 
-    for cam in range(5, 6):
+    for cam in [10, 11]:
         for path in (calibration_directory / f"camera_{cam}").glob('*'):
             last_directory = path.name
             try:
