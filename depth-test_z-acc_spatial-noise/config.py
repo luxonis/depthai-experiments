@@ -17,13 +17,14 @@ parser.add_argument("-n", "--n_samples", type = int, default = 10, help = "Numbe
 parser.add_argument("-gt", "--ground_truth", type = float, default = 1, help = "Ground truth depth in m (camera wall distance)")
 parser.add_argument("--astra_gt", action="store_true", default = None, help = "Use astra pro as ground truth")
 parser.add_argument("--astra_intrinsic", type = str, default = None, help = "Path to astra intrinsic file (.np file containing 3x3 matrix)")
-parser.add_argument('-calib', type=str, required=True, default=None, help="Path to calibration file in json")
-parser.add_argument('-depth', type=str, required=True, default=None, help="Path to depth numpy file")
-parser.add_argument('-rectified', type=str, required=True, default=None, help="Path to the rectified nu")
+parser.add_argument('-calib', type=str, required=False, default=None, help="Path to calibration file in json")
+parser.add_argument('-depth', type=str, required=False, default=None, help="Path to depth numpy file")
+parser.add_argument('-rectified', type=str, required=False, default=None, help="Path to the rectified nu")
 parser.add_argument('-out_results_f', type=str, required=False, default=None, help="Path to the output results file")
 parser.add_argument('-roi_file', type=str, default=None, help = "Output ROI to a file")
 parser.add_argument('-set_roi_file', type=str, default=None, help = "Set ROI from a file")
 parser.add_argument('-mode', type=str, default="interactive", choices=["interactive", "measure"], help = "Mode to run the test in" )
+parser.add_argument('-vertical', action="store_true", help = "Run the test in vertical mode")
 
 args = parser.parse_args()
 

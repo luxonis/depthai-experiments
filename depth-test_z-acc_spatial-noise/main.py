@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import depthai as dai
 from camera import Camera
-from oak_camera import OakCamera
+from oak_camera_rvc3 import OakCamera
 from numpy_replay_camera import NumpyReplayCamera
 from utils import *
 from depth_test import DepthTest
@@ -18,13 +18,16 @@ depth_test = DepthTest()
 cameras = []
 
 
-replay_camera = NumpyReplayCamera(
-    Path(config.args.depth),
-    Path(config.args.rectified),
-    Path(config.args.calib)
-)
+# replay_camera = NumpyReplayCamera(
+#     Path(config.args.depth),
+#     Path(config.args.rectified),
+#     Path(config.args.calib)
+# )
+# cameras.append(replay_camera)
 
-cameras.append(replay_camera)
+rvc3_camera = OakCamera(None, config.args.vertical)
+cameras.append(rvc3_camera)
+
 
 if config.astra_gt:
     try:
