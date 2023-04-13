@@ -415,7 +415,7 @@ with device:
         frameDepth = inDisparityVertical.getFrame()
         # cv2.imshow("disparity", frameDepth)
         tsV = inDisparityVertical.getTimestampDevice()
-        
+
         frameDepthFrame = inDisparityVertical.getFrame()
         with np.errstate(divide='ignore'):
             frameDepthFrame = verScaleFactor / frameDepth

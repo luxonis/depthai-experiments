@@ -122,3 +122,9 @@ def rotate_mesh_90_ccw(map_x, map_y):
     map_x_rot = np.rot90(map_x, direction)
     map_y_rot = np.rot90(map_y, direction)
     return map_x_rot, map_y_rot
+
+def rotate_mesh_90_cw(map_x, map_y):
+    direction = -1
+    map_x_rot = np.rot90(map_x, direction)
+    map_y_rot = np.rot90(map_y, direction)
+    return map_x_rot, map_y_rot
