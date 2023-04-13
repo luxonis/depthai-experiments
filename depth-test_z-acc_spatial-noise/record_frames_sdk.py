@@ -22,4 +22,4 @@ def record_frames_sdk(path = './', fps=FPS, autoExposure=True, manualExposure=10
 
 
 if __name__ == "__main__":
-    record_frames_sdk()
+    record_frames_sdk(record=True)
