@@ -6,135 +6,9 @@ import numpy as np
 from pathlib import Path
 import argparse
 from utils import stereoRectify, rotate_mesh_90_ccw, downSampleMesh
+import config
+from config import args
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-si', action="store_true", help="Static input.")
-parser.add_argument('-vid', action="store_true", help="Use video files")
-parser.add_argument('-calib', type=str, default=None, help="Path to calibration file in json")
-parser.add_argument('-left', type=str, default="left.png", help="left static input image")
-parser.add_argument('-right', type=str, default="right.png", help="right static input image")
-parser.add_argument('-bottom', type=str, default="bottom.png", help="bottom static input image")
-parser.add_argument('-debug', action="store_true", default=False, help="Debug code.")
-parser.add_argument('-rect', '--rectified', action="store_true", default=False, help="Generate and display rectified streams.")
-parser.add_argument('-fps', type=int, default=10, help="Set camera FPS.")
-parser.add_argument('-outDir', type=str, default="out", help="Output directory for depth maps and rectified files.")
-parser.add_argument('-saveFiles', action="store_true", default=False, help="Save output files.")
-parser.add_argument('-fullResolution', action="store_true", default=False, help="Use full resolution for depth maps.")
-parser.add_argument('-xStart', type=int, default=None, help="X start coordinate for depth map.")
-parser.add_argument('-yStart', type=int, default=None, help="Y start coordinate for depth map.")
-parser.add_argument('-cs', type=int, default=128, help="Crop start.")
-parser.add_argument('-imageCrop', default=None, choices=['center', 'right', 'left', 'top', 'bottom'], help="Select default crop for a part of the image")
-parser.add_argument('-numLastFrames', type=int, default=None, help="Number of frames (last frames are used) for calculating the average depth.")
-
-args = parser.parse_args()
-
-imageWidth = 1920
-imageHeight = 1200
-
-cropWidth = 1280
-cropHeight = 800
-
-cropLength = 1024
-cropstart = args.cs
-if cropstart + cropLength > cropWidth:
-    cropstart = cropWidth - cropLength
-
-
-staticInput = args.si
-
-enableRectified = args.rectified
-cameraFPS = args.fps
-blockingOutputs = False
-
-if args.imageCrop == "left":
-    cropstart = 0
-elif args.imageCrop == "right":
-    cropstart = cropWidth - cropLength
-print(f"Setting crop start to {cropstart}")
-
-if args.saveFiles:
-    Path(args.outDir).mkdir(parents=True, exist_ok=True)
-
-if staticInput and args.vid:
-    print("Static input and video input cannot be used at the same time.")
-    exit(1)
-
-if (args.fullResolution and not staticInput) and (args.fullResolution and not args.vid):
-    print("Full resolution can only be used with static input or video input.")
-    exit(1)
-
-# if args.imageCrop and not args.fullResolution:
-#     print("Image crop can only be used with full resolution.")
-#     exit(1)
-
-
-if args.fullResolution:
-    if args.xStart is not None and args.yStart is not None and args.imageCrop:
-        print("xStart and yStart will override imageCrop setting")
-    if args.xStart is not None and args.yStart is not None:
-        cropXStart = args.xStart
-        cropYStart = args.yStart
-    elif args.imageCrop == "left":
-        cropXStart = 0
-        cropYStart = (imageHeight - cropHeight) // 2
-        cropstart = 0
-    elif args.imageCrop == "right":
-        cropXStart = (imageWidth - cropWidth)
-        cropYStart = (imageHeight - cropHeight) // 2
-        cropstart = cropWidth - cropLength
-    elif args.imageCrop == "center":
-        cropXStart = (imageWidth - cropWidth) // 2
-        cropYStart = (imageHeight - cropHeight) // 2
-        cropstart = (cropWidth - cropLength) // 2
-    elif args.imageCrop == "top":
-        cropXStart = (imageWidth - cropWidth) // 2
-        cropYStart = 0
-        cropstart = (cropWidth - cropLength) // 2
-    elif args.imageCrop == "bottom":
-        cropXStart = (imageWidth - cropWidth) // 2
-        cropYStart = (imageHeight - cropHeight)
-        cropstart = (cropWidth - cropLength) // 2
-
-    cropXEnd = cropWidth + cropXStart
-    cropYEnd = cropHeight + cropYStart
-    print(f"cropXStart {cropXStart} - cropXEnd {cropXEnd}")
-    print(f"cropYStart {cropYStart} - cropYEnd {cropYEnd}")
-
-
-if staticInput:
-    left = args.left
-    right = args.right
-    bottom = args.bottom
-
-    leftImg = cv2.imread(left, cv2.IMREAD_GRAYSCALE)
-    rightImg = cv2.imread(right, cv2.IMREAD_GRAYSCALE)
-    bottomImg = cv2.imread(bottom, cv2.IMREAD_GRAYSCALE)
-
-    width = leftImg.shape[1]
-    height = leftImg.shape[0]
-
-    if args.debug:
-        cv2.imshow("leftImg", leftImg)
-        cv2.imshow("rightImg", rightImg)
-        cv2.imshow("bottomImg", bottomImg)
-        cv2.waitKey(1)
-
-if args.vid:
-    leftVideo = cv2.VideoCapture(args.left)
-    rightVideo = cv2.VideoCapture(args.right)
-    bottomVideo = cv2.VideoCapture(args.bottom)
-    numFramesLeft = int(leftVideo.get(cv2.CAP_PROP_FRAME_COUNT))
-    if args.numLastFrames is not None:
-
-        print(f"Using last {args.numLastFrames} frames for calculating the average depth.")
-        for video in [leftVideo, rightVideo, bottomVideo]:
-            if args.numLastFrames > numFramesLeft:
-                print(f"numLastFrames {args.numLastFrames} is greater than number of images in the left video {numFramesLeft}.")
-                break
-            video.set(cv2.CAP_PROP_POS_FRAMES, numFramesLeft - args.numLastFrames)
-
-
-forceFisheye = False
 
 
 
@@ -148,7 +22,7 @@ else:
     calibData = dai.CalibrationHandler(args.calib)
     pipeline.setCalibrationData(calibData)
 
-if staticInput or args.vid:
+if config.staticInput or args.vid:
     monoLeft = pipeline.create(dai.node.XLinkIn)
     monoLeft2 = pipeline.create(dai.node.XLinkIn)
     monoRight = pipeline.create(dai.node.XLinkIn)
@@ -161,11 +35,11 @@ else:
     monoLeft = pipeline.create(dai.node.ColorCamera)
     monoVertical = pipeline.create(dai.node.ColorCamera)
     monoRight = pipeline.create(dai.node.ColorCamera)
-    monoLeft.setFps(cameraFPS)
-    monoVertical.setFps(cameraFPS)
-    monoRight.setFps(cameraFPS)
+    monoLeft.setFps(config.cameraFPS)
+    monoVertical.setFps(config.cameraFPS)
+    monoRight.setFps(config.cameraFPS)
 
-if enableRectified:
+if config.enableRectified:
     xoutRectifiedVertical = pipeline.create(dai.node.XLinkOut)
     xoutRectifiedRight = pipeline.create(dai.node.XLinkOut)
     xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
@@ -176,7 +50,7 @@ stereoVertical = pipeline.create(dai.node.StereoDepth)
 stereoHorizontal = pipeline.create(dai.node.StereoDepth)
 # syncNode = pipeline.create(dai.node.Sync)
 
-if enableRectified:
+if config.enableRectified:
     xoutRectifiedVertical.setStreamName("rectified_vertical")
     xoutRectifiedRight.setStreamName("rectified_right")
     xoutRectifiedLeft.setStreamName("rectified_left")
@@ -185,7 +59,7 @@ xoutDisparityVertical.setStreamName("disparity_vertical")
 xoutDisparityHorizontal.setStreamName("disparity_horizontal")
 
 # Define sources and outputs
-if not staticInput and not args.vid:
+if not config.staticInput and not args.vid:
     monoVertical.setBoardSocket(dai.CameraBoardSocket.VERTICAL)
     monoVertical.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
     monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
@@ -204,7 +78,7 @@ if not staticInput and not args.vid:
 
 # syncNode.output3.link(stereoVertical.left) # left input is bottom camera
 # syncNode.output1.link(stereoVertical.right) # right input is right camera
-if not staticInput and not args.vid:
+if not config.staticInput and not args.vid:
     monoLeft.video.link(stereoVertical.left) # left input is bottom camera
     monoVertical.video.link(stereoVertical.right) # right input is right camera
 else:
@@ -212,7 +86,7 @@ else:
     monoVertical.out.link(stereoVertical.right) # right input is right camera
 
 stereoVertical.disparity.link(xoutDisparityVertical.input)
-if enableRectified:
+if config.enableRectified:
     stereoVertical.rectifiedLeft.link(xoutRectifiedVertical.input)
     stereoVertical.rectifiedRight.link(xoutRectifiedRight.input)
 if args.fullResolution:
@@ -223,7 +97,7 @@ else:
 
 # syncNode.output2.link(stereoHorizontal.left)
 # syncNode.output1.link(stereoHorizontal.right)
-if not staticInput and not args.vid:
+if not config.staticInput and not args.vid:
     monoLeft.video.link(stereoHorizontal.left)
     monoRight.video.link(stereoHorizontal.right)
 else:
@@ -231,7 +105,7 @@ else:
     monoRight.out.link(stereoHorizontal.right)
 
 stereoHorizontal.disparity.link(xoutDisparityHorizontal.input)
-if enableRectified:
+if config.enableRectified:
     stereoHorizontal.rectifiedLeft.link(xoutRectifiedLeft.input)
     stereoHorizontal.rectifiedRight.link(xoutRectifiedRightHor.input)
 
@@ -277,7 +151,7 @@ if 1:
         d1 = d1[:4]
         d2 = d2[:4]
 
-    if forceFisheye or (len(d1) == 4 and len(d2) == 4):
+    if config.forceFisheye or (len(d1) == 4 and len(d2) == 4):
 
         def calc_fov_D_H_V(f, w, h):
             return np.degrees(2*np.arctan(np.sqrt(w*w+h*h)/(2*f))), np.degrees(2*np.arctan(w/(2*f))), np.degrees(2*np.arctan(h/(2*f)))
@@ -330,8 +204,8 @@ if 1:
     baselineHor = abs(T2[0])*10
     focalHor = M1[0][0]
     if args.fullResolution:
-        pt1 = dai.Point2f(cropXStart, cropYStart)
-        pt2 = dai.Point2f(cropXEnd, cropYEnd)
+        pt1 = dai.Point2f(config.cropXStart, config.cropYStart)
+        pt2 = dai.Point2f(config.cropXEnd, config.cropYEnd)
         M1_ = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.CAM_B, width, height, pt1, pt2))
         print(f"orig {M1[0][0]}, {M1_[0][0]}")
 
@@ -342,7 +216,7 @@ if 1:
         d1 = d1[:4]
         d2 = d2[:4]
 
-    if forceFisheye or (len(d1) == 4 and len(d2) == 4): 
+    if config.forceFisheye or (len(d1) == 4 and len(d2) == 4): 
         def calc_fov_D_H_V(f, w, h):
             return np.degrees(2*np.arctan(np.sqrt(w*w+h*h)/(2*f))), np.degrees(2*np.arctan(w/(2*f))), np.degrees(2*np.arctan(h/(2*f)))
 
@@ -370,17 +244,17 @@ if 1:
     horScaleFactor = baselineHor * focalHor * 32
 
 
-    if args.debug and staticInput:
-        img_l_rectified = cv2.remap(leftImg, mapXL, mapYL, cv2.INTER_LINEAR)
+    if args.debug and config.staticInput:
+        img_l_rectified = cv2.remap(config.leftImg, mapXL, mapYL, cv2.INTER_LINEAR)
         cv2.imshow("img_l_rectified", img_l_rectified)
 
-        img_r_rectified = cv2.remap(rightImg, mapXR, mapYR, cv2.INTER_LINEAR)
+        img_r_rectified = cv2.remap(config.rightImg, mapXR, mapYR, cv2.INTER_LINEAR)
         cv2.imshow("img_r_rectified", img_r_rectified)
 
-        img_r_vertical = cv2.remap(rightImg, mapXR_rot, mapYR_rot, cv2.INTER_LINEAR)
+        img_r_vertical = cv2.remap(config.rightImg, mapXR_rot, mapYR_rot, cv2.INTER_LINEAR)
         cv2.imshow("img_r_vertical", img_r_vertical)
 
-        img_b_vertical = cv2.remap(bottomImg, mapXV_rot, mapYV_rot, cv2.INTER_LINEAR)
+        img_b_vertical = cv2.remap(config.bottomImg, mapXV_rot, mapYV_rot, cv2.INTER_LINEAR)
         cv2.imshow("img_b_vertical", img_b_vertical)
 
 
@@ -413,27 +287,27 @@ def sendFrames(leftImg, rightImg, bottomImg, qInLeft, qInLeft2, qInRight, qInVer
     else:
         # data = cv2.resize(leftImg, (width, height), interpolation = cv2.INTER_AREA)
         data = cv2.remap(leftImg, mapXL, mapYL, cv2.INTER_LINEAR)
-        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
+        data = data[config.cropYStart:config.cropYEnd,config.cropXStart:config.cropXEnd]
         print(data.shape)
         data = data.flatten()
-        sendFrame(data, qInLeft, cropWidth, cropHeight, ts, 1)
+        sendFrame(data, qInLeft, config.cropWidth, config.cropHeight, ts, 1)
 
 
 
         # data = cv2.resize(rightImg, (width, height), interpolation = cv2.INTER_AREA)
         data = cv2.remap(rightImg, mapXR, mapYR, cv2.INTER_LINEAR)
-        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
+        data = data[config.cropYStart:config.cropYEnd,config.cropXStart:config.cropXEnd]
         data = data.flatten()
-        sendFrame(data, qInRight, cropWidth, cropHeight, ts, 2)
+        sendFrame(data, qInRight, config.cropWidth, config.cropHeight, ts, 2)
 
 
         data = cv2.remap(bottomImg, mapXV, mapYV, cv2.INTER_LINEAR)
         print(data.shape)
 
-        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
+        data = data[config.cropYStart:config.cropYEnd,config.cropXStart:config.cropXEnd]
         print(data.shape)
 
-        data = data[:,cropstart:cropstart+cropLength]
+        data = data[:,config.cropstart:config.cropstart+config.cropLength]
         data = cv2.rotate(data, cv2.ROTATE_90_COUNTERCLOCKWISE)
         print(data.shape)
         vertHeight = data.shape[0]
@@ -443,8 +317,8 @@ def sendFrames(leftImg, rightImg, bottomImg, qInLeft, qInLeft2, qInRight, qInVer
         sendFrame(data, qInVertical, vertWidth, vertHeight, ts, 3)
 
         data = cv2.remap(leftImg, mapXL_v, mapYL_v, cv2.INTER_LINEAR)
-        data = data[cropYStart:cropYEnd,cropXStart:cropXEnd]
-        data = data[:,cropstart:cropstart+cropLength]
+        data = data[config.cropYStart:config.cropYEnd,config.cropXStart:config.cropXEnd]
+        data = data[:,config.cropstart:config.cropstart+config.cropLength]
         data = cv2.rotate(data, cv2.ROTATE_90_COUNTERCLOCKWISE)
         vertHeight = data.shape[0]
         vertWidth = data.shape[1]
@@ -467,39 +341,39 @@ def sendFrame(data, qIn, width, height, ts, instanceNum):
 
 with device:
     device.startPipeline(pipeline)
-    qDisparityHorizontal = device.getOutputQueue("disparity_horizontal", 4, blockingOutputs)
-    qDisparityVertical = device.getOutputQueue("disparity_vertical", 4, blockingOutputs)
-    if enableRectified:
-        qRectifiedVertical = device.getOutputQueue("rectified_vertical", 4, blockingOutputs)
-        qRectifiedRight = device.getOutputQueue("rectified_right", 4, blockingOutputs)
-        qRectifiedLeft = device.getOutputQueue("rectified_left", 4, blockingOutputs)
-        qRectifiedRightHor = device.getOutputQueue("rectified_right_hor", 4, blockingOutputs)
+    qDisparityHorizontal = device.getOutputQueue("disparity_horizontal", 4,  config.blockingOutputs)
+    qDisparityVertical = device.getOutputQueue("disparity_vertical", 4,  config.blockingOutputs)
+    if config.enableRectified:
+        qRectifiedVertical = device.getOutputQueue("rectified_vertical", 4,  config.blockingOutputs)
+        qRectifiedRight = device.getOutputQueue("rectified_right", 4,  config.blockingOutputs)
+        qRectifiedLeft = device.getOutputQueue("rectified_left", 4,  config.blockingOutputs)
+        qRectifiedRightHor = device.getOutputQueue("rectified_right_hor", 4,  config.blockingOutputs)
 
-    if staticInput or args.vid:
+    if config.staticInput or args.vid:
         qInLeft = device.getInputQueue("inLeft")
         qInRight = device.getInputQueue("inRight")
         qInLeft2 = device.getInputQueue("inLeft2")
         qInVertical = device.getInputQueue("inVertical")
 
     while True:
-        if staticInput:
+        if config.staticInput:
             sendFrames(leftImg, rightImg, bottomImg, qInLeft, qInLeft2, qInRight, qInVertical, width, height, args)
 
         elif args.vid:
-            if not leftVideo.isOpened() or not rightVideo.isOpened() or not bottomVideo.isOpened():
+            if not  config. config.leftVideo.isOpened() or not  config.rightVideo.isOpened() or not  config.bottomVideo.isOpened():
                 print("End of video")
                 break
-            read_correctly, leftImg = leftVideo.read()
+            read_correctly, leftImg =  config.leftVideo.read()
             if not read_correctly:
                 print("End of left video")
                 break
 
-            read_correctly, rightImg = rightVideo.read()
+            read_correctly, rightImg =  config.rightVideo.read()
             if not read_correctly:
                 print("End of the right video")
                 break
 
-            read_correctly, bottomImg = bottomVideo.read()
+            read_correctly, bottomImg =  config.bottomVideo.read()
             if not read_correctly:
                 print("End of the bottom video")
                 break
@@ -509,7 +383,7 @@ with device:
             bottomImg = cv2.cvtColor(bottomImg, cv2.COLOR_BGR2GRAY)
 
             sendFrames(leftImg, rightImg, bottomImg, qInLeft, qInLeft2, qInRight, qInVertical, width, height, args)
-        if enableRectified:
+        if config.enableRectified:
             inRectifiedVertical = qRectifiedVertical.get()
             frameRVertical = inRectifiedVertical.getCvFrame()
             leftRectifiedVer.append(inRectifiedVertical.getFrame())
@@ -599,13 +473,13 @@ with device:
 
 stackedHorizontalDepths = np.stack(horizontalDepths, axis=0)
 stackedVerticalDepths = np.stack(verticalDepths, axis=0)
-if enableRectified:
+if config.enableRectified:
     stackedRectifiedLeftHor = np.stack(leftRectifiedHor, axis=0)
     stackedRectifiedLeftVer = np.stack(leftRectifiedVer, axis=0)
 if args.saveFiles:
     np.save(Path(args.outDir)/"horizontalDepth.npy", stackedHorizontalDepths)
     np.save(Path(args.outDir)/"verticalDepth.npy", stackedVerticalDepths)
-    if enableRectified:
+    if config.enableRectified:
         np.save(Path(args.outDir)/"leftRectifiedVertical.npy", stackedRectifiedLeftVer)
         np.save(Path(args.outDir)/"leftRectifiedHorizontal.npy", stackedRectifiedLeftHor)
 
