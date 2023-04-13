@@ -3,7 +3,7 @@ import numpy as np
 import utils
 import cv2
 
-def create_stereo(pipeline, name, leftIn, rightIn):
+def create_stereo(pipeline, name, leftIn, rightIn, syncedOutputs=False, rectLeft=False, rectRight=False):
     xoutLeft = pipeline.create(dai.node.XLinkOut)
     xoutRight = pipeline.create(dai.node.XLinkOut)
     xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
@@ -20,11 +20,14 @@ def create_stereo(pipeline, name, leftIn, rightIn):
     # Linking
     leftIn.link(stereo.left)
     rightIn.link(stereo.right)
-    stereo.syncedLeft.link(xoutLeft.input)
-    stereo.syncedRight.link(xoutRight.input)
+    if syncedOutputs:
+        stereo.syncedLeft.link(xoutLeft.input)
+        stereo.syncedRight.link(xoutRight.input)
     stereo.disparity.link(xoutDisparity.input)
-    stereo.rectifiedLeft.link(xoutRectifiedLeft.input)
-    stereo.rectifiedRight.link(xoutRectifiedRight.input)
+    if rectLeft:
+        stereo.rectifiedLeft.link(xoutRectifiedLeft.input)
+    if rectRight:
+        stereo.rectifiedRight.link(xoutRectifiedRight.input)
     return stereo, [xoutDisparity.getStreamName(), xoutRectifiedLeft.getStreamName(),
                     xoutRectifiedRight.getStreamName(), xoutLeft.getStreamName(),
                     xoutRight.getStreamName()]
@@ -44,9 +47,9 @@ def create_mesh_on_host(calibData, leftSocket, rightSocket, resolution, vertical
 
     T2 = np.array(calibData.getCameraTranslationVector(leftSocket, rightSocket, True))
 
-    baselineVer = abs(T2[1])*10
-    focalVer = M1[1][1]
-
+    baseline = abs(T2[1])*10
+    focal = M1[1][1]
+    focalScaleFactor = baseline * focal * 32
 
     def calc_fov_D_H_V(f, w, h):
         return np.degrees(2*np.arctan(np.sqrt(w*w+h*h)/(2*f))), np.degrees(2*np.arctan(w/(2*f))), np.degrees(2*np.arctan(h/(2*f)))
@@ -68,4 +71,5 @@ def create_mesh_on_host(calibData, leftSocket, rightSocket, resolution, vertical
 
     meshLeft = list(leftMeshRot.tobytes())
     meshVertical = list(verticalMeshRot.tobytes())
-    return meshLeft, meshVertical
+
+    return meshLeft, meshVertical, focalScaleFactor

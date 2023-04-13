@@ -5,14 +5,27 @@ from pathlib import Path
 import argparse
 import utils
 import pipeline_creation
-PATH_CALIB = "/home/matevz/Desktop/vermeerTestingThinkpad/camera_11/calibrations/calib5.json"
-USE_VERTICAL=True
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-ver', action="store_true", help='Use vertical stereo')
+parser.add_argument('-hor', action="store_true", help='Use horizontal stereo')
+parser.add_argument('-calib', type=str, default=None, help='Path to calibration file')
+
+args = parser.parse_args()
+
+if args.ver is False and args.hor is False:
+    args.ver = True
+    args.hor = True
 
 # Create pipeline
+device = dai.Device()
 pipeline = dai.Pipeline()
-calibData = dai.CalibrationHandler(PATH_CALIB)
-pipeline.setCalibrationData(calibData)
+if not args.calib:
+    calibData = device.readCalibration()
+else:
+    calibData = dai.CalibrationHandler(args.calib)
+    pipeline.setCalibrationData(calibData)
 
 # Cameras
 # Define sources and outputs
@@ -27,30 +40,30 @@ colorRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 colorRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
 
 
-if USE_VERTICAL:
+outNames = []
+if args.ver:
     #################################################  vertical ###############################################################
-    stereoVertical, outNames = pipeline_creation.create_stereo(pipeline, "vertical", colorLeft.isp, colorVertical.isp)
-
-    meshLeft, meshVertical = pipeline_creation.create_mesh_on_host(calibData, colorLeft.getBoardSocket(), colorVertical.getBoardSocket(),
+    stereoVertical, outNamesVertical = pipeline_creation.create_stereo(pipeline, "vertical", colorLeft.isp, colorVertical.isp, True, True, True)
+    outNames += outNamesVertical
+    meshLeft, meshVertical, scale = pipeline_creation.create_mesh_on_host(calibData, colorLeft.getBoardSocket(), colorVertical.getBoardSocket(),
                                                                 (colorLeft.getResolutionWidth(), colorLeft.getResolutionHeight()), vertical=True)
     stereoVertical.loadMeshData(meshLeft, meshVertical)
     stereoVertical.setVerticalStereo(True)
     ############################################################################################################################
 
-else:
+if args.hor:
     #################################################  horizontal ##############################################################
-    colorLeft.setVideoSize(1280, 800)
-    colorRight.setVideoSize(1280, 800)
-    stereoHorizontal, outNames = pipeline_creation.create_stereo(pipeline, "horizontal", colorLeft.video, colorRight.video)
-
-    meshLeft, meshVertical = pipeline_creation.create_mesh_on_host(calibData, colorLeft.getBoardSocket(), colorRight.getBoardSocket(), 
-                                                                (colorLeft.getVideoWidth(), colorLeft.getVideoHeight()))
+    stereoHorizontal, outNamesHorizontal = pipeline_creation.create_stereo(pipeline, "horizontal", colorLeft.isp, colorRight.isp, True, True, True)
+    outNames += outNamesHorizontal
+    meshLeft, meshVertical, scale = pipeline_creation.create_mesh_on_host(calibData, colorLeft.getBoardSocket(), colorRight.getBoardSocket(),
+                                                                (colorLeft.getResolutionWidth(), colorLeft.getResolutionHeight()))
     stereoHorizontal.loadMeshData(meshLeft, meshVertical)
+    stereoHorizontal.setLeftRightCheck(False)
     ############################################################################################################################
 
 # Connect to device and start pipeline
-with dai.Device(pipeline) as device:
-
+with device:
+    device.startPipeline(pipeline)
     queues = {}
     print(outNames)
     for queueName in outNames:
