@@ -4,19 +4,26 @@ import utils
 import cv2
 
 def create_stereo(pipeline, name, leftIn, rightIn, syncedOutputs=False, rectLeft=False, rectRight=False):
-    xoutLeft = pipeline.create(dai.node.XLinkOut)
-    xoutRight = pipeline.create(dai.node.XLinkOut)
-    xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
-    xoutRectifiedRight = pipeline.create(dai.node.XLinkOut)
+    outputs = []
+    if syncedOutputs:
+        xoutLeft = pipeline.create(dai.node.XLinkOut)
+        xoutRight = pipeline.create(dai.node.XLinkOut)
+        xoutLeft.setStreamName(name + "-left")
+        xoutRight.setStreamName(name + "-right")
+        outputs += [xoutLeft.getStreamName(), xoutRight.getStreamName()]
+    if rectLeft:
+        xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
+        xoutRectifiedLeft.setStreamName(name  + "-rectified_left")
+        outputs += [xoutRectifiedLeft.getStreamName()]
+    if rectRight:
+        xoutRectifiedRight = pipeline.create(dai.node.XLinkOut)
+        xoutRectifiedRight.setStreamName(name + "-rectified_right")
+        outputs += [xoutRectifiedRight.getStreamName()]
     xoutDisparity = pipeline.create(dai.node.XLinkOut)
     stereo = pipeline.create(dai.node.StereoDepth)
 
-    xoutLeft.setStreamName(name + "-left")
-    xoutRight.setStreamName(name + "-right")
-    xoutRectifiedLeft.setStreamName(name  + "-rectified_left")
-    xoutRectifiedRight.setStreamName(name + "-rectified_right")
     xoutDisparity.setStreamName(name + "-disparity")
-
+    outputs.append(xoutDisparity.getStreamName())
     # Linking
     leftIn.link(stereo.left)
     rightIn.link(stereo.right)
@@ -28,9 +35,7 @@ def create_stereo(pipeline, name, leftIn, rightIn, syncedOutputs=False, rectLeft
         stereo.rectifiedLeft.link(xoutRectifiedLeft.input)
     if rectRight:
         stereo.rectifiedRight.link(xoutRectifiedRight.input)
-    return stereo, [xoutDisparity.getStreamName(), xoutRectifiedLeft.getStreamName(),
-                    xoutRectifiedRight.getStreamName(), xoutLeft.getStreamName(),
-                    xoutRight.getStreamName()]
+    return stereo, outputs
 
 def create_mesh_on_host(calibData, leftSocket, rightSocket, resolution, vertical=False):
     width = resolution[0]

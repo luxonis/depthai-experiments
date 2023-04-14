@@ -5,7 +5,7 @@ from pathlib import Path
 import argparse
 import utils
 import pipeline_creation
-
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-ver', action="store_true", help='Use vertical stereo')
@@ -13,20 +13,23 @@ parser.add_argument('-hor', action="store_true", help='Use horizontal stereo')
 parser.add_argument('-calib', type=str, default=None, help='Path to calibration file')
 
 parser.add_argument('-videoDir', type=str, default=None, help='Path to video directory')
+parser.add_argument('-imagesDir', type=str, default=None, help='Path to images directory')
 
 CONNECT_LEFT_RIGHT = False
 CONNECT_RECTIFIED_LEFT_RIGHT = False
 
+
+USE_BLOCKING=False
 args = parser.parse_args()
 
 if args.ver is False and args.hor is False:
     args.ver = True
     args.hor = True
 
-videoInput = False
-if args.videoDir is not None:
-    videoInput = True
-
+hostInput = False
+if args.videoDir is not None or args.imagesDir is not None:
+    hostInput = True
+    USE_BLOCKING = True
 # Create pipeline
 device = dai.Device()
 pipeline = dai.Pipeline()
@@ -37,7 +40,7 @@ else:
     pipeline.setCalibrationData(calibData)
 width = 1920
 height = 1200
-if args.videoDir is None:
+if not hostInput:
     # Cameras
     # Define sources and outputs
     colorLeft = pipeline.create(dai.node.ColorCamera)
@@ -63,11 +66,20 @@ else: # Video input
         xLink.setStreamName(xLinkName)
         xLinks[xLinkName] = {}
         xLinks[xLinkName]["node"] = xLink
-        videoPath = str(Path(args.videoDir) / (xLinkName + ".avi"))
-        if not Path(videoPath).exists():
-            print("ERROR: Video file not found: ", videoPath)
-            exit()
-        xLinks[xLinkName]["video"] = cv2.VideoCapture(videoPath)
+        if args.videoDir is not None:
+            videoPath = str(Path(args.videoDir) / (xLinkName + ".avi"))
+            if not Path(videoPath).exists():
+                print("ERROR: Video file not found: ", videoPath)
+                exit()
+            xLinks[xLinkName]["video"] = cv2.VideoCapture(videoPath)
+        elif args.imagesDir is not None:
+            imagePath = str(Path(args.imagesDir) / (xLinkName + ".png"))
+            if not Path(imagePath).exists():
+                print("ERROR: Images directory not found: ", imagePath)
+                exit()
+            xLinks[xLinkName]["image"] = cv2.imread(str(Path(imagePath)))
+            print("Image path: ", imagePath)
+
 
     stereoVerLeftIn = xLinks["left"]["node"].out
     stereoVerRightIn = xLinks["vertical"]["node"].out
@@ -108,24 +120,27 @@ with device:
     print(outNames)
     for queueName in outNames:
         queues[queueName] = device.getOutputQueue(queueName, 4, False)
-    if args.videoDir is not None:
+    if hostInput:
         for xLinkName in xLinks.keys():
             xLinks[xLinkName]["queue"] = device.getInputQueue(xLinkName)
     while True:
-        if args.videoDir is not None:
+        if hostInput:
             ts = dai.Clock.now()
             endOfVideo = False
             for xLinkName in xLinks.keys():
                 xLink = xLinks[xLinkName]
-                if not xLink["video"].isOpened():
-                    endOfVideo = True
-                    break
-                read_correctly, frame = xLink["video"].read()
-                if not read_correctly:
-                    print("Video " + xLinkName + " finished")
-                    xLink["video"].release()
-                    endOfVideo = True
-                    break
+                if args.videoDir:
+                    if not xLink["video"].isOpened():
+                        endOfVideo = True
+                        break
+                    read_correctly, frame = xLink["video"].read()
+                    if not read_correctly:
+                        print("Video " + xLinkName + " finished")
+                        xLink["video"].release()
+                        endOfVideo = True
+                elif args.imagesDir:
+                    print("Image " + xLinkName + " finished")
+                    frame = xLink["image"]
                 frame = cv2.resize(frame, (width, height))
                 # Convert to NV12
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -139,7 +154,10 @@ with device:
             if endOfVideo:
                 break
         for queueName in queues.keys():
-            inFrame = queues[queueName].tryGet()
+            if USE_BLOCKING:
+                inFrame = queues[queueName].get()
+            else:
+                inFrame = queues[queueName].tryGet()
             if inFrame is None:
                 continue
             frame = inFrame.getCvFrame()
@@ -152,3 +170,6 @@ with device:
             cv2.imshow(queueName, frame)
         if cv2.waitKey(1) == ord('q'):
             break
+        if args.imagesDir:
+            if cv2.waitKey(0) == ord('q'):
+                break
