@@ -17,16 +17,16 @@ if config.astra_gt:
 depth_test = DepthTest()
 cameras = []
 
-
-# replay_camera = NumpyReplayCamera(
-#     Path(config.args.depth),
-#     Path(config.args.rectified),
-#     Path(config.args.calib)
-# )
-# cameras.append(replay_camera)
-
-rvc3_camera = OakCamera(None, config.args.vertical)
-cameras.append(rvc3_camera)
+if config.args.depth and config.args.rectified and config.args.calib:
+    replay_camera = NumpyReplayCamera(
+        Path(config.args.depth),
+        Path(config.args.rectified),
+        Path(config.args.calib)
+    )
+    cameras.append(replay_camera)
+else:
+    rvc3_camera = OakCamera(None, config.args.vertical)
+    cameras.append(rvc3_camera)
 
 
 if config.astra_gt:

@@ -20,7 +20,7 @@ class LiveDepthThread(QThread):
         try:
             # Get this script's directory
             script_dir = os.path.dirname(os.path.realpath(__file__))
-            subprocess.run([sys.executable, os.path.join(script_dir, "stereo_both.py")], check=True)
+            subprocess.run([sys.executable, os.path.join(script_dir, "stereo_rvc3", "stereo_live.py")], check=True)
 
         except Exception as e:
             error_message = QMessageBox()
@@ -35,6 +35,32 @@ class LiveDepthThread(QThread):
     def stop_depth(self):
         self.live_depth_proc.kill()
 
+class LiveDepthMeasureThread(QThread):
+    stopped = pyqtSignal()
+    def __init__(self, vertical) -> None:
+        super().__init__()
+        self.vertical = vertical
+    def run(self):
+        try:
+            additional_args = []
+            if self.vertical:
+                additional_args.append("-vertical")
+            # Get this script's directory
+            script_dir = os.path.dirname(os.path.realpath(__file__))
+            subprocess.run([sys.executable, os.path.join(script_dir, "main.py")] + additional_args, check=True)
+
+        except Exception as e:
+            error_message = QMessageBox()
+            error_message.setIcon(QMessageBox.Critical)
+            error_message.setWindowTitle("Error")
+            error_message.setText(f"Script failed: {str(e)}")
+            error_message.setStandardButtons(QMessageBox.Ok)
+            error_message.exec_()
+
+        self.stopped.emit()
+
+    def stop_depth(self):
+        self.live_depth_proc.kill()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--directions', nargs='+',
@@ -161,6 +187,20 @@ class App(QWidget):
         self.run_measurement_button.clicked.connect(
             self.run_measurement_script)
         layout.addWidget(self.run_measurement_button)
+
+        self.run_measurement_button_live = QPushButton('Run measurement (live depth)')
+        self.run_measurement_button_live.clicked.connect(self.run_live_depth_measure)
+        layout.addWidget(self.run_measurement_button_live)
+
+        self.stop_measurement_button_live = QPushButton('Stop measurement (live depth)')
+        self.stop_measurement_button_live.clicked.connect(self.stop_live_depth_measure)
+        self.stop_measurement_button_live.setEnabled(False)
+        layout.addWidget(self.stop_measurement_button_live)
+
+        self.vertical_checkbox = QCheckBox('Vertical')
+        layout.addWidget(self.vertical_checkbox)
+
+
 
         self.extra_button = QPushButton('Run live depth')
         self.extra_button.clicked.connect(self.run_live_depth)
@@ -365,6 +405,29 @@ class App(QWidget):
         self.live_depth_thread.stop_depth()
 
 
+    def run_live_depth_measure(self):
+        self.run_button1.setEnabled(False)
+        self.run_button2.setEnabled(False)
+        self.extra_button.setEnabled(False)
+        self.run_measurement_button_live.setEnabled(False)
+        self.extra_button_stop.setEnabled(True)
+        QApplication.processEvents()
+        print("Starting live depth measure...")
+        vertical = self.vertical_checkbox.isChecked()
+        self.live_depth_thread_measure = LiveDepthMeasureThread(vertical)
+        self.live_depth_thread_measure.stopped.connect(self.on_live_depth_measure_stopped)
+        self.live_depth_thread_measure.start()
+
+    def on_live_depth_measure_stopped(self):
+        self.run_button1.setEnabled(True)
+        self.run_button2.setEnabled(True)
+        self.extra_button.setEnabled(True)
+        self.run_measurement_button_live.setEnabled(True)
+        self.stop_measurement_button_live.setEnabled(False)
+
+    def stop_live_depth_measure(self):
+        print("Killing live depth...")
+        self.live_depth_thread_measure.stop_depth()
 def main():
     app = QApplication(sys.argv)
     main_app = App(args.distances, args.directions)
