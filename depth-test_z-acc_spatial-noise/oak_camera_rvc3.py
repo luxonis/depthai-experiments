@@ -9,8 +9,9 @@ from host_sync import HostSync
 from stereo_rvc3 import pipeline_creation
 
 class OakCamera(Camera):
-    def __init__(self, device_info: dai.DeviceInfo, vertical=True):
+    def __init__(self, device_info: dai.DeviceInfo, vertical=True, use_opencv=False):
         super().__init__(name="OAK")
+        self.use_opencv = use_opencv
         self.vertical = vertical
         self.device_info = device_info
         self.device = dai.Device() # TODO add device_info
@@ -18,10 +19,22 @@ class OakCamera(Camera):
         self._load_calibration()
         self.device.startPipeline(self.pipeline)
         self.mxid = self.device.getDeviceInfo().getMxId()
+        if self.use_opencv:
+            stereo = cv2.StereoSGBM_create()
+            # Set the parameters for StereoSGBM
+            stereo.setBlockSize(9)
+            stereo.setMinDisparity(0)
+            stereo.setNumDisparities(64)
+            stereo.setUniquenessRatio(10)
+            stereo.setSpeckleWindowSize(0)
+            stereo.setSpeckleRange(0)
+            stereo.setDisp12MaxDiff(0)
+            self.opencv_stereo = stereo
 
         self.image_queue = self.device.getOutputQueue(name=self.image_name, maxSize=10, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name=self.depth_name, maxSize=10, blocking=False)
-        self.host_sync = HostSync([self.image_name, self.depth_name])
+        self.right_image_queue = self.device.getOutputQueue(name=self.right_image_name, maxSize=10, blocking=False)
+        self.host_sync = HostSync([self.image_name, self.depth_name, self.right_image_name])
 
 
     def __del__(self):
@@ -70,7 +83,7 @@ class OakCamera(Camera):
         colorRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
         if self.vertical:
             #################################################  vertical ###############################################################
-            stereoVertical, outNames = pipeline_creation.create_stereo(pipeline, "vertical", colorLeft.isp, colorVertical.isp, False, True, False)
+            stereoVertical, outNames = pipeline_creation.create_stereo(pipeline, "vertical", colorLeft.isp, colorVertical.isp, False, True, True)
             self.image_size = (colorLeft.getResolutionHeight(), colorLeft.getResolutionWidth())
             self.mono_image_size = self.image_size
 
@@ -83,7 +96,7 @@ class OakCamera(Camera):
 
         else:
             #################################################  horizontal ##############################################################
-            stereoHorizontal, outNames = pipeline_creation.create_stereo(pipeline, "horizontal", colorLeft.isp, colorRight.isp, False, True, False)
+            stereoHorizontal, outNames = pipeline_creation.create_stereo(pipeline, "horizontal", colorLeft.isp, colorRight.isp, False, True, True)
             self.image_size = (colorLeft.getResolutionWidth(), colorLeft.getResolutionHeight())
             self.mono_image_size = self.image_size
             meshLeft, meshVertical, self.scale_factor = pipeline_creation.create_mesh_on_host(calibData, colorLeft.getBoardSocket(), colorRight.getBoardSocket(),
@@ -92,14 +105,17 @@ class OakCamera(Camera):
             stereoHorizontal.setLeftRightCheck(False)
             stereoHorizontal.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
             ############################################################################################################################
-        disparity, rectified_left, rectified_right, left, right = outNames
+        if self.use_opencv:
+            self.scale_factor /= 2
+        rectified_left, rectified_right, disparity = outNames
         self.depth_name = disparity
         self.image_name = rectified_left
+        self.right_image_name = rectified_right
 
         self.pipeline = pipeline
 
     def update(self):
-        for queue in [self.depth_queue, self.image_queue]:
+        for queue in [self.depth_queue, self.image_queue, self.right_image_queue]:
             new_msgs = queue.tryGetAll()
             if new_msgs is not None:
                 for new_msg in new_msgs:
@@ -109,15 +125,20 @@ class OakCamera(Camera):
         msg_sync = self.host_sync.get()
         if msg_sync is None:
             return
+        self.image_frame = msg_sync[self.image_name].getCvFrame()
+        self.right_image_frame = msg_sync[self.right_image_name].getCvFrame()
         self.depth_frame = msg_sync[self.depth_name].getFrame()
+
+        if self.use_opencv:
+            self.depth_frame = self.opencv_stereo.compute(self.image_frame, self.right_image_frame)
+
         with np.errstate(divide='ignore'):
             self.depth_frame = self.scale_factor / self.depth_frame
         self.depth_frame[self.depth_frame == np.inf] = 0
-        self.image_frame = msg_sync[self.image_name].getCvFrame()
+
         self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
         self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
-
         self.visualize_image_frame()
         self.visualize_depth_frame()
         self.rgbd_to_point_cloud()

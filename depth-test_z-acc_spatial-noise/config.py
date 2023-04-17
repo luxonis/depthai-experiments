@@ -25,6 +25,7 @@ parser.add_argument('-roi_file', type=str, default=None, help = "Output ROI to a
 parser.add_argument('-set_roi_file', type=str, default=None, help = "Set ROI from a file")
 parser.add_argument('-mode', type=str, default="interactive", choices=["interactive", "measure"], help = "Mode to run the test in" )
 parser.add_argument('-vertical', action="store_true", help = "Run the test in vertical mode")
+parser.add_argument('-use_opencv', action="store_true", help = "Use opencv for disparity")
 
 args = parser.parse_args()
 

@@ -11,12 +11,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-ver', action="store_true", help='Use vertical stereo')
 parser.add_argument('-hor', action="store_true", help='Use horizontal stereo')
 parser.add_argument('-calib', type=str, default=None, help='Path to calibration file')
-
+parser.add_argument('-saveFiles', action="store_true", help='Save files')
 parser.add_argument('-videoDir', type=str, default=None, help='Path to video directory')
 parser.add_argument('-imagesDir', type=str, default=None, help='Path to images directory')
 
 CONNECT_LEFT_RIGHT = False
-CONNECT_RECTIFIED_LEFT_RIGHT = False
+CONNECT_RECTIFIED_LEFT_RIGHT = True
 
 
 USE_BLOCKING=False
@@ -161,6 +161,8 @@ with device:
             if inFrame is None:
                 continue
             frame = inFrame.getCvFrame()
+            if args.saveFiles:
+                cv2.imwrite(queueName + ".png", frame)
             if "disparity" in queueName:
                 frame = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
                 # Colorize the disparity map

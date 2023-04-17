@@ -25,7 +25,7 @@ if config.args.depth and config.args.rectified and config.args.calib:
     )
     cameras.append(replay_camera)
 else:
-    rvc3_camera = OakCamera(None, config.args.vertical)
+    rvc3_camera = OakCamera(None, config.args.vertical, config.args.use_opencv)
     cameras.append(rvc3_camera)
 
 
