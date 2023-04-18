@@ -168,8 +168,8 @@ class App(QWidget):
         frames_to_depth_layout = QVBoxLayout()
 
         # Add a tick box to run at the full resolution
-        self.full_resolution_checkbox = QCheckBox('Run at Full Resolution')
-        frames_to_depth_layout.addWidget(self.full_resolution_checkbox)
+        self.opencv_depth = QCheckBox('Use opencv for stereo depth')
+        frames_to_depth_layout.addWidget(self.opencv_depth)
 
         # Add the existing "frames to depth" button to the group
         self.transform_depth_button = QPushButton('Frames to depth')
@@ -177,61 +177,74 @@ class App(QWidget):
             self.transform_depth_frames)
         frames_to_depth_layout.addWidget(self.transform_depth_button)
 
+        self.run_measurement_button = QPushButton('Run measurement')
+        self.run_measurement_button.clicked.connect(
+            self.run_measurement_script)
+        frames_to_depth_layout.addWidget(self.run_measurement_button)
+
         # Set the layout for the group box
         frames_to_depth_group.setLayout(frames_to_depth_layout)
 
         # Add the group box to the main layout
         layout.addWidget(frames_to_depth_group)
 
-        self.run_measurement_button = QPushButton('Run measurement')
-        self.run_measurement_button.clicked.connect(
-            self.run_measurement_script)
-        layout.addWidget(self.run_measurement_button)
+        # Live measurement group
+        live_measurement_group = QGroupBox("Live Measurement")
+        live_measurement_layout = QVBoxLayout()
+
+        self.vertical_checkbox = QCheckBox('Vertical')
+        live_measurement_layout.addWidget(self.vertical_checkbox)
 
         self.run_measurement_button_live = QPushButton('Run measurement (live depth)')
         self.run_measurement_button_live.clicked.connect(self.run_live_depth_measure)
-        layout.addWidget(self.run_measurement_button_live)
+        live_measurement_layout.addWidget(self.run_measurement_button_live)
 
         self.stop_measurement_button_live = QPushButton('Stop measurement (live depth)')
         self.stop_measurement_button_live.clicked.connect(self.stop_live_depth_measure)
         self.stop_measurement_button_live.setEnabled(False)
-        layout.addWidget(self.stop_measurement_button_live)
-
-        self.vertical_checkbox = QCheckBox('Vertical')
-        layout.addWidget(self.vertical_checkbox)
+        live_measurement_layout.addWidget(self.stop_measurement_button_live)
 
 
+        live_measurement_group.setLayout(live_measurement_layout)
+        layout.addWidget(live_measurement_group)
+
+        # Live depth group
+        live_depth_group = QGroupBox("Live Depth")
+        live_depth_layout = QVBoxLayout()
 
         self.extra_button = QPushButton('Run live depth')
         self.extra_button.clicked.connect(self.run_live_depth)
-        layout.addWidget(self.extra_button)
+        live_depth_layout.addWidget(self.extra_button)
 
         self.extra_button_stop = QPushButton('Stop live depth')
         self.extra_button_stop.clicked.connect(self.stop_live_depth)
-        layout.addWidget(self.extra_button_stop)
+        live_depth_layout.addWidget(self.extra_button_stop)
         self.extra_button_stop.setEnabled(False)
+
+        live_depth_group.setLayout(live_depth_layout)
+        layout.addWidget(live_depth_group)
 
         self.setLayout(layout)
 
     def transform_depth_frames(self):
         self.transform_depth_button.setEnabled(False)
         QApplication.processEvents()
-        fullRes = self.full_resolution_checkbox.isChecked()
+        opencv_depth = self.opencv_depth.isChecked()
         try:
             camera_id, direction, distance, target_dir = self.get_test_params()
             additionalParams = []
-            if fullRes:
-                additionalParams.append("-fullResolution")
+            if opencv_depth:
+                additionalParams.append("-useOpenCVDepth")
             print(additionalParams)
             final_dir = self.get_latest_recording_dir(target_dir)
             if not self.check_files(final_dir):
                 raise RuntimeError("Not all files prenesent.")
             script_dir = os.path.dirname(os.path.realpath(__file__))
 
-            subprocess.run([sys.executable, os.path.join(script_dir, "stereo_both.py"), "-vid", "-saveFiles", "-left",
-                            os.path.join(final_dir, "camb,c.avi"), "-right", os.path.join(final_dir, "camc,c.avi"),
-                            "-bottom", os.path.join(final_dir, "camd,c.avi"),  "-calib", os.path.join(final_dir, "calib.json"),
-                            "-rect", "-outDir", os.path.join(final_dir, "out"), "-imageCrop", direction] + additionalParams, check=True)
+            subprocess.run([sys.executable, os.path.join(script_dir, "stereo_rvc3/stereo_live.py"), "-saveFiles", "-videoDir",
+                            final_dir,  "-calib", os.path.join(
+                                final_dir, "calib.json"),
+                            "-rect", "-outDir", os.path.join(final_dir, "out")] + additionalParams, check=True)
 
         except Exception as e:
             error_message = QMessageBox()

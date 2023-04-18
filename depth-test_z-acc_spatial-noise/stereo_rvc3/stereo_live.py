@@ -17,15 +17,29 @@ parser.add_argument('-imagesDir', type=str, default=None, help='Path to images d
 parser.add_argument('-outDir', type=str, default="out", help="Output directory for depth maps and rectified files.")
 parser.add_argument('-rect',action="store_true", default=False, help="Generate and display rectified streams.")
 parser.add_argument('-fps', type=int, default=10, help="Set camera FPS.")
+parser.add_argument('-useOpenCVDepth', action="store_true",
+                    help='Use OpenCV to display frames')
 
 args = parser.parse_args()
 
 CONNECT_LEFT_RIGHT = False
-CONNECT_RECTIFIED_LEFT_RIGHT = args.rect
 
 
 USE_BLOCKING=True
 args = parser.parse_args()
+
+if args.useOpenCVDepth:
+    args.rect = True
+    stereoOcv = cv2.StereoSGBM_create()
+    # Set the parameters for StereoSGBM
+    stereoOcv.setBlockSize(9)
+    stereoOcv.setMinDisparity(0)
+    stereoOcv.setNumDisparities(64)
+    stereoOcv.setUniquenessRatio(10)
+    stereoOcv.setSpeckleWindowSize(0)
+    stereoOcv.setSpeckleRange(0)
+    stereoOcv.setDisp12MaxDiff(0)
+
 
 if args.ver is False and args.hor is False:
     args.ver = True
@@ -70,6 +84,11 @@ if not hostInput:
     stereoHorRightIn = colorRight.isp
 else: # Video input
     xLinks = {}
+    altNames = {
+        "left": "camb,c",
+        "right": "camc,c",
+        "vertical": "camd,c"
+    }
     for xLinkName in ["left", "right", "vertical"]:
         xLink = pipeline.create(dai.node.XLinkIn)
         xLink.setStreamName(xLinkName)
@@ -78,14 +97,17 @@ else: # Video input
         if args.videoDir is not None:
             videoPath = str(Path(args.videoDir) / (xLinkName + ".avi"))
             if not Path(videoPath).exists():
-                print("ERROR: Video file not found: ", videoPath)
-                exit()
+                videoPath = str(Path(args.videoDir) /
+                                (altNames[xLinkName] + ".avi"))
+                if not Path(videoPath).exists():
+                    print("ERROR: Video file not found: ", videoPath)
+                    exit(1)
             xLinks[xLinkName]["video"] = cv2.VideoCapture(videoPath)
         elif args.imagesDir is not None:
             imagePath = str(Path(args.imagesDir) / (xLinkName + ".png"))
             if not Path(imagePath).exists():
                 print("ERROR: Images directory not found: ", imagePath)
-                exit()
+                exit(1)
             xLinks[xLinkName]["image"] = cv2.imread(str(Path(imagePath)))
             print("Image path: ", imagePath)
 
@@ -104,7 +126,8 @@ stereoHorRightInSocket = dai.CameraBoardSocket.RIGHT
 outNames = []
 if args.ver:
     #################################################  vertical ###############################################################
-    stereoVertical, outNamesVertical = pipeline_creation.create_stereo(pipeline, "vertical", stereoVerLeftIn, stereoVerRightIn, CONNECT_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT)
+    stereoVertical, outNamesVertical = pipeline_creation.create_stereo(
+        pipeline, "vertical", stereoVerLeftIn, stereoVerRightIn, CONNECT_LEFT_RIGHT, args.rect, args.rect)
     outNames += outNamesVertical
     meshLeft, meshRight, verScale = pipeline_creation.create_mesh_on_host(calibData, stereoVerLeftInSocket, stereoVerRightInSocket,
                                                                 (width, height), vertical=True)
@@ -114,7 +137,8 @@ if args.ver:
 
 if args.hor:
     #################################################  horizontal ##############################################################
-    stereoHorizontal, outNamesHorizontal = pipeline_creation.create_stereo(pipeline, "horizontal", stereoHorLeftIn, stereoHorRightIn, CONNECT_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT)
+    stereoHorizontal, outNamesHorizontal = pipeline_creation.create_stereo(
+        pipeline, "horizontal", stereoHorLeftIn, stereoHorRightIn, CONNECT_LEFT_RIGHT, args.rect, args.rect)
     outNames += outNamesHorizontal
     meshLeft, meshRight, horScale = pipeline_creation.create_mesh_on_host(calibData, stereoHorLeftInSocket, stereoHorRightInSocket,
                                                                          (width, height))
@@ -153,6 +177,7 @@ with device:
                         print("Video " + xLinkName + " finished")
                         xLink["video"].release()
                         endOfVideo = True
+                        break
                 elif args.imagesDir:
                     print("Image " + xLinkName + " finished")
                     frame = xLink["image"]
@@ -190,10 +215,20 @@ with device:
             cv2.imshow(queueName, frame)
         # Handle saving and depth calculation
         for stereo in ["vertical", "horizontal"]:
+            if not args.rect:
+                continue
             rectLeft =  frames[stereo + "-rectified_left"]
             rectRight = frames[stereo + "-rectified_right"]
             disparity = frames[stereo + "-disparity"]
             scaleFac = verScale if stereo == "vertical" else horScale
+            if args.useOpenCVDepth:
+                disparity = stereoOcv.compute(rectLeft, rectRight)
+                scaleFac = scaleFac / 2
+                disparityShow = cv2.normalize(
+                    disparity, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+                disparityShow = cv2.applyColorMap(
+                    disparityShow, cv2.COLORMAP_JET)
+                cv2.imshow(stereo + "-disparity-opencv", disparityShow)
             with np.errstate(divide='ignore'):
                 depthFrame = scaleFac / disparity
             depthFrame[depthFrame == np.inf] = 0
