@@ -14,12 +14,17 @@ parser.add_argument('-calib', type=str, default=None, help='Path to calibration 
 parser.add_argument('-saveFiles', action="store_true", help='Save files')
 parser.add_argument('-videoDir', type=str, default=None, help='Path to video directory')
 parser.add_argument('-imagesDir', type=str, default=None, help='Path to images directory')
+parser.add_argument('-outDir', type=str, default="out", help="Output directory for depth maps and rectified files.")
+parser.add_argument('-rect',action="store_true", default=False, help="Generate and display rectified streams.")
+parser.add_argument('-fps', type=int, default=10, help="Set camera FPS.")
+
+args = parser.parse_args()
 
 CONNECT_LEFT_RIGHT = False
-CONNECT_RECTIFIED_LEFT_RIGHT = True
+CONNECT_RECTIFIED_LEFT_RIGHT = args.rect
 
 
-USE_BLOCKING=False
+USE_BLOCKING=True
 args = parser.parse_args()
 
 if args.ver is False and args.hor is False:
@@ -30,6 +35,9 @@ hostInput = False
 if args.videoDir is not None or args.imagesDir is not None:
     hostInput = True
     USE_BLOCKING = True
+
+if args.saveFiles:
+    Path(args.outDir).mkdir(parents=True, exist_ok=True)
 # Create pipeline
 device = dai.Device()
 pipeline = dai.Pipeline()
@@ -46,13 +54,14 @@ if not hostInput:
     colorLeft = pipeline.create(dai.node.ColorCamera)
     colorRight = pipeline.create(dai.node.ColorCamera)
     colorVertical = pipeline.create(dai.node.ColorCamera)
-    colorVertical.setBoardSocket(dai.CameraBoardSocket.CAM_D)
-    colorVertical.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
-    colorLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-    colorLeft.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
-    colorRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-    colorRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
 
+    colorVertical.setBoardSocket(dai.CameraBoardSocket.CAM_D)
+    colorLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+    colorRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+
+    for cam in [colorLeft, colorRight, colorVertical]:
+        cam.setFps(args.fps)
+        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
 
 
     stereoVerLeftIn = colorLeft.isp
@@ -97,9 +106,9 @@ if args.ver:
     #################################################  vertical ###############################################################
     stereoVertical, outNamesVertical = pipeline_creation.create_stereo(pipeline, "vertical", stereoVerLeftIn, stereoVerRightIn, CONNECT_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT)
     outNames += outNamesVertical
-    meshLeft, meshVertical, scale = pipeline_creation.create_mesh_on_host(calibData, stereoVerLeftInSocket, stereoVerRightInSocket,
+    meshLeft, meshRight, verScale = pipeline_creation.create_mesh_on_host(calibData, stereoVerLeftInSocket, stereoVerRightInSocket,
                                                                 (width, height), vertical=True)
-    stereoVertical.loadMeshData(meshLeft, meshVertical)
+    stereoVertical.loadMeshData(meshLeft, meshRight)
     stereoVertical.setVerticalStereo(True)
     ############################################################################################################################
 
@@ -107,11 +116,17 @@ if args.hor:
     #################################################  horizontal ##############################################################
     stereoHorizontal, outNamesHorizontal = pipeline_creation.create_stereo(pipeline, "horizontal", stereoHorLeftIn, stereoHorRightIn, CONNECT_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT, CONNECT_RECTIFIED_LEFT_RIGHT)
     outNames += outNamesHorizontal
-    meshLeft, meshVertical, scale = pipeline_creation.create_mesh_on_host(calibData, stereoHorLeftInSocket, stereoHorRightInSocket,
+    meshLeft, meshRight, horScale = pipeline_creation.create_mesh_on_host(calibData, stereoHorLeftInSocket, stereoHorRightInSocket,
                                                                          (width, height))
-    stereoHorizontal.loadMeshData(meshLeft, meshVertical)
+    stereoHorizontal.loadMeshData(meshLeft, meshRight)
     stereoHorizontal.setLeftRightCheck(False)
     ############################################################################################################################
+
+# Connect to device and start pipeline
+verticalDepths = []
+horizontalDepths = []
+leftRectifiedVer = []
+leftRectifiedHor = []
 
 # Connect to device and start pipeline
 with device:
@@ -153,6 +168,7 @@ with device:
                 xLink["queue"].send(img)
             if endOfVideo:
                 break
+        frames = {}
         for queueName in queues.keys():
             if USE_BLOCKING:
                 inFrame = queues[queueName].get()
@@ -160,9 +176,11 @@ with device:
                 inFrame = queues[queueName].tryGet()
             if inFrame is None:
                 continue
+            frames[queueName] = inFrame.getFrame()
             frame = inFrame.getCvFrame()
             if args.saveFiles:
-                cv2.imwrite(queueName + ".png", frame)
+                cv2.imwrite(str(Path(args.outDir) / queueName) + ".png", frame)
+
             if "disparity" in queueName:
                 frame = cv2.normalize(frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
                 # Colorize the disparity map
@@ -170,8 +188,37 @@ with device:
             if "vertical" in queueName and ("rectified" in queueName or "disparity" in queueName):
                 frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
             cv2.imshow(queueName, frame)
+        # Handle saving and depth calculation
+        for stereo in ["vertical", "horizontal"]:
+            rectLeft =  frames[stereo + "-rectified_left"]
+            rectRight = frames[stereo + "-rectified_right"]
+            disparity = frames[stereo + "-disparity"]
+            scaleFac = verScale if stereo == "vertical" else horScale
+            with np.errstate(divide='ignore'):
+                depthFrame = scaleFac / disparity
+            depthFrame[depthFrame == np.inf] = 0
+            if args.saveFiles:
+                if stereo == "vertical":
+                    verticalDepths.append(depthFrame)
+                    leftRectifiedVer.append(rectLeft)
+                else:
+                    horizontalDepths.append(depthFrame)
+                    leftRectifiedHor.append(rectLeft)
         if cv2.waitKey(1) == ord('q'):
             break
         if args.imagesDir:
             if cv2.waitKey(0) == ord('q'):
                 break
+
+if args.saveFiles:
+    stackedHorizontalDepths = np.stack(horizontalDepths, axis=0)
+    stackedVerticalDepths = np.stack(verticalDepths, axis=0)
+    if args.rect:
+        stackedRectifiedLeftHor = np.stack(leftRectifiedHor, axis=0)
+        stackedRectifiedLeftVer = np.stack(leftRectifiedVer, axis=0)
+
+    np.save(Path(args.outDir)/"horizontalDepth.npy", stackedHorizontalDepths)
+    np.save(Path(args.outDir)/"verticalDepth.npy", stackedVerticalDepths)
+    if args.rect:
+        np.save(Path(args.outDir)/"leftRectifiedVertical.npy", stackedRectifiedLeftVer)
+        np.save(Path(args.outDir)/"leftRectifiedHorizontal.npy", stackedRectifiedLeftHor)
