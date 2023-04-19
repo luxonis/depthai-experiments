@@ -56,9 +56,9 @@ class DepthTest:
 
     def fit_plane_o3d(self, point_cloud: o3d.geometry.PointCloud):
         # Use RANSAC for fitting the plane with Open3D
-        max_distance = config.gt * 0.01 # 1% of the ground truth distance
+        max_distance = config.gt * 0.003 # 0.3% of the ground truth distance
         plane_model, inliers = point_cloud.segment_plane(
-            max_distance, ransac_n=3, num_iterations=1000
+            max_distance, ransac_n=3, num_iterations=5000
         )
 
         a, b, c, d = plane_model

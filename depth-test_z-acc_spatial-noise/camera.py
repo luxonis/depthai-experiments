@@ -31,12 +31,20 @@ class Camera:
         if self.image_frame is not None:
             image_frame_roi = self.select_ROI(self.image_frame)
             self.image_visualization_frame = (self.image_frame*0.5 + image_frame_roi*0.5).astype(np.uint8)
-            cv2.imshow(self.window_name, self.image_visualization_frame)
+            img = self.image_visualization_frame
+            width = int(img.shape[1] * config.args.rs)
+            height = int(img.shape[0] * config.args.rs)
+            dim = (width, height)
+            cv2.imshow(self.window_name, cv2.resize(self.image_visualization_frame, dim))
     def visualize_depth_frame(self):
         if self.depth_frame is not None:
             depth_frame_roi = self.select_ROI(self.depth_frame)
             self.depth_visualization_frame = (self.depth_frame*0.5 + depth_frame_roi*0.5).astype(np.uint8)
-            cv2.imshow(self.window_name + "depth", self.depth_visualization_frame)
+            img = self.depth_visualization_frame
+            width = int(img.shape[1] * config.args.rs)
+            height = int(img.shape[0] * config.args.rs)
+            showFrame = cv2.resize(img, (width, height))
+            cv2.imshow(self.window_name + "depth", showFrame)
 
     def on_mouse(self, event, x, y, flags, param):
         x1, y1, x2, y2 = self.ROI
@@ -49,12 +57,17 @@ class Camera:
             self.selecting_ROI = False
             if abs(x1 - x2) * abs(y1 - y2) == 0:
                 x1, y1, x2, y2 = (0, 0, self.image_frame.shape[1], self.image_frame.shape[0])
-        
+
         self.ROI = (x1, y1, x2, y2)
         
 
     def select_ROI(self, frame: np.ndarray):
         x1, y1, x2, y2 = self.ROI
+        x1 = int(x1 / config.args.rs)
+        x2 = int(x2 / config.args.rs)
+        y1 = int(y1 / config.args.rs)
+        y2 = int(y2 / config.args.rs)
+
         ROI_sorted = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
         x1, y1, x2, y2 = ROI_sorted
         ROI_mask = np.zeros_like(frame)
