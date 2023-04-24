@@ -46,8 +46,7 @@ matplotlib-inline==0.1.6
 nbformat==5.7.0
 numpy==1.24.2
 open3d==0.17.0
-opencv-contrib-python==4.7.0.72
-opencv-python==4.7.0.72
+opencv-contrib-python==4.5.5.62 
 packaging==23.0
 pandas==1.5.3
 parso==0.8.3

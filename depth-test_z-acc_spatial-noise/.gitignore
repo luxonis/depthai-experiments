@@ -2,3 +2,4 @@
 *.npy
 results
 data
+*dataset*
