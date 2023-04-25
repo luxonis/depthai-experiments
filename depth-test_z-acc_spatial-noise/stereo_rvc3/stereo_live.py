@@ -19,6 +19,7 @@ parser.add_argument('-rect',action="store_true", default=False, help="Generate a
 parser.add_argument('-fps', type=int, default=10, help="Set camera FPS.")
 parser.add_argument('-useOpenCVDepth', action="store_true",
                     help='Use OpenCV to display frames')
+parser.add_argument('-numLastFrames', type=int, default=None, help="Number of frames (last frames are used) for calculating the average depth.")
 
 args = parser.parse_args()
 
@@ -110,6 +111,19 @@ else: # Video input
                 exit(1)
             xLinks[xLinkName]["image"] = cv2.imread(str(Path(imagePath)))
             print("Image path: ", imagePath)
+    if args.videoDir is not None:
+        numFramesLeft = int(xLinks["left"]["video"].get(cv2.CAP_PROP_FRAME_COUNT))
+        numFramesRight = int(xLinks["right"]["video"].get(cv2.CAP_PROP_FRAME_COUNT))
+        numFramesVertical = int(xLinks["vertical"]["video"].get(cv2.CAP_PROP_FRAME_COUNT))
+        minFrames = min(numFramesLeft, numFramesRight, numFramesVertical)
+        if args.numLastFrames is not None:
+            print(f"Using last {args.numLastFrames} frames for calculating the average depth.")
+            for name in ["left", "right", "vertical"]:
+                if args.numLastFrames > minFrames:
+                    print(f"numLastFrames {args.numLastFrames} is greater than number of images in the left video {numFramesLeft}.")
+                    break
+                video = xLinks[name]["video"]
+                video.set(cv2.CAP_PROP_POS_FRAMES, minFrames - args.numLastFrames)
 
 
     stereoVerLeftIn = xLinks["left"]["node"].out
@@ -179,7 +193,7 @@ with device:
                         endOfVideo = True
                         break
                 elif args.imagesDir:
-                    print("Image " + xLinkName + " finished")
+                    #  print("Image " + xLinkName + " finished")
                     frame = xLink["image"]
                 frame = cv2.resize(frame, (width, height))
                 # Convert to NV12
