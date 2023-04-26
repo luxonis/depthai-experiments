@@ -18,6 +18,7 @@
 - `-p`, `--path`: Path to the recording folder
 - `-d`, `--depth`: Ground truth distance in meters
 - `-a`, `--area`: Choose the area you want to test: center, left or right
+- `-ocv`, `--opencv`: Use OpenCV to recify the frames and run depth
 
 ## Usage
 Run `main.py` with Python 3.

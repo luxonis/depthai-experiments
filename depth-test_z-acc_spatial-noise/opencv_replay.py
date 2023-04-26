@@ -69,7 +69,7 @@ class OpenCVStereo():
         self.right_map_x, self.right_map_y = cv2.fisheye.initUndistortRectifyMap(M2, D2, R2, P2, (self.output_width, self.output_height), cv2.CV_32FC1)
         self.focal_length_x = P1[0][0]
         self.focal_length_y = P1[1][1]
-        self.baseline = -P2[0][3] / self.focal_length_x # TODO check if this is correct
+        self.baseline = -P2[0][3] / self.focal_length_x
         print("Focal length x: ", self.focal_length_x)
         print("Baseline: ", self.baseline)
 
@@ -106,7 +106,7 @@ class OpenCVCamera(Camera):
         super().__init__(name="OpenCV")
         if config.path is None:
             raise RuntimeError("No path to replay file provided")
-
+        # TODO generalize based on calibration
         left_video_names = ["camb,c.avi", "left.avi", "camb,m.avi"]
         right_video_names = ["camc,c.avi", "right.avi", "camc,m.avi"]
         vertical_video_names = ["camd,c.avi", "vertical.avi", "camd,m.avi"]
@@ -155,7 +155,10 @@ class OpenCVCamera(Camera):
 
         self.focal_length = self.intrinsics[0][0] # in pixels
         self.stereoscopic_baseline = calibration.getBaselineDistance() / 100 # in m
-
+        for socket in [self.left_socket, self.right_socket]:
+            cameraModel = calibration.getDistortionModel(socket)
+            if cameraModel != dai.CameraModel.Fisheye:
+                raise RuntimeError(f"Unsupported camera model {cameraModel} - opencv stereo currently only supports Fisheye")
         self.extrinsic = np.eye(4)
         self.extrinsic[0, 3] = -0.15
 
