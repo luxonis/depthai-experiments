@@ -15,6 +15,7 @@ parser.add_argument("-n", "--n_samples", type = int, default = 10, help = "Numbe
 parser.add_argument('-p', '--path', default = None, type = str, help = "Path to the recording folder")
 parser.add_argument('-d', '--depth', default = None, type = float, help = "Ground truth distance in meters")
 parser.add_argument('-a', '--area', type = str, default = 'center', choices = ['center', 'right', 'left'], help = 'Choose the area you want to test')
+parser.add_argument('-ocv', '--opencv', action = 'store_true', help = 'Use opencv for replay')
 
 args = parser.parse_args()
 
@@ -28,7 +29,7 @@ confidence_threshold = args.confidence_threshold 	# 0-255, 255 = low confidence,
 min_range = args.min_range 			# mm
 max_range = args.max_range			# mm
 mono_camera_resolution = getattr(dai.MonoCameraProperties.SensorResolution, args.mono_camera_resolution)
-
+use_opencv = args.opencv
 # Median filter
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7
 median = getattr(dai.StereoDepthProperties.MedianFilter, args.median)

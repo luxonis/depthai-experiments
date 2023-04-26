@@ -99,13 +99,12 @@ class DepthTest:
 		spatial_noise = self.compute_spatial_noise(point_cloud_corrected)
 		self.spatial_noise_rmses.append(spatial_noise)
 
-		if isinstance(camera, OakCamera) or isinstance(camera, ReplayCamera):
-			subpixel_spatial_noise = self.compute_subpixel_spatial_noise(
-				point_cloud_corrected, 
-				focal_length=camera.focal_length,
-				stereoscopic_baseline=camera.stereoscopic_baseline
-			)
-			self.subpixel_spatial_noise_rmses.append(subpixel_spatial_noise)
+		subpixel_spatial_noise = self.compute_subpixel_spatial_noise(
+			point_cloud_corrected,
+			focal_length=camera.focal_length,
+			stereoscopic_baseline=camera.stereoscopic_baseline
+		)
+		self.subpixel_spatial_noise_rmses.append(subpixel_spatial_noise)
 
 		z_accuracy = self.compute_z_accuracy(point_cloud_corrected)
 		self.z_accuracy_medians.append(z_accuracy)

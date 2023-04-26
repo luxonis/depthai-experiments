@@ -63,6 +63,7 @@ class ReplayCamera(Camera):
 
     def _load_calibration(self):
         calibration =  self.replay.calibData
+        print("Config color", config.COLOR)
         self.intrinsics = calibration.getCameraIntrinsics(
             dai.CameraBoardSocket.RGB if config.COLOR else dai.CameraBoardSocket.RIGHT, 
             dai.Size2f(*self.image_size)

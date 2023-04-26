@@ -4,11 +4,11 @@ import depthai as dai
 from camera import Camera
 from oak_camera import OakCamera
 from replay_camera import ReplayCamera
+from opencv_replay import OpenCVCamera
 from utils import *
 from depth_test import DepthTest
 import config
 import open3d as o3d
-import re
 
 
 depth_test = DepthTest()
@@ -16,7 +16,10 @@ cameras = []
 
 device_info = dai.DeviceInfo()
 if config.path is not None:
-	replay_camera = ReplayCamera(device_info)
+	if config.use_opencv:
+		replay_camera = OpenCVCamera()
+	else:
+		replay_camera = ReplayCamera(device_info)
 	cameras.append(replay_camera)
 else:
 	oak_camera = OakCamera(device_info)
@@ -40,7 +43,7 @@ def start_test_callback():
 	global testing
 	if not depth_test.fitted:
 		print("❗WARNING: Plane not fitted, using default values")
-	
+
 	print("Testing started ...")
 	testing = True
 
