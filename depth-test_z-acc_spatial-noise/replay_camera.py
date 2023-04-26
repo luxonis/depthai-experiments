@@ -32,11 +32,15 @@ class ReplayCamera(Camera):
         self.depth_frames = []
         self.removed_frames = False
 
-        if os.path.exists(config.path + '/cama,c.avi'):
+        if 0 and os.path.exists(config.path + '/cama,c.avi'):
             os.rename(config.path + '/cama,c.avi', config.path + '/rgb.avi')
+            os.rename(config.path + '/camb,c.avi', config.path + '/right.avi')
+            os.rename(config.path + '/camc,c.avi', config.path + '/left.avi')
+
+        if 1 and os.path.exists(config.path + '/camd,c.avi'):
+            os.rename(config.path + '/camd,c.avi', config.path + '/rgb.avi')
             os.rename(config.path + '/camb,c.avi', config.path + '/left.avi')
             os.rename(config.path + '/camc,c.avi', config.path + '/right.avi')
-       
         self.replay = Replay(config.path)
         self._create_pipeline()
 
@@ -74,6 +78,7 @@ class ReplayCamera(Camera):
 
     def getMesh(self, calibData, resolution, offset, rectificationScale, useOptimalNewCameraMatrix):
         print("------mesh res", resolution, "offset", offset) # TODO see if offset is needed here and implement...
+        print('Mesh resolution:', resolution)
         width, height = resolution
         offsetWidth, offsetHeight = offset
         ## Top left and bottom right are from camera perspective where Top left corner is at (0,0) and bottom right is at (width, height)
@@ -115,12 +120,17 @@ class ReplayCamera(Camera):
         tranformation = np.array(calibData.getCameraExtrinsics(calibData.getStereoLeftCameraId(), calibData.getStereoRightCameraId()))
         R = tranformation[:3, :3]
         T = tranformation[:3, 3]
-
-        rectIntrinsicsL = M1.copy()
+        self.baseline = abs(T[0])
+        print('baseline', self.baseline)
+        print("Full baseline -> ", self.replay.calibData.getBaselineDistance())
+        rectIntrinsicsL = M2.copy()
         rectIntrinsicsR = M2.copy()
 
         if useOptimalNewCameraMatrix :
-            R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q = cv2.fisheye.stereoRectify(M1, d1[:4], M2, d2[:4], resolution, R, T, flags=cv2.CALIB_ZERO_DISPARITY, balance=0)
+            M2_focal = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(M2, d2, resolution, np.eye(3), fov_scale=1.1)
+            rectIntrinsicsL = M2_focal
+            rectIntrinsicsR = M2_focal
+            # R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q = cv2.fisheye.stereoRectify(M1, d1[:4], M2, d2[:4], resolution, R, T, flags=cv2.CALIB_ZERO_DISPARITY, balance=0)
             
         elif rectificationScale > 0 and rectificationScale < 1:
             rectIntrinsicsL[0][0] *= rectificationScale
@@ -135,8 +145,6 @@ class ReplayCamera(Camera):
         print(rectIntrinsicsL)
         print('Right intrinsic resized')
         print(rectIntrinsicsR)
-        print('Q matrix is ->')
-        print(self.Q)
 
         meshCellSize = 16
         meshLeft = []
@@ -196,10 +204,11 @@ class ReplayCamera(Camera):
     
         centerCropOffset = ((originalRes[0] - res[0]) / 2, (originalRes[1] - res[1]) / 2)
 
-        leftMesh, rightMesh, self.M2 = self.getMesh(calibData, res, centerCropOffset, 1, True)
+        leftMesh, rightMesh, self.M_res = self.getMesh(calibData, res, centerCropOffset, 1, True)
 
         nodes.stereo.loadMeshData(leftMesh, rightMesh)
         nodes.stereo.setSubpixel(True)
+        # nodes.stereo.lr
         nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
 
         xout_depth = pipeline.createXLinkOut()
@@ -229,7 +238,8 @@ class ReplayCamera(Camera):
             disparity = self.depth_queue.get().getFrame()
             # print(f'Frame baseline is  {self.replay.calibData.getBaselineDistance()}')
             with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
-                self.depth_frame = (8 * self.M2[0][0] * self.replay.calibData.getBaselineDistance() * 10 / disparity).astype(np.uint16)
+                self.depth_frame = (8 * self.M_res[0][0] * self.replay.calibData.getBaselineDistance() * 10 / disparity).astype(np.uint16)
+                # self.depth_frame = (8 * self.M_res[0][0] * self.baseline * 10 / disparity).astype(np.uint16)
 
             self.image_frame = self.image_queue.get().getCvFrame()
             self.frames.append(self.image_frame)
@@ -245,7 +255,6 @@ class ReplayCamera(Camera):
         self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
         self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
-        baseline_q = 1/self.Q[3,2]
         
         if points is not None and disparity_point is not None:
 
@@ -260,7 +269,7 @@ class ReplayCamera(Camera):
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 45), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)
             
-            depth_point = (self.M2[0][0] * baseline_q / disparity_point) / 100
+            depth_point = (self.M_res[0][0] * self.baseline / disparity_point) / 100
             text = "{:.3f}m Depth from Q".format(depth_point)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 55), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255,255,255), 3, cv2.LINE_AA)
             cv2.putText(self.depth_visualization_frame, text, (points[0] + 5, points[1] + 55), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0,0,0), 1, cv2.LINE_AA)

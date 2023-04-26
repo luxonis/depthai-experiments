@@ -13,7 +13,7 @@ parser.add_argument("-ms", "--mono_camera_resolution", type = str, default = "TH
 parser.add_argument("-m", "--median", type = str, default = "KERNEL_7x7", choices=["MEDIAN_OFF", "KERNEL_3x3", "KERNEL_5x5", "KERNEL_7x7"], help = "Median filter")
 parser.add_argument("-n", "--n_samples", type = int, default = 10, help = "Number of samples in a single test")
 parser.add_argument('-p', '--path', default = None, type = str, help = "Path to the recording folder")
-parser.add_argument('-d', '--depth', default = None, type = int, help = "Ground truth distance in meters")
+parser.add_argument('-d', '--depth', default = None, type = float, help = "Ground truth distance in meters")
 parser.add_argument('-a', '--area', type = str, default = 'center', choices = ['center', 'right', 'left'], help = 'Choose the area you want to test')
 
 args = parser.parse_args()
@@ -40,3 +40,8 @@ n_samples = args.n_samples
 area = args.area
 path = args.path # path to the recording folder
 real_depth = args.depth
+
+
+# left (id 2. aka camc) - right (id 1 a.k.a camb)
+#         |
+#       below (id 0 a.k.a cama)
