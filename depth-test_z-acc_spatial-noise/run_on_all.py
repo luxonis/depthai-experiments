@@ -58,7 +58,7 @@ def main():
         with open(errors_file, 'a') as f:
             f.write(f"{cam},{path},{calib_file},{position}")
 
-    cams = [f"camera_{i}" for i in [10, 11]]
+    cams = [f"camera_{i}" for i in [4, 7, 11, 12, 17, 18, 20]]
     positions = ["center", "left", "right", "top", "bottom"]
 
     last_checkpoint = read_checkpoint()
@@ -111,26 +111,42 @@ def main():
                         progress_bar.set_description(f"Processing: {cam} {os.path.basename(path)} {os.path.basename(calib_file)} {position}")
                         progress_bar.refresh()
 
-                        for res_type, res_arg in [("fullRes", "-fullResolution"), ("resizedRes", "")]:
-                            out_dir = os.path.join(latest_dir, res_type, calib_name_no_ext)
-                            if Path(out_dir).exists():
-                                print("Skipping existing directory")
-                                continue
-                            os.makedirs(out_dir, exist_ok=True)
+                        res_type = "depthOCV"
+                        out_dir = os.path.join(latest_dir, res_type, calib_name_no_ext)
+                        # if Path(out_dir).exists():
+                        #     print("Skipping existing directory")
+                        #     continue
+                        os.makedirs(out_dir, exist_ok=True)
 
-                            print(f"Running {res_type}")
-
-                            cmd = f"python {SOURCE_DIR}/stereo_both.py -vid {res_arg} -saveFiles -numLastFrames 10 -imageCrop {position} -left {latest_dir}/camb,c.avi -right {latest_dir}/camc,c.avi -bottom {latest_dir}/camd,c.avi -calib {calib_file} -rect -outDir {out_dir}"
-                            ret = subprocess.run(cmd, shell=True, capture_output=True)
-                            if ret.returncode != 0:
-                                print(f"Error running {cmd}")
-                                save_errors(cam, path, calib_file, position)
-                                print(ret.stderr)
-                                print(ret.stdout)
-                            print(cmd)
-                            time.sleep(10)
-                            progress_bar.update(1)
-                        save_checkpoint(cam, path, calib_file, position)
+                        print(f"Running {res_type}")
+                        cmd = [
+                            "python",
+                            f"{SOURCE_DIR}/stereo_rvc3/stereo_live.py",
+                            "-saveFiles",
+                            "-numLastFrames",
+                            "5",
+                            "-useOpenCVDepth",
+                            "-videoDir",
+                            latest_dir,
+                            "-calib",
+                            calib_file,
+                            "-rect",
+                            "-outDir",
+                            out_dir
+                        ]
+                        # cmd = f"python {SOURCE_DIR}/stereo_rvc3/stereo_live.py  -saveFiles -numLastFrames 5  -imagesDir {latest_dir} -calib {calib_file} -rect -outDir {out_dir}"
+                        cmd = " ".join(cmd)
+                        ret = subprocess.run(cmd, shell=True, capture_output=True)
+                        print("HEJ HOJ")
+                        if ret.returncode != 0:
+                            print(f"Error running {cmd}")
+                            save_errors(cam, path, calib_file, position)
+                            print(ret.stderr)
+                            print(ret.stdout)
+                        print(cmd)
+                        time.sleep(7)
+                        progress_bar.update(1)
+                    save_checkpoint(cam, path, calib_file, position)
 
     except KeyboardInterrupt:
         print("\nInterrupted. Saving progress...")

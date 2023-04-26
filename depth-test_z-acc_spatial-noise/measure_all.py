@@ -41,7 +41,7 @@ def main():
     parser.add_argument("-mode", help="Mode to run in", choices=["measure", "interactive"], default="interactive")
     parser.add_argument("--continue", dest="continue_from_last", action="store_true", help="Continue from the last checkpoint")
     parser.add_argument("--camera_ids", required=True, help="List of cameras to process", default=[], nargs='+', type=int)
-    parser.add_argument("--positions", required=False, help="List of positions to process", default=["left", "right", "center"], nargs='+', type=str)
+    parser.add_argument("--positions", required=False, help="List of positions to process", default=["left", "right", "center", "top", "bottom"], nargs='+', type=str)
     args = parser.parse_args()
 
     source_directory = Path(__file__).resolve().parent
@@ -98,7 +98,7 @@ def main():
 
                         calibration_file_stem = calibration_file.stem
 
-                        for resolution_type in ["fullRes", "resizedRes"]:
+                        for resolution_type in ["depthOCV"]:
                             output_directory = latest_directory / resolution_type / calibration_file_stem
                             output_directory.mkdir(parents=True, exist_ok=True)
 
@@ -117,6 +117,7 @@ def main():
                                     "-rectified", str(output_directory / f"leftRectified{orientation.capitalize()}.npy"),
                                     "-gt", str(ground_truth),
                                     "-out_results_f", str(output_directory / f"results_{prefix}_auto.txt"),
+                                    "-rs", str(0.2),
                                 ]
                                 if args.mode == "interactive":
                                     cmd += ["-mode", "interactive"]
@@ -124,7 +125,10 @@ def main():
                                 else:
                                     cmd +=["-mode", "measure"]
                                     cmd +=["-set_roi_file", str(latest_directory / resolution_type / f"roi_{prefix}.txt")]
+                                print("Hello")
+                                print(" ".join(cmd))
                                 result = subprocess.run(cmd, capture_output=False)
+                                print("Hello2")
                                 if result.returncode != 0:
                                     command = " ".join(cmd)
                                     print(command)
