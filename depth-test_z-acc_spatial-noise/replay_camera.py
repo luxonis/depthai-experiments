@@ -123,7 +123,7 @@ class ReplayCamera(Camera):
         T = tranformation[:3, 3]
         self.baseline = abs(T[0])
         print('baseline', self.baseline)
-        print("Full baseline -> ", self.replay.calibData.getBaselineDistance())
+        # print("Full baseline -> ", self.replay.calibData.getBaselineDistance())
         rectIntrinsicsL = M2.copy()
         rectIntrinsicsR = M2.copy()
 
@@ -231,18 +231,19 @@ class ReplayCamera(Camera):
 
     def update(self):
         disparity_point = None
+        baseline = self.replay.calibData.getBaselineDistance()
         if not self.replay.send_frames(False):
             self.stop = True
             self.depth_frame = self.depth_frames[self.idx % len(self.depth_frames)]
             self.image_frame = self.frames[self.idx % len(self.frames)]
             self.idx = self.idx + 1
             if points is not None:
-                disparity_point = self.M_res[0][0] * self.replay.calibData.getBaselineDistance() * 10 / self.depth_frame[points[1]][points[0]]
+                disparity_point = self.M_res[0][0] * baseline * 10 / self.depth_frame[points[1]][points[0]]
         else:
             disparity = self.depth_queue.get().getFrame()
             # print(f'Frame baseline is  {self.replay.calibData.getBaselineDistance()}')
             with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here
-                self.depth_frame = (8 * self.M_res[0][0] * self.replay.calibData.getBaselineDistance() * 10 / disparity).astype(np.uint16)
+                self.depth_frame = (8 * self.M_res[0][0] * baseline * 10 / disparity).astype(np.uint16)
                 # self.depth_frame = (8 * self.M_res[0][0] * self.baseline * 10 / disparity).astype(np.uint16)
 
             self.image_frame = self.image_queue.get().getCvFrame()
