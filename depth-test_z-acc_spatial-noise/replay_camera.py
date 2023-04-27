@@ -132,7 +132,7 @@ class ReplayCamera(Camera):
             rectIntrinsicsL = M2_focal
             rectIntrinsicsR = M2_focal
             # R1, R2, rectIntrinsicsL, rectIntrinsicsR, self.Q = cv2.fisheye.stereoRectify(M1, d1[:4], M2, d2[:4], resolution, R, T, flags=cv2.CALIB_ZERO_DISPARITY, balance=0)
-            
+            print('Modified intrinsics ', rectIntrinsicsL)
         elif rectificationScale > 0 and rectificationScale < 1:
             rectIntrinsicsL[0][0] *= rectificationScale
             rectIntrinsicsL[1][1] *= rectificationScale
@@ -209,6 +209,8 @@ class ReplayCamera(Camera):
 
         nodes.stereo.loadMeshData(leftMesh, rightMesh)
         nodes.stereo.setSubpixel(True)
+        nodes.stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
+        nodes.stereo.setLeftRightCheck(True)
         # nodes.stereo.lr
         nodes.stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
 
@@ -234,8 +236,9 @@ class ReplayCamera(Camera):
             self.depth_frame = self.depth_frames[self.idx % len(self.depth_frames)]
             self.image_frame = self.frames[self.idx % len(self.frames)]
             self.idx = self.idx + 1
-
-        else:           
+            if points is not None:
+                disparity_point = self.M_res[0][0] * self.replay.calibData.getBaselineDistance() * 10 / self.depth_frame[points[1]][points[0]]
+        else:
             disparity = self.depth_queue.get().getFrame()
             # print(f'Frame baseline is  {self.replay.calibData.getBaselineDistance()}')
             with np.errstate(divide='ignore'): # Should be safe to ignore div by zero here

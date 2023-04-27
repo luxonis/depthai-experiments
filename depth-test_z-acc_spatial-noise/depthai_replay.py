@@ -145,19 +145,25 @@ class Replay:
                 if config.area == 'right':
                     frame = frame[60:1140, 640:1920]
                 self.frames[name] = frame
-                cv2.imshow('frame', frame)
+                # cv2.imshow('frame', frame)
         return len(self.frames) == 0
 
     def send_frames(self, pause):
         if self.read_frames(pause):
             return False # end of recording
-        for name in self.frames:
-            if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:
-                self.frames[name] = self.frames[name][:,:,0] # All 3 planes are the same
+        if  "left" in self.frames and "right" in self.frames:
+            self.send_frame(self.frames['left'][:,:,0], 'left')
+            self.send_frame(self.frames['right'][:,:,0], 'right')
+            # if 
+            
+            # if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:
+            #     self.frames[name] = self.frames[name][:,:,0] # All 3 planes are the same
 
-            self.send_frame(self.frames[name], name)
+            # self.send_frame(self.frames[name], name)
 
-        return True
+            return True
+        else :
+            return False
 
     def get_size(self):
         return (1280, 1080)
