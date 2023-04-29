@@ -50,7 +50,7 @@ class OptionsWrapper:
 
     @property
     def height(self):
-        return int(self.raw_options.get('cam_width', 300))
+        return int(self.raw_options.get('cam_height', 300))
 
     @property
     def nn(self):
