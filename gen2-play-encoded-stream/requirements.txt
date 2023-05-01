@@ -1,1 +1,1 @@
-depthai==2.15.2.0
+depthai==2.19.1.0.dev+106e4acdea0b747c8bdda70c6a248c6ef64c7d2d

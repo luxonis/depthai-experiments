@@ -7,8 +7,11 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser()
+parser.add_argument('-cam', '--camera', default='rgb',
+                    choices={'rgb', 'left', 'right', 'cama', 'camb', 'camc', 'camd', 'came', 'camf'},
+                    help="Select encoding format. Default: %(default)s")
 parser.add_argument('-res', '--resolution', default='4k',
-                    choices={'1080', '4k', '12mp', '13mp'},
+                    choices={'1080', '1200', '1500', '1520', '1560', '3000', '4k', '12mp', '13mp'},
                     help="Select color camera resolution. Default: %(default)s")
 parser.add_argument('-enc', '--encode', default='h264',
                     choices={'h264', 'h265', 'jpeg'},
@@ -19,8 +22,25 @@ parser.add_argument('-v', '--verbose', default=False, action="store_true",
                     help="Prints latency for the encoded frame data to reach the app")
 args = parser.parse_args()
 
+cam_socket_opts = {
+    'rgb'  : dai.CameraBoardSocket.RGB,
+    'left' : dai.CameraBoardSocket.LEFT,
+    'right': dai.CameraBoardSocket.RIGHT,
+    'cama' : dai.CameraBoardSocket.CAM_A,
+    'camb' : dai.CameraBoardSocket.CAM_B,
+    'camc' : dai.CameraBoardSocket.CAM_C,
+    'camd' : dai.CameraBoardSocket.CAM_D,
+    'came' : dai.CameraBoardSocket.CAM_E,
+    'camf' : dai.CameraBoardSocket.CAM_F,
+}
+
 res_opts = {
     '1080': dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+    '1200': dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+#    '1500': dai.ColorCameraProperties.SensorResolution.THE_2000X1500,
+#    '1520': dai.ColorCameraProperties.SensorResolution.THE_2028X1520,
+#    '1560': dai.ColorCameraProperties.SensorResolution.THE_2104X1560,
+    '3000': dai.ColorCameraProperties.SensorResolution.THE_4000X3000,
     '4k':   dai.ColorCameraProperties.SensorResolution.THE_4_K,
     '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
     '13mp': dai.ColorCameraProperties.SensorResolution.THE_13_MP,
@@ -42,13 +62,13 @@ xout = pipeline.create(dai.node.XLinkOut)
 xout.setStreamName("enc")
 
 # Properties
-camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+camRgb.setBoardSocket(cam_socket_opts[args.camera])
 camRgb.setResolution(res_opts[args.resolution])
 camRgb.setFps(args.fps)
 videoEnc.setDefaultProfilePreset(camRgb.getFps(), enc_opts[args.encode])
 
 # Linking
-camRgb.video.link(videoEnc.input)
+camRgb.isp.link(videoEnc.input)
 videoEnc.bitstream.link(xout.input)
 
 width, height = 720, 500
