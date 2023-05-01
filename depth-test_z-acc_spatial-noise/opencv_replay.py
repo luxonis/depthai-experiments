@@ -78,7 +78,7 @@ class OpenCVStereo():
         blockSize = 15
         self.stereo = cv2.StereoSGBM_create( # Most similar to MX depth
             minDisparity=1,
-            numDisparities=16,
+            numDisparities=96,
             blockSize=15,
             P1=2 * (blockSize ** 2),
             P2=3 * (blockSize ** 2),
