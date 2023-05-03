@@ -18,7 +18,7 @@ dash-html-components==2.0.0
 dash-table==5.0.0
 decorator==5.1.1
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.19.1.0.dev0+22720cd4ad7503101c678b941012bfc9a07e9080
+depthai==2.19.1.0.dev0+683d3f717673431b475133f494a66e38bc35492c
 git+https://github.com/luxonis/depthai.git@036b571eb89e1303ef322658d38de9b010ecc017#subdirectory=depthai_sdk
 distinctipy==1.2.2
 executing==1.2.0

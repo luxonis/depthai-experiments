@@ -105,6 +105,16 @@ def run_interaticve():
     # point cloud visualization window
     point_cloud_window = o3d.visualization.VisualizerWithKeyCallback()
     point_cloud_window.create_window("Point Cloud")
+    
+    print(f"Press 'Q', quit")
+    print(f"Press 'F', fit_plane")
+    print(f"Press 'V', visualize_plane")
+    print(f"Press 'T', start_test")
+    print(f"Press 'G', set_ground_truth")
+    print(f"Press 'P', save_point_clouds")
+    print(f"Press 'C', toggle_color")
+    print(f"Press '1', select_camera: 0")
+    print(f"Press '2', select_camera: 1")
 
     point_cloud_window.register_key_callback(ord('Q'), lambda vis: quit_callback())
     point_cloud_window.register_key_callback(ord('F'), lambda vis: fit_plane_callback())
@@ -129,7 +139,7 @@ def run_interaticve():
         key = cv2.waitKey(1)
 
         for camera, color in zip(cameras, [(1,0,0), (0,0,1)]):
-            camera.update()
+            camera.update(key)
             if solid_color:
                 camera.point_cloud.paint_uniform_color(color)
             point_cloud_window.update_geometry(camera.point_cloud)

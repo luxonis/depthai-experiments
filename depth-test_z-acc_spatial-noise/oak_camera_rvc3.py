@@ -7,6 +7,7 @@ import config
 from camera import Camera
 from host_sync import HostSync
 from stereo_rvc3 import pipeline_creation
+from stereo_config import StereoConfigHandler
 
 class OakCamera(Camera):
     def __init__(self, device_info: dai.DeviceInfo, vertical=True, use_opencv=False):
@@ -35,6 +36,7 @@ class OakCamera(Camera):
         self.depth_queue = self.device.getOutputQueue(name=self.depth_name, maxSize=10, blocking=False)
         self.right_image_queue = self.device.getOutputQueue(name=self.right_image_name, maxSize=10, blocking=False)
         self.host_sync = HostSync([self.image_name, self.depth_name, self.right_image_name])
+        self.input_config_queue = self.device.getInputQueue(self.input_config_name)
 
 
     def __del__(self):
@@ -81,40 +83,61 @@ class OakCamera(Camera):
         colorLeft.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
         colorRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         colorRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
+        
+
+
+        name = "horizontal"
         if self.vertical:
             #################################################  vertical ###############################################################
-            stereoVertical, outNames = pipeline_creation.create_stereo(pipeline, "vertical", colorLeft.isp, colorVertical.isp, False, True, True)
+            name = "vertical"
+            stereo, outNames = pipeline_creation.create_stereo(pipeline, name, colorLeft.isp, colorVertical.isp, False, True, True)
             self.image_size = (colorLeft.getResolutionHeight(), colorLeft.getResolutionWidth())
             self.mono_image_size = self.image_size
 
             meshLeft, meshVertical, self.scale_factor = pipeline_creation.create_mesh_on_host(calibData, colorLeft.getBoardSocket(), colorVertical.getBoardSocket(),
                                                                         (colorLeft.getResolutionWidth(), colorLeft.getResolutionHeight()), vertical=True)
-            stereoVertical.loadMeshData(meshLeft, meshVertical)
-            stereoVertical.setVerticalStereo(True)
-            stereoVertical.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
+            stereo.loadMeshData(meshLeft, meshVertical)
+            stereo.setVerticalStereo(True)
+            stereo.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
             ############################################################################################################################
 
         else:
             #################################################  horizontal ##############################################################
-            stereoHorizontal, outNames = pipeline_creation.create_stereo(pipeline, "horizontal", colorLeft.isp, colorRight.isp, False, True, True)
+            name = "horizontal"
+            stereo, outNames = pipeline_creation.create_stereo(pipeline, name, colorLeft.isp, colorRight.isp, False, True, True)
             self.image_size = (colorLeft.getResolutionWidth(), colorLeft.getResolutionHeight())
             self.mono_image_size = self.image_size
             meshLeft, meshVertical, self.scale_factor = pipeline_creation.create_mesh_on_host(calibData, colorLeft.getBoardSocket(), colorRight.getBoardSocket(),
                                                                         (colorLeft.getResolutionWidth(), colorLeft.getResolutionHeight()))
-            stereoHorizontal.loadMeshData(meshLeft, meshVertical)
-            stereoHorizontal.setLeftRightCheck(False)
-            stereoHorizontal.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
+            stereo.loadMeshData(meshLeft, meshVertical)
+            stereo.setLeftRightCheck(False)
+            stereo.initialConfig.setDepthAlign(dai.StereoDepthConfig.AlgorithmControl.DepthAlign.RECTIFIED_LEFT)
             ############################################################################################################################
         if self.use_opencv:
             self.scale_factor /= 2
+
+        StereoConfigHandler(stereo.initialConfig.get())
+        StereoConfigHandler.registerWindow(name + ' stereo control panel')
+
+        xinStereoDepthConfig = pipeline.create(dai.node.XLinkIn)
+        xinStereoDepthConfigName = name + "-stereoDepthConfig"
+        xinStereoDepthConfig.setStreamName(xinStereoDepthConfigName)
+        xinStereoDepthConfig.out.link(stereo.inputConfig)
+
         rectified_left, rectified_right, disparity = outNames
         self.depth_name = disparity
         self.image_name = rectified_left
         self.right_image_name = rectified_right
+        self.input_config_name = xinStereoDepthConfigName
 
         self.pipeline = pipeline
 
-    def update(self):
+    def update(self, key = None):
+        
+        if key is not None:
+            StereoConfigHandler.handleKeypress(key, self.input_config_queue)
+
+
         for queue in [self.depth_queue, self.image_queue, self.right_image_queue]:
             new_msgs = queue.tryGetAll()
             if new_msgs is not None:
