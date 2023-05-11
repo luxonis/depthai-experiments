@@ -1,4 +1,5 @@
 import depthai as dai
+from pathlib import Path
 from argparse import ArgumentParser
 parser = ArgumentParser(prog = "Depth test", description = "Test test z-accuracy and spatial noise")
 
@@ -41,7 +42,7 @@ n_samples = args.n_samples
 area = args.area
 path = args.path # path to the recording folder
 real_depth = args.depth
-
+output_path = Path(path) /  'pcl_bag'
 
 # left (id 2. aka camc) - right (id 1 a.k.a camb)
 #         |
