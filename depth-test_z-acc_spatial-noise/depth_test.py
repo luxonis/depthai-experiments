@@ -87,6 +87,8 @@ class DepthTest:
 		axis_angle = normalize(np.cross(self.plane_normal, self.camera_dir)) * np.arccos(np.dot(self.camera_dir, self.plane_normal))
 		R = o3d.geometry.get_rotation_matrix_from_axis_angle(axis_angle)
 		point_cloud_corrected = o3d.geometry.PointCloud(point_cloud)
+		# R = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]).astype(np.float64)
+
 		point_cloud_corrected.rotate(R, center=(0, 0, 0))
 		return point_cloud_corrected
 
