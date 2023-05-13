@@ -18,8 +18,8 @@ Original OpenVINO demo, on which this example was made, is [here](https://docs.o
 3. 544x320 frames are sent from downscale ImageManip node to the object detection model (MobileNetSpatialDetectionNetwork)
 4. Object detections are sent to the Script node
 5. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected person. These configs then get sent to ImageManip together with synced high-res frame
-6. ImageManip will crop only the person out of the original frame. It will also resize the face frame to required size (128,256) by the person-reidentification NN model
-7. Face frames get send to the 2nd NN - [person-reidentification](https://docs.openvino.ai/latest/omz_models_model_person_reidentification_retail_0288.html) NN model. NN results are sent back to the host
+6. ImageManip will crop only the person out of the original frame. It will also resize the person frame to required size (128,256) by the person-reidentification NN model
+7. Person frames get sent to the 2nd NN - [person-reidentification](https://docs.openvino.ai/latest/omz_models_model_person_reidentification_retail_0288.html) NN model. NN results are sent back to the host
 8. Frames, object detections, and reidentification results are all **synced on the host** side and then displayed to the user
 
 ## 2-stage NN pipeline graph
