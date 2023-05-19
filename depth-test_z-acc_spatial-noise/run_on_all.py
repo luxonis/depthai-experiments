@@ -36,6 +36,8 @@ def main():
     parser = argparse.ArgumentParser(description="Script to process camera data.")
     parser.add_argument("calib_dir", help="Path to the calibration directory")
     parser.add_argument("--continue", dest="continue_from_last", action="store_true", help="Continue from the last checkpoint")
+    parser.add_argument("--camera_ids", required=True, help="List of cameras to process", default=[], nargs='+', type=int)
+    parser.add_argument("--positions", required=False, help="List of positions to process", default=["left", "right", "center", "top", "bottom"], nargs='+', type=str)
     args = parser.parse_args()
 
     CALIB_DIR = args.calib_dir
@@ -58,8 +60,8 @@ def main():
         with open(errors_file, 'a') as f:
             f.write(f"{cam},{path},{calib_file},{position}")
 
-    cams = [f"camera_{i}" for i in [4, 7, 11, 12, 17, 18, 20]]
-    positions = ["center", "left", "right", "top", "bottom"]
+    cams = [f"camera_{i}" for i in args.camera_ids]
+    positions = args.positions
 
     last_checkpoint = read_checkpoint()
     if args.continue_from_last and last_checkpoint:
