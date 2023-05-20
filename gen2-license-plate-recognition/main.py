@@ -6,7 +6,7 @@ import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
-from depthai_sdk import FPSHandler
+from depthai_sdk.fps import FPSHandler
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
