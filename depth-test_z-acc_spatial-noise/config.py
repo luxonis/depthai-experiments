@@ -16,6 +16,7 @@ parser.add_argument('-p', '--path', default = None, type = str, help = "Path to 
 parser.add_argument('-d', '--depth', default = None, type = float, help = "Ground truth distance in meters")
 parser.add_argument('-a', '--area', type = str, default = 'center', choices = ['center', 'right', 'left'], help = 'Choose the area you want to test')
 parser.add_argument('-ocv', '--opencv', action = 'store_true', help = 'Use opencv for replay')
+parser.add_argument('-calp', '--calibration_path', type = str, default = None, help = 'Path to the calibration file')
 
 args = parser.parse_args()
 
@@ -30,6 +31,7 @@ min_range = args.min_range 			# mm
 max_range = args.max_range			# mm
 mono_camera_resolution = getattr(dai.MonoCameraProperties.SensorResolution, args.mono_camera_resolution)
 use_opencv = args.opencv
+calibration_path = args.calibration_path
 # Median filter
 # Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7
 median = getattr(dai.StereoDepthProperties.MedianFilter, args.median)
