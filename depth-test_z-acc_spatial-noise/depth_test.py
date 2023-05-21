@@ -11,7 +11,7 @@ class DepthTest:
 	def __init__(self):
 		self.camera_dir = np.array([0, 0, -1])
 		self.plane_normal = np.array([0, 0, -1])
-		self.camera_wall_distance = 1 # m
+		self.camera_wall_distance = config.real_depth
 		self.plane_distance = -self.camera_wall_distance
 		self.plane_coeffs = (0,0,-self.camera_wall_distance)
 

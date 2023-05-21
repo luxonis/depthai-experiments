@@ -17,6 +17,7 @@ parser.add_argument('-d', '--depth', default = None, type = float, help = "Groun
 parser.add_argument('-a', '--area', type = str, default = 'center', choices = ['center', 'right', 'left'], help = 'Choose the area you want to test')
 parser.add_argument('-ocv', '--opencv', action = 'store_true', help = 'Use opencv for replay')
 parser.add_argument('-calp', '--calibration_path', type = str, default = None, help = 'Path to the calibration file')
+parser.add_argument('-alpha', type=float, default=0, help="alpha parameter for rectified frames")
 
 args = parser.parse_args()
 
@@ -38,6 +39,7 @@ median = getattr(dai.StereoDepthProperties.MedianFilter, args.median)
 
 
 n_samples = args.n_samples
+alpha = args.alpha
 
 # path = args.path # path to the recording folder
 area = args.area

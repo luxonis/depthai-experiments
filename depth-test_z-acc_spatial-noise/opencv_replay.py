@@ -46,7 +46,7 @@ class OpenCVStereo():
         # Hardcode the output size to input size for now
         self.output_width = input_size[0]
         self.output_height = input_size[1]
-        self.alpha = 0
+        self.alpha = config.alpha
         self.set_maps()
         self.setup_stereo()
 
