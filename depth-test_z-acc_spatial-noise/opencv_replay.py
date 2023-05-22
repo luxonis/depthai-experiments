@@ -47,6 +47,7 @@ class OpenCVStereo():
         self.output_width = input_size[0]
         self.output_height = input_size[1]
         self.alpha = config.alpha
+        self.vertical = config.use_vertical
         self.set_maps()
         self.setup_stereo()
 
@@ -70,17 +71,30 @@ class OpenCVStereo():
         print("Camera model: ", modelLeft)
         model = modelLeft
         if model == dai.CameraModel.Fisheye:
-            R1, R2, P1, P2, Q = cv2.fisheye.stereoRectify(M1, D1, M2, D2, (self.input_width, self.input_height), R, T, balance=self.alpha, flags=cv2.fisheye.CALIB_ZERO_DISPARITY, fov_scale=1)
-            self.left_map_x, self.left_map_y = cv2.fisheye.initUndistortRectifyMap(M1, D1, R1, P1, (self.output_width, self.output_height), cv2.CV_32FC1)
-            self.right_map_x, self.right_map_y = cv2.fisheye.initUndistortRectifyMap(M2, D2, R2, P2, (self.output_width, self.output_height), cv2.CV_32FC1)
+            if self.vertical:
+                newImageSize = (self.output_height, self.output_width)
+            else:
+                newImageSize = (self.output_width, self.output_height)
+            R1, R2, P1, P2, Q = cv2.fisheye.stereoRectify(M1, D1, M2, D2, (self.input_width, self.input_height), R, T, balance=self.alpha, flags=cv2.fisheye.CALIB_ZERO_DISPARITY, fov_scale=1, newImageSize=newImageSize)
+            if self.vertical:
+                self.left_map_x, self.left_map_y = cv2.fisheye.initUndistortRectifyMap(M1, D1, R1, P1, (self.output_height, self.output_width), cv2.CV_32FC1)
+                self.right_map_x, self.right_map_y = cv2.fisheye.initUndistortRectifyMap(M2, D2, R2, P2, (self.output_height, self.output_width), cv2.CV_32FC1)
+            else:
+                self.left_map_x, self.left_map_y = cv2.fisheye.initUndistortRectifyMap(M1, D1, R1, P1, (self.output_width, self.output_height), cv2.CV_32FC1)
+                self.right_map_x, self.right_map_y = cv2.fisheye.initUndistortRectifyMap(M2, D2, R2, P2, (self.output_width, self.output_height), cv2.CV_32FC1)
         elif model == dai.CameraModel.Perspective:
             R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(M1, D1, M2, D2, (self.input_width, self.input_height), R, T, alpha=self.alpha)
             self.left_map_x, self.left_map_y = cv2.initUndistortRectifyMap(M1, D1, R1, P1, (self.output_width, self.output_height), cv2.CV_32FC1)
             self.right_map_x, self.right_map_y = cv2.initUndistortRectifyMap(M2, D2, R2, P2, (self.output_width, self.output_height), cv2.CV_32FC1)
         self.focal_length_x = P1[0][0]
         self.focal_length_y = P1[1][1]
-        self.baseline = abs(P2[0][3] / self.focal_length_x)
+        print(P2)
+        if self.vertical:
+            self.baseline = abs(P2[0][3] / self.focal_length_y)
+        else:
+            self.baseline = abs(P2[0][3] / self.focal_length_x)
         print("Focal length x: ", self.focal_length_x)
+        print("Focal length y: ", self.focal_length_y)
         print("Baseline: ", self.baseline)
 
     def setup_stereo(self):
@@ -153,12 +167,19 @@ class OpenCVCamera(Camera):
                 raise RuntimeError(f"None of the files {name_possibilities} were found in {config.path}")
             video_files.append(file)
 
+        if config.use_vertical:
+            idLeft = 2
+            idRight = 0
+        else:
+            idLeft = 0
+            idRight = 1
 
-        self.left_socket = sockets[0] # TODO generalize
-        self.right_socket = sockets[1] # TODO generalize
-        self.video_reader = VideoReader(video_files[0], video_files[1])
+        self.left_socket = sockets[idLeft] # TODO generalize
+        self.right_socket = sockets[idRight] # TODO generalize
+
+        self.video_reader = VideoReader(video_files[idLeft], video_files[idRight])
         self.image_size = (self.video_reader.get_width(), self.video_reader.get_height())
-        self.preview_socket = sockets[0]
+        self.preview_socket = sockets[idLeft]
         self.stereo = OpenCVStereo(dai.CalibrationHandler(calib_file), self.left_socket, self.right_socket, self.image_size)
 
         self._load_calibration(calib_file)
@@ -173,8 +194,10 @@ class OpenCVCamera(Camera):
         self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(
             *self.image_size, self.intrinsics[0][0], self.intrinsics[1][1], self.intrinsics[0][2], self.intrinsics[1][2]
         )
-
-        self.focal_length = self.intrinsics[0][0] # in pixels
+        if config.use_vertical:
+            self.focal_length = self.intrinsics[1][1] # in pixels
+        else:
+            self.focal_length = self.intrinsics[0][0] # in pixels
         self.stereoscopic_baseline = calibration.getBaselineDistance() / 100 # in m
         self.cameraModel = None
         for socket in [self.left_socket, self.right_socket]:
