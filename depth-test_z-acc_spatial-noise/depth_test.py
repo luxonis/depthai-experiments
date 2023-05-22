@@ -96,7 +96,7 @@ class DepthTest:
 
 		spatial_noise = self.compute_spatial_noise(point_cloud_corrected)
 		self.spatial_noise_rmses.append(spatial_noise)
-
+		subpixel_spatial_noise = 0 # added so it doesn't throw using non oak camera
 		if isinstance(camera, OakCamera):
 			subpixel_spatial_noise = self.compute_subpixel_spatial_noise(
 				point_cloud_corrected, 

@@ -8,6 +8,7 @@ from utils import *
 from depth_test import DepthTest
 import config
 import open3d as o3d
+from zed_camera import ZedCamera
 
 if config.astra_gt:
 	from openni import openni2
@@ -30,6 +31,14 @@ if config.astra_gt:
 		cameras.append(astra_camera)
 	except:
 		print("❗WARNING: Astra not found")
+
+if config.zed:
+	try:
+		zed_camera = ZedCamera()
+		cameras.append(zed_camera)
+	except:
+		print("❗WARNING: Zed not found")
+
 
 if len(cameras) == 0:
 	print("❗ERROR: No cameras found")
