@@ -168,8 +168,8 @@ class OpenCVCamera(Camera):
             video_files.append(file)
 
         if config.use_vertical:
-            idLeft = 2
-            idRight = 0
+            idLeft = 0
+            idRight = 2
         else:
             idLeft = 0
             idRight = 1
