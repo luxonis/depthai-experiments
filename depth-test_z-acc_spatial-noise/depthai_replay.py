@@ -29,6 +29,8 @@ class Replay:
             raise RuntimeError("There are no recordings in the folder specified.")
 
         # Load calibration data from the recording folder
+        # temp_path = '/home/sachin/luxonis/vermeer/depth-testing-data/sub/camera_007/0.5m/calib_cam_07_051923.json'
+        # self.calibData = dai.CalibrationHandler(temp_path)
         self.calibData = dai.CalibrationHandler(str(self.path / "calib.json"))
 
         # Read basic info about the straems (resolution of streams etc.)
