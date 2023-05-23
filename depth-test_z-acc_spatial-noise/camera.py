@@ -69,9 +69,9 @@ class Camera:
         y2 = int(y2 / config.args.rs)
 
         ROI_sorted = (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
-        x1, y1, x2, y2 = ROI_sorted
+        self.x1, self.y1, self.x2, self.y2 = ROI_sorted
         ROI_mask = np.zeros_like(frame)
-        ROI_mask[y1 : y2, x1 : x2] = 1
+        ROI_mask[self.y1 : self.y2, self.x1 : self.x2] = 1
         
         return frame * ROI_mask
     
@@ -84,9 +84,12 @@ class Camera:
         return np.count_nonzero(depth_roi) / len(depth_roi)
 
 
-    def rgbd_to_point_cloud(self, downsample=False, remove_noise=False):
+    def rgbd_to_point_cloud(self):
         image_frame = self.select_ROI(self.image_frame)
         depth_frame = self.select_ROI(self.depth_frame)
+
+        if self.x2 > self.x1 and self.y2 > self.y1:
+            self.fill_rate1 = np.count_nonzero(depth_frame[self.y1 : self.y2, self.x1 : self.x2]) / (self.x2 - self.x1) / (self.y2 - self.y1)
 
         rgb_o3d = o3d.geometry.Image(cv2.cvtColor(image_frame, cv2.COLOR_RGB2BGR))
         df = np.copy(depth_frame).astype(np.float32)
@@ -97,12 +100,6 @@ class Camera:
         point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbd_image, self.pinhole_camera_intrinsic, self.extrinsic
         )
-
-        if downsample:
-            point_cloud = point_cloud.voxel_down_sample(voxel_size=0.01)
-
-        if remove_noise:
-            point_cloud = point_cloud.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)[0]
 
         self.point_cloud.points = point_cloud.points
         self.point_cloud.colors = point_cloud.colors

@@ -4,6 +4,8 @@ import depthai as dai
 from camera import Camera
 from oak_camera_rvc3 import OakCamera
 from numpy_replay_camera import NumpyReplayCamera
+from replay_camera import ReplayCamera
+from opencv_replay import OpenCVCamera
 from utils import *
 from depth_test import DepthTest
 import config
@@ -24,18 +26,21 @@ if config.args.depth and config.args.rectified and config.args.calib:
         Path(config.args.calib)
     )
     cameras.append(replay_camera)
+# else:
+#     rvc3_camera = OakCamera(None, config.args.vertical, config.args.use_opencv)
+#     cameras.append(rvc3_camera)
+
+device_info = dai.DeviceInfo()
+if config.path is not None:
+    if config.use_opencv:
+        replay_camera = OpenCVCamera()
+    else:
+        replay_camera = ReplayCamera(device_info)
+    cameras.append(replay_camera)
 else:
-    rvc3_camera = OakCamera(None, config.args.vertical, config.args.use_opencv)
-    cameras.append(rvc3_camera)
+    oak_camera = OakCamera(device_info)
+    cameras.append(oak_camera)
 
-
-if config.astra_gt:
-    try:
-        device_info = openni2.Device.open_any()
-        astra_camera = AstraCamera(device_info)
-        cameras.append(astra_camera)
-    except:
-        print("❗WARNING: Astra not found")
 
 if len(cameras) == 0:
     print("❗ERROR: No cameras found")

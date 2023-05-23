@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import open3d as o3d
 from typing import List
+from depthai_sdk import Replay
 import config
 from camera import Camera
 from host_sync import HostSync
@@ -12,11 +13,22 @@ class OakCamera(Camera):
         super().__init__(name="OAK")
 
         self.device_info = device_info
+        self.mxid = device_info.getMxId()
+        self.use_replay = False
+
+        if config.path is not None:
+            self.replay = Replay(config.path)
+            self.use_replay = True
+            print('Available streams from recording:', self.replay.getStreams())
+        
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
         self.mxid = self.device.getDeviceInfo().getMxId()
 
         self.device.setIrLaserDotProjectorBrightness(1200)
+
+        if self.use_replay:
+            self.replay.createQueues(self.device)
 
         self.image_queue = self.device.getOutputQueue(name="image", maxSize=10, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=10, blocking=False)
@@ -25,11 +37,15 @@ class OakCamera(Camera):
         self._load_calibration()
 
     def __del__(self):
+        if self.use_replay:
+            self.replay.close()
+            print("=== Closed replay")
+
         self.device.close()
         print("=== Closed " + self.device_info.getMxId())
 
     def _load_calibration(self):
-        calibration = self.device.readCalibration()
+        calibration = self.pipeline.getCalibrationData()
         self.intrinsics = calibration.getCameraIntrinsics(
             dai.CameraBoardSocket.RGB if config.COLOR else dai.CameraBoardSocket.RIGHT, 
             dai.Size2f(*self.image_size)
@@ -49,13 +65,17 @@ class OakCamera(Camera):
     def _create_pipeline(self):
         pipeline = dai.Pipeline()
 
+        if self.use_replay:
+            self.replay.initPipeline(pipeline)
+        else:
+            mono_left = pipeline.createMonoCamera()
+            mono_right = pipeline.createMonoCamera()
+            mono_left.setResolution(config.mono_camera_resolution)
+            mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+            mono_right.setResolution(config.mono_camera_resolution)
+            mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        
         # Depth cam -> 'depth'
-        mono_left = pipeline.createMonoCamera()
-        mono_right = pipeline.createMonoCamera()
-        mono_left.setResolution(config.mono_camera_resolution)
-        mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        mono_right.setResolution(config.mono_camera_resolution)
-        mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         cam_stereo = pipeline.createStereoDepth()
         cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
         cam_stereo.initialConfig.setMedianFilter(config.median)
@@ -63,8 +83,12 @@ class OakCamera(Camera):
         cam_stereo.setLeftRightCheck(config.lrcheck)
         cam_stereo.setExtendedDisparity(config.extended)
         cam_stereo.setSubpixel(config.subpixel)
-        mono_left.out.link(cam_stereo.left)
-        mono_right.out.link(cam_stereo.right)
+
+        if self.use_replay:
+            self.replay.initStereoDepth(cam_stereo)
+        else:
+            mono_left.out.link(cam_stereo.left)
+            mono_right.out.link(cam_stereo.right)
 
         init_config = cam_stereo.initialConfig.get()
         init_config.postProcessing.speckleFilter.enable = False
@@ -97,12 +121,16 @@ class OakCamera(Camera):
             self.image_size = cam_rgb.getIspSize()
         else:
             cam_stereo.rectifiedRight.link(xout_image.input)
-            self.image_size = mono_right.getResolutionSize()
+            self.image_size = self.replay.getShape('left') if self.use_replay else mono_right.getResolutionSize()
 
-        self.mono_image_size = mono_right.getResolutionSize()
+        self.mono_image_size = self.replay.getShape('left') if self.use_replay else mono_right.getResolutionSize()
         self.pipeline = pipeline
 
     def update(self):
+        if self.use_replay and not self.replay.sendFrames():
+            print('End of the recording')
+            return
+
         for queue in [self.depth_queue, self.image_queue]:
             new_msgs = queue.tryGetAll()
             if new_msgs is not None:
