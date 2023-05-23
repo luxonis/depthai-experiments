@@ -42,6 +42,7 @@ def main():
     parser.add_argument("--continue", dest="continue_from_last", action="store_true", help="Continue from the last checkpoint")
     parser.add_argument("--camera_ids", required=True, help="List of cameras to process", default=[], nargs='+', type=int)
     parser.add_argument("--positions", required=False, help="List of positions to process", default=["left", "right", "center", "top", "bottom"], nargs='+', type=str)
+    parser.add_argument("--alpha", required=False, help="Alpha value for the depth map", default=0.5, type=float)
     args = parser.parse_args()
 
     source_directory = Path(__file__).resolve().parent
@@ -72,6 +73,8 @@ def main():
                 print(f"Ground truth is {ground_truth}")
 
                 for i, calibration_file in enumerate((calibration_directory / camera / 'calibrations').glob('*')):
+                    if i != 0:
+                        continue
                     print(calibration_file.name)
                     # if "calib.json" not in calibration_file.name:
                     #     continue
@@ -105,30 +108,32 @@ def main():
                             print(f"Base directory is {latest_directory}")
                             print(f"Output directory is {output_directory}")
 
-                            for orientation, prefix in [("vertical", "ver"), ("horizontal", "hor")]:
+                            for orientation, prefix in [("vertical", "-vert"), ("horizontal", "")]:
                                 print(f"Running {orientation}")
                                 print(f"Running {position}")
 
                                 cmd = [
                                     sys.executable,
                                     str(source_directory / "main.py"),
-                                    "-calib", str(latest_directory / "calib.json"),
-                                    "-depth", str(output_directory / f"{orientation}Depth.npy"),
-                                    "-rectified", str(output_directory / f"leftRectified{orientation.capitalize()}.npy"),
+                                    "-calp", str(calibration_file),
                                     "-gt", str(ground_truth),
+                                    "-ocv",
+                                    "-p", str(latest_directory),
                                     "-out_results_f", str(output_directory / f"results_{prefix}_auto.txt"),
                                     "-rs", str(0.2),
+                                    "-alpha", str(args.alpha),
                                 ]
+                                if prefix:
+                                    cmd += [prefix]
                                 if args.mode == "interactive":
                                     cmd += ["-mode", "interactive"]
                                     cmd += ["-roi_file", str(latest_directory / resolution_type / f"roi_{prefix}.txt")]
                                 else:
                                     cmd +=["-mode", "measure"]
                                     cmd +=["-set_roi_file", str(latest_directory / resolution_type / f"roi_{prefix}.txt")]
-                                print("Hello")
                                 print(" ".join(cmd))
                                 result = subprocess.run(cmd, capture_output=False)
-                                print("Hello2")
+
                                 if result.returncode != 0:
                                     command = " ".join(cmd)
                                     print(command)

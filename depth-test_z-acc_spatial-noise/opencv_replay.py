@@ -38,6 +38,7 @@ class VideoReader():
 class OpenCVStereo():
     def __init__(self, calib, left_socket, right_socket, input_size) -> None:
         self.left_socket = left_socket
+        self.swap_left_right = False
         self.right_socket = right_socket
         self.calib : dai.CalibrationHandler = calib
         self.input_width = input_size[0]
@@ -88,7 +89,13 @@ class OpenCVStereo():
             self.right_map_x, self.right_map_y = cv2.initUndistortRectifyMap(M2, D2, R2, P2, (self.output_width, self.output_height), cv2.CV_32FC1)
         self.focal_length_x = P1[0][0]
         self.focal_length_y = P1[1][1]
-        print(P2)
+        # print(P2)
+        # print("R1:", R1)
+        # print("R2:", R2)
+        # print(R2[1][0])
+        if R2[1][0] > 0 and self.vertical:
+            self.swap_left_right = True
+            print(self.swap_left_right)
         if self.vertical:
             self.baseline = abs(P2[0][3] / self.focal_length_y)
         else:
@@ -211,8 +218,10 @@ class OpenCVCamera(Camera):
         self.stereo.setup_stereo()
         left_frame, right_frame = self.video_reader.get_synced_frames()
         left_rect, right_rect = self.stereo.get_rectified(left_frame, right_frame)
-
-        disparity = self.stereo.get_disparity(left_rect, right_rect)
+        if self.stereo.swap_left_right:
+            disparity = self.stereo.get_disparity(right_rect, left_rect)
+        else:
+            disparity = self.stereo.get_disparity(left_rect, right_rect)
         # Crop all the frames for disparity
         disparity = disparity[:,self.stereo.numDisparitySearch:]
         left_rect = left_rect[:,self.stereo.numDisparitySearch:]
