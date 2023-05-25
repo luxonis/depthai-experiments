@@ -99,7 +99,6 @@ class Camera:
     def rgbd_to_point_cloud(self):
         image_frame = self.select_ROI(self.image_frame)
         depth_frame = self.select_ROI(self.depth_frame)
-
         if self.x2 > self.x1 and self.y2 > self.y1:
             self.fill_rate1 = np.count_nonzero(depth_frame[self.y1 : self.y2, self.x1 : self.x2]) / (self.x2 - self.x1) / (self.y2 - self.y1)
 

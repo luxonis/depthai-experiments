@@ -51,6 +51,7 @@ class OpenCVStereo():
         self.vertical = config.use_vertical
         self.set_maps()
         self.setup_stereo()
+        self.model = None
 
     def set_maps(self):
         leftSocket = self.left_socket
@@ -87,12 +88,15 @@ class OpenCVStereo():
             R1, R2, P1, P2, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(M1, D1, M2, D2, (self.input_width, self.input_height), R, T, alpha=self.alpha)
             self.left_map_x, self.left_map_y = cv2.initUndistortRectifyMap(M1, D1, R1, P1, (self.output_width, self.output_height), cv2.CV_32FC1)
             self.right_map_x, self.right_map_y = cv2.initUndistortRectifyMap(M2, D2, R2, P2, (self.output_width, self.output_height), cv2.CV_32FC1)
+        self.model = model
         self.focal_length_x = P1[0][0]
         self.focal_length_y = P1[1][1]
-        # print(P2)
-        # print("R1:", R1)
-        # print("R2:", R2)
-        # print(R2[1][0])
+        self.R1 = R1
+        self.R2 = R2
+        self.P1 = P1
+        self.P2 = P2
+        self.M1 = M1
+        self.D1 = D1
         if R2[1][0] > 0 and self.vertical:
             self.swap_left_right = True
             print(self.swap_left_right)
@@ -137,6 +141,35 @@ class OpenCVStereo():
     def get_depth(self, disparity):
         depth = self.num_disparities * self.focal_length_x * self.baseline / (disparity + 1e-8)
         return depth
+
+    def remap_point(self, point):
+        """
+        Remap a point from left image to left_rect image
+
+        Args:
+            point (tuple): a 2D point (x, y) in the left image
+
+        Returns:
+            remapped_point (tuple): the corresponding point in the left_rect image
+        """
+        x, y = point
+
+        # Ensure coordinates are within valid range
+        if x < 0 or x >= self.input_width or y < 0 or y >= self.input_height:
+            print("Point coordinates are outside of the image dimensions.")
+            print("x: ", x, "y: ", y)
+            print("width: ", self.input_width, "height: ", self.input_height)
+            # Clip the coordinates to the image dimensions
+            x = np.clip(x, 0, self.input_width - 1)
+            y = np.clip(y, 0, self.input_height - 1)
+            # raise ValueError("Point coordinates are outside of the image dimensions.")
+        if self.model == dai.CameraModel.Fisheye:
+            dst = cv2.fisheye.undistortPoints(np.array([[[x, y]]], dtype=np.float32), self.M1, self.D1, R=self.R1, P=self.P1)
+            remapped_point = (dst[0,0,0], dst[0,0,1])
+        else:
+            raise NotImplementedError("Remapping for camera model {} is not implemented.".format(self.model))
+
+        return remapped_point
 
 
 
