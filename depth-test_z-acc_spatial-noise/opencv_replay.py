@@ -228,15 +228,10 @@ class OpenCVCamera(Camera):
         right_rect = right_rect[:,self.stereo.numDisparitySearch:]
 
         self.depth_frame = self.stereo.get_depth(disparity) * 10 # From cm to mm
-        disparityShow = cv2.normalize(disparity, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-        disparityShow = cv2.applyColorMap(disparityShow, cv2.COLORMAP_JET)
-        cv2.imshow("disparity", disparityShow)
+        self.disparity_frame = disparity
 
         self.image_frame = left_rect
-        self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
-        cv2.imshow("depth", self.depth_visualization_frame)
 
+        self.visualize_depth_frame()
         self.visualize_image_frame()
         self.rgbd_to_point_cloud()

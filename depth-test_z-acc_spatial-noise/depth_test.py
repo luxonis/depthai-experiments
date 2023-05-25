@@ -188,10 +188,11 @@ class DepthTest:
         print(f"{self.samples} measurements")
         z_accuracy = np.mean(self.z_accuracy_medians) / self.camera_wall_distance * 100
         self.avg_distance = -np.mean(self.z_means)*1000
-        self.median_distance = -np.median(self.z_means)*1000
+        self.median_distance = -np.median(self.z_medians)*1000
         print(f"Z accuracy: {z_accuracy:.2f}% of GT (avg distance: {-np.mean(self.z_means)*1000:.2f}mm)")
         spatial_noise = np.mean(self.spatial_noise_rmses)*1000
-        print(f"Median distance (last plane): {-self.z_medians[-1] * 1000:.2f}mm")
+        print(f"Median distance: {-self.median_distance:.2f}mm")
+        print(f"Median distance error: {((((self.median_distance / 1000) - (self.camera_wall_distance)) / self.camera_wall_distance)) * 100:.2f}%")
         print(f"Average distance: {self.avg_distance:.2f}mm")
         print(f"Spatial noise: {spatial_noise:.2f} mm")
         subpixel_spatial_noise = np.mean(self.subpixel_spatial_noise_rmses)

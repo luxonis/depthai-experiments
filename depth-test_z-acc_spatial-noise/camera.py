@@ -11,6 +11,7 @@ class Camera:
         self.depth_frame: Optional[np.ndarray] = None
         self.depth_visualization_frame: Optional[np.ndarray] = None
         self.point_cloud = o3d.geometry.PointCloud()
+        self.disparity_frame = None
         self.ROI: Tuple[int, int, int, int] = (0, 0, 0, 0)
 
         if config.mode == "interactive":
@@ -37,14 +38,25 @@ class Camera:
             dim = (width, height)
             cv2.imshow(self.window_name, cv2.resize(self.image_visualization_frame, dim))
     def visualize_depth_frame(self):
-        if self.depth_frame is not None:
-            depth_frame_roi = self.select_ROI(self.depth_frame)
-            self.depth_visualization_frame = (self.depth_frame*0.5 + depth_frame_roi*0.5).astype(np.uint8)
-            img = self.depth_visualization_frame
-            width = int(img.shape[1] * config.args.rs)
-            height = int(img.shape[0] * config.args.rs)
-            showFrame = cv2.resize(img, (width, height))
-            cv2.imshow(self.window_name + "depth", showFrame)
+        visualization_frame = None
+        if self.disparity_frame is not None:
+            visualization_frame = self.disparity_frame.copy()
+        elif self.depth_frame is not None:
+            visualization_frame = self.depth_frame.copy()
+        else:
+            return
+
+        visualized_depth_frame = visualization_frame
+        visualized_depth_frame = cv2.normalize(visualized_depth_frame, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+        visualized_depth_frame = cv2.applyColorMap(visualized_depth_frame, cv2.COLORMAP_JET)
+
+        visualized_depth_frame_roi = self.select_ROI(visualized_depth_frame)
+        self.depth_visualization_frame = (visualized_depth_frame*0.5 + visualized_depth_frame_roi*0.5).astype(np.uint8)
+        img = self.depth_visualization_frame
+        width = int(img.shape[1] * config.args.rs)
+        height = int(img.shape[0] * config.args.rs)
+        showFrame = cv2.resize(img, (width, height))
+        cv2.imshow(self.window_name + "depth", showFrame)
 
     def on_mouse(self, event, x, y, flags, param):
         x1, y1, x2, y2 = self.ROI
