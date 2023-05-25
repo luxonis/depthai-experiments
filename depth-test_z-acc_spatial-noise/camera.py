@@ -14,10 +14,9 @@ class Camera:
         self.disparity_frame = None
         self.ROI: Tuple[int, int, int, int] = (0, 0, 0, 0)
 
-        if config.mode == "interactive":
-            self.window_name = f"Camera_{name}"
-            cv2.namedWindow(self.window_name)
-            cv2.setMouseCallback(self.window_name, lambda e, x, y, flags, param: self.on_mouse(e, x,y, flags, param))
+        self.window_name = f"Camera_{name}"
+        cv2.namedWindow(self.window_name)
+        cv2.setMouseCallback(self.window_name, lambda e, x, y, flags, param: self.on_mouse(e, x,y, flags, param))
 
         self.selecting_ROI = False
 

@@ -11,6 +11,8 @@ from depth_test import DepthTest
 import config
 import open3d as o3d
 from pathlib import Path
+import time
+
 np.seterr(invalid='raise')
 if config.astra_gt:
     from astra_camera import AstraCamera
@@ -158,10 +160,22 @@ def run_interaticve():
 
 if __name__ == "__main__":
     if config.mode == "measure":
-        selected_camera.set_roi(config.roi)
-        print(config.roi)
+        roi = config.roi
+        if config.roi_undistorted:
+            if not isinstance(selected_camera, OpenCVCamera):
+                print("❗WARNING: Undistorted ROI can only be used with OpenCVCamera")
+                exit()
+            topPoint = (roi[0], roi[1])
+            bottomPoint = (roi[2], roi[3])
+            topPoint = selected_camera.stereo.undistort_point(topPoint)
+            bottomPoint = selected_camera.stereo.undistort_point(bottomPoint)
+            roi = (topPoint[0], topPoint[1], bottomPoint[0], bottomPoint[1])
+            roi = (int(roi[0]), int(roi[1]), int(roi[2]), int(roi[3]))
+            print("Using undistorted ROI")
+        selected_camera.set_roi(roi)
         for _ in range(config.n_samples):
             selected_camera.update()
+            cv2.waitKey(1)
             depth_test.measure(selected_camera)
         depth_test.print_results()
         save_results_callback()

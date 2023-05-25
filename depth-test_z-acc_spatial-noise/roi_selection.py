@@ -55,7 +55,8 @@ while True:
     if key == ord("q"):
         print("ROI is {}".format(roi_pts))
         with open(args.outROI, "w") as f:
-            f.write(f'{roi_pts[0][0]} {roi_pts[0][1]} {roi_pts[1][0]} {roi_pts[1][1]}')
+            ROI = (roi_pts[0][0], roi_pts[0][1], roi_pts[1][0], roi_pts[1][1])
+            f.write(str(ROI))
         break
 
 cv2.destroyAllWindows()

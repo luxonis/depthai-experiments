@@ -23,6 +23,7 @@ parser.add_argument('-rectified', type=str, required=False, default=None, help="
 parser.add_argument('-out_results_f', type=str, required=False, default=None, help="Path to the output results file")
 parser.add_argument('-roi_file', type=str, default=None, help = "Output ROI to a file")
 parser.add_argument('-set_roi_file', type=str, default=None, help = "Set ROI from a file")
+parser.add_argument('-set_roi_file_undistorted', type=str, default=None, help = "Set ROI from a file - undistorted")
 parser.add_argument('-mode', type=str, default="interactive", choices=["interactive", "measure"], help = "Mode to run the test in" )
 parser.add_argument('-vertical', action="store_true", help = "Run the test in vertical mode")
 parser.add_argument('-use_opencv', action="store_true", help = "Use opencv for disparity")
@@ -41,12 +42,26 @@ COLOR = args.color 				# Use color camera or mono camera for preview
 
 # DEPTH CONFIG
 mode = args.mode
+roi_undistorted = False
 if mode == "measure":
-    if not Path(args.set_roi_file).exists():
-        print("ROI file not found: ", args.set_roi_file)
+    if not args.set_roi_file and not args.set_roi_file_undistorted:
+        print("One of the ROI files must be set")
         exit(1)
+    # if not Path(args.set_roi_file).exists() or not Path(args.set_roi_file_undistorted).exists():
+    #     print("ROI file not found: ", args.set_roi_file)
+    #     exit(1)
+    if args.set_roi_file and args.set_roi_file_undistorted:
+        print("Only one ROI file can be set")
+        exit(1)
+    if args.set_roi_file:
+        roi_file = args.set_roi_file
+    elif args.set_roi_file_undistorted:
+        roi_file = args.set_roi_file_undistorted
+        roi_undistorted = True
+    else:
+        assert False
 
-    with open(args.set_roi_file, 'r') as f:
+    with open(roi_file, 'r') as f:
         roi = ast.literal_eval(f.read().strip())
 
     if len(roi) != 4:

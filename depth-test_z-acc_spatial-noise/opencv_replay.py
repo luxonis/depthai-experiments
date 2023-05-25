@@ -49,9 +49,9 @@ class OpenCVStereo():
         self.output_height = input_size[1]
         self.alpha = config.alpha
         self.vertical = config.use_vertical
+        self.model = None
         self.set_maps()
         self.setup_stereo()
-        self.model = None
 
     def set_maps(self):
         leftSocket = self.left_socket
@@ -142,7 +142,7 @@ class OpenCVStereo():
         depth = self.num_disparities * self.focal_length_x * self.baseline / (disparity + 1e-8)
         return depth
 
-    def remap_point(self, point):
+    def undistort_point(self, point):
         """
         Remap a point from left image to left_rect image
 
