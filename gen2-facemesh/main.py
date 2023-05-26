@@ -27,22 +27,21 @@ def cb(packet: TwoStagePacket):
 
     # face-detection-retail-0004 is 1:1 aspect ratio
     pre_det_crop_bb = BoundingBox().resize_to_aspect_ratio(frame_full.shape, (1, 1), resize_mode='crop')
-    # draw_rect(frame_full, (255, 127, 0), *pre_det_crop_bb.map_to_frame(frame_full.shape))
+    # draw_rect(frame_full, (255, 127, 0), *pre_det_crop_bb.denormalize(frame_full.shape))
 
     for det, imgLdms in zip(packet.detections, packet.nnData):
-        if imgLdms is None:
+        if imgLdms is None or imgLdms.landmarks is None:
             continue
         imgLdms: ImgLandmarks
 
         img_det: dai.ImgDetection = det.img_detection
         det_bb = pre_det_crop_bb.get_relative_bbox(BoundingBox(img_det))
-        # draw_rect(frame_full, (255, 0, 0), *det_bb.map_to_frame(frame_full.shape))
+        # draw_rect(frame_full, (255, 0, 0), *det_bb.denormalize(frame_full.shape))
 
         padding_bb = det_bb.add_padding(0.05, pre_det_crop_bb)
-        draw_rect(frame_full, (0, 0, 255), *padding_bb.map_to_frame(frame_full.shape))
-
+        draw_rect(frame_full, (0, 0, 255), *padding_bb.denormalize(frame_full.shape))
         for ldm, clr in zip(imgLdms.landmarks, imgLdms.colors):
-            mapped_ldm = padding_bb.map_point_to_pixels(*ldm, frame_full.shape)
+            mapped_ldm = padding_bb.map_point(*ldm).denormalize(frame_full.shape)
             cv2.circle(frame_full, center=mapped_ldm, radius=1, color=clr, thickness=-1)
 
             if pass_f is not None:
@@ -66,6 +65,7 @@ with OakCamera() as oak:
     oak.visualize(facemesh_nn, callback=cb).detections(fill_transparency=0)
     # Send the crops to the passthrough callback
     oak.callback(facemesh_nn.out.twostage_crops, pass_cb)
+    oak.visualize(det_nn.out.passthrough)
 
     # oak.show_graph() # Show pipeline graph
     oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)

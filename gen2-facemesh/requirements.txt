@@ -1,3 +1,1 @@
-opencv-python
-numpy
-depthai-sdk==1.9.6
+depthai-sdk==1.10.2
