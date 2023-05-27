@@ -38,11 +38,10 @@ def save_checkpoint(camera, path, calibration_file, position):
 def main():
     parser = argparse.ArgumentParser(description="Script to process camera data.")
     parser.add_argument("calibration_dir", help="Path to the calibration directory")
-    parser.add_argument("-mode", help="Mode to run in", choices=["measure", "interactive", "roi_selection"], default="interactive")
+    parser.add_argument("-mode", help="Mode to run in", choices=["measure", "interactive"], default="interactive")
     parser.add_argument("--continue", dest="continue_from_last", action="store_true", help="Continue from the last checkpoint")
     parser.add_argument("--camera_ids", required=True, help="List of cameras to process", default=[], nargs='+', type=int)
-    parser.add_argument("--positions", required=False, help="List of positions to process", default=["left", "right", "center", "top", "bottom"], nargs='+', type=str)
-    parser.add_argument("--alpha", required=False, help="Alpha value for the depth map", default=0.5, type=float)
+    parser.add_argument("--positions", required=False, help="List of positions to process", default=["left", "right", "center"], nargs='+', type=str)
     args = parser.parse_args()
 
     source_directory = Path(__file__).resolve().parent
@@ -105,41 +104,27 @@ def main():
 
                             print(f"Base directory is {latest_directory}")
                             print(f"Output directory is {output_directory}")
-                            if args.mode == "roi_selection":
-                                cmd = [
-                                    sys.executable,
-                                    str(source_directory / "roi_selection.py"),
-                                    "--input", str(Path(latest_directory) / "camb,c.avi"),
-                                    "--outROI", str(latest_directory / "roi.txt"),
-                                ]
-                                subprocess.run(cmd)
-                                break
-                            for orientation, prefix in [("vertical", "-vert"), ("horizontal", "")]:
+
+                            for orientation, prefix in [("horizontal", "hor")]:
                                 print(f"Running {orientation}")
                                 print(f"Running {position}")
 
                                 cmd = [
                                     sys.executable,
                                     str(source_directory / "main.py"),
-                                    "-calp", str(calibration_file),
+                                    "-calib", str(latest_directory / "calib.json"),
+                                    "-depth", str(output_directory / f"{orientation}Depth.npy"),
+                                    "-rectified", str(output_directory / f"leftRectified{orientation.capitalize()}.npy"),
                                     "-gt", str(ground_truth),
-                                    "-ocv",
-                                    "-p", str(latest_directory),
                                     "-out_results_f", str(output_directory / f"results_{prefix}_auto.txt"),
-                                    # "-rs", str(0.2),
-                                    "-alpha", str(args.alpha),
                                 ]
-                                if prefix:
-                                    cmd += [prefix]
                                 if args.mode == "interactive":
                                     cmd += ["-mode", "interactive"]
                                     cmd += ["-roi_file", str(latest_directory / resolution_type / f"roi_{prefix}.txt")]
                                 else:
                                     cmd +=["-mode", "measure"]
-                                    cmd +=["-set_roi_file_undistorted", str(latest_directory / "roi.txt")]
-                                print(" ".join(cmd))
+                                    cmd +=["-set_roi_file", str(latest_directory / resolution_type / f"roi_{prefix}.txt")]
                                 result = subprocess.run(cmd, capture_output=False)
-
                                 if result.returncode != 0:
                                     command = " ".join(cmd)
                                     print(command)
