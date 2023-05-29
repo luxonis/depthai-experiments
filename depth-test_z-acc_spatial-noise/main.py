@@ -9,6 +9,10 @@ from depth_test import DepthTest
 import config
 import open3d as o3d
 from pathlib import Path
+from zed_camera import ZedCamera
+import time
+
+
 np.seterr(invalid='raise')
 if config.astra_gt:
     from astra_camera import AstraCamera
@@ -27,6 +31,15 @@ if config.args.depth and config.args.rectified and config.args.calib:
 else:
     rvc3_camera = OakCamera(None, config.args.vertical, config.args.use_opencv)
     cameras.append(rvc3_camera)
+
+if config.zed:
+	try:
+		zed_camera = ZedCamera()
+		cameras.append(zed_camera)
+	except Exception as ex:
+		print("❗WARNING: Zed not found: " ,ex)
+
+
 
 
 if config.astra_gt:
@@ -134,7 +147,6 @@ def run_interaticve():
     point_cloud_window.get_view_control().set_constant_z_far(15)
     origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
     point_cloud_window.add_geometry(origin)
-
     while running:
         key = cv2.waitKey(1)
 

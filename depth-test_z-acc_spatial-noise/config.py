@@ -26,6 +26,7 @@ parser.add_argument('-set_roi_file', type=str, default=None, help = "Set ROI fro
 parser.add_argument('-mode', type=str, default="interactive", choices=["interactive", "measure"], help = "Mode to run the test in" )
 parser.add_argument('-vertical', action="store_true", help = "Run the test in vertical mode")
 parser.add_argument('-use_opencv', action="store_true", help = "Use opencv for disparity")
+parser.add_argument('-zed', action="store_true", help = "Use Zed")
 parser.add_argument('-rs', type=float, default=1, help = "Resize windows by a factor")
 args = parser.parse_args()
 
@@ -71,3 +72,4 @@ resuls_file.parent.mkdir(parents=True, exist_ok=True)
 # Astra
 astra_gt = args.astra_gt # use astra pro as ground truth
 astra_intrinsic = args.astra_intrinsic # path to the astra intrinsic matrix
+zed=args.zed
