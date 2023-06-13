@@ -4,6 +4,11 @@ import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
 
+parser = ArgumentParser(description="Script to collect camera data.")
+parser.add_argument("--camera_ids", required=True, help="List of cameras to process", default=[], nargs='+', type=int)
+parser.add_argument("--input_dir", required=True, help="Path to the input directory")
+parser.add_argument("--output_file", required=False, help="Path to the output file")
+args = parser.parse_args()
 
 def get_latest_directory(parent_dir):
     max_id = 0
@@ -53,13 +58,15 @@ def merge_results(fromFile, toFile,  camId, result_type, resolution, side, calib
 
 def main():
     source_directory = Path(__file__).resolve().parent
-    calibration_directory = Path(sys.argv[1])
+    calibration_directory = Path(args.input_dir)
 
     print(f"Calibration directory is {calibration_directory}")
 
-    target_file = calibration_directory / "merged_depth_results_all_2.csv"
+    target_file = calibration_directory / "merged_depth_results_all.csv"
+    if args.output_file is not None:
+        target_file = Path(args.output_file)
 
-    for cam in [10, 11]:
+    for cam in args.camera_ids:
         for path in (calibration_directory / f"camera_{cam}").glob('*'):
             last_directory = path.name
             try:
@@ -73,7 +80,7 @@ def main():
             print(f"Ground truth is {ground_truth}")
 
             for position in ["center", "left", "right", "top", "bottom"]:
-                for resolution in ["fullRes", "resizedRes"]:
+                for resolution in ["depthOCV"]:
                     print(f"Running in {cam} {path} m {position}")
                     depth_dir = path / position
 
@@ -97,8 +104,8 @@ def main():
 
                     for calibration_file in (calibration_directory / f"camera_{cam}" / "calibrations").glob('*'):
                         calibration_stem = calibration_file.stem
-                        for orientation in ["vertical", "horizontal"]:
-                            from_file_path = output_directory / calibration_stem / f"results_{orientation[:3]}_auto.txt"
+                        for orientation in ["-vert", ""]:
+                            from_file_path = output_directory / calibration_stem / f"results_{orientation}_auto.txt"
                             merge_results(from_file_path, target_file, cam, orientation, resolution, position, calibration_stem)
 
 if __name__ == "__main__":

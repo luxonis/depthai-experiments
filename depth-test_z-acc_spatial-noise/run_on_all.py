@@ -127,7 +127,6 @@ def main():
                             "-saveFiles",
                             "-numLastFrames",
                             "5",
-                            "-useOpenCVDepth",
                             "-videoDir",
                             latest_dir,
                             "-calib",

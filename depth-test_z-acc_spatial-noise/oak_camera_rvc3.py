@@ -131,7 +131,7 @@ class OakCamera(Camera):
 
         if self.use_opencv:
             self.depth_frame = self.opencv_stereo.compute(self.image_frame, self.right_image_frame)
-
+            self.disparity_frame = self.depth_frame.copy()
         with np.errstate(divide='ignore'):
             self.depth_frame = self.scale_factor / self.depth_frame
         self.depth_frame[self.depth_frame == np.inf] = 0

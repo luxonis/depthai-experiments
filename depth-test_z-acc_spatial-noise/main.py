@@ -28,9 +28,7 @@ if config.args.depth and config.args.rectified and config.args.calib:
         Path(config.args.calib)
     )
     cameras.append(replay_camera)
-# else:
-#     rvc3_camera = OakCamera(None, config.args.vertical, config.args.use_opencv)
-#     cameras.append(rvc3_camera)
+
 
 device_info = dai.DeviceInfo()
 if config.path is not None:
@@ -39,9 +37,10 @@ if config.path is not None:
     else:
         replay_camera = ReplayCamera(device_info)
     cameras.append(replay_camera)
-else:
-    oak_camera = OakCamera(device_info)
-    cameras.append(oak_camera)
+
+if len(cameras) == 0:
+    rvc3_camera = OakCamera(None, config.args.vertical, config.args.use_opencv)
+    cameras.append(rvc3_camera)
 
 
 if len(cameras) == 0:
