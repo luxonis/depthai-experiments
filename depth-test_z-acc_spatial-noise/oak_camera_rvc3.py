@@ -24,7 +24,7 @@ class OakCamera(Camera):
             # Set the parameters for StereoSGBM
             stereo.setBlockSize(9)
             stereo.setMinDisparity(0)
-            stereo.setNumDisparities(64)
+            stereo.setNumDisparities(96)
             stereo.setUniquenessRatio(10)
             stereo.setSpeckleWindowSize(0)
             stereo.setSpeckleRange(0)
