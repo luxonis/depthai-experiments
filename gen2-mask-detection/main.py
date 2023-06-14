@@ -39,6 +39,7 @@ with OakCamera() as oak:
     # to the callback function (where it will be displayed)
     oak.visualize(mask, callback=cb).detections(fill_transparency=0.1)
     oak.visualize(det_nn.out.passthrough)
+    oak.visualize(mask.out.twostage_crops, scale=3.0)
 
     # oak.show_graph() # Show pipeline graph
     oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)

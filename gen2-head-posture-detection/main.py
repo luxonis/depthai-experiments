@@ -12,7 +12,7 @@ with OakCamera() as oak:
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
     det_nn.config_nn(resize_mode='crop')
 
-    emotion_nn = oak.create_nn('head-pose-estimation-adas-0001', input=det_nn)
+    headpose = oak.create_nn('head-pose-estimation-adas-0001', input=det_nn)
     # emotion_nn.config_multistage_nn(show_cropped_frames=True) # For debugging
 
     def cb(packet: TwoStagePacket):
@@ -52,8 +52,9 @@ with OakCamera() as oak:
 
     # Visualize detections on the frame. Also display FPS on the frame. Don't show the frame but send the packet
     # to the callback function (where it will be displayed)
-    oak.visualize(emotion_nn, callback=cb, fps=True)
+    oak.visualize(headpose, callback=cb, fps=True)
     oak.visualize(det_nn.out.passthrough)
+    oak.visualize(headpose.out.twostage_crops, scale=3.0)
     # oak.show_graph() # Show pipeline graph, no need for now
     oak.start(blocking=True) # This call will block until the app is stopped (by pressing 'Q' button)
 
