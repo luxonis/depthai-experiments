@@ -102,8 +102,8 @@ class DeepSort(object):
         logger.info(f'- in-build embedder : {"No" if self.embedder is None else "Yes"}')
         logger.info(f'- polygon detections : {"No" if polygon is False else "Yes"}')
 
-    def iter(self, detections, embeddings, frame):
-        height, width = frame.shape[:2]
+    def iter(self, detections, embeddings, resolution):
+        height, width = resolution
         # Decode detections into bounding boxes
         object_bbs = self.decode_dets(detections, (width, height))
         # Calculate embeddings for each crop

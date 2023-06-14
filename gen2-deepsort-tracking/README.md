@@ -1,6 +1,6 @@
 # Object tracking using DeepSORT
 
-This example demonstrates how to run 2 stage object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) with DepthAI library.
+This example demonstrates how to run 2 stage object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) with DepthAI SDK.
 It tracks detected objects in the frames. Demo uses [YoloV6n](https://github.com/meituan/YOLOv6) model to detect objects, crops them on the device using Script node, and then sends object frames to [MobileNetV2](https://pytorch.org/hub/pytorch_vision_mobilenet_v2/) feature extraction model which computes the embedding of the object.
 
 ## Demo
