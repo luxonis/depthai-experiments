@@ -1,157 +1,71 @@
-#!/usr/bin/env python3
-
+from depthai_sdk import OakCamera, Visualizer
+from depthai_sdk.classes.packets import TwoStagePacket
+from depthai_sdk.classes.nn_results import ImgLandmarks
+from depthai_sdk.visualize.bbox import BoundingBox
 import cv2
 import depthai as dai
-import argparse
-import time
-import numpy as np
-from utils.effect import EffectRenderer2D
 
-'''
-MediaPipe Facial Landmark detector with PNG EffectRenderer.
-Run as:
-python3 -m pip install -r requirements.txt
-python3 main.py -conf [CONF]
+# Confidence threshold for the facemesh model
+THRESHOLD = 0.3
+# 5% padding for face detection, as facemesh_192x192 is trained on the whole head not just the face
+PADDING = 5
 
-Blob is converted from MediaPipe's tflite model.
-'''
+# We will be saving the passthrough frames so we can draw landmarks on it
+pass_f = None
+def pass_cb(packet):
+    global pass_f
+    pass_f = packet.frame
 
+def draw_rect(frame, color, top_left, bottom_right):
+    cv2.rectangle(frame, top_left, bottom_right, color, 1)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-conf", "--confidence_thresh", help="set the confidence threshold", default=0.5, type=float)
+def cb(packet: TwoStagePacket):
+    global pass_f
+    vis: Visualizer = packet.visualizer
+    vis.draw(packet.frame)
+    frame_full = packet.frame
 
-args = parser.parse_args()
-CONF_THRESH = args.confidence_thresh
-NN_PATH = "models/face_landmark_openvino_2021.4_6shave.blob"
-NN_WIDTH, NN_HEIGHT = 192, 192
-PREVIEW_WIDTH, PREVIEW_HEIGHT = 416, 416
-OVERLAY_IMAGE = "mask/facepaint.png"
+    # face-detection-retail-0004 is 1:1 aspect ratio
+    pre_det_crop_bb = BoundingBox().resize_to_aspect_ratio(frame_full.shape, (1, 1), resize_mode='crop')
+    # draw_rect(frame_full, (255, 127, 0), *pre_det_crop_bb.denormalize(frame_full.shape))
 
+    for det, imgLdms in zip(packet.detections, packet.nnData):
+        if imgLdms is None or imgLdms.landmarks is None:
+            continue
+        imgLdms: ImgLandmarks
 
-# Start defining a pipeline
-pipeline = dai.Pipeline()
-pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
+        img_det: dai.ImgDetection = det.img_detection
+        det_bb = pre_det_crop_bb.get_relative_bbox(BoundingBox(img_det))
+        # draw_rect(frame_full, (255, 0, 0), *det_bb.denormalize(frame_full.shape))
 
+        padding_bb = det_bb.add_padding(0.05, pre_det_crop_bb)
+        draw_rect(frame_full, (0, 0, 255), *padding_bb.denormalize(frame_full.shape))
+        for ldm, clr in zip(imgLdms.landmarks, imgLdms.colors):
+            mapped_ldm = padding_bb.map_point(*ldm).denormalize(frame_full.shape)
+            cv2.circle(frame_full, center=mapped_ldm, radius=1, color=clr, thickness=-1)
 
-# Color camera
-cam = pipeline.create(dai.node.ColorCamera)
-cam.setPreviewSize(PREVIEW_WIDTH, PREVIEW_HEIGHT)
-cam.setInterleaved(False)
-cam.setFps(30)
+            if pass_f is not None:
+                cv2.circle(pass_f, center=(int(ldm[0]*192), int(ldm[1]*192)), radius=1, color=clr, thickness=-1)
 
+    cv2.imshow('Facemesh', frame_full)
+    if pass_f is not None:
+        cv2.imshow('Passthrough', cv2.pyrUp(pass_f))
 
-# Neural Network for Landmark detection
-nn = pipeline.create(dai.node.NeuralNetwork)
-nn.setBlobPath(NN_PATH)
-nn.setNumPoolFrames(4)
-nn.input.setBlocking(False)
-nn.setNumInferenceThreads(2)
+with OakCamera() as oak:
+    color = oak.create_camera('color')
 
+    det_nn = oak.create_nn('face-detection-retail-0004', color)
+    # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
+    det_nn.config_nn(resize_mode='crop')
 
-# Image Manip
-manip = pipeline.create(dai.node.ImageManip)
-manip.initialConfig.setResizeThumbnail(NN_WIDTH, NN_HEIGHT)
-manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
+    facemesh_nn = oak.create_nn('facemesh_192x192', input=det_nn)
+    facemesh_nn.config_multistage_nn(scale_bb=(5,5))
 
+    # Send the 2stage NN results to the callback
+    oak.visualize(facemesh_nn, callback=cb).detections(fill_transparency=0)
+    # Send the crops to the passthrough callback
+    oak.callback(facemesh_nn.out.twostage_crops, pass_cb)
+    oak.visualize(det_nn.out.passthrough)
 
-# Create outputs
-
-xin_rgb = pipeline.create(dai.node.XLinkIn)
-xin_rgb.setStreamName("xin")
-
-
-xout_rgb = pipeline.create(dai.node.XLinkOut)
-xout_rgb.setStreamName("cam")
-xout_rgb.input.setBlocking(False)
-
-xout_nn = pipeline.create(dai.node.XLinkOut)
-xout_nn.setStreamName("nn")
-xout_nn.input.setBlocking(False)
-
-
-# Linking
-cam.preview.link(xout_rgb.input)
-cam.preview.link(manip.inputImage)
-manip.out.link(nn.input)
-nn.out.link(xout_nn.input)
-
-
-# Pipeline defined, now the device is assigned and pipeline is started
-with dai.Device(pipeline) as device:
-
-    # Output queues
-    q_cam = device.getOutputQueue(name="cam", maxSize=4)
-    q_nn = device.getOutputQueue(name="nn", maxSize=4)
-
-    # Read face overlay
-    effect_rendered = EffectRenderer2D(OVERLAY_IMAGE)
-
-    # FPS Init
-    start_time = time.time()
-    counter = 0
-    fps = 0
-    layer_info_printed = False
-
-    while True:
-        in_cam = q_cam.get()
-        in_nn = q_nn.get()
-
-        # Get frame
-        frame = in_cam.getCvFrame()
-
-        # Get outputs
-        score = np.array(in_nn.getLayerFp16('conv2d_31')).reshape((1,))
-        score = 1 / (1 + np.exp(-score[0]))     # sigmoid on score
-        landmarks = np.array(in_nn.getLayerFp16('conv2d_21')).reshape((468, 3))
-
-        if score > CONF_THRESH:
-            # scale landmarks
-            ldms = landmarks#.copy()
-            ldms *= np.array([PREVIEW_WIDTH/NN_WIDTH, PREVIEW_HEIGHT/NN_HEIGHT, 1])
-
-            # render frame
-            target_frame = frame.copy()
-            applied_effect = effect_rendered.render_effect(target_frame, ldms)
-            cv2.imshow("Effect", applied_effect)
-
-            # show landmarks on frame
-            for ldm in ldms:
-                col = (0, 0, int(ldm[2]) * 5 + 100)
-                cv2.circle(frame, (int(ldm[0]), int(ldm[1])), 1, col, 1)
-
-        else:
-            applied_effect = frame
-
-        cv2.imshow("Demo", np.hstack([frame, applied_effect]))
-
-
-        # Show FPS and score
-        color_black, color_white = (0, 0, 0), (255, 255, 255)
-        label_fps = "Fps: {:.2f}".format(fps)
-        label_count = "Score: {:.2f}".format(score)
-
-        (w1, h1), _ = cv2.getTextSize(label_fps, cv2.FONT_HERSHEY_TRIPLEX, 0.4, 1)
-        (w2, h2), _ = cv2.getTextSize(label_count, cv2.FONT_HERSHEY_TRIPLEX, 0.4, 1)
-
-        cv2.rectangle(frame, (0, frame.shape[0] - h1 - 6), (w1 + 2, frame.shape[0]), color_white, -1)
-        cv2.rectangle(frame, (0, 0), (w2 + 2, h2 + 6), color_white, -1)
-
-        cv2.putText(frame, label_fps, (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX,
-                    0.4, color_black)
-        cv2.putText(frame, label_count, (2, 12), cv2.FONT_HERSHEY_TRIPLEX,
-                    0.4, color_black)
-
-
-
-        cv2.imshow("Landmarks", frame)
-
-        counter += 1
-        if (time.time() - start_time) > 1:
-            fps = counter / (time.time() - start_time)
-
-            counter = 0
-            start_time = time.time()
-
-
-        if cv2.waitKey(1) == ord('q'):
-            break
+    # oak.show_graph() # Show pipeline graph
+    oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)

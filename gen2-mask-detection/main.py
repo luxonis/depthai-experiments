@@ -1,4 +1,5 @@
-from depthai_sdk import OakCamera, TwoStagePacket, Visualizer, TextPosition
+from depthai_sdk import OakCamera, Visualizer, TextPosition
+from depthai_sdk.classes.packets  import TwoStagePacket
 import numpy as np
 import cv2
 
@@ -9,14 +10,15 @@ def log_softmax(x):
 with OakCamera() as oak:
     color = oak.create_camera('color')
 
-    det = oak.create_nn('face-detection-retail-0004', color)
+    det_nn = oak.create_nn('face-detection-retail-0004', color)
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    det.config_nn(resize_mode='crop')
+    det_nn.config_nn(resize_mode='crop')
 
-    mask = oak.create_nn('sbd_mask_classification_224x224', input=det)
+    mask = oak.create_nn('sbd_mask_classification_224x224', input=det_nn)
     # mask.config_multistage_nn(show_cropped_frames=True) # For debugging
 
-    def cb(packet: TwoStagePacket, visualizer: Visualizer):
+    def cb(packet: TwoStagePacket):
+        vis: Visualizer = packet.visualizer
         for det, rec in zip(packet.detections, packet.nnData):
             index = np.argmax(log_softmax(rec.getFirstLayerFp16()))
             text = "No Mask"
@@ -25,18 +27,19 @@ with OakCamera() as oak:
                 text = "Mask"
                 color = (0,255,0)
 
-            visualizer.add_text(text,
-                                bbox=(*det.top_left, *det.bottom_right),
-                                position=TextPosition.BOTTOM_MID,
-                                color=color)
+            vis.add_text(text,
+                        bbox=(*det.top_left, *det.bottom_right),
+                        position=TextPosition.BOTTOM_MID,
+                        color=color)
 
-        frame = visualizer.draw(packet.frame)
+        frame = vis.draw(packet.frame)
         cv2.imshow('Mask detection', frame)
 
     # Visualize detections on the frame. Don't show the frame but send the packet
     # to the callback function (where it will be displayed)
     oak.visualize(mask, callback=cb).detections(fill_transparency=0.1)
-    oak.visualize(det.out.passthrough)
+    oak.visualize(det_nn.out.passthrough)
+    oak.visualize(mask.out.twostage_crops, scale=3.0)
 
     # oak.show_graph() # Show pipeline graph
     oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)
