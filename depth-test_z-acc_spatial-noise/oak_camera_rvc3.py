@@ -20,16 +20,17 @@ class OakCamera(Camera):
         self.device.startPipeline(self.pipeline)
         self.mxid = self.device.getDeviceInfo().getMxId()
         if self.use_opencv:
-            stereo = cv2.StereoSGBM_create()
-            # Set the parameters for StereoSGBM
-            stereo.setBlockSize(9)
-            stereo.setMinDisparity(0)
-            stereo.setNumDisparities(96)
-            stereo.setUniquenessRatio(10)
-            stereo.setSpeckleWindowSize(0)
-            stereo.setSpeckleRange(0)
-            stereo.setDisp12MaxDiff(0)
-            self.opencv_stereo = stereo
+            self.num_disparities = 16
+            self.numDisparitySearch = 96
+            blockSize = 15
+            self.opencv_stereo = cv2.StereoSGBM_create( # Most similar to MX depth
+                minDisparity=1,
+                numDisparities=self.numDisparitySearch,
+                blockSize=15,
+                P1=2 * (blockSize ** 2),
+                P2=3 * (blockSize ** 2),
+                mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
+            )
 
         self.image_queue = self.device.getOutputQueue(name=self.image_name, maxSize=10, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name=self.depth_name, maxSize=10, blocking=False)
