@@ -17,8 +17,6 @@ dash-core-components==2.0.0
 dash-html-components==2.0.0
 dash-table==5.0.0
 decorator==5.1.1
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-git+https://github.com/luxonis/depthai.git@2efde0ac4a7eda729fce8bd70803dc1fb00dc296#subdirectory=depthai_sdk
 distinctipy==1.2.2
 executing==1.2.0
 fastjsonschema==2.16.3
@@ -44,7 +42,6 @@ matplotlib==3.7.1
 matplotlib-inline==0.1.6
 nbformat==5.7.0
 numpy==1.24.2
-open3d==0.17.0
 opencv-contrib-python==4.7.0.72
 opencv-python==4.7.0.72
 packaging==23.0
@@ -89,3 +86,4 @@ Werkzeug==2.2.3
 widgetsnbextension==4.0.6
 xmltodict==0.13.0
 zipp==3.15.0
+depthai_sdk
