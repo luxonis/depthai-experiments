@@ -2,10 +2,11 @@
 import depthai as dai
 import threading
 import time
+import numpy as np
 
 pipeline = dai.Pipeline()
 
-N = 20
+N = 100
 
 xin = pipeline.create(dai.node.XLinkIn)
 xin.setMaxDataSize(10)
@@ -37,15 +38,15 @@ with dai.Device(pipeline) as device:
     thread = threading.Thread(target=send_buff, args=(qin,))
     thread.start()
 
-    total_latency = 0
+    latencies = np.array([])
     for i in range(N):
         buff: dai.Buffer = qout.get()
         latency = time.time() - timestamps[i]
-        if i != 0:
-            total_latency += latency
-        print('Got buffer {}, latency {:.2f}ms'.format(i, latency * 1000))
+        if i != 0: # Skip first buffer
+            latency *= 1000 # to milliseconds
+            latencies = np.append(latencies, latency)
+            print('Got {}. buffer, latency {:.2f} ms'.format(i, latency))
 
-    avrg_latency = total_latency / (N - 1)
     print()
-    print('Average latency {:.2f} ms'.format(avrg_latency * 1000))
+    print('Average latency {:.2f} ms, Std: {:.1f}'.format(np.average(latencies), np.std(latencies)))
 

@@ -20,7 +20,7 @@ Name: detection_out, Type: DataType.FP16, Shape: [7, 100, 1, 1] (StorageOrder.NC
 
 ### OAK bandwidth test
 
-Sends large buffers to/from device to calculate uplink and downlink bandwidth. Results will vary a bit even at the same setup, and will especially vary
+[oak_bandwidth_test.py](oak_bandwidth_test.py) sends large buffers to/from the device to calculate uplink and downlink bandwidth. Results will vary a bit even at the same setup, and will especially vary
 at different network configurations.
 
 ```
@@ -35,15 +35,18 @@ Uplink 211.7 mbps
 
 ### OAK latency test
 
-Calculates the roundabout latency (via loopback XLinkIn -> XLinkOut). Latency for the first frame will be about 50ms for both USB/POE devices, as
+[oak_latency_test.py](oak_latency_test.py) calculates the roundabout latency (via loopback XLinkIn -> XLinkOut). Latency for the first frame will be about 50ms for both USB/POE devices, as
 device/pipeline is still booting up.
 
 ```
-USB3 (5gbps, direct link), latency is stable:
-Average latency 1.00 ms
+# USB3 - 5gbps, direct link:
+Average latency 2.00 ms, Std: 4.2
 
-POE (1gbps, direct link), latency varies  quite a bit (from 2ms to 30ms):
-Average latency 9.89 ms
+# POE - 1gbps, direct link:
+Average latency 5.2 ms, Std: 6.2
+
+# POE - 1gpbs, through Netgear PoE switch:
+Average latency 3.5 ms, Std: 3.5
 ```
 
 
