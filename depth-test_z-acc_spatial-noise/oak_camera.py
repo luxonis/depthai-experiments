@@ -16,7 +16,7 @@ class OakCamera(Camera):
         self.device = dai.Device(self.pipeline, self.device_info)
         self.mxid = self.device.getDeviceInfo().getMxId()
 
-        self.device.setIrLaserDotProjectorBrightness(1200)
+        #self.device.setIrLaserDotProjectorBrightness(1200)
 
         self.image_queue = self.device.getOutputQueue(name="image", maxSize=10, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=10, blocking=False)
@@ -44,14 +44,13 @@ class OakCamera(Camera):
 
         self.extrinsic = np.eye(4)
         self.extrinsic[0, 3] = -0.15
-    
 
     def _create_pipeline(self):
         pipeline = dai.Pipeline()
 
         # Depth cam -> 'depth'
         mono_left = pipeline.createMonoCamera()
-        mono_right = pipeline.createMonoCamera()
+        mono_right = pipeline.createMonoCamera() 
         mono_left.setResolution(config.mono_camera_resolution)
         mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         mono_right.setResolution(config.mono_camera_resolution)
