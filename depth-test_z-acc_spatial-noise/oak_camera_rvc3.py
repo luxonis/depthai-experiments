@@ -132,14 +132,20 @@ class OakCamera(Camera):
 
         if self.use_opencv:
             self.depth_frame = self.opencv_stereo.compute(self.image_frame, self.right_image_frame)
-            self.disparity_frame = self.depth_frame.copy()
+        self.disparity_frame = self.depth_frame.copy()
         with np.errstate(divide='ignore'):
             self.depth_frame = self.scale_factor / self.depth_frame
         self.depth_frame[self.depth_frame == np.inf] = 0
 
-        self.depth_visualization_frame = cv2.normalize(self.depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        self.depth_visualization_frame = cv2.equalizeHist(self.depth_visualization_frame)
-        self.depth_visualization_frame = cv2.applyColorMap(self.depth_visualization_frame, cv2.COLORMAP_HOT)
         self.visualize_image_frame()
         self.visualize_depth_frame()
         self.rgbd_to_point_cloud()
+
+
+if __name__ == "__main__":
+    camera = OakCamera(None, False, False)
+    while True:
+        camera.update()
+        key = cv2.waitKey(1)
+        if key == ord('q'):
+            break
