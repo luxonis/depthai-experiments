@@ -25,12 +25,12 @@ pipeline = dai.Pipeline()
 
 monoLeft = pipeline.create(dai.node.MonoCamera)
 monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+monoLeft.setBoardSocket(dai.CameraBoardSocket.CAM_B) #CAM_B = left camera
 
 monoRight = pipeline.create(dai.node.MonoCamera)
 monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-
+monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C) #CAM_C = right camera
+ 
 stereo = pipeline.createStereoDepth()
 stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 stereo.initialConfig.setMedianFilter(median)
@@ -75,7 +75,7 @@ if COLOR:
     camRgb.setIspScale(1, 3)
     camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
     camRgb.initialControl.setManualFocus(130)
-    stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A) #CAM_A = center camera
     camRgb.isp.link(xout_colorize.input)
 else:
     stereo.rectifiedRight.link(xout_colorize.input)
@@ -133,10 +133,10 @@ with dai.Device(pipeline) as device:
     calibData = device.readCalibration()
     if COLOR:
         w, h = camRgb.getIspSize()
-        intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, dai.Size2f(w, h))
+        intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.CAM_A, dai.Size2f(w, h))
     else:
         w, h = monoRight.getResolutionSize()
-        intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, dai.Size2f(w, h))
+        intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.CAM_C, dai.Size2f(w, h))
     pcl_converter = PointCloudVisualizer(intrinsics, w, h)
 
     serial_no = device.getMxId()
@@ -173,4 +173,6 @@ with dai.Device(pipeline) as device:
             cv2.imwrite(f"{serial_no}_{timestamp}_rectified_right.png", rectified_right)
             o3d.io.write_point_cloud(f"{serial_no}_{timestamp}.pcd", pcl_converter.pcl, compressed=True)
         elif key == ord("q"):
+            pcl_converter.close_window()
+            cv2.destroyAllWindows()
             break
