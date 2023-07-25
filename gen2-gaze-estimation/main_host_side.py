@@ -8,7 +8,6 @@ import blobconverter
 import cv2
 import depthai
 import numpy as np
-from imutils.video import FPS
 from math import cos, sin
 
 
@@ -192,8 +191,6 @@ class Main:
         self.gaze = None
 
         self.running = True
-        self.fps = FPS()
-        self.fps.start()
 
     def face_thread(self):
         face_nn = self.device.getOutputQueue("face_nn")
@@ -327,7 +324,6 @@ class Main:
             if not read_correctly:
                 break
 
-            self.fps.update()
             self.frame = new_frame
             self.debug_frame = self.frame.copy()
 
@@ -378,8 +374,6 @@ class Main:
                     cv2.destroyAllWindows()
                     break
 
-        self.fps.stop()
-        print("FPS: {:.2f}".format(self.fps.fps()))
         if not camera:
             self.cap.release()
         cv2.destroyAllWindows()

@@ -1,38 +1,21 @@
 # coding=utf-8
-import os
-import argparse
 import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
-import time
 from MultiMsgSync import TwoStageHostSeqSync
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-name", "--name", type=str, help="Name of the person for database saving")
-
-args = parser.parse_args()
-
-def frame_norm(frame, bbox):
-    normVals = np.full(len(bbox), frame.shape[0])
-    normVals[::2] = frame.shape[1]
-    return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
+from depthai_sdk.visualize.bbox import BoundingBox
 
 VIDEO_SIZE = (1072, 1072)
-
-class TextHelper:
-    def __init__(self) -> None:
-        self.bg_color = (0, 0, 0)
-        self.color = (255, 255, 255)
-        self.text_type = cv2.FONT_HERSHEY_SIMPLEX
-        self.line_type = cv2.LINE_AA
-    def putText(self, frame, text, coords):
-        cv2.putText(frame, text, coords, self.text_type, 1.0, self.bg_color, 4, self.line_type)
-        cv2.putText(frame, text, coords, self.text_type, 1.0, self.color, 2, self.line_type)
 
 pipeline = dai.Pipeline()
 pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_4)
 openvino_version = '2021.4'
+
+def create_output(name: str, output: dai.Node.Output):
+    xout = pipeline.create(dai.node.XLinkOut)
+    xout.setStreamName(name)
+    output.link(xout.input)
 
 cam = pipeline.create(dai.node.ColorCamera)
 # For ImageManip rotate you need input frame of multiple of 16
@@ -40,26 +23,16 @@ cam.setPreviewSize(1072, 1072)
 cam.setVideoSize(VIDEO_SIZE)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 cam.setInterleaved(False)
-cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+cam.setPreviewNumFramesPool(20)
+cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
 
-host_face_out = pipeline.create(dai.node.XLinkOut)
-host_face_out.setStreamName('color')
-cam.video.link(host_face_out.input)
-
-# ImageManip as a workaround to have more frames in the pool.
-# cam.preview can only have 4 frames in the pool before it will
-# wait (freeze). Copying frames and setting ImageManip pool size to
-# higher number will fix this issue.
-copy_manip = pipeline.create(dai.node.ImageManip)
-cam.preview.link(copy_manip.inputImage)
-copy_manip.setNumFramesPool(20)
-copy_manip.setMaxOutputFrameSize(1072*1072*3)
+create_output('color', cam.video)
 
 # ImageManip that will crop the frame before sending it to the Face detection NN node
 face_det_manip = pipeline.create(dai.node.ImageManip)
 face_det_manip.initialConfig.setResize(300, 300)
 face_det_manip.setMaxOutputFrameSize(300*300*3)
-copy_manip.out.link(face_det_manip.inputImage)
+cam.preview.link(face_det_manip.inputImage)
 
 #=================[ FACE DETECTION ]=================
 
@@ -74,9 +47,7 @@ face_det_nn.setBlobPath(blobconverter.from_zoo(
 # Link Face ImageManip -> Face detection NN node
 face_det_manip.out.link(face_det_nn.input)
 
-face_det_xout = pipeline.create(dai.node.XLinkOut)
-face_det_xout.setStreamName("detection")
-face_det_nn.out.link(face_det_xout.input)
+create_output('detection', face_det_nn.out)
 
 #=================[ SCRIPT NODE ]=================
 
@@ -88,7 +59,7 @@ script.setProcessor(dai.ProcessorType.LEON_CSS)
 face_det_nn.out.link(script.inputs['face_det_in'])
 face_det_nn.passthrough.link(script.inputs['face_pass'])
 
-copy_manip.out.link(script.inputs['preview'])
+cam.preview.link(script.inputs['preview'])
 
 with open("script.py", "r") as f:
     script.setScript(f.read())
@@ -97,7 +68,6 @@ with open("script.py", "r") as f:
 
 headpose_manip = pipeline.create(dai.node.ImageManip)
 headpose_manip.initialConfig.setResize(60, 60)
-headpose_manip.inputConfig.setWaitForMessage(True)
 script.outputs['headpose_cfg'].link(headpose_manip.inputConfig)
 script.outputs['headpose_img'].link(headpose_manip.inputImage)
 
@@ -116,7 +86,6 @@ headpose_nn.passthrough.link(script.inputs['headpose_pass'])
 
 landmark_manip = pipeline.create(dai.node.ImageManip)
 landmark_manip.initialConfig.setResize(48, 48)
-landmark_manip.inputConfig.setWaitForMessage(True)
 script.outputs['landmark_cfg'].link(landmark_manip.inputConfig)
 script.outputs['landmark_img'].link(landmark_manip.inputImage)
 
@@ -131,9 +100,7 @@ landmark_manip.out.link(landmark_nn.input)
 landmark_nn.out.link(script.inputs['landmark_in'])
 landmark_nn.passthrough.link(script.inputs['landmark_pass'])
 
-landmark_xout = pipeline.create(dai.node.XLinkOut)
-landmark_xout.setStreamName('landmarks')
-landmark_nn.out.link(landmark_xout.input)
+create_output('landmarks', landmark_nn.out)
 
 
 #=================[ LEFT EYE CROP ]=================
@@ -145,11 +112,6 @@ script.outputs['left_manip_img'].link(left_manip.inputImage)
 script.outputs['left_manip_cfg'].link(left_manip.inputConfig)
 left_manip.out.link(script.inputs['left_eye_in'])
 
-# m1 = pipeline.create(dai.node.XLinkOut)
-# m1.setStreamName("m1")
-# left_manip.out.link(m1.input)
-
-
 #=================[ LEFT EYE CROP ]=================
 
 right_manip = pipeline.create(dai.node.ImageManip)
@@ -159,42 +121,33 @@ script.outputs['right_manip_img'].link(right_manip.inputImage)
 script.outputs['right_manip_cfg'].link(right_manip.inputConfig)
 right_manip.out.link(script.inputs['right_eye_in'])
 
-# m2 = pipeline.create(dai.node.XLinkOut)
-# m2.setStreamName("m2")
-# right_manip.out.link(m2.input)
-
-
 #=================[ GAZE ESTIMATION ]=================
-
 
 gaze_nn = pipeline.create(dai.node.NeuralNetwork)
 gaze_nn.setBlobPath(blobconverter.from_zoo(
     name="gaze-estimation-adas-0002",
     shaves=6,
-    version=openvino_version
+    version=openvino_version,
+    compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8']
 ))
 script.outputs['to_gaze'].link(gaze_nn.input)
 
-gaze_xout = pipeline.create(dai.node.XLinkOut)
-gaze_xout.setStreamName('recognition')
-gaze_nn.out.link(gaze_xout.input)
+create_output('gaze', gaze_nn.out)
 
 #==================================================
 
 with dai.Device(pipeline) as device:
     sync = TwoStageHostSeqSync()
-    text = TextHelper()
 
     queues = {}
     # Create output queues
-    for name in ["color", "detection", "landmarks", "recognition"]: #, "m1", "m2"]:
+    for name in ["color", "detection", "landmarks", "gaze"]:
         queues[name] = device.getOutputQueue(name)
 
     while True:
         for name, q in queues.items():
-            # Add all msgs (color frames, object detections and face recognitions) to the Sync class.
+            # Add all msgs (color frames, detections and gaze estimations) to the Sync class.
             if q.has():
-                # print(f"got msg {name}")
                 msg = q.get()
                 sync.add_msg(msg, name)
                 if name == "color":
@@ -202,17 +155,29 @@ with dai.Device(pipeline) as device:
 
         msgs = sync.get_msgs()
         if msgs is not None:
-            # print("synced")
-            cv2.imshow("ASD", msgs["color"].getCvFrame())
+            frame = msgs["color"].getCvFrame()
             dets = msgs["detection"].detections
-            # for i, detection in enumerate(dets):
-                # bbox = frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-                # cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
+            for i, detection in enumerate(dets):
+                det = BoundingBox(detection)
+                tl, br = det.denormalize(frame.shape)
+                cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
 
-                # landmarks = np.array(msgs["landmarks"][0].getFirstLayerFp16())
-                # text.putText(frame, f"{name} {(100*conf):.0f}%", (bbox[0] + 10,bbox[1] + 35))
-                # break
+                gaze = np.array(msgs["gaze"][i].getFirstLayerFp16())
+                gaze_x, gaze_y = (gaze * 100).astype(int)[:2]
 
+                landmarks = np.array(msgs["landmarks"][i].getFirstLayerFp16())
+                colors = [(0, 127, 255), (0, 127, 255), (255, 0, 127), (127, 255, 0), (127, 255, 0)]
+                for lm_i in range(0, len(landmarks) // 2):
+                    # 0,1 - left eye, 2,3 - right eye, 4,5 - nose tip, 6,7 - left mouth, 8,9 - right mouth
+                    x, y = landmarks[lm_i*2:lm_i*2+2]
+                    point = det.map_point(x,y).denormalize(frame.shape)
+
+                    if lm_i <= 1: # Draw arrows from left eye & right eye
+                        cv2.arrowedLine(frame, point, ((point[0] + gaze_x*5), (point[1] - gaze_y*5)), colors[lm_i], 3)
+
+                    cv2.circle(frame, point, 2, colors[lm_i], 2)
+
+            cv2.imshow("Lasers", frame)
 
         if cv2.waitKey(1) == ord('q'):
             break

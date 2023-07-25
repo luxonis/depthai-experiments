@@ -25,6 +25,7 @@ def check_gaze_est(seq):
         gaze_data.setLayer("left_eye_image", dict['left'].getData())
         gaze_data.setLayer("right_eye_image", dict['right'].getData())
         gaze_data.setLayer("head_pose_angles", dict['angles'])
+        # node.warn(f'Angles: {dict["angles"]}')
         node.io['to_gaze'].send(gaze_data)
 
         # Clear previous results
@@ -34,11 +35,11 @@ def check_gaze_est(seq):
             if str(seq) == str(sq):
                 return
 
-PAD = 0.05
+PAD = 0.15
 PAD2x = PAD * 2
 def get_eye_coords(x, y, det):
-    xdelta = (det.xmax + det.xmin) / 2
-    ydelta = (det.ymax + det.ymin) / 2
+    xdelta = det.xmax - det.xmin
+    ydelta = det.ymax - det.ymin
 
     xmin = x - PAD
     xmax = xmin + PAD2x
