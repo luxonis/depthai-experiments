@@ -11,22 +11,6 @@ To go back to auto controls:
   'E' - autoexposure
   'F' - autofocus (continuous)
 
-Other controls:
-'1' - AWB lock (true / false)
-'2' - AE lock (true / false)
-'3' - Select control: AWB mode
-'4' - Select control: AE compensation
-'5' - Select control: anti-banding/flicker mode
-'6' - Select control: effect mode
-'7' - Select control: brightness
-'8' - Select control: contrast
-'9' - Select control: saturation
-'0' - Select control: sharpness
-'[' - Select control: luma denoise
-']' - Select control: chroma denoise
-'a' 'd' - Increase/decrease dot projector intensity
-'w' 's' - Increase/decrease flood LED intensity
-
 For the 'Select control: ...' options, use these keys to modify the value:
   '-' or '_' to decrease
   '+' or '=' to increase
@@ -43,6 +27,8 @@ import collections
 import time
 from itertools import cycle
 from matplotlib import pyplot as plt, cm
+from scipy import optimize
+import matplotlib.animation as animation
 
 def socket_type_pair(arg):
     socket, type = arg.split(',')
@@ -70,6 +56,20 @@ parser.add_argument('-rs', '--resizable-windows', action='store_true',
                     help="Make OpenCV windows resizable. Note: may introduce some artifacts")
 parser.add_argument('-raw', '--enable-raw', default=False, action="store_true",
                     help='Enable the RAW camera streams')
+parser.add_argument('-lens', '--lens_pos', default=115, type=float,
+                    help='Set the lens position for focal test')
+parser.add_argument('-dif', '--diff', default=30, type=int,
+                    help='Set the value for looping through lens of camera')
+parser.add_argument('-hs', '--H_SIZE', default=2, type=int,
+                    help='Set the horizontal crop')
+parser.add_argument('-ws', '--W_SIZE', default=2, type=int,
+                    help='Set the vertical crop')
+parser.add_argument('-cd', '--lensWait', default=0.5, type=float,
+                    help='Set the vertical crop')
+parser.add_argument('-mts', '--showcropMatrix', default=False, action="store_true",
+                    help='Show animation in test of lends position.')
+parser.add_argument('-dbd', '--detectBoard', default=False, action="store_true",
+                    help='Show animation in test of lends position.')
 args = parser.parse_args()
 
 cam_list = []
@@ -144,6 +144,31 @@ def get_sigma(self, frame_gray):
 def gaussian(x, amplitude, mean, stddev, const):
     return amplitude * np.exp(-(x - mean) ** 2 / (2 * stddev ** 2)) + const
 
+def GetArUcoCorners(img: np.ndarray):
+	aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
+	corners, ids, ret = cv2.aruco.detectMarkers(img, aruco_dict)
+	if len(ids) != 4:
+		# print('Setup is not correct!')
+		return None
+	center_dict = {}
+	for e, id in enumerate(ids):
+		corners_block = corners[e][0]
+		center = np.mean(corners_block, axis=0)
+		center_dict[str(id[0])] = center
+	return center_dict
+
+def WarpImage(img: np.ndarray, pnts: dict, size: tuple):
+	src_pnts = np.array([
+		pnts['0'], pnts['1'],
+		pnts['2'], pnts['3']
+	], dtype=np.float32)
+	dst_pnt = np.array([
+		[0, 0], [size[0], 0],
+		[0, size[1]], [size[0], size[1]]
+	], dtype=np.float32)
+	warp_mat = cv2.getPerspectiveTransform(src_pnts, dst_pnt)
+	img = cv2.warpPerspective(img, warp_mat, size)
+	return img
 # Calculates FPS over a moving window, configurable
 class FPS:
     def __init__(self, window_size=30):
@@ -258,7 +283,7 @@ with dai.Device() as device:
     FLOOD_MAX = 1500
 
     # Defaults and limits for manual focus/exposure controls
-    lensPos = 150
+    lensPos = args.lens_pos
     lensMin = 0
     lensMax = 255
 
@@ -269,10 +294,10 @@ with dai.Device() as device:
     sensIso = 800
     sensMin = 100
     sensMax = 1600
-    diff=30
-    W_SIZE  = 4
+    diff=args.diff
+    W_SIZE  = args.W_SIZE
     # Number of pieces Vertically to each Horizontal  
-    H_SIZE = 2
+    H_SIZE = args.H_SIZE
 
     dotIntensity = 0
     floodIntensity = 0
@@ -393,7 +418,11 @@ with dai.Device() as device:
             auto_cameras={}
             lens_position={}
             frame_matrix={}
-            crop_matrix={}
+            if args.showcropMatrix:
+                crop_matrix={}
+            if args.detectBoard:
+                board_matrix={}
+                lends_detected={}
             index=0
 
             for p in device.getConnectedCameraFeatures():
@@ -410,17 +439,26 @@ with dai.Device() as device:
                     while pkt==None:
                         q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
                         pkt = q[c].tryGet()
-                        if pkt is not None: 
-                            #lensPos=pkt.getLensPosition()
-                            lensPos=115
+                        if pkt is not None:
+                            if args.lens_pos==115 and pkt.getLensPosition()>diff:
+                                lensPos=pkt.getLensPosition()
+                            elif pkt.getLensPosition()<diff:
+                                print(f"Tracking lens position for {c} is not working properly, setting default value {args.lens_pos}")
+                            else:
+                                lensPos=args.lens_pos
                             lens_position[c]=[lensPos,lensPos-diff,lensPos+diff]
-                            print(f"Starting lens position {pkt.getLensPosition()}")
-                            auto_cameras[c]={}
+                            print(f"Starting lens position {lensPos} for camera {c}")
                             frame_matrix[c]=[]
-                            crop_matrix[c]={}
+                            if args.showcropMatrix:
+                                crop_matrix[c]={}
+                            if args.detectBoard:
+                                board_matrix[c]={}
+                                auto_cameras[c]=[]
+                                lends_detected[c]=[]
+                            else:
+                                auto_cameras[c]={}
                             break
             index=0
-            print(auto_cameras, lens_position)
             def Sobel_filter(frame):
                 sobelx = cv2.Sobel(frame, cv2.CV_64F, 1, 0, ksize=3)
                 sobely = cv2.Sobel(frame, cv2.CV_64F, 0, 1, ksize=3)
@@ -438,7 +476,181 @@ with dai.Device() as device:
                         lensPos = clamp(lens_position[c][0], lens_position[c][2], lens_position[c][1])
                         print(f"Setting manual focus for camera {c}, lens position: ", lens_position[c][1])
                         ctrl = dai.CameraControl()
-                        ctrl.setManualFocus(lens_position[c][1])
+                        ctrl.setManualFocus(int(lens_position[c][1]))
+                        controlQueue.send(ctrl)
+                        q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
+                        pkt = q[c].tryGet()
+                        if pkt is not None:
+                            frame = pkt.getCvFrame()
+                            if pkt.getType() != dai.RawImgFrame.Type.RAW8:
+                                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                            if args.detectBoard:
+                                if auto_cameras[c] is None:
+                                    auto_cameras[c]=[]
+                                try:
+                                    cnrs = GetArUcoCorners(frame)
+                                    img_warp = WarpImage(frame, cnrs, (140, 70))
+                                    dst_laplace = cv2.Laplacian(img_warp, cv2.CV_64F).var()
+                                    print(dst_laplace)
+                                    auto_cameras[c].append(dst_laplace)
+                                    lends_detected[c].append(lens_position[c][1])
+                                    frame_matrix[c].append(Sobel_filter(img_warp))
+                                except:
+                                    print("Charuco board not found, waiting 4 seconds.")
+                            else:
+                                frame_matrix[c].append(Sobel_filter(frame))
+                                frame2 = frame
+                                height, width = frame.shape[:2]
+                                jndex=0
+                                for ih in range(H_SIZE):
+                                   for iw in range(W_SIZE):
+                                        if auto_cameras[c].get(jndex) is None:
+                                            auto_cameras[c][jndex]=[]
+                                        if args.showcropMatrix:
+                                            if crop_matrix[c].get(jndex) is None:
+                                                crop_matrix[c][jndex]=[]
+                                        if args.detectBoard:
+                                            if board_matrix[c].get(jndex) is None:
+                                                board_matrix[c][jndex]=[]
+                                        x = width / W_SIZE * iw 
+                                        y = height / H_SIZE * ih
+                                        h = (height / H_SIZE)
+                                        w = (width / W_SIZE )
+                                        frame = frame[int(y):int(y+h), int(x):int(x+w)]
+                                        NAME = str(time.time()) 
+                                        dst_laplace = cv2.Laplacian(frame, cv2.CV_64F).var()
+                                        auto_cameras[c][jndex].append(dst_laplace)
+                                        if args.showcropMatrix:
+                                            crop_matrix[c][jndex].append(Sobel_filter(frame))
+                                        frame = frame2
+                                        jndex+=1
+                                        #print(f"Value of laplacian is {dst_laplace}, gradient magnitude {gradient_magnitude.var()}")
+                                        #cv2.imshow(f"Focal test {c}, {lensPos}", frame)
+                    lens_position[c][1]=lens_position[c][1]+1
+                            
+                time.sleep(args.lensWait)
+                index+=1
+            if auto_cameras!={}:
+                for c, crop in auto_cameras.items():
+                    fig, (ax1, ax2) = plt.subplots(2)
+                    if args.showcropMatrix:
+                        fig2 =plt.figure()
+
+                    # Create an empty image object
+                    img = ax1.imshow(frame_matrix[c][2], cmap='hot')
+                    cbar = fig.colorbar(img)
+                    title = ax1.set_title(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
+                    def update_matrix(i):
+                        # Get the matrix for the current frame
+                        current_matrix = frame_matrix[c][i % len(frame_matrix[c])+2]
+
+                        # Update the image data with the current matrix
+                        img.set_array(current_matrix)
+                        title.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
+
+                    # Create the animation
+                    ani1 = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
+                    if args.detectBoard:
+                        variance=crop
+                        lens=lends_detected[c]
+                        popt, _ = optimize.curve_fit(gaussian, lens, variance, p0=(max(variance), (lens_position[c][1]+lens_position[c][2]-2*diff+2)/2, 5, min(variance)))
+                        ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(0/len(crop)), label=f"CAM: {c}, crop {c}, Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
+                        ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(0/len(crop)))
+                    else:
+                        for crop_index, variance  in crop.items():
+                            variance=variance[2:]
+                            lens=np.arange(lens_position[c][1]-2*diff+1,lens_position[c][2])
+                            popt, _ = optimize.curve_fit(gaussian, lens, variance, p0=(max(variance), (lens_position[c][1]+lens_position[c][2]-2*diff+2)/2, 5, min(variance)))
+                            if args.showcropMatrix:
+                                ax3 = fig2.add_subplot(H_SIZE,W_SIZE,crop_index+1)
+                                img2 = ax3.imshow(crop_matrix[c][crop_index][2], cmap='hot')
+                                title2 = fig2.suptitle(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
+                                def update_matrix(i):
+                                    # Get the matrix for the current frame
+                                    current_matrix = crop_matrix[c][crop_index][i % len(crop_matrix[c][crop_index])+2]
+
+                                    # Update the image data with the current matrix
+                                    img2.set_data(current_matrix)
+                                    title2.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
+
+                                # Create the animation
+                                ani2 = animation.FuncAnimation(fig, update_matrix, frames=len(crop_matrix[c][crop_index])-2, interval=100)
+                            # Display the animation
+                            ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(crop_index/len(crop.items())), label=f"CAM: {c}, crop {crop_index}, Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
+                            ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(crop_index/len(crop.items())))
+                    ax2.set_title("Focal test for camera")
+                    ax2.set_xlabel("Lens position")
+                    ax2.set_ylabel("Laplacian variance")
+                    ax2.grid()
+                    ax2.legend()
+                plt.show()
+                #ani.save("D:\\FAKS, FMF\\Studentska dela\\TLI.gif", dpi=300, writer=animation.PillowWriter(fps=25))
+                if abs(round(popt[1],2)-(lens_position[c][1]+lens_position[c][2]-2*diff)/2)>LENS_STEP:
+                    print("Camera's autofocus does not work properly. If Gaussian is not centered press \"f\" and wait a few seconds. \nIf Gaussian is centered and the values still does not match, contact Luxonis.")
+            print("Before running the test again, press F to restart autofocus.")
+
+        elif key == ord('r'):
+            print("\nStart focus test")
+            auto_cameras={}
+            lens_position={}
+            frame_matrix={}
+            crop_matrix={}
+            final_position={}
+            max_sigma={}
+            focus_set={}
+            index=0
+            which_frame=5
+
+            for p in device.getConnectedCameraFeatures():
+                if p.hasAutofocus:
+                    auto_cameras[cam_list[index]]={}
+                index+=1
+            if auto_cameras=={}:
+                print("There are no autofocus cameras, test will end.")
+            for c in auto_cameras.keys():
+                if auto_cameras=={}:
+                    break
+                if auto_cameras.get(c) is not None:
+                    pkt=None
+                    while pkt==None:
+                        q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
+                        pkt = q[c].tryGet()
+                        if pkt is not None:
+                            if args.lens_pos==115 and pkt.getLensPosition()>diff:
+                                lensPos=pkt.getLensPosition()
+                            elif pkt.getLensPosition()<diff:
+                                print(f"Tracking lens position for {c} is not working properly, setting default value {args.lens_pos}")
+                            else:
+                                lensPos=args.lens_pos
+                            lens_position[c]=[lensPos,lensPos-diff,lensPos+diff]
+                            print(f"Starting lens position {lensPos} for camera {c}")
+                            auto_cameras[c]={}
+                            frame_matrix[c]=[]
+                            crop_matrix[c]={}
+                            max_sigma[c]={}
+                            focus_set[c]=0
+                            final_position[c]=False
+                            break
+            index=0
+            jump=0
+            def Sobel_filter(frame):
+                sobelx = cv2.Sobel(frame, cv2.CV_64F, 1, 0, ksize=3)
+                sobely = cv2.Sobel(frame, cv2.CV_64F, 0, 1, ksize=3)
+                ## Calculate gradient magnitude
+                gradient_magnitude = np.sqrt(sobelx**2 + sobely**2)
+                ## Normalize the gradient magnitude
+                gradient_magnitude = cv2.normalize(gradient_magnitude, None, 0, 1, cv2.NORM_MINMAX, cv2.CV_64F)
+                return gradient_magnitude
+
+            while final_position[c]==False:
+                if auto_cameras=={}:
+                    break
+                for c in auto_cameras.keys():
+                    if auto_cameras.get(c) is not None and index!=0:
+                        lensPos = clamp(lens_position[c][0], lens_position[c][2], lens_position[c][1])
+                        print(f"Setting manual focus for camera {c}, lens position: ", lens_position[c][1])
+                        ctrl = dai.CameraControl()
+                        ctrl.setManualFocus(int(lens_position[c][1]))
                         controlQueue.send(ctrl)
                         q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
                         pkt = q[c].tryGet()
@@ -469,14 +681,26 @@ with dai.Device() as device:
                                     jndex+=1
                                     #print(f"Value of laplacian is {dst_laplace}, gradient magnitude {gradient_magnitude.var()}")
                                     #cv2.imshow(f"Focal test {c}, {lensPos}", frame)
-                    lens_position[c][1]=lens_position[c][1]+1
+                            sigma=auto_cameras[c][which_frame][index]
+                            print(f"Lends position {lens_position[c][1]}")
+                            if auto_cameras[c][which_frame][index]<auto_cameras[c][which_frame][index-1] and index>0:
+                                if index==1: #If we went the wrong way at the start TODO If the jump was just because of noise
+                                    diff=-diff 
+                                elif index>1: #If we already went over the peak
+                                    diff=-1
+                                jump+=1
+                                if jump==2 and auto_cameras[c][which_frame][index]>max_sigma[c]: #If we went over the peak twice, it sets the value for that camera
+                                    final_position[c]==True
+                                    focus_set[c]=lens_position[c][1]
+                        if max_sigma[c]<auto_cameras[c][which_frame][index]:
+                            max_sigma[c]=auto_cameras[c][which_frame][index]
+                        lens_position[c][1]+=diff #Change lends position 
+                        index+=1
                             
-                time.sleep(1.5)
+                time.sleep(args.lensWait)
                 index+=1
-            from scipy import optimize
-
-            
-            import matplotlib.animation as animation
+            for c in auto_cameras.keys():
+                print(f"Position of lends: camera {c} lends {focus_set[c]}")
             if auto_cameras!={}:
                 for c, crop in auto_cameras.items():
                     fig, (ax1, ax2) = plt.subplots(2)
@@ -495,7 +719,7 @@ with dai.Device() as device:
                         title.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
 
                     # Create the animation
-                    ani = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
+                    ani1 = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
                     for crop_index, variance  in crop.items():
                         variance=variance[2:]
                         lens=np.arange(lens_position[c][1]-2*diff+1,lens_position[c][2])
@@ -512,13 +736,10 @@ with dai.Device() as device:
                             title2.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
 
                         # Create the animation
-                        ani = animation.FuncAnimation(fig, update_matrix, frames=len(crop_matrix[c][crop_index])-2, interval=100)
+                        ani2 = animation.FuncAnimation(fig, update_matrix, frames=len(crop_matrix[c][crop_index])-2, interval=100)
                         # Display the animation
                         ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(crop_index/len(crop.items())), label=f"CAM: {c}, crop {crop_index}, Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
                         ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(crop_index/len(crop.items())))
-                        #ax2.vlines(x=round(popt[1],2), ymin=min(variance)-10, ymax=max(variance)+10, linestyles='--', color=plt.cm.nipy_spectral(crop_index/len(crop.items())), label=f"CAM: {c}, crop {crop_index}, Estimated position is {round(popt[1],2)}")
-                        #ax2.vlines(x=(lens_position[c][1]+lens_position[c][2]-2*diff)/2, ymin=min(variance)-10, ymax=max(variance)+10, linestyles='--', color=plt.cm.nipy_spectral(crop_index/len(crop.items())), label=f"CAM: {c}, crop {crop_index}, Autofocus position {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}")
-                        #ax2.axvspan((lens_position[c][1]+lens_position[c][2]-2*diff)/2-1.5, (lens_position[c][1]+lens_position[c][2]-2*diff)/2+1.5, alpha=0.5, color='green')
                     ax2.set_title("Focal test for camera")
                     ax2.set_xlabel("Lens position")
                     ax2.set_ylabel("Laplacian variance")
@@ -528,107 +749,4 @@ with dai.Device() as device:
                 #ani.save("D:\\FAKS, FMF\\Studentska dela\\TLI.gif", dpi=300, writer=animation.PillowWriter(fps=25))
                 if abs(round(popt[1],2)-(lens_position[c][1]+lens_position[c][2]-2*diff)/2)>LENS_STEP:
                     print("Camera's autofocus does not work properly. If Gaussian is not centered press \"f\" and wait a few seconds. \nIf Gaussian is centered and the values still does not match, contact Luxonis.")
-    
-        elif key in [ord('i'), ord('o'), ord('k'), ord('l')]:
-            if key == ord('i'): expTime -= EXP_STEP
-            if key == ord('o'): expTime += EXP_STEP
-            if key == ord('k'): sensIso -= ISO_STEP
-            if key == ord('l'): sensIso += ISO_STEP
-            expTime = clamp(expTime, expMin, expMax)
-            sensIso = clamp(sensIso, sensMin, sensMax)
-            print("Setting manual exposure, time: ", expTime, "iso: ", sensIso)
-            ctrl = dai.CameraControl()
-            ctrl.setManualExposure(expTime, sensIso)
-            controlQueue.send(ctrl)
-        elif key == ord('1'):
-            awb_lock = not awb_lock
-            print("Auto white balance lock:", awb_lock)
-            ctrl = dai.CameraControl()
-            ctrl.setAutoWhiteBalanceLock(awb_lock)
-            controlQueue.send(ctrl)
-        elif key == ord('2'):
-            ae_lock = not ae_lock
-            print("Auto exposure lock:", ae_lock)
-            ctrl = dai.CameraControl()
-            ctrl.setAutoExposureLock(ae_lock)
-            controlQueue.send(ctrl)
-        elif key == ord('a'):
-            dotIntensity = dotIntensity - DOT_STEP
-            if dotIntensity < 0:
-                dotIntensity = 0
-            device.setIrLaserDotProjectorBrightness(dotIntensity)
-        elif key == ord('d'):
-            dotIntensity = dotIntensity + DOT_STEP
-            if dotIntensity > DOT_MAX:
-                dotIntensity = DOT_MAX
-            device.setIrLaserDotProjectorBrightness(dotIntensity)
-        elif key == ord('w'):
-            floodIntensity = floodIntensity + FLOOD_STEP
-            if floodIntensity > FLOOD_MAX:
-                floodIntensity = FLOOD_MAX
-            device.setIrFloodLightBrightness(floodIntensity)
-        elif key == ord('s'):
-            floodIntensity = floodIntensity - FLOOD_STEP
-            if floodIntensity < 0:
-                floodIntensity = 0
-            device.setIrFloodLightBrightness(floodIntensity)
-        elif key >= 0 and chr(key) in '34567890[]':
-            if   key == ord('3'): control = 'awb_mode'
-            elif key == ord('4'): control = 'ae_comp'
-            elif key == ord('5'): control = 'anti_banding_mode'
-            elif key == ord('6'): control = 'effect_mode'
-            elif key == ord('7'): control = 'brightness'
-            elif key == ord('8'): control = 'contrast'
-            elif key == ord('9'): control = 'saturation'
-            elif key == ord('0'): control = 'sharpness'
-            elif key == ord('['): control = 'luma_denoise'
-            elif key == ord(']'): control = 'chroma_denoise'
-            print("Selected control:", control)
-        elif key in [ord('-'), ord('_'), ord('+'), ord('=')]:
-            change = 0
-            if key in [ord('-'), ord('_')]: change = -1
-            if key in [ord('+'), ord('=')]: change = 1
-            ctrl = dai.CameraControl()
-            if control == 'none':
-                print("Please select a control first using keys 3..9 0 [ ]")
-            elif control == 'ae_comp':
-                ae_comp = clamp(ae_comp + change, -9, 9)
-                print("Auto exposure compensation:", ae_comp)
-                ctrl.setAutoExposureCompensation(ae_comp)
-            elif control == 'anti_banding_mode':
-                abm = next(anti_banding_mode)
-                print("Anti-banding mode:", abm)
-                ctrl.setAntiBandingMode(abm)
-            elif control == 'awb_mode':
-                awb = next(awb_mode)
-                print("Auto white balance mode:", awb)
-                ctrl.setAutoWhiteBalanceMode(awb)
-            elif control == 'effect_mode':
-                eff = next(effect_mode)
-                print("Effect mode:", eff)
-                ctrl.setEffectMode(eff)
-            elif control == 'brightness':
-                brightness = clamp(brightness + change, -10, 10)
-                print("Brightness:", brightness)
-                ctrl.setBrightness(brightness)
-            elif control == 'contrast':
-                contrast = clamp(contrast + change, -10, 10)
-                print("Contrast:", contrast)
-                ctrl.setContrast(contrast)
-            elif control == 'saturation':
-                saturation = clamp(saturation + change, -10, 10)
-                print("Saturation:", saturation)
-                ctrl.setSaturation(saturation)
-            elif control == 'sharpness':
-                sharpness = clamp(sharpness + change, 0, 4)
-                print("Sharpness:", sharpness)
-                ctrl.setSharpness(sharpness)
-            elif control == 'luma_denoise':
-                luma_denoise = clamp(luma_denoise + change, 0, 4)
-                print("Luma denoise:", luma_denoise)
-                ctrl.setLumaDenoise(luma_denoise)
-            elif control == 'chroma_denoise':
-                chroma_denoise = clamp(chroma_denoise + change, 0, 4)
-                print("Chroma denoise:", chroma_denoise)
-                ctrl.setChromaDenoise(chroma_denoise)
-            controlQueue.send(ctrl)
+            print("Before running the test again, press F to restart autofocus.")
