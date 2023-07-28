@@ -1,24 +1,26 @@
 # Utilities
 
-This folder contains DepthAI utility tools.
+This folder contains Focal test for cameras.
 
-## Device Manager
+## Focal test
 
-![Device Manager](https://user-images.githubusercontent.com/18037362/171629704-0f78f31a-1778-4338-8ac0-bdfb0d2d593f.png)
+Firstly you need to install dependencies by running
+``python3 install_requirements.py``
+and then you can run focal test with two option; by displaying board or without it and cropping image.
 
-``device_manager.py`` helps interfacing with the device [Bootloader](https://docs.luxonis.com/projects/api/en/latest/components/bootloader) and bootloader configuration. See [Device Manager Usage](https://docs.luxonis.com/projects/api/en/latest/components/bootloader/#device-manager-usage) to see how to use this utility.
-
-## Standalone executable
-
-Requirements:
+## Croping taken image
+The test will take as default that you want to just crop the taken frame into more small images and then check, how focused the images are. The parameters which determinates, how many crops do you have in images are ``-hs``=horizontal crops and ``-vs``=vertical crops.
+The sample code, which you can run to get cropped images is:
 ```
-# Linux/macOS
-python3 -m pip install pyinstaller
-# Windows
-python -m pip install pyinstaller
+python3 focal_test.py -hs 2 -vs 2 
+```
+to also display the cropped images, add ``-mts`` argument. To add the animations (not recommended for crop images) add ``-anim``.
+
+## Taking the picture of board
+The board, which is inside the folder, can be put anywhere in the room, because program will detect the charuco boards around it and crop the image so just the board will be shown. 
+To use that feature, you need to add argumen ``-dbd``. In this option, argument ``-mts`` does not work, while argument ``-anim`` works.
+Sample code would be
+```
+python3 focal_test.py -dbd -anim
 ```
 
-To build standalone executable issue the following command:
-```sh
-pyinstaller --onefile -w --icon=assets/icon.ico --add-data="assets/icon.ico;assets" --add-data="assets/icon.png;assets" device_manager.py
-```
