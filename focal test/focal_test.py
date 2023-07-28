@@ -67,9 +67,11 @@ parser.add_argument('-ws', '--W_SIZE', default=2, type=int,
 parser.add_argument('-cd', '--lensWait', default=0.5, type=float,
                     help='Set the vertical crop')
 parser.add_argument('-mts', '--showcropMatrix', default=False, action="store_true",
-                    help='Show animation in test of lends position.')
+                    help='Display the animation of all cropped images.')
 parser.add_argument('-dbd', '--detectBoard', default=False, action="store_true",
-                    help='Show animation in test of lends position.')
+                    help='Detect board, not crop the image.')
+parser.add_argument('-anim', '--displayAnimation', default=False, action="store_true",
+                    help='Display the animation of lends position.')
 args = parser.parse_args()
 
 cam_list = []
@@ -527,57 +529,80 @@ with dai.Device() as device:
                                         #print(f"Value of laplacian is {dst_laplace}, gradient magnitude {gradient_magnitude.var()}")
                                         #cv2.imshow(f"Focal test {c}, {lensPos}", frame)
                     lens_position[c][1]=lens_position[c][1]+1
-                            
                 time.sleep(args.lensWait)
                 index+=1
             if auto_cameras!={}:
+                camera_index=0
                 for c, crop in auto_cameras.items():
                     fig, (ax1, ax2) = plt.subplots(2)
                     if args.showcropMatrix:
                         fig2 =plt.figure()
-
                     # Create an empty image object
-                    img = ax1.imshow(frame_matrix[c][2], cmap='hot')
-                    cbar = fig.colorbar(img)
-                    title = ax1.set_title(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
-                    def update_matrix(i):
-                        # Get the matrix for the current frame
-                        current_matrix = frame_matrix[c][i % len(frame_matrix[c])+2]
-
-                        # Update the image data with the current matrix
-                        img.set_array(current_matrix)
-                        title.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
-
-                    # Create the animation
-                    ani1 = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
                     if args.detectBoard:
                         variance=crop
                         lens=lends_detected[c]
                         popt, _ = optimize.curve_fit(gaussian, lens, variance, p0=(max(variance), (lens_position[c][1]+lens_position[c][2]-2*diff+2)/2, 5, min(variance)))
-                        ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(0/len(crop)), label=f"CAM: {c}, crop {c}, Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
-                        ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(0/len(crop)))
+                        ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(camera_index/len(auto_cameras)), label=f"CAM: {c}, Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
+                        ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(camera_index/len(auto_cameras)))
+                        if args.displayAnimation:
+                            img = ax1.imshow(frame_matrix[c][2], cmap='hot')
+                            cbar = fig.colorbar(img)
+                            title = ax1.set_title(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
+                            def update_matrix(i):
+                                # Get the matrix for the current frame
+                                current_matrix = frame_matrix[c][i % len(frame_matrix[c])+2]
+
+                                # Update the image data with the current matrix
+                                img.set_array(current_matrix)
+                                title.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
+
+                            # Create the animation
+                            ani1 = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
+                        else:
+                            title = ax1.set_title(f'Autofocus, lends position  {round(popt[1],2)}')
+                            ax1.imshow(frame_matrix[c][variance.index(max(variance))], cmap="hot")
+                        camera_index+=1
                     else:
+                        if args.displayAnimation:
+                            img = ax1.imshow(frame_matrix[c][2], cmap='hot')
+                            cbar = fig.colorbar(img)
+                            title = ax1.set_title(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
+                            def update_matrix(i):
+                                # Get the matrix for the current frame
+                                current_matrix = frame_matrix[c][i % len(frame_matrix[c])+2]
+
+                                # Update the image data with the current matrix
+                                img.set_array(current_matrix)
+                                title.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
+
+                            # Create the animation
+                            ani1 = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
                         for crop_index, variance  in crop.items():
                             variance=variance[2:]
                             lens=np.arange(lens_position[c][1]-2*diff+1,lens_position[c][2])
                             popt, _ = optimize.curve_fit(gaussian, lens, variance, p0=(max(variance), (lens_position[c][1]+lens_position[c][2]-2*diff+2)/2, 5, min(variance)))
-                            if args.showcropMatrix:
-                                ax3 = fig2.add_subplot(H_SIZE,W_SIZE,crop_index+1)
-                                img2 = ax3.imshow(crop_matrix[c][crop_index][2], cmap='hot')
-                                title2 = fig2.suptitle(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
-                                def update_matrix(i):
-                                    # Get the matrix for the current frame
-                                    current_matrix = crop_matrix[c][crop_index][i % len(crop_matrix[c][crop_index])+2]
-
-                                    # Update the image data with the current matrix
-                                    img2.set_data(current_matrix)
-                                    title2.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
-
-                                # Create the animation
-                                ani2 = animation.FuncAnimation(fig, update_matrix, frames=len(crop_matrix[c][crop_index])-2, interval=100)
-                            # Display the animation
                             ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(crop_index/len(crop.items())), label=f"CAM: {c}, crop {crop_index}, Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
                             ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(crop_index/len(crop.items())))
+                            if args.showcropMatrix:
+                                ax3 = fig2.add_subplot(H_SIZE,W_SIZE,crop_index+1)
+                                if args.displayAnimation:
+                                    img2 = ax3.imshow(crop_matrix[c][crop_index][2], cmap='hot')
+                                    title2 = fig2.suptitle(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
+                                    def update_matrix(i):
+                                        # Get the matrix for the current frame
+                                        current_matrix = crop_matrix[c][crop_index][i % len(crop_matrix[c][crop_index])+2]
+                                    # Update the image data with the current matrix
+                                        img2.set_data(current_matrix)
+                                        title2.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
+                                    # Create the animation
+                                    ani2 = animation.FuncAnimation(fig, update_matrix, frames=len(crop_matrix[c][crop_index])-2, interval=100)
+                                else:
+                                    ax3.imshow(crop_matrix[c][crop_index][variance.index(max(variance))], cmap='hot')
+                            else:
+                                title = ax1.set_title(f'Autofocus, lends position  {round(popt[1],2)}')
+                                ax1.imshow(frame_matrix[c][variance.index(max(variance))], cmap="hot")
+
+                            # Display the animation
                     ax2.set_title("Focal test for camera")
                     ax2.set_xlabel("Lens position")
                     ax2.set_ylabel("Laplacian variance")
