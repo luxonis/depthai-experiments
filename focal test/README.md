@@ -1,7 +1,3 @@
-# Utilities
-
-This folder contains Focal test for cameras.
-
 ## Focal test
 
 Firstly you need to install dependencies by running
