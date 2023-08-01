@@ -1,0 +1,1 @@
+pip install --force-reinstall --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/ depthai==2.19.1.0.dev0+8a3888552446d396d438c2d4e912f40b17733e45    
