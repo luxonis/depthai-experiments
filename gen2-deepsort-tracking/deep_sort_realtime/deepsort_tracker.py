@@ -102,6 +102,25 @@ class DeepSort(object):
         logger.info(f'- in-build embedder : {"No" if self.embedder is None else "Yes"}')
         logger.info(f'- polygon detections : {"No" if polygon is False else "Yes"}')
 
+    def iter(self, detections, embeddings, resolution):
+        height, width = resolution
+        # Decode detections into bounding boxes
+        object_bbs = self.decode_dets(detections, (width, height))
+        # Calculate embeddings for each crop
+        object_embeds = np.array([emb.getFirstLayerFp16() for emb in embeddings])
+        # Track iteration
+        object_tracks = self.update_tracks(object_bbs, embeds=object_embeds)
+        return object_tracks
+
+    def decode_dets(self, detections, shape):
+        bbs = []
+        W, H = shape
+        for detection in detections:
+            x1, y1, x2, y2 = int(detection.xmin*W), int(detection.ymin*H), int(detection.xmax*W), int(detection.ymax*H)
+            w, h = x2-x1, y2-y1
+            bbs.append(([x1, y1, w, h], detection.confidence, detection.label, [x1/W, y1/H]))
+        return bbs
+
     def update_tracks(self, raw_detections, embeds=None, frame=None, today=None):
 
         """Run multi-target tracker on a particular sequence.
