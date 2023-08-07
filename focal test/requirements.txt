@@ -6,9 +6,8 @@ depthai-sdk==1.9.4
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
 pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64" and platform_machine != "arm64"
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.19.1.0.dev0+8a3888552446d396d438c2d4e912f40b17733e45
+depthai==2.21.2.0
 numpy==1.24.3
-opencv-contrib-python==4.5.4.58
 pandas==1.5.3
 matplotlib
 openpyxl
@@ -16,4 +15,3 @@ PySimpleGUI==4.60.3
 Pillow==9.2.0
 matplotlib
 scipy
-time

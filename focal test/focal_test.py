@@ -72,6 +72,8 @@ parser.add_argument('-dbd', '--detectBoard', default=False, action="store_true",
                     help='Detect board, not crop the image.')
 parser.add_argument('-anim', '--displayAnimation', default=False, action="store_true",
                     help='Display the animation of lends position.')
+parser.add_argument('-bord', '--id_board', default=[[[0],[1],[2],[3]], [[4],[5],[6],[7]], [[8],[9],[10],[11]], [[12],[13],[14],[15]]],
+                    help='Give the list od ID of charucos, which you wanna crop in boards.')
 args = parser.parse_args()
 
 cam_list = []
@@ -146,23 +148,30 @@ def get_sigma(self, frame_gray):
 def gaussian(x, amplitude, mean, stddev, const):
     return amplitude * np.exp(-(x - mean) ** 2 / (2 * stddev ** 2)) + const
 
-def GetArUcoCorners(img: np.ndarray):
+def GetArUcoCorners(img: np.ndarray, enu_id: np.array):
 	aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
 	corners, ids, ret = cv2.aruco.detectMarkers(img, aruco_dict)
-	if len(ids) != 4:
+	#if len(ids) != 4:
 		# print('Setup is not correct!')
+		#return None
+	try:
+		center_dict = {}
+		for e, id in enumerate(ids):
+			for num in enu_id:
+				if num==id:
+					corners_block = corners[e][0]
+					center = np.mean(corners_block, axis=0)
+					center_dict[str(id[0])] = center
+		if len(center_dict)!=4:
+			return None
+	except:
 		return None
-	center_dict = {}
-	for e, id in enumerate(ids):
-		corners_block = corners[e][0]
-		center = np.mean(corners_block, axis=0)
-		center_dict[str(id[0])] = center
 	return center_dict
 
-def WarpImage(img: np.ndarray, pnts: dict, size: tuple):
+def WarpImage(img: np.ndarray, pnts: dict, size: tuple, enu_id: np.array):
 	src_pnts = np.array([
-		pnts['0'], pnts['1'],
-		pnts['2'], pnts['3']
+		pnts[str(enu_id[0][0])], pnts[str(enu_id[1][0])],
+		pnts[str(enu_id[2][0])], pnts[str(enu_id[3][0])]
 	], dtype=np.float32)
 	dst_pnt = np.array([
 		[0, 0], [size[0], 0],
@@ -450,17 +459,18 @@ with dai.Device() as device:
                                 lensPos=args.lens_pos
                             lens_position[c]=[lensPos,lensPos-diff,lensPos+diff]
                             print(f"Starting lens position {lensPos} for camera {c}")
-                            frame_matrix[c]=[]
                             if args.showcropMatrix:
                                 crop_matrix[c]={}
                             if args.detectBoard:
                                 board_matrix[c]={}
-                                auto_cameras[c]=[]
-                                lends_detected[c]=[]
+                                lends_detected[c]={}
+                                frame_matrix[c]={}
                             else:
                                 auto_cameras[c]={}
+                                frame_matrix[c]=[]
                             break
             index=0
+            id_boards=args.id_board
             def Sobel_filter(frame):
                 sobelx = cv2.Sobel(frame, cv2.CV_64F, 1, 0, ksize=3)
                 sobely = cv2.Sobel(frame, cv2.CV_64F, 0, 1, ksize=3)
@@ -488,32 +498,35 @@ with dai.Device() as device:
                                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                             if args.detectBoard:
                                 if auto_cameras[c] is None:
-                                    auto_cameras[c]=[]
-                                try:
-                                    cnrs = GetArUcoCorners(frame)
-                                    img_warp = WarpImage(frame, cnrs, (140, 70))
-                                    dst_laplace = cv2.Laplacian(img_warp, cv2.CV_64F).var()
-                                    print(dst_laplace)
-                                    auto_cameras[c].append(dst_laplace)
-                                    lends_detected[c].append(lens_position[c][1])
-                                    frame_matrix[c].append(Sobel_filter(img_warp))
-                                except:
-                                    print("Charuco board not found, waiting 4 seconds.")
+                                    auto_cameras[c]={}
+                                frame_index=0
+                                for enu_id in id_boards:
+                                    if auto_cameras[c].get(frame_index) is None:
+                                        auto_cameras[c][frame_index]=[]
+                                        lends_detected[c][frame_index]=[]
+                                        frame_matrix[c][frame_index]=[]
+                                    try:
+                                        cnrs = GetArUcoCorners(frame, enu_id)
+                                        img_warp = WarpImage(frame, cnrs, (140, 70), enu_id)
+                                        dst_laplace = cv2.Laplacian(img_warp, cv2.CV_64F).var()
+                                        auto_cameras[c][frame_index].append(dst_laplace)
+                                        lends_detected[c][frame_index].append(lens_position[c][1])
+                                        frame_matrix[c][frame_index].append(Sobel_filter(img_warp))
+                                    except:
+                                        print(f"Board {enu_id} not found.")
+                                    frame_index+=1
                             else:
                                 frame_matrix[c].append(Sobel_filter(frame))
                                 frame2 = frame
                                 height, width = frame.shape[:2]
-                                jndex=0
+                                crop_index=0
                                 for ih in range(H_SIZE):
                                    for iw in range(W_SIZE):
-                                        if auto_cameras[c].get(jndex) is None:
-                                            auto_cameras[c][jndex]=[]
+                                        if auto_cameras[c].get(crop_index) is None:
+                                            auto_cameras[c][crop_index]=[]
                                         if args.showcropMatrix:
-                                            if crop_matrix[c].get(jndex) is None:
-                                                crop_matrix[c][jndex]=[]
-                                        if args.detectBoard:
-                                            if board_matrix[c].get(jndex) is None:
-                                                board_matrix[c][jndex]=[]
+                                            if crop_matrix[c].get(crop_index) is None:
+                                                crop_matrix[c][crop_index]=[]
                                         x = width / W_SIZE * iw 
                                         y = height / H_SIZE * ih
                                         h = (height / H_SIZE)
@@ -521,13 +534,11 @@ with dai.Device() as device:
                                         frame = frame[int(y):int(y+h), int(x):int(x+w)]
                                         NAME = str(time.time()) 
                                         dst_laplace = cv2.Laplacian(frame, cv2.CV_64F).var()
-                                        auto_cameras[c][jndex].append(dst_laplace)
+                                        auto_cameras[c][crop_index].append(dst_laplace)
                                         if args.showcropMatrix:
-                                            crop_matrix[c][jndex].append(Sobel_filter(frame))
+                                            crop_matrix[c][crop_index].append(Sobel_filter(frame))
                                         frame = frame2
-                                        jndex+=1
-                                        #print(f"Value of laplacian is {dst_laplace}, gradient magnitude {gradient_magnitude.var()}")
-                                        #cv2.imshow(f"Focal test {c}, {lensPos}", frame)
+                                        crop_index+=1
                     lens_position[c][1]=lens_position[c][1]+1
                 time.sleep(args.lensWait)
                 index+=1
@@ -539,30 +550,39 @@ with dai.Device() as device:
                         fig2 =plt.figure()
                     # Create an empty image object
                     if args.detectBoard:
-                        variance=crop
-                        lens=lends_detected[c]
-                        popt, _ = optimize.curve_fit(gaussian, lens, variance, p0=(max(variance), (lens_position[c][1]+lens_position[c][2]-2*diff+2)/2, 5, min(variance)))
-                        ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(camera_index/len(auto_cameras)), label=f"CAM: {c}, Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
-                        ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(camera_index/len(auto_cameras)))
-                        if args.displayAnimation:
-                            img = ax1.imshow(frame_matrix[c][2], cmap='hot')
-                            cbar = fig.colorbar(img)
-                            title = ax1.set_title(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
-                            def update_matrix(i):
-                                # Get the matrix for the current frame
-                                current_matrix = frame_matrix[c][i % len(frame_matrix[c])+2]
+                        for crop_index, variance  in crop.items():
+                            #fig, (ax1, ax2) = plt.subplots(2)
+                            lens=lends_detected[c][crop_index]
+                            try:
+                                popt, _ = optimize.curve_fit(gaussian, lens, variance, p0=(max(variance), (lens_position[c][1]+lens_position[c][2]-2*diff+2)/2, 5, min(variance)))
+                                ax2.plot(lens,variance, "-x", color=plt.cm.nipy_spectral(crop_index/len(crop.items())), label=f"CAM: {c}, board {crop_index} Autofocus: {(lens_position[c][1]+lens_position[c][2]-2*diff)/2}, Estimated:  {round(popt[1],2)}")
+                                ax2.plot(lens, gaussian(lens, *popt), color=plt.cm.nipy_spectral(crop_index/len(crop.items())))
+                                if args.displayAnimation:
+                                    img = ax1.imshow(frame_matrix[c][2], cmap='hot')
+                                    cbar = fig.colorbar(img)
+                                    title = ax1.set_title(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2}')
+                                    def update_matrix(i):
+                                        # Get the matrix for the current frame
+                                        current_matrix = frame_matrix[c][i % len(frame_matrix[c])+2]
 
-                                # Update the image data with the current matrix
-                                img.set_array(current_matrix)
-                                title.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
+                                        # Update the image data with the current matrix
+                                        img.set_array(current_matrix)
+                                        title.set_text(f'Autofocus, lends position  {lens_position[c][1]-2*diff+2+i}')
 
-                            # Create the animation
-                            ani1 = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
-                        else:
-                            title = ax1.set_title(f'Autofocus, lends position  {round(popt[1],2)}')
-                            ax1.imshow(frame_matrix[c][variance.index(max(variance))], cmap="hot")
-                        camera_index+=1
-                    else:
+                                    # Create the animation
+                                    ani1 = animation.FuncAnimation(fig, update_matrix, frames=len(frame_matrix[c])-2, interval=100)
+                                else:
+                                    title = ax1.set_title(f'Autofocus, lends position  {round(popt[1],2)}')
+                                    ax1.imshow(frame_matrix[c][crop_index][variance.index(max(variance))], cmap="hot")
+                                camera_index+=1
+                            except:
+                                print(f"Could not calculate the focus range with variance {variance} and lens position {lens}.")
+                            #ax2.set_title("Focal test for camera")
+                            #ax2.set_xlabel("Lens position")
+                            #ax2.set_ylabel("Laplacian variance")
+                            #ax2.grid()
+                            #ax2.legend()
+                    else:#
                         if args.displayAnimation:
                             img = ax1.imshow(frame_matrix[c][2], cmap='hot')
                             cbar = fig.colorbar(img)
@@ -610,8 +630,13 @@ with dai.Device() as device:
                     ax2.legend()
                 plt.show()
                 #ani.save("D:\\FAKS, FMF\\Studentska dela\\TLI.gif", dpi=300, writer=animation.PillowWriter(fps=25))
-                if abs(round(popt[1],2)-(lens_position[c][1]+lens_position[c][2]-2*diff)/2)>LENS_STEP:
-                    print("Camera's autofocus does not work properly. If Gaussian is not centered press \"f\" and wait a few seconds. \nIf Gaussian is centered and the values still does not match, contact Luxonis.")
+                try:
+                    if abs(round(popt[1],2)-(lens_position[c][1]+lens_position[c][2]-2*diff)/2)>4:
+                        print("Camera's autofocus does not work properly. If Gaussian is not centered press \"f\" and wait a few seconds. \nIf Gaussian is centered and the values still does not match, contact Luxonis.")
+                    else:
+                        print("Camera has no lends tilt.")
+                except:
+                    print("Focus not tested properly")
             print("Before running the test again, press F to restart autofocus.")
 
         elif key == ord('r'):
@@ -686,13 +711,13 @@ with dai.Device() as device:
                             frame_matrix[c].append(Sobel_filter(frame))
                             frame2 = frame
                             height, width = frame.shape[:2]
-                            jndex=0
+                            crop_index=0
                             for ih in range(H_SIZE):
                                for iw in range(W_SIZE):
-                                    if auto_cameras[c].get(jndex) is None:
-                                        auto_cameras[c][jndex]=[]
-                                    if crop_matrix[c].get(jndex) is None:
-                                        crop_matrix[c][jndex]=[]
+                                    if auto_cameras[c].get(crop_index) is None:
+                                        auto_cameras[c][crop_index]=[]
+                                    if crop_matrix[c].get(crop_index) is None:
+                                        crop_matrix[c][crop_index]=[]
                                     x = width / W_SIZE * iw 
                                     y = height / H_SIZE * ih
                                     h = (height / H_SIZE)
@@ -700,10 +725,10 @@ with dai.Device() as device:
                                     frame = frame[int(y):int(y+h), int(x):int(x+w)]
                                     NAME = str(time.time()) 
                                     dst_laplace = cv2.Laplacian(frame, cv2.CV_64F).var()
-                                    auto_cameras[c][jndex].append(dst_laplace)
-                                    crop_matrix[c][jndex].append(Sobel_filter(frame))
+                                    auto_cameras[c][crop_index].append(dst_laplace)
+                                    crop_matrix[c][crop_index].append(Sobel_filter(frame))
                                     frame = frame2
-                                    jndex+=1
+                                    crop_index+=1
                                     #print(f"Value of laplacian is {dst_laplace}, gradient magnitude {gradient_magnitude.var()}")
                                     #cv2.imshow(f"Focal test {c}, {lensPos}", frame)
                             sigma=auto_cameras[c][which_frame][index]
