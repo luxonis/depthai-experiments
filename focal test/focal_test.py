@@ -27,6 +27,7 @@ import collections
 import time
 from itertools import cycle
 from matplotlib import pyplot as plt, cm
+from matplotlib import colors
 from scipy import optimize
 import matplotlib.animation as animation
 
@@ -58,7 +59,7 @@ parser.add_argument('-raw', '--enable-raw', default=False, action="store_true",
                     help='Enable the RAW camera streams')
 parser.add_argument('-lens', '--lens_pos', default=115, type=float,
                     help='Set the lens position for focal test')
-parser.add_argument('-dif', '--diff', default=30, type=int,
+parser.add_argument('-dif', '--diff', default=15, type=int,
                     help='Set the value for looping through lens of camera')
 parser.add_argument('-hs', '--H_SIZE', default=2, type=int,
                     help='Set the horizontal crop')
@@ -427,6 +428,7 @@ with dai.Device() as device:
         elif key == ord('m'):
             print("\nStart focus test")
             auto_cameras={}
+            manual_cameras={}
             lens_position={}
             frame_matrix={}
             if args.showcropMatrix:
@@ -435,15 +437,19 @@ with dai.Device() as device:
                 board_matrix={}
                 lends_detected={}
             index=0
-
+            print(cam_list)
             for p in device.getConnectedCameraFeatures():
                 if p.hasAutofocus:
                     auto_cameras[cam_list[index]]={}
+                else:
+                    manual_cameras[cam_list[index]]={}
                 index+=1
             if auto_cameras=={}:
                 print("There are no autofocus cameras, test will end.")
-            for c in auto_cameras.keys():
-                if auto_cameras=={}:
+            if manual_cameras=={}:
+                print("There are no manual cameras, test will end.")
+            for c in cam_list:
+                if auto_cameras == {} and manual_cameras == {}:
                     break
                 if auto_cameras.get(c) is not None:
                     pkt=None
@@ -469,6 +475,12 @@ with dai.Device() as device:
                                 auto_cameras[c]={}
                                 frame_matrix[c]=[]
                             break
+                if manual_cameras.get(c) is not None:
+                    while pkt==None:
+                        q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
+                        pkt = q[c].tryGet()
+                        if pkt is not None:
+                            manual_cameras[c]={}
             index=0
             id_boards=args.id_board
             def Sobel_filter(frame):
@@ -483,7 +495,7 @@ with dai.Device() as device:
             while index<2*diff+1:
                 if auto_cameras=={}:
                     break
-                for c in auto_cameras.keys():
+                for c in cam_list:
                     if auto_cameras.get(c) is not None and index!=0:
                         lensPos = clamp(lens_position[c][0], lens_position[c][2], lens_position[c][1])
                         print(f"Setting manual focus for camera {c}, lens position: ", lens_position[c][1])
@@ -513,7 +525,7 @@ with dai.Device() as device:
                                         lends_detected[c][frame_index].append(lens_position[c][1])
                                         frame_matrix[c][frame_index].append(Sobel_filter(img_warp))
                                     except:
-                                        print(f"Board {enu_id} not found.")
+                                        print(f"Board {enu_id} for {c} not found.")
                                     frame_index+=1
                             else:
                                 frame_matrix[c].append(Sobel_filter(frame))
@@ -539,7 +551,48 @@ with dai.Device() as device:
                                             crop_matrix[c][crop_index].append(Sobel_filter(frame))
                                         frame = frame2
                                         crop_index+=1
-                    lens_position[c][1]=lens_position[c][1]+1
+                    if auto_cameras.get(c) is not None:
+                        lens_position[c][1]=lens_position[c][1]+1
+                    if manual_cameras.get(c) is not None and index!=0:
+                        q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
+                        pkt = q[c].tryGet()
+                        if pkt is not None:
+                            frame = pkt.getCvFrame()
+                            if pkt.getType() != dai.RawImgFrame.Type.RAW8:
+                                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                            if args.detectBoard:
+                                if manual_cameras[c] is None:
+                                    manual_cameras[c]={}
+                                frame_index=0
+                                for enu_id in id_boards:
+                                    if manual_cameras[c].get(frame_index) is None:
+                                        manual_cameras[c][frame_index]=[]
+                                    try:
+                                        cnrs = GetArUcoCorners(frame, enu_id)
+                                        img_warp = WarpImage(frame, cnrs, (140, 70), enu_id)
+                                        dst_laplace = cv2.Laplacian(img_warp, cv2.CV_64F).var()
+                                        manual_cameras[c][frame_index].append(dst_laplace)
+                                    except:
+                                        print(f"Board {enu_id} for {c} not found.")
+                                    frame_index+=1
+                            else:
+                                frame2 = frame
+                                height, width = frame.shape[:2]
+                                crop_index=0
+                                for ih in range(H_SIZE):
+                                   for iw in range(W_SIZE):
+                                        if manual_cameras[c].get(crop_index) is None:
+                                            manual_cameras[c][crop_index]=[]
+                                        x = width / W_SIZE * iw 
+                                        y = height / H_SIZE * ih
+                                        h = (height / H_SIZE)
+                                        w = (width / W_SIZE )
+                                        frame = frame[int(y):int(y+h), int(x):int(x+w)]
+                                        NAME = str(time.time()) 
+                                        dst_laplace = cv2.Laplacian(frame, cv2.CV_64F).var()
+                                        manual_cameras[c][crop_index].append(dst_laplace)
+                                        frame = frame2
+                                        crop_index+=1
                 time.sleep(args.lensWait)
                 index+=1
             if auto_cameras!={}:
@@ -628,7 +681,6 @@ with dai.Device() as device:
                     ax2.set_ylabel("Laplacian variance")
                     ax2.grid()
                     ax2.legend()
-                plt.show()
                 #ani.save("D:\\FAKS, FMF\\Studentska dela\\TLI.gif", dpi=300, writer=animation.PillowWriter(fps=25))
                 try:
                     if abs(round(popt[1],2)-(lens_position[c][1]+lens_position[c][2]-2*diff)/2)>4:
@@ -638,7 +690,40 @@ with dai.Device() as device:
                 except:
                     print("Focus not tested properly")
             print("Before running the test again, press F to restart autofocus.")
-
+            if manual_cameras!={}:
+                compare_variance = {}
+                for c, crop in manual_cameras.items():
+                    fig_man, ax1_man = plt.subplots()
+                    reference_value = 0
+                    camera_variance = []
+                    for crop_index, variance  in crop.items():
+                        avg_variance=sum(variance)/len(variance)
+                        fig_man.suptitle(f"Manual camera focus of image, camera {c}")
+                        n, bins, patches = ax1_man.hist(variance, bins=5, alpha=0.5, ec="black", label=f"Crop num {crop_index}, average {avg_variance}")
+                        if crop_index == 0:
+                            reference_value = avg_variance
+                        else:
+                            if abs(reference_value-avg_variance) > 1000:
+                                print(f"Camera {c} has some tilt, between {crop_index} and {0}")
+                        camera_variance.append(avg_variance)
+                    ax1_man.legend()
+                    ax1_man.grid()
+                    ax1_man.set_xlabel("Lap variance")
+                    ax1_man.set_ylabel("Num picture")
+                    compare_variance[c]=sum(camera_variance)/len(camera_variance)
+                print(compare_variance)
+            plt.show()
+            camera_index = 0
+            reference_value = 0
+            reference_camera = 0
+            for c, variance in compare_variance.items():
+                if camera_index == 0:
+                    reference_value = variance
+                    refrence_camera = c
+                else:
+                    if abs(reference_value-variance)>1000:
+                        print(f"Camera has some tilt: {reference_camera} and {c} variance does not match.")
+                camera_index+=1
         elif key == ord('r'):
             print("\nStart focus test")
             auto_cameras={}
