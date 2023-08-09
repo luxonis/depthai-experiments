@@ -4,7 +4,7 @@
 
 This example demonstrates how to run 3 stage inference (3-series, 2-parallel) using DepthAI.
 
-[![Gaze Example Demo](https://github.com/luxonis/depthai-experiments/assets/18037362/5d7eea47-d5be-4d8a-92b2-7b5ff01d443d)](https://github.com/luxonis/depthai-experiments/assets/18037362/e132044b-34c8-474a-bb1a-63dec1b5d9a8)
+[![Gaze Example Demo](https://github.com/luxonis/depthai-experiments/assets/18037362/5d7eea47-d5be-4d8a-92b2-7b5ff01d443d)](https://tinyurl.com/5h3dycc5)
 
 Original OpenVINO demo, on which this example was made, is official [here](https://docs.openvinotoolkit.org/2021.1/omz_demos_gaze_estimation_demo_README.html) from Intel and implemented with the NCS2 with nice diagrams and explanation, [here](https://github.com/LCTyrell/Gaze_pointer_controller), from @LCTyrell.
 
