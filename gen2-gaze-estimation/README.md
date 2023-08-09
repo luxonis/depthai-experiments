@@ -6,6 +6,8 @@ This example demonstrates how to run 3 stage inference (3-series, 2-parallel) us
 
 [![Gaze Example Demo](https://github.com/luxonis/depthai-experiments/assets/18037362/5d7eea47-d5be-4d8a-92b2-7b5ff01d443d)](https://tinyurl.com/5h3dycc5)
 
+(Click on the gif for full-res video)
+
 Original OpenVINO demo, on which this example was made, is official [here](https://docs.openvinotoolkit.org/2021.1/omz_demos_gaze_estimation_demo_README.html) from Intel and implemented with the NCS2 with nice diagrams and explanation, [here](https://github.com/LCTyrell/Gaze_pointer_controller), from @LCTyrell.
 
 ![graph](https://user-images.githubusercontent.com/32992551/103378235-de4fec00-4a9e-11eb-88b2-621180f7edef.jpeg)
