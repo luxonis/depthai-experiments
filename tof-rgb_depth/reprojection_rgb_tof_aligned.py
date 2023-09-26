@@ -121,13 +121,13 @@ hardware_rectify = True
 
 fps = 30
 
-RGB_SOCKET = dai.CameraBoardSocket.CAM_B
+RGB_SOCKET = dai.CameraBoardSocket.CAM_C
 LEFT_SOCKET = dai.CameraBoardSocket.CAM_C
 ToF_SOCKET = dai.CameraBoardSocket.CAM_A
 
 #Properties
 camRgb.setBoardSocket(RGB_SOCKET)
-camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
+camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
 camRgb.setFps(fps)
 camRgb.setIspScale(2, 3)
 
@@ -207,7 +207,7 @@ with device:
         if frameRgb is not None and frameDepth is not None:
 
             if hardware_rectify:
-                rectification_map = cv2.initUndistortRectifyMap(depth_intrinsics, None, rgb_extrinsics[0:3, 0:3], depth_intrinsics, (1280, 720), cv2.CV_32FC1)
+                rectification_map = cv2.initUndistortRectifyMap(depth_intrinsics, None, rgb_extrinsics[0:3, 0:3], depth_intrinsics, (1280, 800), cv2.CV_32FC1)
                 frameDepth = cv2.remap(frameDepth, rectification_map[0], rectification_map[1], cv2.INTER_LINEAR)
 
             # print(f'Extrinsics {rgb_extrinsics}')
