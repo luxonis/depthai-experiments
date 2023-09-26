@@ -5,7 +5,7 @@ from numba import jit, prange
 
 
 @jit(nopython=True, parallel=True)
-def reprojection(depth_image, depth_camera_intrinsics, camera_extrinsics, color_camera_intrinsics, mode, hardware_rectify=True):
+def reprojection(depth_image, depth_camera_intrinsics, camera_extrinsics, color_camera_intrinsics, mode, hardware_rectify=False):
     height = len(depth_image)
     width = len(depth_image[0])
     
@@ -96,46 +96,37 @@ queueNames = []
 
 # Define sources and outputs
 camRgb = pipeline.create(dai.node.ColorCamera)
-cam_a = pipeline.create(dai.node.Camera)
-tof = pipeline.create(dai.node.ToF)
-
-tofConfig = tof.initialConfig.get()
-# tofConfig.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MIN
-tofConfig.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MAX
-tofConfig.depthParams.avgPhaseShuffle = False
-tofConfig.depthParams.minimumAmplitude = 3.0
-tof.initialConfig.set(tofConfig)
-# Link the ToF sensor to the ToF node
-cam_a.raw.link(tof.input)
+left = pipeline.create(dai.node.MonoCamera)
+right = pipeline.create(dai.node.MonoCamera)
+stereo = pipeline.create(dai.node.StereoDepth)
 
 rgbOut = pipeline.create(dai.node.XLinkOut)
-xout = pipeline.create(dai.node.XLinkOut)
-tof.depth.link(xout.input)
+depthOut = pipeline.create(dai.node.XLinkOut)
 
 rgbOut.setStreamName("rgb")
 queueNames.append("rgb")
-xout.setStreamName("depth")
+depthOut.setStreamName("depth")
 queueNames.append("depth")
 
 hardware_rectify = True
 
 fps = 30
 
-RGB_SOCKET = dai.CameraBoardSocket.CAM_B
-LEFT_SOCKET = dai.CameraBoardSocket.CAM_C
-ToF_SOCKET = dai.CameraBoardSocket.CAM_A
+RGB_SOCKET = dai.CameraBoardSocket.RGB
+LEFT_SOCKET = dai.CameraBoardSocket.LEFT
+RIGHT_SOCKET = dai.CameraBoardSocket.RIGHT
 
 #Properties
 camRgb.setBoardSocket(RGB_SOCKET)
-camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
+camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 camRgb.setFps(fps)
 camRgb.setIspScale(2, 3)
 
 try:    
     calibData = device.readCalibration2()
-    rgb_intrinsics = calibData.getCameraIntrinsics(RGB_SOCKET, 1280, 800)
-    depth_intrinsics = calibData.getCameraIntrinsics(ToF_SOCKET, 640, 480)
-    rgb_extrinsics = calibData.getCameraExtrinsics(ToF_SOCKET, RGB_SOCKET)
+    rgb_intrinsics = calibData.getCameraIntrinsics(RGB_SOCKET, 1280, 720)
+    depth_intrinsics = calibData.getCameraIntrinsics(RIGHT_SOCKET, 1280, 720)
+    rgb_extrinsics = calibData.getCameraExtrinsics(RIGHT_SOCKET, RGB_SOCKET)
 
     depth_intrinsics = np.asarray(depth_intrinsics).reshape(3, 3)
     rgb_extrinsics = np.asarray(rgb_extrinsics).reshape(4, 4)
@@ -148,8 +139,24 @@ try:
 except:
     raise
 
+left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+left.setBoardSocket(LEFT_SOCKET)
+left.setFps(fps)
+right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+right.setBoardSocket(RIGHT_SOCKET)
+right.setFps(fps)
+
+stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+
 # Linking
 camRgb.isp.link(rgbOut.input)
+left.out.link(stereo.left)
+right.out.link(stereo.right)
+stereo.depth.link(depthOut.input)
+
+# if aligned to rectified right then need to calculated rotation matrix using https://github.com/szabi-luxonis/playfield/blob/main/stereoRectifyMinimal/stereoRectify.py
+# then multiply the inverse of it with the extrinsic matrix of right-rgb cam
+stereo.setDepthAlign(RIGHT_SOCKET)
 
 def colorizeDepth(frameDepth):
     min_depth = np.percentile(frameDepth[frameDepth != 0], 1)
@@ -162,7 +169,6 @@ def colorizeDepth(frameDepth):
 # Connect to device and start pipeline
 with device:
     device.startPipeline(pipeline)
-    print('Connected cameras:', device.getConnectedCameraFeatures())
 
     frameRgb = None
     frameDepth = None
@@ -194,15 +200,7 @@ with device:
 
         if latestPacket["depth"] is not None:
             frameDepth = latestPacket["depth"].getFrame()
-            depth_downscaled = frameDepth[::4]
-            non_zero_depth = depth_downscaled[depth_downscaled != 0] # Remove invalid depth values
-            cv2.imshow("ToF", non_zero_depth)
-            if len(non_zero_depth) == 0:
-                min_depth, max_depth = 0, 0
-            else:
-                min_depth = np.percentile(non_zero_depth, 3)
-                max_depth = np.percentile(non_zero_depth, 97)
-            depth_colorized = np.interp(frameDepth, (min_depth, max_depth), (0, 255)).astype(np.uint8)
+        
         # Blend when both received
         if frameRgb is not None and frameDepth is not None:
 
@@ -214,25 +212,21 @@ with device:
             # print(f'Intrinsics {rgb_intrinsics}')
             # print(f'Depth median is {np.median(frameDepth[frameDepth != 0])}')
             # exit(1)
-
-            # NEEDS RESCALING
             frameDepth1 = reprojection(frameDepth, depth_intrinsics, rgb_extrinsics, rgb_intrinsics, 0, hardware_rectify)
             frameDepth2 = reprojection(frameDepth, depth_intrinsics, rgb_extrinsics, rgb_intrinsics, 1, hardware_rectify)
 
            
             frameDepth1 = colorizeDepth(frameDepth1)
             frameDepth2 = colorizeDepth(frameDepth2)
-            cv2.imshow("Colorized depth", depth_colorized)
-            cv2.imshow("Colorized depth1", frameDepth1)
-            cv2.imshow("Colorized depth2", frameDepth2)
-            frameRgb = cv2.resize(frameRgb, (frameDepth.shape[1], frameDepth.shape[0]))
+
             blended = cv2.addWeighted(frameRgb, rgbWeight, frameDepth1, depthWeight, 0)
             cv2.imshow(rgb_depth_window_name, blended)
 
             blended2 = cv2.addWeighted(frameRgb, rgbWeight, frameDepth2, depthWeight, 0)
             cv2.imshow(rgb_depth_window_name1, blended2)
-
+            
             frameRgb = None
             frameDepth = None
+
         if cv2.waitKey(1) == ord('q'):
             break
