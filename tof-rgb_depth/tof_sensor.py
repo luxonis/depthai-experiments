@@ -34,16 +34,17 @@ with dai.Device(pipeline) as device:
     while True:
         imgFrame = q.get()  # blocking call, will wait until a new data has arrived
         depth_map = imgFrame.getFrame()
-
         # Colorize the depth frame to jet colormap
         depth_downscaled = depth_map[::4]
         non_zero_depth = depth_downscaled[depth_downscaled != 0] # Remove invalid depth values
+        cv2.imshow("ToF", non_zero_depth)
         if len(non_zero_depth) == 0:
             min_depth, max_depth = 0, 0
         else:
             min_depth = np.percentile(non_zero_depth, 3)
             max_depth = np.percentile(non_zero_depth, 97)
         depth_colorized = np.interp(depth_map, (min_depth, max_depth), (0, 255)).astype(np.uint8)
+        cv2.imshow("ToF", depth_colorized)
         depth_colorized = cv2.applyColorMap(depth_colorized, cv2.COLORMAP_JET)
 
         cv2.imshow("Colorized depth", depth_colorized)

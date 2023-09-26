@@ -4,8 +4,8 @@ import depthai as dai
 from numba import jit, prange
 
 
-@jit(nopython=True, parallel=True)
-def reprojection(depth_image, depth_camera_intrinsics, camera_extrinsics, color_camera_intrinsics, mode, hardware_rectify=False):
+
+def reprojection(depth_image, depth_camera_intrinsics, camera_extrinsics, color_camera_intrinsics, mode, hardware_rectify=True):
     height = len(depth_image)
     width = len(depth_image[0])
     
@@ -121,13 +121,13 @@ hardware_rectify = True
 
 fps = 30
 
-RGB_SOCKET = dai.CameraBoardSocket.RGB
-LEFT_SOCKET = dai.CameraBoardSocket.LEFT
+RGB_SOCKET = dai.CameraBoardSocket.CAM_B
+LEFT_SOCKET = dai.CameraBoardSocket.CAM_C
 ToF_SOCKET = dai.CameraBoardSocket.CAM_A
 
 #Properties
 camRgb.setBoardSocket(RGB_SOCKET)
-camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_720_P)
 camRgb.setFps(fps)
 camRgb.setIspScale(2, 3)
 
@@ -194,14 +194,7 @@ with device:
         if latestPacket["depth"] is not None:
             frameDepth = latestPacket["depth"].getFrame()
             depth_downscaled = frameDepth[::4]
-            non_zero_depth = depth_downscaled[depth_downscaled != 0]
-            if len(non_zero_depth) == 0:
-                min_depth, max_depth = 0, 0
-            else:
-                min_depth = np.percentile(non_zero_depth, 3)
-                max_depth = np.percentile(non_zero_depth, 97)
-            depth_colorized = np.interp(frameDepth, (min_depth, max_depth), (0, 255)).astype(np.uint8)
-            frameDepth = depth_colorized
+            depth_colorized = frameDepth
         # Blend when both received
         if frameRgb is not None and frameDepth is not None:
 
@@ -213,20 +206,24 @@ with device:
             # print(f'Intrinsics {rgb_intrinsics}')
             # print(f'Depth median is {np.median(frameDepth[frameDepth != 0])}')
             # exit(1)
+            print(depth_intrinsics)
+            print(rgb_intrinsics)
+            print(rgb_extrinsics)
             frameDepth1 = reprojection(frameDepth, depth_intrinsics, rgb_extrinsics, rgb_intrinsics, 0, hardware_rectify)
             frameDepth2 = reprojection(frameDepth, depth_intrinsics, rgb_extrinsics, rgb_intrinsics, 1, hardware_rectify)
 
            
             frameDepth1 = colorizeDepth(frameDepth1)
             frameDepth2 = colorizeDepth(frameDepth2)
-
-            blended = cv2.addWeighted(frameRgb, rgbWeight, frameDepth1, depthWeight, 0)
-            cv2.imshow(rgb_depth_window_name, blended)
-
-            blended2 = cv2.addWeighted(frameRgb, rgbWeight, frameDepth2, depthWeight, 0)
-            cv2.imshow(rgb_depth_window_name1, blended2)
-            
             cv2.imshow("Colorized depth", depth_colorized)
+            cv2.imshow("Colorized depth1", frameDepth1)
+            cv2.imshow("Colorized depth2", frameDepth2)
+            #blended = cv2.addWeighted(frameRgb, rgbWeight, frameDepth1, depthWeight, 0)
+            #cv2.imshow(rgb_depth_window_name, blended)
+
+            #blended2 = cv2.addWeighted(frameRgb, rgbWeight, frameDepth2, depthWeight, 0)
+            #cv2.imshow(rgb_depth_window_name1, blended2)
+
             frameRgb = None
             frameDepth = None
         if cv2.waitKey(1) == ord('q'):
