@@ -1015,8 +1015,6 @@ yolo_nn.out.link(xout_nn.input)
 
 
 
-import time
-
 class FrequencyMeter:
     """
     A utility class to measure the frequency of events over a specified duration.
