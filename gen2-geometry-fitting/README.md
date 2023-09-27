@@ -1,6 +1,6 @@
 # Gen2 Geometry Fitting
 
-This example demonstrates fitting of predefined geometric primitives onto point clouds of objects detected in RGBD images. The device captures depth and color information and runs YOLOv5 on the image data. Detected bounding boxes are used to fit geometry onto subsets of the full point cloud. Possible types of geometry are plane, cuboid, sphere and cylinder, the fitted geometry depends on the YOLO detection label. You can expect up to 5FPS, depending on the geometry. Cylinder fitting is in beta and will take up to 3 seconds. The example was tested on a OAK-D PRO device.
+This example demonstrates fitting of predefined geometric primitives onto point clouds of objects detected in RGBD images. The device captures depth and color information and runs YOLOv5 on the image data. Detected bounding boxes are used to fit geometry onto subsets of the full point cloud. Possible types of geometry are plane, cuboid, sphere and cylinder, the fitted geometry depends on the YOLO detection label. You can expect up to 5FPS, depending on the geometry. Cylinder fitting is not officially and will take up to 3 seconds, it is disabled by default, set any detection shape to cylinder to enable. The example was tested on a OAK-D PRO device.
 ![example](https://github.com/leoogrizek/depthai-experiments/assets/35898289/1b2c212b-92f6-4a56-9cf8-fbc7929a3e8f)
 
 ## Installation
