@@ -203,6 +203,7 @@ with device:
                 min_depth = np.percentile(non_zero_depth, 3)
                 max_depth = np.percentile(non_zero_depth, 97)
             depth_colorized = np.interp(frameDepth, (min_depth, max_depth), (0, 255)).astype(np.uint8)
+            frameDepth = depth_colorized
         # Blend when both received
         if frameRgb is not None and frameDepth is not None:
 
