@@ -1,0 +1,7 @@
+av==10.0.0
+depthai==2.22.0.0
+matplotlib
+numba
+numpy
+opencv_contrib_python==4.5.5.62
+pandas
