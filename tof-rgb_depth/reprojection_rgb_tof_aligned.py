@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import depthai as dai
 from numba import jit, prange
-
+print(dai.__version__)
 
 @jit(nopython=True, parallel=True)
 def reprojection(depth_image, depth_camera_intrinsics, camera_extrinsics, color_camera_intrinsics, mode, hardware_rectify=True):
@@ -28,7 +28,7 @@ def reprojection(depth_image, depth_camera_intrinsics, camera_extrinsics, color_
 
             # apply transformation
             if hardware_rectify:
-                x1 = x + camera_extrinsics[0][3]
+                x1 = x 
                 y1 = y 
                 z1 = z 
             else:
@@ -129,12 +129,14 @@ ToF_SOCKET = dai.CameraBoardSocket.CAM_A
 camRgb.setBoardSocket(RGB_SOCKET)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
 camRgb.setFps(fps)
-camRgb.setIspScale(2, 3)
+#camRgb.setIspScale(2, 3)
 
 try:    
     calibData = device.readCalibration2()
-    rgb_intrinsics = calibData.getCameraIntrinsics(RGB_SOCKET, 1280, 800)
-    depth_intrinsics = calibData.getCameraIntrinsics(ToF_SOCKET, 640, 480)
+    rgb_intrinsics = calibData.getCameraIntrinsics(RGB_SOCKET,1280, 800)
+    print(rgb_intrinsics)
+    depth_intrinsics = calibData.getCameraIntrinsics(ToF_SOCKET,640, 480)
+    print(depth_intrinsics)
     rgb_extrinsics = calibData.getCameraExtrinsics(ToF_SOCKET, RGB_SOCKET)
 
     depth_intrinsics = np.asarray(depth_intrinsics).reshape(3, 3)
@@ -155,7 +157,7 @@ def colorizeDepth(frameDepth):
     min_depth = np.percentile(frameDepth[frameDepth != 0], 1)
     max_depth = np.percentile(frameDepth, 99)
     depthFrameColor = np.interp(frameDepth, (min_depth, max_depth), (0, 255)).astype(np.uint8)
-    depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_HOT)
+    depthFrameColor = cv2.applyColorMap(depthFrameColor, cv2.COLORMAP_JET)
     return depthFrameColor
 
 
@@ -208,7 +210,7 @@ with device:
         if frameRgb is not None and frameDepth is not None:
 
             if hardware_rectify:
-                rectification_map = cv2.initUndistortRectifyMap(depth_intrinsics, None, rgb_extrinsics[0:3, 0:3], depth_intrinsics, (1280, 800), cv2.CV_32FC1)
+                rectification_map = cv2.initUndistortRectifyMap(depth_intrinsics, None, rgb_extrinsics[0:3, 0:3], depth_intrinsics, (1200, 800), cv2.CV_32FC1)
                 frameDepth = cv2.remap(frameDepth, rectification_map[0], rectification_map[1], cv2.INTER_LINEAR)
 
             # print(f'Extrinsics {rgb_extrinsics}')
@@ -226,6 +228,7 @@ with device:
             cv2.imshow("Colorized depth", depth_colorized)
             cv2.imshow("Colorized depth1", frameDepth1)
             cv2.imshow("Colorized depth2", frameDepth2)
+            
             frameRgb = cv2.resize(frameRgb, (frameDepth.shape[1], frameDepth.shape[0]))
             blended = cv2.addWeighted(frameRgb, rgbWeight, frameDepth1, depthWeight, 0)
             cv2.imshow(rgb_depth_window_name, blended)
