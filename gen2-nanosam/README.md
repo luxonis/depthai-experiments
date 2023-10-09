@@ -1,6 +1,6 @@
 # Gen2 NANOSAM
 
-[NanoSAM](https://github.com/NVIDIA-AI-IOT/nanosam) embedder ported to OAK and available through DepthAI Model ZOO. You also need mask decoder ONNX, which you can find in the NanoSAM official README or [here](https://drive.google.com/file/d/1jYNvnseTL49SNRx9PDcbkZ9DwsY8up7n/view?usp=drive_link). While embedder runs on the device, the ONNX runs on the CPU. You can also run it on GPU using `onnxruntime-gpu`package`.
+[NanoSAM](https://github.com/NVIDIA-AI-IOT/nanosam) embedder ported to OAK and available through DepthAI Model ZOO. You also need mask decoder ONNX, which you can find in the NanoSAM official README or [here](https://drive.google.com/file/d/1jYNvnseTL49SNRx9PDcbkZ9DwsY8up7n/view?usp=drive_link). While embedder runs on the device, the ONNX runs on the CPU. You can also run it on GPU using `onnxruntime-gpu` package.
 
 ![output_short](https://github.com/luxonis/depthai-experiments/assets/56075061/94aafd80-f4ac-4fa3-b250-4f50ed6fe3d6)
 
