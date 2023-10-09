@@ -5,7 +5,7 @@ import argparse
 import blobconverter
 
 from decoder import ONNXDecoder
-from utils import generate_overlay, frame_norm
+from utils import generate_overlay, frame_norm, resize_and_pad
 
 # --- constants ---
 YOLO_WIDTH, YOLO_HEIGHT = 512, 288
@@ -100,11 +100,7 @@ POINT_LABELS = []
 
 
 def click_event(event, x, y, flags, param):
-    if event == cv2.EVENT_LBUTTONDOWN:
-        # Store the point
-        POINTS.append([x, y])
-        POINT_LABELS.append(1)
-    elif event == cv2.EVENT_RBUTTONDOWN:
+    if event == cv2.EVENT_MBUTTONDOWN:
         POINTS.append([x, y])
         POINT_LABELS.append(0)
 
@@ -116,6 +112,7 @@ decoder = ONNXDecoder(onnx_path=args.decoder)
 # init CV2
 cv2.imshow("RGB", np.zeros((NN_HEIGHT, NN_WIDTH, 3), dtype=np.uint8))
 cv2.setMouseCallback("RGB", click_event)
+
 
 # Pipeline defined, now the device is assigned and pipeline is started
 with dai.Device(pipeline) as device:
@@ -135,7 +132,12 @@ with dai.Device(pipeline) as device:
             frame = in_rgb.getCvFrame()
             return True, frame
         else:
-            return video_rec.read()
+            ok, frame = video_rec.read()
+            if not ok:
+                return ok, frame
+
+            frame = resize_and_pad(frame, (NN_WIDTH, NN_HEIGHT))
+            return ok, frame
 
     while video_rec.isOpened() if not is_camera else True:
         read_correctly, frame = get_frame()
@@ -143,12 +145,12 @@ with dai.Device(pipeline) as device:
             break
 
         if not is_camera:
-            nn_data = dai.NNData()
-            nn_data.setLayer(
-                "input",
-                cv2.resize(frame, (NN_WIDTH, NN_HEIGHT).transpose(2, 0, 1).flatten()),
-            )
-            q_in.send(nn_data)
+            img = dai.ImgFrame()
+            img.setType(dai.ImgFrame.Type.BGR888p)
+            img.setData(cv2.resize(frame, (NN_WIDTH, NN_HEIGHT)).transpose(2, 0, 1).flatten())
+            img.setWidth(NN_WIDTH)
+            img.setHeight(NN_HEIGHT)
+            q_in.send(img)
 
         nn_out = q_nn.get()
         embeddings = nn_out.getFirstLayerFp16()
@@ -162,9 +164,10 @@ with dai.Device(pipeline) as device:
             # prepare points
             points = np.array([
                 [bbox[0], bbox[1]],
-                [bbox[2], bbox[3]]
+                [bbox[2], bbox[3]],
+                *POINTS
             ])
-            point_labels = np.array([2, 3])
+            point_labels = np.array([2, 3, *POINT_LABELS])
 
             # draw bbox
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255,0,255), 2)

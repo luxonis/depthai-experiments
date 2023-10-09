@@ -5,7 +5,7 @@ import argparse
 import blobconverter
 
 from decoder import ONNXDecoder
-from utils import generate_overlay
+from utils import generate_overlay, resize_and_pad
 
 # --- constants ---
 NN_WIDTH, NN_HEIGHT = 1024, 1024
@@ -75,7 +75,7 @@ def click_event(event, x, y, flags, param):
         # Store the point
         POINTS.append([x, y])
         POINT_LABELS.append(1)
-    elif event == cv2.EVENT_RBUTTONDOWN:
+    elif event == cv2.EVENT_MBUTTONDOWN:
         POINTS.append([x, y])
         POINT_LABELS.append(0)
 
@@ -104,7 +104,12 @@ with dai.Device(pipeline) as device:
             frame = in_rgb.getCvFrame()
             return True, frame
         else:
-            return video_rec.read()
+            ok, frame = video_rec.read()
+            if not ok:
+                return ok, frame
+
+            frame = resize_and_pad(frame, (NN_WIDTH, NN_HEIGHT))
+            return ok, frame
 
     while video_rec.isOpened() if not is_camera else True:
         read_correctly, frame = get_frame()
@@ -115,7 +120,7 @@ with dai.Device(pipeline) as device:
             nn_data = dai.NNData()
             nn_data.setLayer(
                 "input",
-                cv2.resize(frame, (NN_WIDTH, NN_HEIGHT).transpose(2, 0, 1).flatten()),
+                cv2.resize(frame, (NN_WIDTH, NN_HEIGHT)).transpose(2, 0, 1).flatten(),
             )
             q_in.send(nn_data)
 
