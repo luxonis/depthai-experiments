@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import depthai as dai
 from datetime import timedelta
-from depthai_sdk import FPSHandler
+from depthai_sdk.fps import FPSHandler
 
 # Weights to use when blending depth/rgb image (should equal 1.0)
 rgbWeight = 0.4
@@ -150,8 +150,8 @@ with dai.Device() as device:
         rgb_ts, rgb = synced['rgb']
         stereo_ts, disp = synced['disp']
         imuTs, imu = synced['imu']
-        print(f"[Seq {rgb.getSequenceNum()}] Mid of RGB exposure ts: {td2ms(rgb_ts)}ms, RGB ts: {td2ms(rgb.getTimestampDevice())}ms, RGB exposure time: {td2ms(rgb.getExposureTime(), exposure=True)}ms")
-        print(f"[Seq {disp.getSequenceNum()}] Mid of Stereo exposure ts: {td2ms(stereo_ts)}ms, Disparity ts: {td2ms(disp.getTimestampDevice())}ms, Stereo exposure time: {td2ms(disp.getExposureTime(), exposure=True)}ms")
+        print(f"[Seq {rgb.getSequenceNum()}] Mid of RGB exposure ts: {td2ms(rgb_ts)}ms, RGB ts: {td2ms(rgb.getTimestampDevice())}ms, RGB exposure time: {td2ms(rgb.getExposureTime())}ms")
+        print(f"[Seq {disp.getSequenceNum()}] Mid of Stereo exposure ts: {td2ms(stereo_ts)}ms, Disparity ts: {td2ms(disp.getTimestampDevice())}ms, Stereo exposure time: {td2ms(disp.getExposureTime())}ms")
         print(f"[Seq {imu.acceleroMeter.sequence}] IMU ts: {td2ms(imuTs)}ms")
         print('-----------')
 
