@@ -75,8 +75,8 @@ def reprojection(depth_image, depth_camera_intrinsics, camera_extrinsics, color_
 
     return image
 
-rgbWeight = 0.4
-depthWeight = 0.6
+rgbWeight = 0.6
+depthWeight = 0.4
 
 def updateBlendWeights(percent_rgb):
     """
@@ -117,7 +117,7 @@ queueNames.append("rgb")
 xout.setStreamName("depth")
 queueNames.append("depth")
 
-hardware_rectify = True
+hardware_rectify = False
 
 fps = 30
 
@@ -133,12 +133,15 @@ camRgb.setFps(fps)
 
 try:    
     calibData = device.readCalibration2()
-    rgb_intrinsics = calibData.getCameraIntrinsics(RGB_SOCKET,1280, 800)
-    print(rgb_intrinsics)
-    depth_intrinsics = calibData.getCameraIntrinsics(ToF_SOCKET,640, 480)
-    print(depth_intrinsics)
-    rgb_extrinsics = calibData.getCameraExtrinsics(ToF_SOCKET, RGB_SOCKET)
 
+    rgb_intrinsics = calibData.getCameraIntrinsics(RGB_SOCKET,640, 480)
+    print(f'rgb_intrinsics at 640x 480 {rgb_intrinsics}')
+    depth_intrinsics = calibData.getCameraIntrinsics(ToF_SOCKET,640, 480)
+    print(f'TOF Intrinsics {depth_intrinsics}')
+    distortCoeffs = np.asarray(calibData.getDistortionCoefficients(ToF_SOCKET))
+    print(f'TOF Distortion coeffs {distortCoeffs}')
+    rgb_extrinsics = calibData.getCameraExtrinsics(ToF_SOCKET, RGB_SOCKET)
+    print(f'rgb_extrinsics {np.asarray(rgb_extrinsics)}')
     depth_intrinsics = np.asarray(depth_intrinsics).reshape(3, 3)
     rgb_extrinsics = np.asarray(rgb_extrinsics).reshape(4, 4)
     rgb_extrinsics[:,3] *= 10 # to mm
@@ -149,7 +152,6 @@ try:
         camRgb.initialControl.setManualFocus(lensPosition)
 except:
     raise
-
 # Linking
 camRgb.isp.link(rgbOut.input)
 
@@ -180,6 +182,17 @@ with device:
     cv2.namedWindow(rgb_depth_window_name1)
     cv2.createTrackbar('RGB Weight %', rgb_depth_window_name1, int(rgbWeight*100), 100, updateBlendWeights)
 
+    depth_intrinsics = np.array([[471.451,   0.   , 317.897],
+                                 [  0.   , 471.539, 245.027],
+                                 [  0.   ,   0.   ,   1.   ]])
+    distortCoeffs = np.array([ 0.081, -0.432,  0.   , -0.   ,  0.418])
+
+    if hardware_rectify:
+        rectification_map = cv2.initUndistortRectifyMap(depth_intrinsics, distortCoeffs, rgb_extrinsics[0:3, 0:3], depth_intrinsics, (640, 480), cv2.CV_32FC1)
+    else:
+        rectification_map = cv2.initUndistortRectifyMap(depth_intrinsics, distortCoeffs, np.eye(3), depth_intrinsics, (640, 480), cv2.CV_32FC1)
+
+
     while True:
         latestPacket = {}
         latestPacket["rgb"] = None
@@ -196,6 +209,7 @@ with device:
 
         if latestPacket["depth"] is not None:
             frameDepth = latestPacket["depth"].getFrame()
+            print(frameDepth.shape)
             depth_downscaled = frameDepth[::4]
             non_zero_depth = depth_downscaled[depth_downscaled != 0] # Remove invalid depth values
             cv2.imshow("ToF", non_zero_depth)
@@ -209,9 +223,12 @@ with device:
         # Blend when both received
         if frameRgb is not None and frameDepth is not None:
 
-            if hardware_rectify:
-                rectification_map = cv2.initUndistortRectifyMap(depth_intrinsics, None, rgb_extrinsics[0:3, 0:3], depth_intrinsics, (1200, 800), cv2.CV_32FC1)
-                frameDepth = cv2.remap(frameDepth, rectification_map[0], rectification_map[1], cv2.INTER_LINEAR)
+            print(f'Shape of frame depth is {frameDepth.shape}')
+            print(f'Shape of rectification map is {rectification_map[0].shape}')
+            print(f'Shape of frameRgb is {frameRgb.shape}')
+            print('Why rectifiy here ?')
+            # exit(1)
+            frameDepth = cv2.remap(frameDepth, rectification_map[0], rectification_map[1], cv2.INTER_LINEAR)
 
             # print(f'Extrinsics {rgb_extrinsics}')
             # print(f'Intrinsics {rgb_intrinsics}')
@@ -229,11 +246,19 @@ with device:
             cv2.imshow("Colorized depth1", frameDepth1)
             cv2.imshow("Colorized depth2", frameDepth2)
             
-            frameRgb = cv2.resize(frameRgb, (frameDepth.shape[1], frameDepth.shape[0]))
-            blended = cv2.addWeighted(frameRgb, rgbWeight, frameDepth1, depthWeight, 0)
+            # frameRgb = cv2.resize(frameRgb, (frameDepth.shape[1], frameDepth.shape[0]))
+            frameRgb = cv2.resize(frameRgb, (0, 0), fx=0.5, fy=0.5)
+            print('Frame rgb shape -----------------------')
+            print(frameRgb.shape)
+            frameRgb_padded = np.pad(frameRgb, ((40, 40), (0, 0), (0, 0)), mode='constant', constant_values=0)
+            print('frameDepth1 img shape -----------------------')
+            print(frameDepth1.shape)
+
+            # exit(1)
+            blended = cv2.addWeighted(frameRgb_padded, rgbWeight, frameDepth1, depthWeight, 0)
             cv2.imshow(rgb_depth_window_name, blended)
 
-            blended2 = cv2.addWeighted(frameRgb, rgbWeight, frameDepth2, depthWeight, 0)
+            blended2 = cv2.addWeighted(frameRgb_padded, rgbWeight, frameDepth2, depthWeight, 0)
             cv2.imshow(rgb_depth_window_name1, blended2)
 
             frameRgb = None

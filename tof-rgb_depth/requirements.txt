@@ -1,0 +1,8 @@
+numpy<1.24 # For RPi Buster (last successful build) and macOS M1 (first build). But allow for higher versions, to support Python3.11 (not available in 1.21.4 yet)
+opencv-contrib-python==4.5.5.62 # Last successful RPi build, also covers M1 with above pinned numpy (otherwise 4.6.0.62 would be required, but that has a bug with charuco boards). Python version not important, abi3 wheels
+pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64" and platform_machine != "arm64"
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+# depthai==2.21.2.0.dev+8604ea3d8c90b984332fe8b0a5215876ac2f940d
+depthai==2.22.0.0.dev+93a1dedf444e62a2080e548425d3ba74d01e4007
+Qt.py
+scipy
