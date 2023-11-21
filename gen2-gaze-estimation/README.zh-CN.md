@@ -4,7 +4,7 @@
 
 本示例演示了如何使用Gen2 Pipeline Builder在DepthAI上运行3阶段推理(3序列，2并行)。
 
-[![Gaze Example Demo](https://github.com/luxonis/depthai-experiments/assets/18037362/5d7eea47-d5be-4d8a-92b2-7b5ff01d443d)](https://github.com/luxonis/depthai-experiments/assets/18037362/e132044b-34c8-474a-bb1a-63dec1b5d9a8)
+[![Gaze Example Demo](https://github.com/luxonis/depthai-experiments/assets/18037362/6c7688e5-30bc-4bed-8455-8b8e9899c5b0)](https://github.com/luxonis/depthai-experiments/assets/18037362/e132044b-34c8-474a-bb1a-63dec1b5d9a8)
 
 
 原OpenVINO演示，在其上做这个例子，是官方[在这里](https://docs.openvinotoolkit.org/2021.1/omz_demos_gaze_estimation_demo_README.html), 从英特尔，并与NCS2实现漂亮的图表和说明， [在这里](https://github.com/LCTyrell/Gaze_pointer_controller) @LCTyrell。

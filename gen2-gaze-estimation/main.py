@@ -24,6 +24,7 @@ cam.setVideoSize(VIDEO_SIZE)
 cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 cam.setInterleaved(False)
 cam.setPreviewNumFramesPool(20)
+cam.setFps(20)
 cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
 
 create_output('color', cam.video)
