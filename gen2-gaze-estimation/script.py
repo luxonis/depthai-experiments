@@ -19,18 +19,15 @@ def check_gaze_est(seq):
 
     if "left" in dict and "right" in dict and "angles" in dict:
         # node.warn("GOT ALL 3")
-        # 60x60x3 (x2 frames) + 6 (3 floats)
-        gaze_data = NNData(21606)
-        gaze_data.setSequenceNum(dict['left'].getSequenceNum())
-        gaze_data.setLayer("left_eye_image", dict['left'].getData())
-        gaze_data.setLayer("right_eye_image", dict['right'].getData())
-        gaze_data.setLayer("head_pose_angles", dict['angles'])
-        # node.warn(f'Angles: {dict["angles"]}')
-        node.io['to_gaze'].send(gaze_data)
+        # Send to gaze estimation NN
+        node.io['to_gaze_left'].send(dict['left'])
+        node.io['to_gaze_right'].send(dict['right'])
+        head_pose = NNData(6)
+        head_pose.setLayer("head_pose_angles", dict['angles'])
+        node.io['to_gaze_head'].send(head_pose)
 
         # Clear previous results
         for i, sq in enumerate(sync):
-            # node.warn(f"removing seq num {i} (seq {seq})")
             del sync[str(seq)]
             if str(seq) == str(sq):
                 return

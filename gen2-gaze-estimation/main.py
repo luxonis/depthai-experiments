@@ -131,7 +131,21 @@ gaze_nn.setBlobPath(blobconverter.from_zoo(
     version=openvino_version,
     compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8']
 ))
-script.outputs['to_gaze'].link(gaze_nn.input)
+
+SCRIPT_OUTPUT_NAMES = ['to_gaze_head', 'to_gaze_left', 'to_gaze_right']
+NN_NAMES = ['head_pose_angles', 'left_eye_image', 'right_eye_image']
+for script_name, nn_name in zip(SCRIPT_OUTPUT_NAMES, NN_NAMES):
+    # Link Script node output to NN input
+    script.outputs[script_name].link(gaze_nn.inputs[nn_name])
+    # Set NN input to blocking and to not reuse previous msgs
+    gaze_nn.inputs[nn_name].setBlocking(True)
+    gaze_nn.inputs[nn_name].setReusePreviousMessage(False)
+
+# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
+# Will be fixed in depthai 2.24
+gaze_nn.passthroughs['left_eye_image'].link(script.inputs['none'])
+script.inputs['none'].setBlocking(False)
+script.inputs['none'].setQueueSize(1)
 
 create_output('gaze', gaze_nn.out)
 
