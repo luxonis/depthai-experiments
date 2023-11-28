@@ -25,6 +25,7 @@ with dai.Device() as device:
         fps_host[c] = FPS()
         fps_capt[c] = FPS()
     capture_list = []
+    end = False
     while True:
         for c in camera.streams:
             pkt = q[c].tryGet()
@@ -33,8 +34,8 @@ with dai.Device() as device:
                 fps_capt[c].update(pkt.getTimestamp().total_seconds())
                 frame = pkt.getCvFrame()
                 capture = c in capture_list
-                if c in capture_list:
-                    capture_file_info = ('capture_' + c + '_'
+                if capture:
+                    capture_file_info = ('capture_' + c + '_' + camera.sensors[c] 
                          + '_' + str(frame.shape[0]) + 'x' + str(frame.shape[1])
                          + '_exp_' + str(int(pkt.getExposureTime().total_seconds()*1e6))
                          + '_iso_' + str(pkt.getSensitivity())
@@ -50,17 +51,21 @@ with dai.Device() as device:
                     cv2.imwrite(f"{dir_path}/dataset/{time.strftime('%Y-%m-%d')}/{filename}", frame)
                     capture_list.remove(c)
                 cv2.imshow(c, frame)
-            key = cv2.waitKey(1)
-        if key == ord (" "):
-            capture_time = time.strftime('%Y%m%d_%H%M%S')
-            capture_list = camera.streams
-            print(f"Capture all images")
-        print("\rFPS:",
-            *["{:6.2f}|{:6.2f}".format(fps_host[c].get(), fps_capt[c].get()) for c in camera.streams],
-            end=' ', flush=True)
-        response.CameraControl(key,camera.streams)
-        if key == ord("q"):
+                key = cv2.waitKey(1)
+                if key == ord ("c"):
+                    capture_time = time.strftime('%Y%m%d_%H%M%S')
+                    capture_list = camera.streams.copy()
+                    print(f"Capture all images")
+                print("\rFPS:",
+                    *["{:6.2f}|{:6.2f}".format(fps_host[c].get(), fps_capt[c].get()) for c in camera.streams],
+                    end=' ', flush=True)
+                response.CameraControl(key,camera.streams)
+                if key == ord("q"):
+                    end = True
+                    break
+        if end:
             break
+            
 
 
 

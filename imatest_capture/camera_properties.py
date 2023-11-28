@@ -7,9 +7,9 @@ import time
 from itertools import cycle
 
 cam_socket_opts = {
-    'color'  : dai.CameraBoardSocket.CAM_A,
-    'left' : dai.CameraBoardSocket.CAM_B,
-    'right': dai.CameraBoardSocket.CAM_C,
+    'cama'  : dai.CameraBoardSocket.CAM_A,
+    'camb' : dai.CameraBoardSocket.CAM_B,
+    'camc': dai.CameraBoardSocket.CAM_C,
     'cama' : dai.CameraBoardSocket.CAM_A,
     'camb' : dai.CameraBoardSocket.CAM_B,
     'camc' : dai.CameraBoardSocket.CAM_C,
@@ -45,6 +45,7 @@ class Camera_creation(object):
     def __init__(self, device, FPS = 30) -> None:
         self.xout = {}
         self.cam = {}
+        self.sensors = {}
         self.streams = []
         self.fps = FPS
         self.device = device
@@ -60,17 +61,22 @@ class Camera_creation(object):
 
         self.features = self.device.getConnectedCameraFeatures()
         for cam_info in self.features:
-            print(cam_info)
-            self.streams.append(cam_info.name)
-            self.xout[cam_info.name] = self.pipeline.createXLinkOut()
-            self.xout[cam_info.name].setStreamName(cam_info.name)
+            self.streams.append(cam_info.socket.name)
+            self.sensors[cam_info.socket.name] = cam_info.sensorName
+            self.xout[cam_info.socket.name] = self.pipeline.createXLinkOut()
+            self.xout[cam_info.socket.name].setStreamName(cam_info.socket.name)
             if len(cam_info.supportedTypes) > 1:
-               answer = input("For camera info please select supported type:")
+                answer = input("For camera info please select supported type (C/M):  ")
+                if answer == "C":
+                    self.sensorType(cam_info.socket.name,cam_info.height,dai.CameraSensorType.COLOR)
+                else:
+                   self.sensorType(cam_info.socket.name,cam_info.height,dai.CameraSensorType.MONO)
+                   
             else:
-                self.sensorType(cam_info.name,cam_info.height,cam_info.supportedTypes[0])
-            self.cam[cam_info.name].setBoardSocket(cam_socket_opts[cam_info.name])
-            self.control.out.link(self.cam[cam_info.name].inputControl)
-            self.cam[cam_info.name].setFps(self.fps)
+                self.sensorType(cam_info.socket.name,cam_info.height,cam_info.supportedTypes[0])
+            self.cam[cam_info.socket.name].setBoardSocket(cam_info.socket)
+            self.control.out.link(self.cam[cam_info.socket.name].inputControl)
+            self.cam[cam_info.socket.name].setFps(self.fps)
         return self.pipeline
 
     def sensorType(self, name, resolution, supportedTypes):
