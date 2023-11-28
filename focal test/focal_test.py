@@ -330,7 +330,10 @@ with dai.Device() as device:
     control = 'none'
 
     print("Cam:", *['     ' + c.ljust(8) for c in cam_list], "[host | capture timestamp]")
-
+    import os 
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    text_file = open(f"{dir_path}/Output_{time.strftime('%Y-%m-%d %H_%M_%S')}.txt", "w")
+    text_file.write("Cam,crop,lends_position,laplacian\n")
     capture_list = []
     while True:
         for c in streams:
@@ -524,6 +527,7 @@ with dai.Device() as device:
                                         auto_cameras[c][frame_index].append(dst_laplace)
                                         lends_detected[c][frame_index].append(lens_position[c][1])
                                         frame_matrix[c][frame_index].append(Sobel_filter(img_warp))
+                                        text_file.write(f"{c},{frame_index},{lens_position[c][1]},{dst_laplace}\n")
                                     except:
                                         print(f"Board {enu_id} for {c} not found.")
                                     frame_index+=1
@@ -549,6 +553,7 @@ with dai.Device() as device:
                                         auto_cameras[c][crop_index].append(dst_laplace)
                                         if args.showcropMatrix:
                                             crop_matrix[c][crop_index].append(Sobel_filter(frame))
+                                        text_file.write(f"{c},{crop_index},{lens_position[c][1]},{dst_laplace}\n")
                                         frame = frame2
                                         crop_index+=1
                     if auto_cameras.get(c) is not None:
@@ -597,6 +602,7 @@ with dai.Device() as device:
                 index+=1
             if auto_cameras!={}:
                 camera_index=0
+                text_file.close()
                 for c, crop in auto_cameras.items():
                     fig, (ax1, ax2) = plt.subplots(2)
                     if args.showcropMatrix:
