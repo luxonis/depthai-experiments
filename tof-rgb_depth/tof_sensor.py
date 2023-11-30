@@ -30,7 +30,30 @@ def get_rgb_value(event, x, y, flags, param):
         pixel_value = depth_map[y, x]*0.1
         print(f"RGB Value at ({x}, {y}): {pixel_value}cm")
 
+def draw_roi(event, x, y, flags, param):
+    global roi, cropping, frame
+    if event == cv2.EVENT_LBUTTONDOWN:
+        roi = [x, y]
+        cropping = True
+    elif event == cv2.EVENT_LBUTTONUP:
+        roi.append(x)
+        roi.append(y)
+        cropping = False
 
+def _mask_frame( frame: np.ndarray, roi) -> np.ndarray:
+    if roi is not None:
+        assert (len(roi) == 4)
+        x1, y1, x2, y2 = roi
+        roi_sorted = [min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)]
+        x1, y1, x2, y2 = roi_sorted
+        mask = np.zeros_like(frame)
+        mask[y1:y2, x1:x2] = 1
+    else:
+        mask = np.ones_like(frame)
+    frame = frame * mask
+    return frame
+roi = []
+cropping = False
 cv2.namedWindow('Image')
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
@@ -51,7 +74,13 @@ with dai.Device(pipeline) as device:
             min_depth = np.percentile(non_zero_depth, 3)
             max_depth = np.percentile(non_zero_depth, 97)
         depth_colorized = np.interp(depth_map, (min_depth, max_depth), (0, 255)).astype(np.uint8)
-        cv2.setMouseCallback('Image', get_rgb_value)
+        if len(roi) == 4 and abs(roi[0]-roi[2])>10 and abs(roi[1]-roi[3])>10:
+            cv2.rectangle(depth_colorized, (roi[0], roi[1]), (roi[2], roi[3]), (0, 0, 0), 5)
+            depth_map2 = cv2.rectangle(depth_map, (roi[0], roi[1]), (roi[2], roi[3]), (0, 0, 0), 5)
+            depth_np = _mask_frame(depth_map, roi=roi)
+            print(f"RGB Value of ROI is: {np.mean(depth_map2)}cm")
+            cv2.imshow("Cropped depth", depth_np)
+        cv2.setMouseCallback('Image', draw_roi)
         key = cv2.waitKey(1)
 
         depth_colorized = cv2.applyColorMap(depth_colorized, cv2.COLORMAP_JET)
