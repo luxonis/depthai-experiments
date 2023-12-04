@@ -3,7 +3,7 @@
 import cv2
 import depthai as dai
 import numpy as np
-
+from matplotlib import pyplot as plt, cm
 pipeline = dai.Pipeline()
 
 cam_a = pipeline.createColorCamera()
@@ -54,6 +54,7 @@ def _mask_frame( frame: np.ndarray, roi) -> np.ndarray:
     return frame
 roi = []
 cropping = False
+distance = 30
 cv2.namedWindow('Image')
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
@@ -78,8 +79,14 @@ with dai.Device(pipeline) as device:
             cv2.rectangle(depth_colorized, (roi[0], roi[1]), (roi[2], roi[3]), (0, 0, 0), 5)
             depth_map2 = cv2.rectangle(depth_map, (roi[0], roi[1]), (roi[2], roi[3]), (0, 0, 0), 5)
             depth_np = _mask_frame(depth_map, roi=roi)
-            print(f"RGB Value of ROI is: {np.mean(depth_map2)}cm")
-            cv2.imshow("Cropped depth", depth_np)
+            print(depth_np[roi[0]:roi[2], roi[1]:roi[3]])
+            x1, y1, x2, y2 = roi
+            print(f"RGB Value of ROI is: {np.mean(depth_np[min(x1, x2):max(x1, x2), min(y1, y2):max(y1, y2)])}m, error {np.mean(depth_np)-distance}m")
+            min_depth = np.percentile(depth_np, 3)
+            max_depth = np.percentile(depth_np, 97)
+            depth_color = np.interp(depth_np, (min_depth, max_depth), (0, 255)).astype(np.uint8)
+            depth_color = cv2.applyColorMap(depth_color, cv2.COLORMAP_JET)
+            cv2.imshow("Cropped depth", depth_np-distance)
         cv2.setMouseCallback('Image', draw_roi)
         key = cv2.waitKey(1)
 
@@ -88,3 +95,18 @@ with dai.Device(pipeline) as device:
 
         if key == ord('q'):
             break
+plt.title(f"Depth map of ToF sensor, distance {distance}cm")
+plt.imshow(depth_map*0.1, cmap=plt.cm.jet)
+cbar = plt.colorbar()
+cbar.set_label("Depth[cm]")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.show()
+
+plt.title(f"Error map of ToF sensor, distance {distance}cm")
+plt.imshow((depth_map*0.1-distance)/distance*100, cmap=plt.cm.jet)
+cbar = plt.colorbar()
+cbar.set_label("Error[%]")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.show()
