@@ -19,7 +19,11 @@ python3 -m pip install -r requirements.txt
 brew install pkg-config cairo gobject-introspection gst-plugins-bad gst-plugins-base gstreamer gst-rtsp-server ffmpeg gst-plugins-good
 ```
 
-(if you're using M1 processor, you might have to configure your homebrew properly to install these packages - check [this StackOverflow question](https://stackoverflow.com/q/64882584))
+(if you're using Mac ARM processor, you might have to configure your homebrew properly to install these packages - check [this StackOverflow question](https://stackoverflow.com/q/64882584))
+
+### Windows
+
+I'd suggest using WSL2 and installing Ubuntu on there. You can use the command apt-get command from Ubuntu above to install necessary dependencies.
 
 ## Usage
 
