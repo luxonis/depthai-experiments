@@ -66,7 +66,6 @@ with contextlib.ExitStack() as stack:
     threads = []
 
     for device_info in device_infos:
-        time.sleep(1) # Currently required due to XLink race issues
         thread = threading.Thread(target=worker, args=(device_info, stack, devices))
         thread.start()
         threads.append(thread)

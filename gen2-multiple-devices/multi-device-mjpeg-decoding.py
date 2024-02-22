@@ -57,7 +57,6 @@ with contextlib.ExitStack() as stack:
     queues = {}
     threads = []
     for dev in device_infos:
-        time.sleep(1) # Currently required due to XLink race issues
         q = Queue(1)
         thread = threading.Thread(target=worker, args=(dev, stack, q))
         queues[dev.getMxId()] = q
