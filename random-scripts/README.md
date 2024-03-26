@@ -28,9 +28,18 @@ USB3 (5gbps, direct link):
 Downlink 2273.6 mbps
 Uplink 1070.6 mbps
 
+USB3 (10gbps, direct link):
+Downlink 3362.2 mbps
+Uplink 2729.7 mbps
+
 POE (1gbps, direct link):
 Downlink 805.8 mbps
 Uplink 211.7 mbps
+```
+
+To enable 10Gbps USB3 mode, one has to explicitly set it in Device constructor:
+```py
+with dai.Device(pipeline, maxUsbSpeed=dai.UsbSpeed.SUPER_PLUS) as device:
 ```
 
 ### OAK latency test
