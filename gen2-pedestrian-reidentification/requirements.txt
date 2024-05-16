@@ -1,1 +1,1 @@
-depthai-sdk==1.11.0
+depthai-sdk==1.12.0
