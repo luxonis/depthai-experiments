@@ -44,7 +44,8 @@ class HostSpatialsCalc:
         inRange = (self.THRESH_LOW <= depthROI) & (depthROI <= self.THRESH_HIGH)
 
         # Required information for calculating spatial coordinates on the host
-        HFOV = np.deg2rad(self.calibData.getFov(dai.CameraBoardSocket(depthData.getInstanceNum())))
+        HFOV = np.deg2rad(self.calibData.getFov(dai.CameraBoardSocket(depthData.getInstanceNum()), useSpec=False))
+
 
         averageDepth = averaging_method(depthROI[inRange])
 
