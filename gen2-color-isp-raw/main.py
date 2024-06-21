@@ -232,20 +232,32 @@ while True:
             bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
         if name == 'raw':
             # Preallocate the output buffer
-            unpacked = np.empty(payload.size * 4 // 5, dtype=np.uint16)
+            raw_packed = payload
+            pixel_order = cv2.COLOR_BayerBG2BGR
+            # Specific trim of leading metadata for IMX283, TODO FW
+            if raw_packed.size == 5312*(3692+18)*5//4 or raw_packed.size == 3840*(2160+22)*5//4:
+                if raw_packed.size == 5312*(3692+18)*5//4:
+                    extra_offset = 64
+                    raw_packed = payload[(5312*18+extra_offset)*5//4:]
+                    missing_data = np.full(extra_offset*5//4, 0xAA, dtype=np.uint8) # FIXME
+                    raw_packed = np.append(raw_packed, missing_data)
+                else:
+                    raw_packed = payload[3840*22*5//4:]
+                pixel_order = cv2.COLOR_BayerGR2BGR
+            unpacked = np.empty(raw_packed.size * 4 // 5, dtype=np.uint16)
             if capture_flag:
                 # Save to capture file on bits [9:0] of the 16-bit pixels
-                unpack_raw10(payload, unpacked, expand16bit=False)
+                unpack_raw10(raw_packed, unpacked, expand16bit=False)
                 filename = capture_file_info_str + '_10bit.bw'
                 print("Saving to file:", filename)
                 unpacked.tofile(filename)
             # Full range for display, use bits [15:6] of the 16-bit pixels
-            unpack_raw10(payload, unpacked, expand16bit=True)
+            unpack_raw10(raw_packed, unpacked, expand16bit=True)
             shape = (height, width)
             bayer = unpacked.reshape(shape).astype(np.uint16)
             # See this for the ordering, at the end of page:
             # https://docs.opencv.org/4.5.1/de/d25/imgproc_color_conversions.html
-            bgr = cv2.cvtColor(bayer, cv2.COLOR_BayerBG2BGR)
+            bgr = cv2.cvtColor(bayer, pixel_order)
         if capture_flag:  # Save to disk if `c` was pressed
             filename = capture_file_info_str + '.png'
             print("Saving to file:", filename)
