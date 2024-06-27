@@ -1,11 +1,10 @@
 from depthai_sdk import OakCamera
 from depthai_sdk.classes.packets import DetectionPacket, PointcloudPacket
-from depthai_sdk.classes import BoxEstimator
+from depthai_sdk.classes.box_estimator import BoxEstimator
 import depthai_viewer as viewer
 import cv2
 import subprocess
 import select
-import numpy as np
 import sys
 
 FPS = 10.0
