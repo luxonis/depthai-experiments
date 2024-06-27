@@ -1,163 +1,118 @@
-#!/usr/bin/env python3
-
-import time
+from depthai_sdk import OakCamera
+from depthai_sdk.classes.packets import DetectionPacket, PointcloudPacket
+from depthai_sdk.classes.box_estimator import BoxEstimator
+import depthai_viewer as viewer
 import cv2
-import depthai as dai
-import open3d as o3d
-import argparse
-from box_estimator import BoxEstimator
-from projector_3d import PointCloudFromRGBD
+import subprocess
+import select
+import sys
 
+FPS = 10.0
+box = BoxEstimator(median_window=10)
 
+with OakCamera() as oak:
+    try:
+        subprocess.Popen([sys.executable, "-m", "depthai_viewer", "--viewer-mode"], stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+    except subprocess.TimeoutExpired:
+        pass
+    viewer.init("Depthai Viewer")
+    viewer.connect()
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-maxd', '--max_dist', type=float, help="Maximum distance between camera and object in space in meters",
-                    default=1.5)
-parser.add_argument('-mins', '--min_box_size', type=float, help="Minimum box size in cubic meters",
-                    default=0.003)
+    color = oak.create_camera('cam_c', resolution='800p', fps=20)
 
-args = parser.parse_args()
+    model_config = {
+        'source': 'roboflow', # Specify that we are downloading the model from Roboflow
+        'model':'cardboard-box-u35qd/1',
+        'key':'dDOP8nChA9rZUWUTG8ia' # Fake API key, replace with your own!
+    }
+    nn = oak.create_nn(model_config, color)
+    nn.config_nn(conf_threshold=0.85)
 
-COLOR = True
+    tof = oak.create_tof(fps=20)
+    tof.set_align_to(color, output_size=(640, 400))
+    tof.configure_tof(phaseShuffleTemporalFilter=True,
+                      phaseUnwrappingLevel=2,
+                      phaseUnwrapErrorThreshold=100)
 
-lrcheck  = True   # Better handling for occlusions
-extended = False  # Closer-in minimum depth, disparity range is doubled
-subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
-# Options: MEDIAN_OFF, KERNEL_3x3, KERNEL_5x5, KERNEL_7x7
-median   = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+    pointcloud = oak.create_pointcloud(tof)
 
-print("StereoDepth config options:")
-print("    Left-Right check:  ", lrcheck)
-print("    Extended disparity:", extended)
-print("    Subpixel:          ", subpixel)
-print("    Median filtering:  ", median)
+    q = oak.queue([
+        pointcloud.out.main.set_name('pcl'),
+        tof.out.main.set_name('tof'),
+        nn.out.main.set_name('nn'),
+    ]).configure_syncing(enable_sync=True, threshold_ms=500//FPS).get_queue()
+    # oak.show_graph()
+    oak.start()
 
-pipeline = dai.Pipeline()
+    viewer.log_rigid3(f"Right", child_from_parent=([0, 0, 0], [0, 0, 0, 0]), xyz="RDF", timeless=True)
+    viewer.log_rigid3(f"Cropped", child_from_parent=([0, 0, 0], [1, 0, 0, 0]), xyz="RDF", timeless=True)
 
-monoLeft = pipeline.create(dai.node.MonoCamera)
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+    def draw_mesh():
+        pos,ind,norm = box.get_plane_mesh(size=500)
+        viewer.log_mesh("Right/Plane", pos, indices=ind, normals=norm, albedo_factor=[0.5,1,0], timeless=True)
 
-monoRight = pipeline.create(dai.node.MonoCamera)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-
-stereo = pipeline.createStereoDepth()
-stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
-stereo.initialConfig.setMedianFilter(median)
-stereo.setLeftRightCheck(lrcheck)
-stereo.setExtendedDisparity(extended)
-stereo.setSubpixel(subpixel)
-monoLeft.out.link(stereo.left)
-monoRight.out.link(stereo.right)
-
-config = stereo.initialConfig.get()
-config.postProcessing.speckleFilter.enable = False
-config.postProcessing.speckleFilter.speckleRange = 50
-config.postProcessing.temporalFilter.enable = True
-config.postProcessing.spatialFilter.enable = True
-config.postProcessing.spatialFilter.holeFillingRadius = 2
-config.postProcessing.spatialFilter.numIterations = 1
-config.postProcessing.thresholdFilter.minRange = 400
-config.postProcessing.thresholdFilter.maxRange = 15000
-config.postProcessing.decimationFilter.decimationFactor = 1
-stereo.initialConfig.set(config)
-
-xout_depth = pipeline.createXLinkOut()
-xout_depth.setStreamName('depth')
-stereo.depth.link(xout_depth.input)
-
-# xout_disparity = pipeline.createXLinkOut()
-# xout_disparity.setStreamName('disparity')
-# stereo.disparity.link(xout_disparity.input)
-
-xout_colorize = pipeline.createXLinkOut()
-xout_colorize.setStreamName('colorize')
-if COLOR:
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    camRgb.setIspScale(1, 3)
-    camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-    camRgb.initialControl.setManualFocus(130)
-    stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-    camRgb.isp.link(xout_colorize.input)
-else:
-    stereo.rectifiedRight.link(xout_colorize.input)
-
-
-class HostSync:
-    def __init__(self):
-        self.arrays = {}
-    def add_msg(self, name, msg):
-        if not name in self.arrays:
-            self.arrays[name] = []
-        # Add msg to array
-        self.arrays[name].append({'msg': msg, 'seq': msg.getSequenceNum()})
-
-        synced = {}
-        for name, arr in self.arrays.items():
-            for i, obj in enumerate(arr):
-                if msg.getSequenceNum() == obj['seq']:
-                    synced[name] = obj['msg']
-                    break
-        # If there are 3 (all) synced msgs, remove all old msgs
-        # and return synced msgs
-        if len(synced) == 2: # color, depth, nn
-            # Remove old msgs
-            for name, arr in self.arrays.items():
-                for i, obj in enumerate(arr):
-                    if obj['seq'] < msg.getSequenceNum():
-                        arr.remove(obj)
-                    else: break
-            return synced
-        return False
-
-with dai.Device(pipeline) as device:
-
-    device.setIrLaserDotProjectorBrightness(1200)
-    qs = []
-    qs.append(device.getOutputQueue("depth", 1))
-    qs.append(device.getOutputQueue("colorize", 1))
-
-    calibData = device.readCalibration()
-    if COLOR:
-        w, h = camRgb.getIspSize()
-        intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, dai.Size2f(w, h))
+    if box.is_calibrated():
+        draw_mesh()
     else:
-        w, h = monoRight.getResolutionSize()
-        intrinsics = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, dai.Size2f(w, h))
+        print("Calibrate first, write 'c' in terminal when most of the view is flat floor!!")
 
-    # Sleep for 5 seconds, for the camera to settle
-    time.sleep(5)
+    while oak.running():
+        packets = q.get()
 
-    pcl_converter = PointCloudFromRGBD(intrinsics, w, h)
-    sync = HostSync()
-    box_estimator = BoxEstimator(args.max_dist)
+        nn: DetectionPacket = packets["nn"]
+        cvFrame = nn.frame[..., ::-1] # BGR to RGB
+        depth = packets["tof"].frame
+        pcl_packet: PointcloudPacket = packets["pcl"]
+        points = pcl_packet.points
 
-    i = 0
-    t = time.time()
+        # Convert 800P into 400P into 256000x3
+        colors_640 = cv2.pyrDown(cvFrame).reshape(-1, 3)
+        viewer.log_points("Right/PointCloud", points.reshape(-1, 3), colors=colors_640)
+        # Depth map visualize
+        viewer.log_depth_image("depth/frame", depth, meter=1e3)
+        viewer.log_image("video/color", cvFrame)
 
-    while True:
-        for q in qs:
-            new_msg = q.tryGet()
-            if new_msg is not None:
-                msgs = sync.add_msg(q.getName(), new_msg)
-                if msgs:
-                    depth = msgs["depth"].getFrame()
-                    color = msgs["colorize"].getCvFrame()
+        if box.is_calibrated():
+            if 0 == len(nn.detections):
+                continue # No boxes found
+            # Currently supports only 1 detection (box) at a time
+            det = nn.detections[0]
+            # Get the bounding box of the detection (relative to full frame size)
+            # Add 10% padding on all sides
+            box_bb = nn.bbox.get_relative_bbox(det.bbox)
+            padded_box_bb = box_bb.add_padding(0.1)
+            points_roi = pcl_packet.crop_points(padded_box_bb).reshape(-1, 3)
 
-                    cv2.imshow("color", color)
-                    rgb = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
-                    pointcloud = pcl_converter.rgbd_to_projection(depth, rgb)
-                    t_new = time.time()
-                    dt =  t_new - t
-                    fps = 1 / dt
-                    t = t_new
-                    l, w, h = box_estimator.process_pcl(pointcloud)
-                    if(l * w * h  > args.min_box_size):
-                        box_estimator.vizualise_box()
-                        img = box_estimator.vizualise_box_2d(intrinsics, color)
-                        cv2.imshow("2d projection", img)
-                        print(f"Length: {l:.2f}, Width: {w:.2f}, Height:{h:.2f}")
-        if cv2.waitKey(1) == ord('q'):
-            break
+            dimensions, corners = box.process_points(points_roi)
+            if corners is None:
+                continue
+
+            viewer.log_points("Cropped/Box_PCL", box.box_pcl)
+            viewer.log_points("Cropped/Plane_PCL", box.plane_pcl, colors=(0.2,1.0,0.6))
+            # viewer.log_points("Cropped/TopSide_PCL", box.top_side_pcl, colors=(1,0.3,0.6))
+            viewer.log_points(f"Cropped/Box_Corners", corners, radii=8, colors=(1.0,0,0.0))
+
+            corners = box.inverse_corner_points()
+            viewer.log_points(f"Right/Box_Corners", corners, radii=8, colors=(1.0,0,0.0))
+            viewer.log_line_segments(f"Right/Box_Edges", box.get_3d_lines(corners), stroke_width=4, color=(1.0,0,0.0))
+
+            l,w,h = dimensions
+            label = f"{det.label_str} ({det.confidence:.2f})\n{l/10:.1f} x {w/10:.1f}\nH: {h/10:.1f} cm"
+            viewer.log_rect('video/bbs',
+                    box_bb.to_tuple(cvFrame.shape),
+                    label=label,
+                    rect_format=viewer.RectFormat.XYXY)
+            viewer.log_rect('depth/bbs',
+                    padded_box_bb.to_tuple(depth.shape),
+                    label="Padded BoundingBox",
+                    rect_format=viewer.RectFormat.XYXY)
+
+        key = oak.poll()
+        ready, _, _ = select.select([sys.stdin], [], [], 0.001) # Terminal input
+        if ready:
+            key = sys.stdin.readline().strip()
+        if key == 'c':
+            if box.calibrate(points):
+                print(f"Calibrated Plane: {box.ground_plane_eq}")
+                draw_mesh()
