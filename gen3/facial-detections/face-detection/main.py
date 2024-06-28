@@ -40,26 +40,11 @@ with dai.Pipeline() as pipeline:
     # Define manip
     manip = pipeline.create(dai.node.ImageManip)
     manip.initialConfig.setResize(NN_WIDTH, NN_HEIGHT)
-    #manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
     manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
     manip.inputConfig.setWaitForMessage(False)
 
-    # Create outputs
-    # xout_cam = pipeline.create(dai.node.XLinkOut)
-    # xout_cam.setStreamName("cam")
-
-    # xout_nn = pipeline.create(dai.node.XLinkOut)
-    # xout_nn.setStreamName("nn")
-
-
     cam.preview.link(manip.inputImage)
-    #cam.preview.link(xout_cam.input)
     manip.out.link(detection_nn.input)
-    #detection_nn.out.link(xout_nn.input)
-
-
-    # --------------- Inference ---------------
-    # Pipeline defined, now the device is assigned and pipeline is started
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     q_cam = cam.preview.createOutputQueue(4, False)
@@ -69,12 +54,13 @@ with dai.Pipeline() as pipeline:
     counter = 0
     fps = 0
     layer_info_printed = False
+
+    # --------------- Inference ---------------
+    # Pipeline defined, now the pipeline is started
     pipeline.start()
     while pipeline.isRunning():
-        in_frame = q_cam.get()
+        in_frame: dai.ImgFrame = q_cam.get()
         in_nn: dai.NNData = q_nn.get()
-        # if not (in_frame and in_nn):
-        #     continue
 
         frame = in_frame.getCvFrame()
 
