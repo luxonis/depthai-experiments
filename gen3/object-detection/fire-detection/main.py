@@ -184,7 +184,7 @@ class DepthAI:
 
     def run_camera(self):
         while self.pipeline.isRunning():
-            in_rgb = self.preview.tryGet()
+            in_rgb: depthai.ImgFrame = self.preview.tryGet()
             if in_rgb is not None:
                 shape = (3, in_rgb.getHeight(), in_rgb.getWidth())
                 self.frame = (
