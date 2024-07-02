@@ -3,7 +3,7 @@ import time
 import argparse
 import blobconverter
 import depthai as dai
-from host_process import HostFaceDetection
+from host_face_detection import HostFaceDetection
 
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
