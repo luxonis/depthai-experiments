@@ -18,8 +18,7 @@ VIDEO_WIDTH, VIDEO_HEIGHT = 640, 480
 
 # --------------- Pipeline ---------------
 # Start defining a pipeline
-pipeline = dai.Pipeline()
-with pipeline:
+with dai.Pipeline() as pipeline:
 
     # Define a neural network that will detect faces
     detection_nn = pipeline.create(dai.node.NeuralNetwork)
