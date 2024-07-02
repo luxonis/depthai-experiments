@@ -3,7 +3,7 @@ import time
 import argparse
 import blobconverter
 import depthai as dai
-from host_process import HostProcess
+from host_process import HostFaceDetection
 
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
@@ -43,16 +43,16 @@ with pipeline:
     manip.out.link(detection_nn.input)
 
     #Define host node
-    host_display = pipeline.create(HostProcess).build(
+    face_detection = pipeline.create(HostFaceDetection).build(
         preview=cam.preview, 
         detection_network=detection_nn.out,
         nn_width=NN_WIDTH,
         nn_height=NN_HEIGHT,
         video_width=VIDEO_WIDTH,
         video_height=VIDEO_HEIGHT)
-    host_display.set_start_time(time.time())
-    host_display.set_confidence_thresh(args.confidence_thresh)
-    host_display.set_iou_thresh(args.iou_thresh)
-    host_display.set_keep_top_k(args.keep_top_k)
+    face_detection.set_start_time(time.time())
+    face_detection.set_confidence_thresh(args.confidence_thresh)
+    face_detection.set_iou_thresh(args.iou_thresh)
+    face_detection.set_keep_top_k(args.keep_top_k)
     
     pipeline.run()
