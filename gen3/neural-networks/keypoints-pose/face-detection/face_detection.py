@@ -7,7 +7,7 @@ from utils.utils import draw
 from utils.priorbox import PriorBox
 
 
-class HostFaceDetection(dai.node.HostNode):
+class FaceDetection(dai.node.HostNode):
     def __init__(self) -> None:
         self._counter = 0
         self._fps = 0
@@ -15,7 +15,7 @@ class HostFaceDetection(dai.node.HostNode):
         super().__init__()
 
 
-    def build(self, preview: dai.Node.Output, detection_network: dai.Node.Output, nn_width: int, nn_height: int, video_width: int, video_height: int) -> "HostFaceDetection":
+    def build(self, preview: dai.Node.Output, detection_network: dai.Node.Output, nn_width: int, nn_height: int, video_width: int, video_height: int) -> "FaceDetection":
         self.link_args(preview, detection_network)
         self.sendProcessingToPipeline(True)
         self._nn_width = nn_width
