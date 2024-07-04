@@ -1,7 +1,7 @@
 import blobconverter
 import depthai as dai
 
-from kalman_filter import KalmanFilterNode
+from kalman_filter_node import KalmanFilterNode
 
 
 label_map = ['background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
