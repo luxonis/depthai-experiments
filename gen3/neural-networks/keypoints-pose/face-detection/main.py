@@ -3,7 +3,7 @@ import time
 import argparse
 import blobconverter
 import depthai as dai
-from host_face_detection import HostFaceDetection
+from face_detection import FaceDetection
 
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
@@ -42,7 +42,7 @@ with dai.Pipeline() as pipeline:
     manip.out.link(detection_nn.input)
 
     #Define host node
-    face_detection = pipeline.create(HostFaceDetection).build(
+    face_detection = pipeline.create(FaceDetection).build(
         preview=cam.preview, 
         detection_network=detection_nn.out,
         nn_width=NN_WIDTH,

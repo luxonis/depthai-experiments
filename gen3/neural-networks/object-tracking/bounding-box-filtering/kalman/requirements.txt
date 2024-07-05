@@ -1,4 +1,4 @@
 opencv-python
 numpy~=1.0
 depthai~=3.0
-blobconverter==1.3.0
+blobconverter==1.4.3
