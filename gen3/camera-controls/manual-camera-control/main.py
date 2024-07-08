@@ -45,13 +45,11 @@ with dai.Pipeline() as pipeline:
     if args.rotate:
         cam.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
-
     cv2.namedWindow("isp", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("isp", (960, 540))
     if args.enable_raw:
         cv2.namedWindow("raw", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("raw", (960, 540))
-
 
     pipeline.create(ManualCameraControl).build(
         preview_isp=cam.isp,
