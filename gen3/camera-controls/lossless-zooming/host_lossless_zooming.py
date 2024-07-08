@@ -17,8 +17,7 @@ class LosslessZooming(dai.node.HostNode):
             # we just want to display the stream, so we need to decode it.
             frame = cv2.imdecode(preview_1080p.getData(), cv2.IMREAD_COLOR)
         else:
-            yuv420Frame = preview_1080p.getData().reshape((preview_1080p.getHeight()*3 // 2, preview_1080p.getWidth()))
-            frame = cv2.cvtColor(yuv420Frame, cv2.COLOR_YUV2BGR_I420)
+            frame = preview_1080p.getCvFrame()
 
         # Remove this line if you would like to see 1080P (not downscaled)
         frame = cv2.resize(frame, (640, 360))
