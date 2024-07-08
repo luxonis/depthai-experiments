@@ -21,7 +21,7 @@ with dai.Pipeline() as pipeline:
     left.out.link(stereo.left)
     right.out.link(stereo.right)
 
-    lossless_zooming = pipeline.create(WLSFilter).build(
+    wls_filter = pipeline.create(WLSFilter).build(
         disparity=stereo.disparity,
         rectified_right=stereo.rectifiedRight,
         max_disparity=stereo.initialConfig.getMaxDisparity()
