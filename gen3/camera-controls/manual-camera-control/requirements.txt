@@ -1,0 +1,5 @@
+numpy==1.22
+numba
+opencv-python
+argparse
+depthai~=3.0
