@@ -1,0 +1,3 @@
+opencv-python
+numpy
+depthai~=3.0.0
