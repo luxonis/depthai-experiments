@@ -84,7 +84,7 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
     
     def _timestamps_in_tolerance(self, timestamp1: float, timestamp2: float) -> bool:
         difference = abs(timestamp1 - timestamp2)
-        return difference < (self._camera_fps / self.FPS_TOLERANCE_DIVISOR)
+        return difference < (1 / self._camera_fps / self.FPS_TOLERANCE_DIVISOR)
 
 
     def _add_recognition_by_detection_ts(self, recognition: dai.NNData, detection_ts: float) -> None:
