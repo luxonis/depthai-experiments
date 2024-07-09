@@ -4,18 +4,43 @@ import subprocess
 import shutil
 import datetime
 import time
+import argparse
 
-TIMEOUT = 30
-SAVE_TO_FILE = True
-PRINT = True
+"""
+USAGE: gen3_script_tester.py [-p PATH] [-t TIMEOUT] [-s]
+
+optional arguments:
+  -p PATH, --path PATH      The path to a single directory to be tested (otherwise searches for all valid experiments in gen3)
+  -t, --timeout             The time it takes to evaluate a running program as working (in seconds)
+  -s save                   Saves the output log to a file (otherwise just prints it)
+"""
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-p",
+    "--path",
+    type=str,
+    help="The path to a single directory to be tested (otherwise searches for all valid experiments in gen3)",
+)
+parser.add_argument(
+    "-t", "--timeout"
+    , type=int
+    , default=30
+    , help="The time it takes to evaluate a running program as working (in seconds)"
+)
+parser.add_argument(
+    "-s", "--save"
+    , action="store_true"
+    , help="Saves the output log to a file (otherwise just prints it)"
+)
+args = parser.parse_args()
 
 def output(text, f):
-    if SAVE_TO_FILE:
+    if args.save:
         f.write(text+"\n")
-    if PRINT:
-        print(text)
+    print(text)
 
-def setup_venv_exe(dir, f):
+def setup_venv_exe(dir, f=None):
     env_dir = os.path.join(dir, ".test-venv")
     env_builder = EnvBuilder(clear=True, with_pip=True, system_site_packages=False)
     env_builder.create(env_dir)
@@ -37,7 +62,7 @@ def setup_venv_exe(dir, f):
         output("Requirements installed", f)
         return env_exe
 
-def test_directory(dir, f):
+def test_directory(dir, f=None):
     main = os.path.join(dir, "main.py")
     requirements = os.path.join(dir, "requirements.txt")
 
@@ -51,10 +76,10 @@ def test_directory(dir, f):
                 return
 
             start_time = time.time()
-            subprocess.run(executable + " " + main, shell=True, cwd=dir , timeout=TIMEOUT, check=True, text=True
+            subprocess.run(executable + " " + main, shell=True, cwd=dir , timeout=args.timeout, check=True, text=True
                            , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         except subprocess.TimeoutExpired:
-            output("Main run successfully for " + str(TIMEOUT) + " seconds", f)
+            output("Main ran successfully for " + str(args.timeout) + " seconds", f)
         except subprocess.CalledProcessError as e:
             duration = time.time() - start_time
             output("Main terminated after " + str(duration) + " seconds", f)
@@ -64,7 +89,7 @@ def test_directory(dir, f):
                     output("Error = " + line, f)
         # success block
         else:
-            output("Main finished successfully under " + str(TIMEOUT) + " seconds", f)
+            output("Main finished successfully under " + str(args.timeout) + " seconds", f)
         finally:
             shutil.rmtree(os.path.join(dir, ".test-venv"))
             output("----------------------------", f)
@@ -80,15 +105,20 @@ def test_directory(dir, f):
 
 print("Starting test...")
 
-if SAVE_TO_FILE:
+if args.save:
     log_file = "test_" + datetime.datetime.now().strftime("%H:%M:%S") + ".txt"
     with open(log_file, "w") as f:
         for dirpath, dirnames, filenames in os.walk(os.path.dirname(__file__)):
             test_directory(dirpath, f)
+        else:
+            test_directory(args.path, f)
 
         print("Test finished, results in: " + log_file)
 else:
-    for dirpath, dirnames, filenames in os.walk(os.path.dirname(__file__)):
-        test_directory(dirpath, None)
+    if args.path is None:
+        for dirpath, dirnames, filenames in os.walk(os.path.dirname(__file__)):
+            test_directory(dirpath)
+    else:
+        test_directory(args.path)
 
     print("Test finished")
