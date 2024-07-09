@@ -3,7 +3,7 @@ import numpy as np
 import depthai as dai
 
 class StereoSGBM(dai.node.HostNode):
-    def __init__(self, ):
+    def __init__(self):
         self.max_disparity = 96
         self.stereoProcessor = cv2.StereoSGBM_create(
             minDisparity=1,
@@ -16,18 +16,17 @@ class StereoSGBM(dai.node.HostNode):
         )
         super().__init__()
 
-    def build(self, monoLeftQ, monoRightQ, baseline, focalLength, H_right, H_left=np.identity(3, dtype=np.float32)):
-        self.link_args(monoLeftQ, monoRightQ)
+    def build(self, monoLeftOut : dai.Node.Output, monoRightOut : dai.Node.Output, calibObj : dai.CalibrationHandler, monoCamera : dai.node.MonoCamera) -> "StereoSGBM":
+        self.link_args(monoLeftOut, monoRightOut)
         self.sendProcessingToPipeline(True)
 
-        self.baseline = baseline
-        self.focal_length = focalLength
-        self.H1 = H_left  # for left camera
-        self.H2 = H_right  # for right camera
+        self.baseline = calibObj.getBaselineDistance() * 10 # mm
+        self.focal_length = self.count_focal_length(calibObj, monoCamera)
+        self.H1, self.H2 = self.countH(calibObj, monoCamera)  # for left, right camera
 
         return self
 
-    def process(self, monoLeft, monoRight):
+    def process(self, monoLeft : dai.ImgFrame, monoRight : dai.ImgFrame) -> None:
         monoLeftFrame = monoLeft.getCvFrame()
         cv2.imshow("left", monoLeft.getCvFrame())
 
@@ -39,6 +38,31 @@ class StereoSGBM(dai.node.HostNode):
         if cv2.waitKey(1) == ord('q'):
             self.stopPipeline()
 
+    def countH(self, calibObj : dai.CalibrationHandler, monoCamera : dai.node.MonoCamera):
+        width, height = self.get_width_height(monoCamera)
+
+        M_left = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoLeftCameraId(), width, height))
+        M_right = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoRightCameraId(), width, height))
+
+        R1 = np.array(calibObj.getStereoLeftRectificationRotation())
+        R2 = np.array(calibObj.getStereoRightRectificationRotation())
+
+        H_left = np.matmul(np.matmul(M_right, R1), np.linalg.inv(M_left))
+        H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))
+
+        return H_left, H_right
+    
+    def count_focal_length(self, calibObj : dai.CalibrationHandler, monoCamera : dai.node.MonoCamera):
+        width, height = self.get_width_height(monoCamera)
+
+        M_right = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoRightCameraId(), width, height))
+        focalLength = M_right[0][0]
+        return focalLength
+    
+    def get_width_height(self, monoCamera : dai.node.MonoCamera):
+        width = monoCamera.getResolutionWidth()
+        height = monoCamera.getResolutionHeight()
+        return width, height
 
     def rectification(self, left_img, right_img):
         # warp right image
@@ -94,29 +118,14 @@ with dai.Pipeline(device) as pipeline:
     depth_enabled = dai.CameraBoardSocket.CAM_B in cams and dai.CameraBoardSocket.CAM_C in cams
     if not depth_enabled:
         raise RuntimeError("Unable to run this experiment on device without left & right cameras! (Available cameras: {})".format(cams))
-    calibObj = device.readCalibration()
-
-    width = monoLeft.getResolutionWidth()
-    height = monoLeft.getResolutionHeight()
-
-    M_left = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoLeftCameraId(), width, height))
-    M_right = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoRightCameraId(), width, height))
-    R1 = np.array(calibObj.getStereoLeftRectificationRotation())
-    R2 = np.array(calibObj.getStereoRightRectificationRotation())
-
-    H_left = np.matmul(np.matmul(M_right, R1), np.linalg.inv(M_left))
-    H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))
-
-    baseline = calibObj.getBaselineDistance() * 10 # mm
-    focalLength = M_right[0][0]
+    
+    calibObj = device.readCalibration() 
 
     host = pipeline.create(StereoSGBM).build(
         monoLeft.out,
         monoRight.out,
-        baseline, 
-        focalLength, 
-        H_right, 
-        H_left
+        calibObj,
+        monoLeft
     )
 
     print("pipeline created")
