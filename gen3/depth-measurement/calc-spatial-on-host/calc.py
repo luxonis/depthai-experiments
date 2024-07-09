@@ -22,7 +22,7 @@ class HostSpatialsCalc(dai.node.HostNode):
         super().__init__()
 
 
-    def build(self, stereo, calibData):
+    def build(self, stereo : dai.node.StereoDepth, calibData : dai.CalibrationHandler) -> "HostSpatialsCalc":
         self.calibData = calibData
         self.stereo = stereo
 
@@ -31,7 +31,7 @@ class HostSpatialsCalc(dai.node.HostNode):
         print("Use WASD keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
         return self
 
-    def process(self, disparity, depth):
+    def process(self, disparity : dai.ImgFrame, depth : dai.ImgFrame) -> None:
         # Calculate spatial coordiantes from depth frame
         spatials, centroid = self.calc_spatials(depth, (self.x, self.y)) # centroid == x/y in our case
 
