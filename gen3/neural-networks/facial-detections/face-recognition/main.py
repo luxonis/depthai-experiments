@@ -96,6 +96,8 @@ with dai.Pipeline() as pipeline:
     face_rec_manip.out.link(face_rec_nn.input)
 
     sync_node = pipeline.create(DetectionsRecognitionsSync).build()
+    sync_node.set_camera_fps(cam.getFps())
+
     face_det_nn.out.link(sync_node.input_detections)
     face_rec_nn.out.link(sync_node.input_recognitions)
 
