@@ -1,5 +1,3 @@
-[中文文档](README.zh-CN.md)
-
 ## Host-Side WLS Filtering
 
 ## Background

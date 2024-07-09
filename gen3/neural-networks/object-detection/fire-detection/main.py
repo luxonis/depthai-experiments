@@ -12,33 +12,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "-nd", "--no-debug", action="store_true", help="prevent debug output"
 )
-parser.add_argument(
-    "-cam",
-    "--camera",
-    action="store_true",
-    help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)",
-)
 
 parser.add_argument(
     "-vid",
     "--video",
     type=str,
-    help="The path of the video file used for inference (conflicts with -cam)",
+    help="The path of the video file used for inference (otherwise uses DepthAI 4K RGB camera)",
 )
 
 args = parser.parse_args()
 
 debug = not args.no_debug
-
-
-if args.camera and args.video:
-    raise ValueError(
-        'Command line parameter error! "-Cam" cannot be used together with "-vid"!'
-    )
-elif args.camera is False and args.video is None:
-    raise ValueError(
-        'Missing inference source! Use "-cam" to run on DepthAI cameras, or use "-vid <path>" to run on video files'
-    )
 
 
 def to_planar(arr: np.ndarray, shape: tuple):
@@ -260,4 +244,4 @@ if __name__ == "__main__":
     if args.video:
         Main(file=args.video).run()
     else:
-        Main(camera=args.camera).run()
+        Main(camera=True).run()

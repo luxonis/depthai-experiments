@@ -25,7 +25,7 @@ with dai.Pipeline() as pipeline:
     # Link Face ImageManip -> Face detection NN node
     cam.preview.link(face_det_nn.input)
 
-    objectTracker = pipeline.create(dai.node.ObjectTracker).build()
+    objectTracker = pipeline.create(dai.node.ObjectTracker)
     objectTracker.setDetectionLabelsToTrack([1])  # track only person
     # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
     objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)

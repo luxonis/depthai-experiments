@@ -25,9 +25,8 @@ usage: main.py [-h] [-nd] [-cam] [-vid VIDEO]
 optional arguments:
   -h, --help            show this help message and exit
   -nd, --no-debug       prevent debug output
-  -cam, --camera        Use DepthAI 4K RGB camera for inference (conflicts with -vid)
   -vid VIDEO, --video VIDEO
-                        The path of the video file used for inference (conflicts with -cam)
+                        The path of the video file used for inference (otherwise uses DepthAI 4K RGB camera)
 
 ```
 
@@ -39,7 +38,7 @@ python main.py -vid <path>
 
 To use with DepthAI 4K RGB camera, use instead
 ```bash
-python main.py -cam
+python main.py
 ```
 
 > Press 'q' to exit the program.

@@ -16,7 +16,7 @@ with dai.Pipeline(device) as pipeline:
     mono_left = pipeline.create(dai.node.MonoCamera)
     mono_right = pipeline.create(dai.node.MonoCamera)
     stereo = pipeline.create(dai.node.StereoDepth).build(mono_left.out, mono_right.out)
-    object_tracker = pipeline.create(dai.node.ObjectTracker).build()
+    object_tracker = pipeline.create(dai.node.ObjectTracker)
 
     cam_rgb.setPreviewSize(300, 300)
     cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
