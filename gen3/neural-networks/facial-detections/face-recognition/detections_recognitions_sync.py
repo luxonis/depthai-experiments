@@ -1,11 +1,12 @@
 from queue import PriorityQueue
+import time
 import depthai as dai
 from detected_recognitions import DetectedRecognitions
 
 
 class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
     FPS_TOLERANCE_DIVISOR = 2.0
-
+    INPUT_CHECKS_PER_FPS = 100
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -43,6 +44,7 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
                 if ready_data:
                     self._clear_old_data(ready_data)
                     self.output.send(ready_data)
+            time.sleep(1 / self.INPUT_CHECKS_PER_FPS / self._camera_fps)
 
 
     def _add_recognition(self, recognition: dai.NNData) -> None:
