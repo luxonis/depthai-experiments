@@ -15,8 +15,6 @@ class BlurFaces(dai.node.HostNode):
     
 
     def process(self, img_frame: dai.ImgFrame, nn_in: dai.Tracklets) -> None:
-        # Using tracklets instead of ImgDetections in case NN inaccuratelly detected face, so blur
-        # will still happen on all tracklets (even LOST ones)
         frame = img_frame.getCvFrame()
         for t in nn_in.tracklets:
             # Expand the bounding box a bit so it fits the face nicely (also convering hair/chin/beard)
