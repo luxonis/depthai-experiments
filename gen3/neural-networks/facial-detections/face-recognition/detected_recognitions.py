@@ -8,5 +8,5 @@ class DetectedRecognitions(dai.Buffer):
         self.nn_data: list[dai.NNData] = nn_data
         
         self.setTimestampDevice(detections.getTimestampDevice())
-        self.setTimestamp(detections.getTimestamp()) # Can be removed
-        self.setSequenceNum(detections.getSequenceNum()) # Can be removed
+        self.setTimestamp(detections.getTimestamp())
+        self.setSequenceNum(detections.getSequenceNum())

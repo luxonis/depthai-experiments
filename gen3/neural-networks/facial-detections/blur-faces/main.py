@@ -40,8 +40,7 @@ with dai.Pipeline() as pipeline:
     
     pipeline.create(BlurFaces).build(
         video=cam.video,
-        tracklets=objectTracker.out,
-        tracker_passthrough=objectTracker.passthroughTrackerFrame
+        tracklets=objectTracker.out
     )
     
     print("Pipeline created.")
