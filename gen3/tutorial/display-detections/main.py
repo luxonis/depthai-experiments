@@ -30,7 +30,7 @@ with dai.Pipeline() as pipeline:
     display = pipeline.create(DisplayDetections).build(
         full=cam.preview,
         square=crop_square.out,
-        passthrough=nn.passthrough,
+        passthrough=crop_nn.out,
         nn=nn.out
     )
 

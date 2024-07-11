@@ -11,16 +11,14 @@ class DisplayDetections(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, passthrough: dai.Node.Output, nn: dai.Node.Output) -> "DisplayDetections":
-        self.link_args(passthrough, nn)
+    def build(self, rgb: dai.Node.Output, nn: dai.Node.Output) -> "DisplayDetections":
+        self.link_args(rgb, nn)
         self.sendProcessingToPipeline(True)
         return self
 
-    # passthrough is actually type dai.ImgFrame here
-    def process(self, passthrough: dai.Buffer, detections: dai.ImgDetections) -> None:
-        assert isinstance(passthrough, dai.ImgFrame)
-        frame = passthrough.getCvFrame()
+    def process(self, rgb: dai.ImgFrame, detections: dai.ImgDetections) -> None:
         color = (255, 0, 0)
+        frame = rgb.getCvFrame()
 
         for detection in detections.detections:
             bbox = (np.array((detection.xmin, detection.ymin, detection.xmax, detection.ymax)) * frame.shape[0]).astype(int)
@@ -50,7 +48,7 @@ with dai.Pipeline() as pipeline:
     cam.preview.link(nn.input)
 
     display = pipeline.create(DisplayDetections).build(
-        passthrough=nn.passthrough,
+        rgb=cam.preview,
         nn=nn.out
     )
 

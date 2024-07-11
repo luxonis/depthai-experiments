@@ -11,16 +11,13 @@ class DisplayCropDetections(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, rgb: dai.Node.Output, passthrough: dai.Node.Output, nn: dai.Node.Output) -> "DisplayCropDetections":
-        self.link_args(rgb, passthrough, nn)
+    def build(self, rgb: dai.Node.Output, crop: dai.Node.Output, nn: dai.Node.Output) -> "DisplayCropDetections":
+        self.link_args(rgb, crop, nn)
         self.sendProcessingToPipeline(True)
         return self
 
-    # passthrough is actually type dai.ImgFrame here
-    def process(self, rgb: dai.ImgFrame, passthrough: dai.Buffer, detections: dai.ImgDetections) -> None:
-        assert isinstance(passthrough, dai.ImgFrame)
-
-        cv2.imshow("Cropped detections", self.displayDetections(passthrough.getCvFrame(), detections.detections))
+    def process(self, rgb: dai.ImgFrame, crop: dai.ImgFrame, detections: dai.ImgDetections) -> None:
+        cv2.imshow("Cropped detections", self.displayDetections(crop.getCvFrame(), detections.detections))
         cv2.imshow("RGB", self.displayDetections(rgb.getCvFrame(), detections.detections))
 
         if cv2.waitKey(1) == ord('q'):
@@ -64,7 +61,7 @@ with dai.Pipeline() as pipeline:
 
     display = pipeline.create(DisplayCropDetections).build(
         rgb=cam.video,
-        passthrough=nn.passthrough,
+        crop=crop.out,
         nn=nn.out
     )
 

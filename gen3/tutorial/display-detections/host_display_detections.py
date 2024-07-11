@@ -16,11 +16,8 @@ class DisplayDetections(dai.node.HostNode):
         self.sendProcessingToPipeline(True)
         return self
 
-    # passthrough is actually type dai.ImgFrame here
     def process(self, full: dai.ImgFrame, square: dai.ImgFrame
-                , passthrough: dai.Buffer, detections: dai.ImgDetections) -> None:
-        assert isinstance(passthrough, dai.ImgFrame)
-
+                , passthrough: dai.ImgFrame, detections: dai.ImgDetections) -> None:
         cv2.imshow("Passthrough", self.displayDetections(passthrough.getCvFrame(), detections.detections, False))
         cv2.imshow("Crop high res", self.displayDetections(square.getCvFrame(), detections.detections, False))
         cv2.imshow("Crop before inference", self.displayDetections(full.getCvFrame(), detections.detections, True))
