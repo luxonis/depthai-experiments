@@ -32,7 +32,7 @@ python3 -m pip install -r requirements.txt
 ## Usage
 
 ```
-User controls
+User controls in main.py
 'a' - to select crop
 's' - to select letterbox
 'd' - to select stretch
@@ -42,4 +42,11 @@ Run the application
 
 ```
 python3 main.py
+```
+
+Run the simple tutorials
+```
+python3 cropping.py
+python3 letterboxing.py
+python3 stretching.py
 ```

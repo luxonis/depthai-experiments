@@ -16,7 +16,6 @@ class FullFOV(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
         self.manip_mode = MANIP_MODE.CROP
-        self.i = 0
 
     def build(self, isp: dai.Node.Output, crop_manip: dai.Node.Output, letterbox_manip: dai.Node.Output,
               stretch_manip: dai.Node.Output, nn_manip: dai.Node.Output, nn: dai.Node.Output
@@ -90,12 +89,10 @@ class FullFOV(dai.node.HostNode):
         elif manip_mode == MANIP_MODE.LETTERBOX:
             normVals = np.full(4, frame.shape[0])
             normVals[::2] = frame.shape[1]
-            print(bbox)
             bbox = (bbox[0]
                     , 0.5 + (bbox[1]-0.5)*frame.shape[1]/frame.shape[0]
                     , bbox[2]
                     , 0.5 + (bbox[3]-0.5)*frame.shape[1]/frame.shape[0])
-            print(bbox)
             return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
         # resizes the bounding box based on the frame size
         else:

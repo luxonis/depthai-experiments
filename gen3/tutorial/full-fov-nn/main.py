@@ -2,7 +2,7 @@ import depthai as dai
 import blobconverter
 from host_full_fov import FullFOV
 
-with (dai.Pipeline() as pipeline):
+with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.ColorCamera)
