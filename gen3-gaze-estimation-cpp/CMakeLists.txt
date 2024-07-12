@@ -28,7 +28,8 @@ if(NOT MSVC)
 endif()
 
 # Set compiler features (c++14)
-set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
+
 
 # Windows - Add runtime dependencies
 if(WIN32)

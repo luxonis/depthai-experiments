@@ -38,12 +38,12 @@ int main() {
 #include <iostream>
 #include <vector>
 #include "depthai/depthai.hpp"
-//#include "blobconverter/"
+#include "MultiMsgSync.cpp"
+#include "bbox.cpp"
 
 int main(){
     dai::Pipeline pipeline(true);
     pipeline.setOpenVINOVersion(dai::OpenVINO::VERSION_2021_4);
-    std::string openvino_version = "2021.4";
     std::tuple<int,int> VIDEO_SIZE = {1072,1072};
 
     auto cam = pipeline.create<dai::node::ColorCamera>();
@@ -70,11 +70,7 @@ int main(){
     std::cout<<"Creating Face Detection Neural Network..."<<std::endl;
     auto face_det_nn = pipeline.create<dai::node::MobileNetDetectionNetwork>();
     face_det_nn->setConfidenceThreshold(0.5);
-    /*face_det_nn->setBlobPath(blobconverter.from_zoo(
-    name="face-detection-retail-0004",
-    shaves=6,
-    version=openvino_version)
-    );*/
+    face_det_nn->setBlobPath("face-detection-retail-0004.blob");
 
     // Link Face ImageManip -> Face detection NN node
     face_det_manip->out.link(face_det_nn->input);
@@ -92,8 +88,9 @@ int main(){
 
     cam->preview.link(script->inputs["preview"]);
     
-    std::fstream f("script.py",std::ios::binary);
-    //script->setScript(f.read());
+    std::ifstream f("script.py", std::ios::binary);
+    std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(f), {});
+    script->setScript(buffer);
     
     //=================[ HEAD POSE ESTIMATION ]=================
     auto headpose_manip = pipeline.create<dai::node::ImageManip>();
@@ -102,11 +99,7 @@ int main(){
     script->outputs["headpose_img"].link(headpose_manip->inputImage);
 
     auto headpose_nn = pipeline.create<dai::node::NeuralNetwork>();
-    //headpose_nn->setBlobPath(blobconverter.from_zoo(
-    //    name="head-pose-estimation-adas-0001",
-    //    shaves=6,
-    //    version=openvino_version
-    //));
+    headpose_nn->setBlobPath("head-pose-estimation-adas-0001.blob");
     headpose_manip->out.link(headpose_nn->input);
 
     headpose_nn->out.link(script->inputs["headpose_in"]);    
@@ -119,11 +112,7 @@ int main(){
     script->outputs["landmark_img"].link(landmark_manip->inputImage);
 
     auto landmark_nn = pipeline.create<dai::node::NeuralNetwork>();
-    //landmark_nn->setBlobPath(blobconverter.from_zoo(
-    //name="landmarks-regression-retail-0009",
-    //shaves=6,
-    //version=openvino_version
-    //));
+    landmark_nn->setBlobPath("landmarks-regression-retail-0009.blob");
     
     landmark_manip->out.link(landmark_nn->input);
 
@@ -151,12 +140,7 @@ int main(){
     //=================[ GAZE ESTIMATION ]=================
 
     auto gaze_nn = pipeline.create<dai::node::NeuralNetwork>();
-    //gaze_nn.setBlobPath(blobconverter.from_zoo(
-    //    name="gaze-estimation-adas-0002",
-    //    shaves=6,
-    //    version=openvino_version,
-    //    compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8']
-    //))
+    gaze_nn->setBlobPath("gaze-estimation-adas-0002.blob");
 
     std::vector<std::string> SCRIPT_OUTPUT_NAMES = {"to_gaze_head","to_gaze_left","to_gaze_right"},
     NN_NAMES = {"head_pose_angles","left_eye_image","right_eye_image"};
@@ -183,12 +167,19 @@ int main(){
 
     pipeline.start();
     while(pipeline.isRunning()) {
-
+        TwoStageHostSeqSync sync;
         while(true){
+            int key = cv::waitKey(1);
+            if(key == 'q' || key == 'Q') {
+                pipeline.stop();
+                break;
+            }
+
             std::vector<std::string> names = {"color","detection","landmarks","gaze"};
             for(auto name : names){
                 if(queues[name]->has()){
-                    auto msg = queues[name]->get();
+                    auto msg = std::shared_ptr<dai::MessageQueue>(queues[name]);
+                    sync.add_msg(msg,name);
                     if(name == "color"){
                         auto videoIn = queues["color"]->get<dai::ImgFrame>();
                         cv::imshow("video",videoIn->getCvFrame());
@@ -197,39 +188,51 @@ int main(){
 
             }
 
+        auto msgs = sync.get_msgs();
+        if(msgs.second == -1) continue;
 
-        /*
-        msgs = sync.get_msgs()
-        if msgs is not None:
-            frame = msgs["color"].getCvFrame()
-            dets = msgs["detection"].detections
-            for i, detection in enumerate(dets):
-                det = BoundingBox(detection)
-                tl, br = det.denormalize(frame.shape)
-                cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
+        auto frame = msgs.first["color"][0]->get<dai::ImgFrame>()->getCvFrame();
+        auto dets = msgs.first["detection"][0]->get<dai::ImgDetections>()->detections;
+        
+        for(int i = 0; i < dets.size();i++){
+            auto &detection = dets[i];
+            BoundingBox det(detection);
+            // shape = height,width,channels
+            // seems to be (1072,1072,3)
+            //auto [tl,br] = det.denormalize(frame.shape);
+            //replaced top-left and bottom-right with one array (easier impl)
+            auto pts = det.denormalize({1072,1072,3});
 
-                gaze = np.array(msgs["gaze"][i].getFirstLayerFp16())
-                gaze_x, gaze_y = (gaze * 100).astype(int)[:2]
+            cv::rectangle(frame, cv::Point(pts[0],pts[1]),cv::Point(pts[2],pts[3]),
+            cv::Scalar(10,245,10),1);           
+            //cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
+            
+            auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
+            dai::TensorInfo gaze;
+            gaze_ptr->getLayer(gaze_ptr->getAllLayerNames()[0],gaze);
 
-                landmarks = np.array(msgs["landmarks"][i].getFirstLayerFp16())
-                colors = [(0, 127, 255), (0, 127, 255), (255, 0, 127), (127, 255, 0), (127, 255, 0)]
-                for lm_i in range(0, len(landmarks) // 2):
-                    # 0,1 - left eye, 2,3 - right eye, 4,5 - nose tip, 6,7 - left mouth, 8,9 - right mouth
-                    x, y = landmarks[lm_i*2:lm_i*2+2]
-                    point = det.map_point(x,y).denormalize(frame.shape)
+            //gaze_x, gaze_y = (gaze * 100).astype(int)[:2]
 
-                    if lm_i <= 1: # Draw arrows from left eye & right eye
-                        cv2.arrowedLine(frame, point, ((point[0] + gaze_x*5), (point[1] - gaze_y*5)), colors[lm_i], 3)
+            auto landmarks_ptr = msgs.first["landmarks"][i]->get<dai::NNData>();
+            dai::TensorInfo landmarks;
+            landmarks_ptr->getLayer(landmarks_ptr->getAllLayerNames()[0],landmarks);
+            
 
-                    cv2.circle(frame, point, 2, colors[lm_i], 2)
-
-            cv2.imshow("Lasers", frame)*/
-
-            int key = cv::waitKey(1);
-            if(key == 'q' || key == 'Q') {
-                pipeline.stop();
-                break;
+            int colors[5][3] = { {0,127,255}, {0,127,255}, {255,0,127}, {127,255,0}, {127,255,0} };            
+            for(int lm_i = 0;i < 3/*landmarks.size()/2*/;lm_i++){
+                // 0,1 - left eye, 2,3 - right eye, 4,5 - nose tip, 6,7 - left mouth, 8,9 - right mouth
+                auto x = landmarks[lm_i*2], y = landmarks[lm_i*2+1];
+                // again,should be frame.shape
+                auto point = det.map_point(x,y).denormalize({1072,1072,3});
+                if(lm_i <= 1){ // Draw arrows from left eye & right eye
+                    cv::arrowedLine(frame, point, ((point[0] + gaze_x*5), (point[1] - gaze_y*5)), colors[lm_i], 3);
+                }
+                cv::circle(frame,point,2,colors[lm_i],2);
             }
+
+        }
+        
+        cv::imshow("Lasers",frame);
         }
     }
     return 0;
