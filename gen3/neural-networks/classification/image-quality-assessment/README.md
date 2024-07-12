@@ -25,12 +25,6 @@ Run the application
 
 ```
 python3 main.py
-```
-
-## Usage
-
-```
-usage: main.py [-h] [-nn NN_PATH]
 
 optional arguments:
   -h, --help            show this help message and exit
