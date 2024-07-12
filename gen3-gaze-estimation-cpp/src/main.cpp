@@ -41,6 +41,52 @@ int main() {
 #include "MultiMsgSync.cpp"
 #include "bbox.cpp"
 
+std::size_t getTensorDataSize(const TensorInfo& tensor) {
+    uint32_t i;
+
+    // Use the first non zero stride
+    for(i = 0; i < tensor.strides.size(); i++) {
+        if(tensor.strides[i] > 0) {
+            break;
+        }
+    }
+    return tensor.dims[i] * tensor.strides[i];
+}
+
+ std::vector<float> getData(dai::TensorInfo &tensor, std::shared_ptr<dai::NNData> dat) {
+    if(tensor.dataType == dai::TensorInfo::DataType::FP16) {
+        // Total data size = last dimension * last stride
+        if(tensor.numDimensions > 0) {
+            std::size_t size = getTensorDataSize(tensor);
+            std::size_t numElements = size / 2;  // FP16
+
+            std::vector<float> data;
+            data.reserve(numElements);
+            auto* pFp16Data = reinterpret_cast<std::uint16_t*>(dat->data->getData()[tensor.offset]);
+            for(std::size_t i = 0; i < numElements; i++) {
+                data.push_back(fp16_ieee_to_fp32_value(pFp16Data[i]));
+            }
+            return data;
+        }
+    } else if(tensor.dataType == dai::TensorInfo::DataType::FP32) {
+        if(tensor.numDimensions > 0) {
+            std::size_t size = getTensorDataSize(tensor);
+            std::size_t numElements = size / sizeof(float_t);
+
+            std::vector<float> data;
+            data.reserve(numElements);
+            auto* pFp32Data = reinterpret_cast<float_t*>(dat->data->getData()[tensor.offset]);
+            for(std::size_t i = 0; i < numElements; i++) {
+                data.push_back(pFp32Data[i]);
+            }
+            return data;
+            }
+        }
+    return {};
+ }
+
+
+
 int main(){
     dai::Pipeline pipeline(true);
     pipeline.setOpenVINOVersion(dai::OpenVINO::VERSION_2021_4);
@@ -206,28 +252,30 @@ int main(){
             cv::rectangle(frame, cv::Point(pts[0],pts[1]),cv::Point(pts[2],pts[3]),
             cv::Scalar(10,245,10),1);           
             //cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
-            
-            auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
-            dai::TensorInfo gaze;
-            gaze_ptr->getLayer(gaze_ptr->getAllLayerNames()[0],gaze);
+            std::vector<float> gaze,landmarks;
 
-            //gaze_x, gaze_y = (gaze * 100).astype(int)[:2]
+            auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
+            dai::TensorInfo gaze_info;
+            gaze_ptr->getLayer(gaze_ptr->getAllLayerNames()[0],gaze_info);
+            gaze = getData(gaze_info,gaze_ptr);
+
+            auto gaze_x = (int)gaze[0], gaze_y = (int)gaze[1];
 
             auto landmarks_ptr = msgs.first["landmarks"][i]->get<dai::NNData>();
-            dai::TensorInfo landmarks;
-            landmarks_ptr->getLayer(landmarks_ptr->getAllLayerNames()[0],landmarks);
+            dai::TensorInfo landmarks_info;
+            auto landmarks = landmarks_ptr->getTensor<float>(landmarks_ptr->getAllLayerNames()[0],0);
             
 
             int colors[5][3] = { {0,127,255}, {0,127,255}, {255,0,127}, {127,255,0}, {127,255,0} };            
-            for(int lm_i = 0;i < 3/*landmarks.size()/2*/;lm_i++){
+            for(int lm_i = 0;i < landmarks.size()/2;lm_i++){
                 // 0,1 - left eye, 2,3 - right eye, 4,5 - nose tip, 6,7 - left mouth, 8,9 - right mouth
                 auto x = landmarks[lm_i*2], y = landmarks[lm_i*2+1];
                 // again,should be frame.shape
                 auto point = det.map_point(x,y).denormalize({1072,1072,3});
                 if(lm_i <= 1){ // Draw arrows from left eye & right eye
-                    cv::arrowedLine(frame, point, ((point[0] + gaze_x*5), (point[1] - gaze_y*5)), colors[lm_i], 3);
+                    cv::arrowedLine(frame, cv::Point(point[0],point[1]), cv::Point((point[0] + gaze_x*5), (point[1] - gaze_y*5)), cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]), 3);
                 }
-                cv::circle(frame,point,2,colors[lm_i],2);
+                cv::circle(frame,cv::Point(point[0],point[1]),2,cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]),2);
             }
 
         }
