@@ -7,9 +7,9 @@ resultion, which can only be obtained from `isp` and `still` outputs of [ColorCa
 
 Here we have 3 options:
 
-1. Crop the ISP frame to 1:1 aspect ratio and lose some FOV
-2. Stretch the ISP frame to to the 1:1 aspect ratio of the NN
-3. Apply letterboxing to the ISP frame to get 1:1 aspect ratio frame
+1. Crop the ISP frame before inferencing to 1:1 aspect ratio and lose some FOV
+2. Apply letterboxing to the ISP frame to get 1:1 aspect ratio and lose some accuracy
+3. Stretch the ISP frame to the 1:1 aspect ratio of the NN and lose some accuracy
 
 ## Demos
 

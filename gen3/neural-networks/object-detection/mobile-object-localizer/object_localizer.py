@@ -17,6 +17,7 @@ class ObjectLocalizer(dai.node.HostNode):
 
     def build(self, cam: dai.Node.Output, nn: dai.Node.Output, manip: dai.Node.Output) -> "ObjectLocalizer":
         self.link_args(cam, nn, manip)
+        self.sendProcessingToPipeline(True)
         return self
 
 

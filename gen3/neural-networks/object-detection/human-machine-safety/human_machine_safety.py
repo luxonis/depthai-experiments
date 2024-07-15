@@ -24,6 +24,7 @@ class HumanMachineSafety(dai.node.HostNode):
 
     def build(self, in_rgb: dai.Node.Output, in_det: dai.Node.Output, in_depth: dai.Node.Output, palm_in: dai.Node.Output, label_map: list[str], dangerous_objects: list[str]) -> "HumanMachineSafety":
         self.link_args(in_rgb, in_det, in_depth, palm_in)
+        self.sendProcessingToPipeline(True)
         self._label_map = label_map
         self._dangerous_objects = dangerous_objects
         return self

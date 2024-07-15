@@ -17,25 +17,8 @@ python3 -m pip install -r requirements.txt
 
 ## Usage
 
-```
-usage: main.py [-h] [-nd] [-cam] [-vid VIDEO]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -nd, --no-debug       prevent debug output
-  -cam, --camera        Use DepthAI 4K RGB camera for inference (conflicts with -vid)
-  -vid VIDEO, --video VIDEO
-                        The path of the video file used for inference (conflicts with -cam)
+Run the application
 
 ```
-
-To use with a video file, run the script with the following arguments
-
-```
-python main.py -vid <path>
-```
-
-To use with DepthAI 4K RGB camera, use instead
-```
-python main.py -cam
+python3 main.py
 ```

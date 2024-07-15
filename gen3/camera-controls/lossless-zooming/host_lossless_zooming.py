@@ -25,7 +25,6 @@ class LosslessZooming(dai.node.HostNode):
         cv2.imshow('Lossless zoom 1080P', frame)
         cv2.imshow('Preview', preview_full.getCvFrame())
 
-
         if cv2.waitKey(1) == ord('q'):
             print("Pipeline exited.")
             self.stopPipeline()

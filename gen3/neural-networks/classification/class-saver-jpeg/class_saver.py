@@ -16,6 +16,7 @@ class ClassSaver(dai.node.HostNode):
 
     def build(self, rgb: dai.Node.Output, nn_out: dai.Node.Output, dataset: DictWriter, texts: list[str]) -> "ClassSaver":
         self.link_args(rgb, nn_out)
+        self.sendProcessingToPipeline(True)
         self._texts = texts
         self._dataset = dataset
         return self
