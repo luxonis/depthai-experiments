@@ -1,4 +1,4 @@
-# Efficientnet-b0
+## Efficientnet-b0
 
 You can read more about the EfficientDet model in [OpenVINO's Docs](https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/public/efficientnet-b0)
 This model includes 1000 classes of image classification. You can view these classes in the `classes.py` script.

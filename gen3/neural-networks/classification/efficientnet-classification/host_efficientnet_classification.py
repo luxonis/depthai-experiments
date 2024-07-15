@@ -50,7 +50,3 @@ class EfficientnetClassification(dai.node.HostNode):
 def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
-
-def to_planar(arr: np.ndarray, shape: tuple) -> np.ndarray:
-    resized = cv2.resize(arr, shape)
-    return resized.transpose(2, 0, 1)

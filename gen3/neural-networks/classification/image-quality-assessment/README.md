@@ -1,4 +1,4 @@
-# Image quality assessment
+## Image quality assessment
 
 This is an example of image quality assessment running directly from OAK RGB camera
 
@@ -13,7 +13,7 @@ The model outputs 4 quality classes
 
 ![demo-gif](https://i.imgur.com/LcKM0tK.gif)
 
-# Installation
+## Installation
 
 ```
 python3 -m pip install -r requirements.txt
