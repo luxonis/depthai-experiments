@@ -1,0 +1,4 @@
+opencv-python==4.10.0.84
+depthai~=3.0a
+gdown==5.2.0
+numpy==1.26.0
