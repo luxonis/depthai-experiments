@@ -1,0 +1,4 @@
+depthai~=3.0a
+gdown>=4.4
+xmltodict==0.13.0
+numpy~=1.0
