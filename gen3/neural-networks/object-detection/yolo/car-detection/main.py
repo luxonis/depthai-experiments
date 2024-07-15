@@ -10,7 +10,7 @@ parser.add_argument("-m", "--model", help="Provide model path for inference",
                     default='models/yolo_v4_tiny_openvino_2021.3_6shave.blob', type=str)
 parser.add_argument("-c", "--config", help="Provide config path for inference",
                     default='yolo-tiny.json', type=str)
-parser.add_argument("-vid", "--vid", help="Provide Lunonis video name or path to video that should be used instead of camera",
+parser.add_argument("-vid", "--vid", help="Provide Luxonis video name or path to video that should be used instead of camera",
                     default="cars-tracking-above-01", type=str)
 parser.add_argument("-cam", "--cam", help="Use camera, not video.", 
                     action="store_true")
