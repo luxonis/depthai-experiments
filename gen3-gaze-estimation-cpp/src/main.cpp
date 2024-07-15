@@ -1,47 +1,3 @@
-// Includes common necessary includes for development using depthai library
-#include "depthai/depthai.hpp"
-
-int main() {
-    // Create pipeline
-    dai::Pipeline pipeline(true);
-
-    // Define source and output
-    auto camRgb = pipeline.create<dai::node::ColorCamera>();
-
-    // Properties
-    camRgb->setBoardSocket(dai::CameraBoardSocket::CAM_A);
-    camRgb->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
-    camRgb->setVideoSize(1072, 1072);
-
-    auto outputQueue = camRgb->video.createOutputQueue();
-    auto script = pipeline.create<dai::node::Script>();
-    script->setProcessor(dai::ProcessorType::LEON_CSS);
-    
-    //std::ifstream f("test.py", std::ios::binary);
-    //std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(f), {});
-    //script->setScript(buffer);
-    script->setScript(R"(
-        import time
-        while 1:
-            time.sleep(0.01)
-    )");
-
-    camRgb->preview.link(script->inputs["preview"]);
-
-    pipeline.start();
-    while(pipeline.isRunning()) {
-        auto videoIn = outputQueue->get<dai::ImgFrame>();
-
-        cv::imshow("video", videoIn->getCvFrame());
-
-        int key = cv::waitKey(1);
-        if(key == 'q' || key == 'Q') {
-            pipeline.stop();
-        }
-    }
-    return 0;
-}
-/*
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -80,7 +36,7 @@ int main(){
     face_det_nn->setBlobPath("face-detection-retail-0004.blob");
 
     // Link Face ImageManip -> Face detection NN node
-    //face_det_manip->out.link(face_det_nn->input);
+    face_det_manip->out.link(face_det_nn->input);
 
     queues["detection"] = face_det_nn->out.createOutputQueue();
 
@@ -163,17 +119,16 @@ int main(){
     }
     //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
     //# Will be fixed in depthai 2.24
-    gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
-    script->inputs["none"].setBlocking(false);
-    script->inputs["none"].setMaxSize(1);
+    //gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
+    //script->inputs["none"].setBlocking(false);
+    //script->inputs["none"].setMaxSize(1);
     
     queues["gaze"] = gaze_nn->out.createOutputQueue();
   
     //==================================================
     pipeline.start();
     TwoStageHostSeqSync sync;
-    std::vector<std::string> names = {"color", "detection"};
-    //std::vector<std::string> names = {"color","detection","landmarks","gaze"};
+    std::vector<std::string> names = {"color", "detection", "landmarks", "gaze"};
     while(pipeline.isRunning()) {
         for(auto name : names){
             if(queues[name]->has()){
@@ -181,6 +136,7 @@ int main(){
                 sync.add_msg(msg,name);
                 if(name == "color")
                 cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
+                else std::cout<<name<<"\n";
             }
         }
      
@@ -235,6 +191,4 @@ int main(){
         cv::imshow("Lasers",frame);      
     }
     return 0;
-
 }
-*/
