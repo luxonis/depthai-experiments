@@ -1,5 +1,3 @@
-// Sample
-/*
 // Includes common necessary includes for development using depthai library
 #include "depthai/depthai.hpp"
 
@@ -13,16 +11,27 @@ int main() {
     // Properties
     camRgb->setBoardSocket(dai::CameraBoardSocket::CAM_A);
     camRgb->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
-    camRgb->setVideoSize(1920, 1080);
+    camRgb->setVideoSize(1072, 1072);
 
     auto outputQueue = camRgb->video.createOutputQueue();
+    auto script = pipeline.create<dai::node::Script>();
+    script->setProcessor(dai::ProcessorType::LEON_CSS);
+    
+    //std::ifstream f("test.py", std::ios::binary);
+    //std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(f), {});
+    //script->setScript(buffer);
+    script->setScript(R"(
+        import time
+        while 1:
+            time.sleep(0.01)
+    )");
+
+    camRgb->preview.link(script->inputs["preview"]);
 
     pipeline.start();
     while(pipeline.isRunning()) {
         auto videoIn = outputQueue->get<dai::ImgFrame>();
 
-        // Get BGR frame from NV12 encoded video frame to show with opencv
-        // Visualizing the frame on slower hosts might have overhead
         cv::imshow("video", videoIn->getCvFrame());
 
         int key = cv::waitKey(1);
@@ -32,60 +41,13 @@ int main() {
     }
     return 0;
 }
-*/
-
+/*
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include "depthai/depthai.hpp"
 #include "MultiMsgSync.cpp"
 #include "bbox.cpp"
-
-std::size_t getTensorDataSize(const TensorInfo& tensor) {
-    uint32_t i;
-
-    // Use the first non zero stride
-    for(i = 0; i < tensor.strides.size(); i++) {
-        if(tensor.strides[i] > 0) {
-            break;
-        }
-    }
-    return tensor.dims[i] * tensor.strides[i];
-}
-
- std::vector<float> getData(dai::TensorInfo &tensor, std::shared_ptr<dai::NNData> dat) {
-    if(tensor.dataType == dai::TensorInfo::DataType::FP16) {
-        // Total data size = last dimension * last stride
-        if(tensor.numDimensions > 0) {
-            std::size_t size = getTensorDataSize(tensor);
-            std::size_t numElements = size / 2;  // FP16
-
-            std::vector<float> data;
-            data.reserve(numElements);
-            auto* pFp16Data = reinterpret_cast<std::uint16_t*>(dat->data->getData()[tensor.offset]);
-            for(std::size_t i = 0; i < numElements; i++) {
-                data.push_back(fp16_ieee_to_fp32_value(pFp16Data[i]));
-            }
-            return data;
-        }
-    } else if(tensor.dataType == dai::TensorInfo::DataType::FP32) {
-        if(tensor.numDimensions > 0) {
-            std::size_t size = getTensorDataSize(tensor);
-            std::size_t numElements = size / sizeof(float_t);
-
-            std::vector<float> data;
-            data.reserve(numElements);
-            auto* pFp32Data = reinterpret_cast<float_t*>(dat->data->getData()[tensor.offset]);
-            for(std::size_t i = 0; i < numElements; i++) {
-                data.push_back(pFp32Data[i]);
-            }
-            return data;
-            }
-        }
-    return {};
- }
-
-
 
 int main(){
     dai::Pipeline pipeline(true);
@@ -105,7 +67,6 @@ int main(){
 
     std::map<std::string,std::shared_ptr<dai::MessageQueue>> queues;
     queues["color"] = cam->video.createOutputQueue();
-
     // ImageManip that will crop the frame before sending it to the Face detection NN node
     auto face_det_manip = pipeline.create<dai::node::ImageManip>();
     face_det_manip->initialConfig.setResize(300,300);
@@ -119,7 +80,7 @@ int main(){
     face_det_nn->setBlobPath("face-detection-retail-0004.blob");
 
     // Link Face ImageManip -> Face detection NN node
-    face_det_manip->out.link(face_det_nn->input);
+    //face_det_manip->out.link(face_det_nn->input);
 
     queues["detection"] = face_det_nn->out.createOutputQueue();
 
@@ -170,7 +131,7 @@ int main(){
     //=================[ LEFT EYE CROP ]=================
     auto left_manip = pipeline.create<dai::node::ImageManip>();
     left_manip->initialConfig.setResize(60,60);
-    left_manip->inputConfig.setWaitForMessage(true);
+    left_manip->inputConfig.setWaitForMessage(false);
     script->outputs["left_manip_img"].link(left_manip->inputImage);
     script->outputs["left_manip_img"].link(left_manip->inputConfig);
     left_manip->out.link(script->inputs["left_eye_in"]);
@@ -178,7 +139,7 @@ int main(){
     //=================[ RIGHT EYE CROP ]=================
     auto right_manip = pipeline.create<dai::node::ImageManip>();
     right_manip->initialConfig.setResize(60,60);
-    right_manip->inputConfig.setWaitForMessage(true);
+    right_manip->inputConfig.setWaitForMessage(false);
     script->outputs["right_manip_img"].link(right_manip->inputImage);
     script->outputs["right_manip_img"].link(right_manip->inputConfig);
     right_manip->out.link(script->inputs["right_eye_in"]);
@@ -199,48 +160,43 @@ int main(){
         // Set NN input to blocking and to not reuse previous msgs
         gaze_nn->inputs[nn_name].setBlocking(true);
         gaze_nn->inputs[nn_name].setReusePreviousMessage(false);
-
     }
     //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
     //# Will be fixed in depthai 2.24
-    //gaze_nn.passthroughs['left_eye_image'].link(script.inputs['none'])
-    //script.inputs['none'].setBlocking(False)
-    //script.inputs['none'].setQueueSize(1)
-    //
+    gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
+    script->inputs["none"].setBlocking(false);
+    script->inputs["none"].setMaxSize(1);
+    
     queues["gaze"] = gaze_nn->out.createOutputQueue();
-
+  
     //==================================================
-
     pipeline.start();
+    TwoStageHostSeqSync sync;
+    std::vector<std::string> names = {"color", "detection"};
+    //std::vector<std::string> names = {"color","detection","landmarks","gaze"};
     while(pipeline.isRunning()) {
-        TwoStageHostSeqSync sync;
-        while(true){
-            int key = cv::waitKey(1);
-            if(key == 'q' || key == 'Q') {
-                pipeline.stop();
-                break;
+        for(auto name : names){
+            if(queues[name]->has()){
+                auto msg = queues[name];
+                sync.add_msg(msg,name);
+                if(name == "color")
+                cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
             }
-
-            std::vector<std::string> names = {"color","detection","landmarks","gaze"};
-            for(auto name : names){
-                if(queues[name]->has()){
-                    auto msg = std::shared_ptr<dai::MessageQueue>(queues[name]);
-                    sync.add_msg(msg,name);
-                    if(name == "color"){
-                        auto videoIn = queues["color"]->get<dai::ImgFrame>();
-                        cv::imshow("video",videoIn->getCvFrame());
-                    }
-                }
-
-            }
-
+        }
+     
+        int key = cv::waitKey(1);
+        if(key == 'q' || key == 'Q') {
+            pipeline.stop();
+            break;
+        }
+            
         auto msgs = sync.get_msgs();
         if(msgs.second == -1) continue;
+        std::cout<<"======================================================\n";
 
         auto frame = msgs.first["color"][0]->get<dai::ImgFrame>()->getCvFrame();
         auto dets = msgs.first["detection"][0]->get<dai::ImgDetections>()->detections;
-        
-        for(int i = 0; i < dets.size();i++){
+        for(size_t i = 0; i < dets.size();i++){
             auto &detection = dets[i];
             BoundingBox det(detection);
             // shape = height,width,channels
@@ -252,19 +208,15 @@ int main(){
             cv::rectangle(frame, cv::Point(pts[0],pts[1]),cv::Point(pts[2],pts[3]),
             cv::Scalar(10,245,10),1);           
             //cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
-            std::vector<float> gaze,landmarks;
 
             auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
-            dai::TensorInfo gaze_info;
-            gaze_ptr->getLayer(gaze_ptr->getAllLayerNames()[0],gaze_info);
-            gaze = getData(gaze_info,gaze_ptr);
-
+            auto gaze = gaze_ptr->getTensor<float>(gaze_ptr->getAllLayerNames()[0],0);
+            
             auto gaze_x = (int)gaze[0], gaze_y = (int)gaze[1];
 
             auto landmarks_ptr = msgs.first["landmarks"][i]->get<dai::NNData>();
-            dai::TensorInfo landmarks_info;
             auto landmarks = landmarks_ptr->getTensor<float>(landmarks_ptr->getAllLayerNames()[0],0);
-            
+        
 
             int colors[5][3] = { {0,127,255}, {0,127,255}, {255,0,127}, {127,255,0}, {127,255,0} };            
             for(int lm_i = 0;i < landmarks.size()/2;lm_i++){
@@ -280,9 +232,9 @@ int main(){
 
         }
         
-        cv::imshow("Lasers",frame);
-        }
+        cv::imshow("Lasers",frame);      
     }
     return 0;
 
 }
+*/

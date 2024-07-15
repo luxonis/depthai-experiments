@@ -103,9 +103,12 @@ while True:
         passthrough = node.io['headpose_pass'].get()
         seq = passthrough.getSequenceNum()
         # Face rotation in degrees
-        y = headpose.getLayerFp16('angle_y_fc')[0]
-        p = headpose.getLayerFp16('angle_p_fc')[0]
-        r = headpose.getLayerFp16('angle_r_fc')[0]
+        #y = headpose.getLayerFp16('angle_y_fc')[0]
+        #p = headpose.getLayerFp16('angle_p_fc')[0]
+        #r = headpose.getLayerFp16('angle_r_fc')[0]
+        y = 1
+        p = 1
+        r = 1
         angles = [y,p,r]
         # node.warn(f"angles {angles}")
         add_to_dict(angles, seq, "angles")
