@@ -11,7 +11,7 @@ with dai.Pipeline() as pipeline:
     cam = pipeline.create(dai.node.ColorCamera).build()
     cam.setPreviewSize(300, 300)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setVideoSize(1080,1080)
+    cam.setVideoSize(1280, 800)
     cam.setInterleaved(False)
 
     # NeuralNetwork
