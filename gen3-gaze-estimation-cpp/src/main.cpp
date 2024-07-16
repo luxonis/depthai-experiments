@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <opencv2/highgui.hpp>
 #include <vector>
 #include "depthai/depthai.hpp"
 #include "MultiMsgSync.cpp"
@@ -23,6 +24,7 @@ int main(){
 
     std::map<std::string,std::shared_ptr<dai::MessageQueue>> queues;
     queues["color"] = cam->video.createOutputQueue();
+
     // ImageManip that will crop the frame before sending it to the Face detection NN node
     auto face_det_manip = pipeline.create<dai::node::ImageManip>();
     face_det_manip->initialConfig.setResize(300,300);
@@ -45,7 +47,7 @@ int main(){
     // to the 'age_gender_manip' to crop the initial frame
     auto script = pipeline.create<dai::node::Script>();
     script->setProcessor(dai::ProcessorType::LEON_CSS);
-
+    
     face_det_nn->out.link(script->inputs["face_det_in"]); 
     face_det_nn->passthrough.link(script->inputs["face_pass"]);
 
@@ -76,8 +78,8 @@ int main(){
 
     auto landmark_nn = pipeline.create<dai::node::NeuralNetwork>();
     landmark_nn->setBlobPath("landmarks-regression-retail-0009.blob");
-    
     landmark_manip->out.link(landmark_nn->input);
+    
 
     landmark_nn->out.link(script->inputs["landmark_in"]);
     landmark_nn->passthrough.link(script->inputs["landmark_pass"]);
@@ -87,7 +89,7 @@ int main(){
     //=================[ LEFT EYE CROP ]=================
     auto left_manip = pipeline.create<dai::node::ImageManip>();
     left_manip->initialConfig.setResize(60,60);
-    left_manip->inputConfig.setWaitForMessage(false);
+    left_manip->inputConfig.setWaitForMessage(true);
     script->outputs["left_manip_img"].link(left_manip->inputImage);
     script->outputs["left_manip_img"].link(left_manip->inputConfig);
     left_manip->out.link(script->inputs["left_eye_in"]);
@@ -95,7 +97,7 @@ int main(){
     //=================[ RIGHT EYE CROP ]=================
     auto right_manip = pipeline.create<dai::node::ImageManip>();
     right_manip->initialConfig.setResize(60,60);
-    right_manip->inputConfig.setWaitForMessage(false);
+    right_manip->inputConfig.setWaitForMessage(true);
     script->outputs["right_manip_img"].link(right_manip->inputImage);
     script->outputs["right_manip_img"].link(right_manip->inputConfig);
     right_manip->out.link(script->inputs["right_eye_in"]);
@@ -119,23 +121,25 @@ int main(){
     }
     //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
     //# Will be fixed in depthai 2.24
-    //gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
-    //script->inputs["none"].setBlocking(false);
-    //script->inputs["none"].setMaxSize(1);
-    
+    gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
+    script->inputs["none"].setBlocking(false);
+    script->inputs["none"].setMaxSize(1);
+
     queues["gaze"] = gaze_nn->out.createOutputQueue();
   
     //==================================================
-    pipeline.start();
     TwoStageHostSeqSync sync;
     std::vector<std::string> names = {"color", "detection", "landmarks", "gaze"};
+    pipeline.start();
     while(pipeline.isRunning()) {
+        //cv::imshow("asd",face_det_manip->inputImage.get<dai::ImgFrame>()->getCvFrame());
         for(auto name : names){
             if(queues[name]->has()){
                 auto msg = queues[name];
                 sync.add_msg(msg,name);
                 if(name == "color")
-                cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
+                //cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
+                    int a =0;
                 else std::cout<<name<<"\n";
             }
         }
