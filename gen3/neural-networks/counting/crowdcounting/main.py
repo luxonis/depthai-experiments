@@ -1,9 +1,9 @@
 from pathlib import Path
 import depthai as dai
 import argparse
-import errno
-import os
 from host_crowdcounting import Crowdcounting
+from download import download_vids
+from os.path import isfile
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--video-path', type=str, help="Path to the video input for inference. Default: vids/virat.mp4"
@@ -12,6 +12,14 @@ args = parser.parse_args()
 
 video_source = Path(args.video_path).resolve().absolute()
 nn_shape = (426, 240)
+
+# Download test videos
+if not isfile(Path("vids/virat.mp4").resolve().absolute()) or \
+    not isfile(Path("vids/vid1.mp4").resolve().absolute()) or \
+    not isfile(Path("vids/vid2.mp4").resolve().absolute()) or \
+    not isfile(Path("vids/vid3.mp4").resolve().absolute()) or \
+    not isfile(Path("vids/vid4.mp4").resolve().absolute()):
+    download_vids()
 
 with dai.Pipeline() as pipeline:
 

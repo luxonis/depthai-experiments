@@ -1,4 +1,4 @@
-## Gen2 Tensorflow Image Classification example
+# Gen2 Tensorflow Image Classification example
 
 This example demonstrates how to run a neural network created using [TensorFlow Image Classification tutorial](https://colab.research.google.com/drive/1oNxfvx5jOfcmk1Nx0qavjLN8KtWcLRn6?usp=sharing)
 (which one of our community members has put together in a single Colab Notebook, even with OpenVINO conversion to .blob)
