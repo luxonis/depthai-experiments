@@ -26,19 +26,27 @@ int main(){
     queues["color"] = cam->video.createOutputQueue();
 
     // ImageManip that will crop the frame before sending it to the Face detection NN node
-    auto face_det_manip = pipeline.create<dai::node::ImageManip>();
-    face_det_manip->initialConfig.setResize(300,300);
-    face_det_manip->setMaxOutputFrameSize(300*300*3);
-    cam->preview.link(face_det_manip->inputImage);
+    //auto face_det_manip = pipeline.create<dai::node::ImageManip>();
+    //face_det_manip->initialConfig.setResize(300,300);
+    //face_det_manip->setMaxOutputFrameSize(300*300*3);
+    //cam->preview.link(face_det_manip->inputImage);
+
 
     //=================[ FACE DETECTION ]=================
     std::cout<<"Creating Face Detection Neural Network..."<<std::endl;
     auto face_det_nn = pipeline.create<dai::node::MobileNetDetectionNetwork>();
+    //auto face_det_archive = dai::NNArchive("face-detection-retail-0004.blob");
+    //auto face_det_nn = pipeline.create<dai::node::DetectionNetwork>()->build(cam->preview, face_det_archive);
+    //auto face_det_nn = pipeline.create<dai::node::DetectionNetwork>();
+    face_det_nn->setBlobPath("face-detection-retail-0004.blob");
     face_det_nn->setConfidenceThreshold(0.5);
     face_det_nn->setBlobPath("face-detection-retail-0004.blob");
+    //auto q = face_det_nn->passthrough.createOutputQueue();
 
     // Link Face ImageManip -> Face detection NN node
-    face_det_manip->out.link(face_det_nn->input);
+    //face_det_manip->out.link(face_det_nn->input);
+    cam->preview.link(face_det_nn->input);
+    cam->setPreviewSize(300,300);
 
     queues["detection"] = face_det_nn->out.createOutputQueue();
 
@@ -131,15 +139,17 @@ int main(){
     TwoStageHostSeqSync sync;
     std::vector<std::string> names = {"color", "detection", "landmarks", "gaze"};
     pipeline.start();
+    
     while(pipeline.isRunning()) {
-        //cv::imshow("asd",face_det_manip->inputImage.get<dai::ImgFrame>()->getCvFrame());
         for(auto name : names){
             if(queues[name]->has()){
                 auto msg = queues[name];
                 sync.add_msg(msg,name);
-                if(name == "color")
-                //cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
-                    int a =0;
+                if(name == "color"){
+                    cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
+                    //cv::imshow("video",q->get<dai::ImgFrame>()->getCvFrame());
+                    
+                }
                 else std::cout<<name<<"\n";
             }
         }
