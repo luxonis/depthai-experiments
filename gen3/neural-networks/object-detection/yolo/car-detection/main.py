@@ -12,7 +12,7 @@ parser.add_argument("-c", "--config", help="Provide config path for inference",
                     default='yolo-tiny.json', type=str)
 parser.add_argument("-vid", "--vid", help="Provide Luxonis video name or path to video that should be used instead of camera",
                     default="cars-tracking-above-01", type=str)
-parser.add_argument("-cam", "--cam", help="Use camera, not video.", 
+parser.add_argument("-cam", "--cam", help="Use camera instead of video.", 
                     action="store_true")
 args = parser.parse_args()
 
