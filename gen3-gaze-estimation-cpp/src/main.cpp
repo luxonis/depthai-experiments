@@ -7,6 +7,8 @@
 #include "bbox.cpp"
 
 int main(){
+    try{
+
     dai::Pipeline pipeline(true);
     pipeline.setOpenVINOVersion(dai::OpenVINO::VERSION_2021_4);
     std::tuple<int,int> VIDEO_SIZE = {1072,1072};
@@ -26,27 +28,23 @@ int main(){
     queues["color"] = cam->video.createOutputQueue();
 
     // ImageManip that will crop the frame before sending it to the Face detection NN node
-    //auto face_det_manip = pipeline.create<dai::node::ImageManip>();
-    //face_det_manip->initialConfig.setResize(300,300);
-    //face_det_manip->setMaxOutputFrameSize(300*300*3);
-    //cam->preview.link(face_det_manip->inputImage);
+    auto face_det_manip = pipeline.create<dai::node::ImageManip>();
+    face_det_manip->initialConfig.setResize(300,300);
+    face_det_manip->setMaxOutputFrameSize(300*300*3);
+    cam->preview.link(face_det_manip->inputImage);
 
 
     //=================[ FACE DETECTION ]=================
     std::cout<<"Creating Face Detection Neural Network..."<<std::endl;
-    auto face_det_nn = pipeline.create<dai::node::MobileNetDetectionNetwork>();
-    //auto face_det_archive = dai::NNArchive("face-detection-retail-0004.blob");
-    //auto face_det_nn = pipeline.create<dai::node::DetectionNetwork>()->build(cam->preview, face_det_archive);
-    //auto face_det_nn = pipeline.create<dai::node::DetectionNetwork>();
-    face_det_nn->setBlobPath("face-detection-retail-0004.blob");
+    auto face_det_nn = pipeline.create<dai::node::MobileNetDetectionNetwork>()->build();
     face_det_nn->setConfidenceThreshold(0.5);
     face_det_nn->setBlobPath("face-detection-retail-0004.blob");
-    //auto q = face_det_nn->passthrough.createOutputQueue();
+
 
     // Link Face ImageManip -> Face detection NN node
-    //face_det_manip->out.link(face_det_nn->input);
-    cam->preview.link(face_det_nn->input);
-    cam->setPreviewSize(300,300);
+    face_det_manip->out.link(face_det_nn->input);
+    //cam->preview.link(face_det_nn->input);
+    //cam->setPreviewSize(300,300);
 
     queues["detection"] = face_det_nn->out.createOutputQueue();
 
@@ -61,7 +59,7 @@ int main(){
 
     cam->preview.link(script->inputs["preview"]);
     
-    std::ifstream f("script.py", std::ios::binary);
+    std::ifstream f("test.py", std::ios::binary);
     std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(f), {});
     script->setScript(buffer);
     
@@ -71,7 +69,7 @@ int main(){
     script->outputs["headpose_cfg"].link(headpose_manip->inputConfig);
     script->outputs["headpose_img"].link(headpose_manip->inputImage);
 
-    auto headpose_nn = pipeline.create<dai::node::NeuralNetwork>();
+    auto headpose_nn = pipeline.create<dai::node::NeuralNetwork>()->build();
     headpose_nn->setBlobPath("head-pose-estimation-adas-0001.blob");
     headpose_manip->out.link(headpose_nn->input);
 
@@ -84,7 +82,7 @@ int main(){
     script->outputs["landmark_cfg"].link(landmark_manip->inputConfig);
     script->outputs["landmark_img"].link(landmark_manip->inputImage);
 
-    auto landmark_nn = pipeline.create<dai::node::NeuralNetwork>();
+    auto landmark_nn = pipeline.create<dai::node::NeuralNetwork>()->build();
     landmark_nn->setBlobPath("landmarks-regression-retail-0009.blob");
     landmark_manip->out.link(landmark_nn->input);
     
@@ -99,7 +97,7 @@ int main(){
     left_manip->initialConfig.setResize(60,60);
     left_manip->inputConfig.setWaitForMessage(true);
     script->outputs["left_manip_img"].link(left_manip->inputImage);
-    script->outputs["left_manip_img"].link(left_manip->inputConfig);
+    script->outputs["left_manip_cfg"].link(left_manip->inputConfig);
     left_manip->out.link(script->inputs["left_eye_in"]);
 
     //=================[ RIGHT EYE CROP ]=================
@@ -107,18 +105,18 @@ int main(){
     right_manip->initialConfig.setResize(60,60);
     right_manip->inputConfig.setWaitForMessage(true);
     script->outputs["right_manip_img"].link(right_manip->inputImage);
-    script->outputs["right_manip_img"].link(right_manip->inputConfig);
+    script->outputs["right_manip_cfg"].link(right_manip->inputConfig);
     right_manip->out.link(script->inputs["right_eye_in"]);
 
     //=================[ GAZE ESTIMATION ]=================
 
-    auto gaze_nn = pipeline.create<dai::node::NeuralNetwork>();
+    
+    auto gaze_nn = pipeline.create<dai::node::NeuralNetwork>()->build();
     gaze_nn->setBlobPath("gaze-estimation-adas-0002.blob");
 
     std::vector<std::string> SCRIPT_OUTPUT_NAMES = {"to_gaze_head","to_gaze_left","to_gaze_right"},
     NN_NAMES = {"head_pose_angles","left_eye_image","right_eye_image"};
-
-    for(int i=0;i<SCRIPT_OUTPUT_NAMES.size();i++){
+    for(size_t i=0;i<SCRIPT_OUTPUT_NAMES.size();i++){
         auto script_name = SCRIPT_OUTPUT_NAMES[i];
         auto nn_name = NN_NAMES[i];
         // Link Script node output to NN input
@@ -127,17 +125,21 @@ int main(){
         gaze_nn->inputs[nn_name].setBlocking(true);
         gaze_nn->inputs[nn_name].setReusePreviousMessage(false);
     }
+    /*
+    */
+    
     //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
     //# Will be fixed in depthai 2.24
-    gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
-    script->inputs["none"].setBlocking(false);
-    script->inputs["none"].setMaxSize(1);
+    //gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
+    //script->inputs["none"].setBlocking(false);
+    //script->inputs["none"].setMaxSize(1);
 
     queues["gaze"] = gaze_nn->out.createOutputQueue();
   
     //==================================================
     TwoStageHostSeqSync sync;
-    std::vector<std::string> names = {"color", "detection", "landmarks", "gaze"};
+    // landmarks,gaze
+    std::vector<std::string> names = {"color","detection" , "landmarks","gaze"};
     pipeline.start();
     
     while(pipeline.isRunning()) {
@@ -147,8 +149,7 @@ int main(){
                 sync.add_msg(msg,name);
                 if(name == "color"){
                     cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
-                    //cv::imshow("video",q->get<dai::ImgFrame>()->getCvFrame());
-                    
+                    //cv::imshow("video",q->get<dai::ImgFrame>()->getCvFrame());  
                 }
                 else std::cout<<name<<"\n";
             }
@@ -162,7 +163,7 @@ int main(){
             
         auto msgs = sync.get_msgs();
         if(msgs.second == -1) continue;
-        std::cout<<"======================================================\n";
+        std::cout<<"====================================================================================\n";
 
         auto frame = msgs.first["color"][0]->get<dai::ImgFrame>()->getCvFrame();
         auto dets = msgs.first["detection"][0]->get<dai::ImgDetections>()->detections;
@@ -203,6 +204,9 @@ int main(){
         }
         
         cv::imshow("Lasers",frame);      
+    }
+    } catch(const std::exception &e){
+        std::cerr<<e.what()<<"\n";
     }
     return 0;
 }

@@ -58,7 +58,7 @@ class TwoStageHostSeqSync{
             seq_remove.push_back(seq); // Will get removed from dict if we find synced msgs pairs
             // Check if we have both detections and color frame with this sequence number
             if(r_msgs.count("color") > 0 && r_msgs.count("detection") > 0){
-                std::cout<<"lmao1\n";
+                //std::cout<<"lmao1\n";
                 // Check if all detected objects (faces) have finished gaze (age/gender) inference
                 if(0 < r_msgs["gaze"].size()){
                     std::cout<<"lmao2\n";
@@ -67,6 +67,7 @@ class TwoStageHostSeqSync{
                     for(auto rm : seq_remove){
                         msgs[rm].clear();
                     }
+                    
                     return {r_msgs,0}; // Returned synced msgs
                 }
             }
