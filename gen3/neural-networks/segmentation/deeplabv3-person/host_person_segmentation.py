@@ -21,13 +21,12 @@ class PersonSegmentation(dai.node.HostNode):
         frame = preview.getData().reshape(shape).transpose(1, 2, 0).astype(np.uint8)
         frame = np.ascontiguousarray(frame)
 
-        # Get first layer data
         first_layer = nn.getAllLayers()[0]
-        layer1 = nn.getTensor(first_layer.name).astype(np.int32).flatten()
+        data = nn.getTensor(first_layer.name).astype(np.int32).flatten()
         dims = first_layer.dims[::-1]
-        layer1 = np.asarray(layer1, dtype=np.int32).reshape(dims)
+        data = np.asarray(data, dtype=np.int32).reshape(dims)
 
-        output_colors = self.decode_deeplabv3p(layer1)
+        output_colors = self.decode_deeplabv3p(data)
         frame = cv2.addWeighted(frame,1, output_colors,0.2,0)
 
         cv2.imshow("Preview", frame)
