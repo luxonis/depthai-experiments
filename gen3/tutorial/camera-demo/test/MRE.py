@@ -115,6 +115,7 @@ class TestPassthrough(dai.node.ThreadedHostNode):
             tstamp = datetime.timedelta(seconds = self.timestamp // 1000,
                                         milliseconds = self.timestamp % 1000)
             buffer.setTimestamp(tstamp)
+            # buffer.setTimestampDevice(tstamp)
             buffer.setType(dai.ImgFrame.Type.RAW8)
             buffer.setWidth(1280)
             buffer.setHeight(720)
@@ -123,7 +124,7 @@ class TestPassthrough(dai.node.ThreadedHostNode):
                 self.output.send(buffer)
             self.output.send(buffer)
 
-            print('timestamp_ms:', self.timestamp)
+            # print('timestamp_ms:', self.timestamp)
             self.timestamp += frameInterval
 
             
