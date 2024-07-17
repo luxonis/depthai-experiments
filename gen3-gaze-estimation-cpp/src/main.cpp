@@ -128,9 +128,9 @@ int main(){
     
     //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
     //# Will be fixed in depthai 2.24
-    //gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
-    //script->inputs["none"].setBlocking(false);
-    //script->inputs["none"].setMaxSize(1);
+    gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
+    script->inputs["none"].setBlocking(false);
+    script->inputs["none"].setMaxSize(1);
 
     queues["gaze"] = gaze_nn->out.createOutputQueue();
   
@@ -169,6 +169,7 @@ int main(){
             //std::cout<<dets.size()<<"\n";
             auto detection = dets[i];
             BoundingBox det(detection);
+            //std::cout<<"bbox: "<<det.xmin;
             //auto [tl,br] = det.denormalize(frame.shape);
             //replaced top-left and bottom-right with one array (easier impl)
             auto pts = det.denormalize({frame.rows,frame.cols});
@@ -180,12 +181,12 @@ int main(){
             auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
             auto gaze = gaze_ptr->getTensor<float>(gaze_ptr->getAllLayerNames()[0],0);
             
-            auto gaze_x = (int)gaze[0]*100, gaze_y = (int)gaze[1]*100;
+            auto gaze_x = (int)(gaze[0]*100.f), gaze_y = (int)(gaze[1]*100.f);
 
             auto landmarks_ptr = msgs.first["landmarks"][i]->get<dai::NNData>();
-            auto landmarks = landmarks_ptr->getTensor<float>(landmarks_ptr->getAllLayerNames()[0],0);
-            //std::cout<<landmarks.size()<<"\n";
-            
+            auto xlandmarks = landmarks_ptr->getTensor<float>(landmarks_ptr->getAllLayerNames()[0],0);
+            std::vector<float> landmarks(xlandmarks.begin(),xlandmarks.end());
+
             int colors[5][3] = { 
             {0,127,255}, 
             {0,127,255}, 
@@ -198,10 +199,13 @@ int main(){
                 // 0,1 - left eye, 2,3 - right eye, 4,5 - nose tip, 6,7 - left mouth, 8,9 - right mouth
                 auto x = landmarks[lm_i*2], y = landmarks[lm_i*2+1];
                 auto point = det.map_point(x,y).denormalize({frame.rows,frame.cols});
+                //std::cout<<lm_i<<" "<<x<<" "<<y<<" "<<point[0]<<" "<<point[1]<<"\n";
                 if(lm_i <= 1){ // Draw arrows from left eye & right eye
+                    
+                    //std::cout<<"=====================\n"<<point[0]<<" "<<point[1]<<"\n"<<(point[0]+gaze_x*5)<<" "<<(point[1]-gaze_y*5)<<"\n";
                     cv::arrowedLine(frame, cv::Point(point[0],point[1]), cv::Point((point[0] + gaze_x*5), (point[1] - gaze_y*5)), cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]), 3);
                 }
-                cv::circle(frame,cv::Point(point[0],point[1]),2,cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]),2);
+                else cv::circle(frame,cv::Point(point[0],point[1]),2,cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]),2);
             }
 
         }

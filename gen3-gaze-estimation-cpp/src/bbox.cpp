@@ -1,5 +1,6 @@
 #include <array>
 #include <vector>
+#include <depthai/depthai.hpp>
 
 class Point{
     //Used within the BoundingBox class when dealing with points.
@@ -7,7 +8,7 @@ class Point{
     Point(float x,float y) : x(x),y(y){}    
     //Denormalize the point to pixel coordinates (0..frame width, 0..frame height)
     std::array<int,2> denormalize(std::vector<int> frame_shape){
-        return {x * frame_shape[1], y * frame_shape[0]};
+        return {(int)(x * (float)frame_shape[1]), int(y * (float)frame_shape[0])};
     }
 
     private:
@@ -47,6 +48,6 @@ class BoundingBox{
         float mapped_x = xmin + width * x, mapped_y = ymin + height * y;
         return Point(mapped_x, mapped_y);
     }
-    private:
+    //private:
     float xmin,ymin,xmax,ymax,width,height;
 };
