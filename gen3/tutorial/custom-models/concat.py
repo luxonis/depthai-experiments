@@ -59,11 +59,7 @@ with dai.Pipeline() as pipeline:
     right.out.link(manipRight.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    # to test from vs code
-    dirname = os.path.dirname(__file__)
-    path = os.path.join(dirname, "models", "concat_openvino_2021.4_6shave.blob")
-    nn.setBlobPath(path)
-    # nn.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
+    nn.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
     nn.setNumInferenceThreads(2)
 
     manipLeft.out.link(nn.inputs['img1'])
