@@ -10,6 +10,10 @@ PyTorch/Kornia, convert them and run them on the DepthAI.
 
 ## Demos
 
+### main.py
+
+Starts all tutorials at once
+
 ### Concatenate frames
 
 ![Concat frames](https://user-images.githubusercontent.com/18037362/134209980-09c6e2f9-8a26-45d5-a6ad-c31d9e2816e1.png)

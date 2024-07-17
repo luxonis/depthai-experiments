@@ -1,9 +1,9 @@
 import cv2
 import depthai as dai
 from functions import draw_box
-import argparse
 import numpy as np
 import blobconverter
+from pathlib import Path
 # from depthai_sdk.fps import FPSHandler
 
 # ---------- Parameters ----------
@@ -11,25 +11,24 @@ import blobconverter
 MOBILENET_DETECTOR_PATH = str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
 OBJECTRON_CHAIR_PATH = "models/objectron_chair_openvino_2021.4_6shave.blob"
 
-INPUT_W, INPUT_H = 640, 360
-
-# nezabudnut na FPSHandler - vyrobit si svoj
-# zamysliet sa ako spracovat output scriptu
-# ostatne by malo byt okssssssssss
-
+# INPUT_W, INPUT_H = 640, 360
+INPUT_W, INPUT_H = 427, 267
 
 
 class DisplayChairDetections(dai.node.HostNode):
     def __init__(self):
         super().__init__()
 
-    def build(self) -> "DisplayChairDetections":
+    def build(self, camOut : dai.Node.Output) -> "DisplayChairDetections":
+        self.link_args(camOut)
+        self.sendProcessingToPipeline(True)
         return self
     
-    def process(self) -> None:
-        pass
+    def process(self, camPreview : dai.ImgFrame) -> None:
+        cv2.imshow("preview", camPreview.getCvFrame())
 
-
+        if cv2.waitKey(1) == ord('q'):
+            self.stopPipeline()
 
 
 # ---------- Pipeline ----------
@@ -82,7 +81,8 @@ with dai.Pipeline() as pipeline:
     cam.preview.link(script_pp.inputs['preview'])
 
     # Create Manip for frame resizing before pose NN
-    manip_pose = pipeline.createImageManip()
+    # manip_pose = pipeline.createImageManip()
+    manip_pose = pipeline.create(dai.node.ImageManip)
     manip_pose.initialConfig.setResize(224, 224)
     manip_pose.inputConfig.setWaitForMessage(True)
     manip_pose.inputConfig.setMaxSize(10)
@@ -92,120 +92,121 @@ with dai.Pipeline() as pipeline:
     script_pp.outputs['manip_cfg'].link(manip_pose.inputConfig)
     script_pp.outputs['manip_img'].link(manip_pose.inputImage)
 
-    # Link manip config to queue
-    # config_xout = pipeline.createXLinkOut()
-    # config_xout.setStreamName("cfg_out")
-    # script_pp.outputs['manip_cfg'].link(config_xout.input)
 
-    # 2nd stage pose NN
+    # # 2nd stage pose NN
     nn_pose = pipeline.create(dai.node.NeuralNetwork)
     nn_pose.setBlobPath(OBJECTRON_CHAIR_PATH)
     manip_pose.out.link(nn_pose.input)
     nn_pose.input.setMaxSize(20)
 
+    pipeline.create(DisplayChairDetections).build(
+        camOut=cam.preview
+    )
+
+    pipeline.run()
 
 # --------------- Main ---------------
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    frame_seq_map = {}
-    pose_map = {}
+#     frame_seq_map = {}
+#     pose_map = {}
 
-    print("Starting pipeline...")
+#     print("Starting pipeline...")
 
-    with dai.Device(pipeline) as device:
+#     with dai.Device(pipeline) as device:
 
-        q_cam = device.getOutputQueue("cam", 4, False)
-        q_detection = device.getOutputQueue("nn_det", 4, False)
+#         q_cam = device.getOutputQueue("cam", 4, False)
+#         q_detection = device.getOutputQueue("nn_det", 4, False)
 
-        q_pose = device.getOutputQueue("nn_pose", 20, False)
-        q_pose_frame = device.getOutputQueue("nn_pose_frame", 16, False)
-        q_cfg = device.getOutputQueue("cfg_out", 16, False)
-
-
-        frame = None
-
-        while True:
-
-            in_frame = q_cam.tryGet()
-            if in_frame is None:
-                continue
-
-            frame = in_frame.getCvFrame()
-
-            frame_seq_map[in_frame.getSequenceNum()] = frame.copy()
-
-            in_det = q_detection.tryGet()
+#         q_pose = device.getOutputQueue("nn_pose", 20, False)
+#         q_pose_frame = device.getOutputQueue("nn_pose_frame", 16, False)
+#         q_cfg = device.getOutputQueue("cfg_out", 16, False)
 
 
-            if in_det is not None:
-                detections = in_det.detections
-                # find the detection with highest confidence
-                # label of 9 indicates chair in VOC
-                confs = [det.confidence for det in detections if det.label == 9]
-                # confs = [det.confidence for det in detections if det.label == 62]
-                if len(confs) > 0:
-                    idx = confs.index(max(confs))
-                    detection = detections[idx]
+#         frame = None
 
-                    # try and get pose_frame
-                    # if pose_frame exists, so does the config
+#         while True:
 
-                    pose_frame_in = q_pose_frame.tryGet()
-                    if pose_frame_in is not None:
+#             in_frame = q_cam.tryGet()
+#             if in_frame is None:
+#                 continue
 
-                        # POSE INFERENCE
-                        in_pose = q_pose.get()
-                        in_cfg = q_cfg.get()
+#             frame = in_frame.getCvFrame()
 
-                        out = np.array(in_pose.getLayerFp16("StatefulPartitionedCall:1")).reshape(9, 2)
+#             frame_seq_map[in_frame.getSequenceNum()] = frame.copy()
 
-                        cfg_crop = in_cfg
+#             in_det = q_detection.tryGet()
 
-                        pose_frame = pose_frame_in.getCvFrame()
 
-                        #if out is not None and cfg_crop is not None:
-                        xmin, ymin = cfg_crop.getCropXMin(), cfg_crop.getCropYMin()
-                        xmax, ymax = cfg_crop.getCropXMax(), cfg_crop.getCropYMax()
+#             if in_det is not None:
+#                 detections = in_det.detections
+#                 # find the detection with highest confidence
+#                 # label of 9 indicates chair in VOC
+#                 confs = [det.confidence for det in detections if det.label == 9]
+#                 # confs = [det.confidence for det in detections if det.label == 62]
+#                 if len(confs) > 0:
+#                     idx = confs.index(max(confs))
+#                     detection = detections[idx]
 
-                        xmin, ymin = int(xmin * INPUT_W), int(ymin * INPUT_H)
-                        xmax, ymax = int(xmax * INPUT_W), int(ymax * INPUT_H)
+#                     # try and get pose_frame
+#                     # if pose_frame exists, so does the config
 
-                        OG_W, OG_H = xmax - xmin, ymax - ymin
+#                     pose_frame_in = q_pose_frame.tryGet()
+#                     if pose_frame_in is not None:
 
-                        scale_x = OG_W / 224
-                        scale_y = OG_H / 224
+#                         # POSE INFERENCE
+#                         in_pose = q_pose.get()
+#                         in_cfg = q_cfg.get()
 
-                        out[:, 0] = out[:, 0] * scale_x + xmin
-                        out[:, 1] = out[:, 1] * scale_y + ymin
+#                         out = np.array(in_pose.getLayerFp16("StatefulPartitionedCall:1")).reshape(9, 2)
 
-                        l = pose_map.get(pose_frame_in.getSequenceNum())
-                        if l is None:
-                            l = []
-                        l.append(out)
-                        pose_map[pose_frame_in.getSequenceNum()] = l
+#                         cfg_crop = in_cfg
 
-            # show delayed input with synced output if exists
+#                         pose_frame = pose_frame_in.getCvFrame()
 
-            frame_synced = img = np.zeros((INPUT_H, INPUT_W,3), dtype=np.uint8)
+#                         #if out is not None and cfg_crop is not None:
+#                         xmin, ymin = cfg_crop.getCropXMin(), cfg_crop.getCropYMin()
+#                         xmax, ymax = cfg_crop.getCropXMax(), cfg_crop.getCropYMax()
 
-            if len(frame_seq_map) > 30:
-                seq_id = list(frame_seq_map.keys())[0]
+#                         xmin, ymin = int(xmin * INPUT_W), int(ymin * INPUT_H)
+#                         xmax, ymax = int(xmax * INPUT_W), int(ymax * INPUT_H)
 
-                frame_synced = frame_seq_map[seq_id]
-                boxes = pose_map.get(seq_id)
-                if boxes is not None:
-                    for box in boxes:
-                        draw_box(frame_synced, box)
+#                         OG_W, OG_H = xmax - xmin, ymax - ymin
 
-                for map_key in list(filter(lambda item: item <= seq_id, frame_seq_map.keys())):
-                    del frame_seq_map[map_key]
-                for map_key in list(filter(lambda item: item <= seq_id, pose_map.keys())):
-                    del pose_map[map_key]
+#                         scale_x = OG_W / 224
+#                         scale_y = OG_H / 224
 
-            frame = cv2.hconcat([frame, frame_synced])
+#                         out[:, 0] = out[:, 0] * scale_x + xmin
+#                         out[:, 1] = out[:, 1] * scale_y + ymin
 
-            cv2.imshow("Objectron", frame)
+#                         l = pose_map.get(pose_frame_in.getSequenceNum())
+#                         if l is None:
+#                             l = []
+#                         l.append(out)
+#                         pose_map[pose_frame_in.getSequenceNum()] = l
 
-            if cv2.waitKey(1) == ord('q'):
-                break
+#             # show delayed input with synced output if exists
+
+#             frame_synced = img = np.zeros((INPUT_H, INPUT_W,3), dtype=np.uint8)
+
+#             if len(frame_seq_map) > 30:
+#                 seq_id = list(frame_seq_map.keys())[0]
+
+#                 frame_synced = frame_seq_map[seq_id]
+#                 boxes = pose_map.get(seq_id)
+#                 if boxes is not None:
+#                     for box in boxes:
+#                         draw_box(frame_synced, box)
+
+#                 for map_key in list(filter(lambda item: item <= seq_id, frame_seq_map.keys())):
+#                     del frame_seq_map[map_key]
+#                 for map_key in list(filter(lambda item: item <= seq_id, pose_map.keys())):
+#                     del pose_map[map_key]
+
+#             frame = cv2.hconcat([frame, frame_synced])
+
+#             cv2.imshow("Objectron", frame)
+
+#             if cv2.waitKey(1) == ord('q'):
+#                 break

@@ -10,18 +10,20 @@ class DisplayBlur(dai.node.HostNode):
         self.shape = (3, SHAPE, SHAPE)
         super().__init__()
 
+
     def build(self, rgb_out : dai.Node.Output, nn_out : dai.Node.Output) -> "DisplayBlur":
         self.link_args(rgb_out, nn_out)
         self.sendProcessingToPipeline(True)
         return self
     
+
     def process(self, rgb_frame : dai.ImgFrame, nn_det : dai.NNData) -> None:
         cv2.imshow("Blur", self.get_frame(nn_det))
         cv2.imshow("Color", rgb_frame.getCvFrame())
 
         if cv2.waitKey(1) == ord('q'):
             self.stopPipeline()
-        pass
+
 
     def get_frame(self, imfFrame):
         return np.array(imfFrame.getData()).view(np.float16).reshape(self.shape).transpose(1, 2, 0).astype(np.uint8)
