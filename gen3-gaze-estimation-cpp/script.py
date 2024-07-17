@@ -18,14 +18,14 @@ def check_gaze_est(seq):
     dict = sync[str(seq)]
 
     if "left" in dict and "right" in dict and "angles" in dict:
-        node.warn("GOT ALL 3")
+        # node.warn("GOT ALL 3")
         # Send to gaze estimation NN
-        node.io['to_gaze_left'].send(dict['left']) # <------------------
-        node.io['to_gaze_right'].send(dict['right']) # <------------------
+        node.io['to_gaze_left'].send(dict['left'])
+        node.io['to_gaze_right'].send(dict['right'])
         head_pose = NNData(6)
         head_pose.setLayer("head_pose_angles", dict['angles'])
-        node.io['to_gaze_head'].send(head_pose) # <------------------
-        node.warn("sent gaze data")
+        node.io['to_gaze_head'].send(head_pose)
+
         # Clear previous results
         for i, sq in enumerate(sync):
             del sync[str(seq)]
@@ -48,38 +48,30 @@ def get_eye_coords(x, y, det):
     ymin2 = det.ymin + ydelta * ymin
     ymax2 = det.ymin + ydelta * ymax
     ret = (xmin2, ymin2, xmax2, ymax2)
-    node.warn(f"Eye: {x}/{y}, Crop eyes: {ret}, det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
+    # node.warn(f"Eye: {x}/{y}, Crop eyes: {ret}, det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
     return ret
 
-while True:    
-    time.sleep(0.01)
-    #_ = node.io['none'].tryGet()
-    
+while True:
+    time.sleep(0.001)
+
     preview = node.io['preview'].tryGet()
     if preview is not None:
         sync[str(preview.getSequenceNum())] = {
             "frame": preview
         }
-        #while len(sync) >= 20:
-        #    sync.pop(next(iter(sync)))
-            #sync.popitem(last=True)
-        #node.warn(f"New frame, {len(sync)}")
-        
-    
-    face_dets = node.io['face_det_in'].tryGet()
-    #_ = node.io['face_pass'].tryGet()
+        # node.warn(f"New frame, {len(sync)}")
 
+    face_dets = node.io['face_det_in'].tryGet()
     if face_dets is not None:
-        #node.warn("face_dets")
         passthrough = node.io['face_pass'].get()
         seq = passthrough.getSequenceNum()
+
         # No detections, carry on
         if len(face_dets.detections) == 0:
-            #node.warn("No faces")
             del sync[str(seq)]
             continue
 
-        node.warn(f"New detection {seq}")
+        #node.warn(f"New detection {seq}")
         if len(sync) == 0: continue
         img = find_in_dict(seq, "frame")
         if img is None: continue
@@ -103,15 +95,11 @@ while True:
             cfg2.setResize(48, 48)
             cfg2.setKeepAspectRatio(False)
             node.io['landmark_cfg'].send(cfg2)
-            node.io['landmark_img'].send(img) # <------------------
+            node.io['landmark_img'].send(img)
             break # Only 1 face at the time currently supported
 
-        
     headpose = node.io['headpose_in'].tryGet()
-    #_ = node.io['headpose_pass'].tryGet()
-    #headpose = None
     if headpose is not None:
-        #node.warn("headpose")
         passthrough = node.io['headpose_pass'].get()
         seq = passthrough.getSequenceNum()
         # Face rotation in degrees
@@ -122,12 +110,9 @@ while True:
         # node.warn(f"angles {angles}")
         add_to_dict(angles, seq, "angles")
         check_gaze_est(seq)
-    
-    
+
     landmark_in = node.io['landmark_in'].tryGet()
-    #landmark_in = None
     if landmark_in is not None:
-        #node.warn("landmark")
         passthrough = node.io['landmark_pass'].get()
         seq = passthrough.getSequenceNum()
 
@@ -150,20 +135,18 @@ while True:
         right_cfg.setResize(60, 60)
         right_cfg.setKeepAspectRatio(False)
         node.io['right_manip_cfg'].send(right_cfg)
-        node.io['right_manip_img'].send(img) # <------------------
+        node.io['right_manip_img'].send(img)
 
     left_eye = node.io['left_eye_in'].tryGet()
-    #left_eye = None
     if left_eye is not None:
-        node.warn("LEFT EYE GOT")
+        # node.warn("LEFT EYE GOT")
         seq = left_eye.getSequenceNum()
         add_to_dict(left_eye, seq, "left")
         check_gaze_est(seq)
 
     right_eye = node.io['right_eye_in'].tryGet()
-    #right_eye = None
     if right_eye is not None:
-        node.warn("RIGHT EYE GOT")
+        # node.warn("RIGHT EYE GOT")
         seq = right_eye.getSequenceNum()
         add_to_dict(right_eye, seq, "right")
         check_gaze_est(seq)

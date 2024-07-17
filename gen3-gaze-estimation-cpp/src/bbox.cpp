@@ -48,6 +48,6 @@ class BoundingBox{
         float mapped_x = xmin + width * x, mapped_y = ymin + height * y;
         return Point(mapped_x, mapped_y);
     }
-    //private:
+    private:
     float xmin,ymin,xmax,ymax,width,height;
 };

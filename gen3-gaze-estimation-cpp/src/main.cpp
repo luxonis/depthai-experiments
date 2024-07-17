@@ -38,11 +38,8 @@ int main(){
     face_det_nn->setConfidenceThreshold(0.5);
     face_det_nn->setBlobPath("face-detection-retail-0004.blob");
 
-
     // Link Face ImageManip -> Face detection NN node
     face_det_manip->out.link(face_det_nn->input);
-    //cam->preview.link(face_det_nn->input);
-    //cam->setPreviewSize(300,300);
 
     queues["detection"] = face_det_nn->out.createOutputQueue();
 
@@ -57,7 +54,7 @@ int main(){
 
     cam->preview.link(script->inputs["preview"]);
     
-    std::ifstream f("test.py", std::ios::binary);
+    std::ifstream f("script.py", std::ios::binary);
     std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(f), {});
     script->setScript(buffer);
     
@@ -107,8 +104,6 @@ int main(){
     right_manip->out.link(script->inputs["right_eye_in"]);
 
     //=================[ GAZE ESTIMATION ]=================
-
-    
     auto gaze_nn = pipeline.create<dai::node::NeuralNetwork>()->build();
     gaze_nn->setBlobPath("gaze-estimation-adas-0002.blob");
 
@@ -123,15 +118,7 @@ int main(){
         gaze_nn->inputs[nn_name].setBlocking(true);
         gaze_nn->inputs[nn_name].setReusePreviousMessage(false);
     }
-    /*
-    */
     
-    //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
-    //# Will be fixed in depthai 2.24
-    gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
-    script->inputs["none"].setBlocking(false);
-    script->inputs["none"].setMaxSize(1);
-
     queues["gaze"] = gaze_nn->out.createOutputQueue();
   
     //==================================================
@@ -147,9 +134,7 @@ int main(){
                 sync.add_msg(msg,name);
                 if(name == "color"){
                     cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
-                    //cv::imshow("video",q->get<dai::ImgFrame>()->getCvFrame());  
                 }
-                //else std::cout<<name<<"\n";
             }
         }
      
@@ -161,23 +146,18 @@ int main(){
     
         auto msgs = sync.get_msgs();
         if(msgs.second == -1) continue;
-        //std::cout<<"====================================================================================\n";
 
         auto frame = msgs.first["color"][0]->get<dai::ImgFrame>()->getCvFrame();
         auto dets = msgs.first["detection"][0]->get<dai::ImgDetections>()->detections;
         for(size_t i = 0; i < dets.size();i++){
-            //std::cout<<dets.size()<<"\n";
             auto detection = dets[i];
             BoundingBox det(detection);
-            //std::cout<<"bbox: "<<det.xmin;
-            //auto [tl,br] = det.denormalize(frame.shape);
             //replaced top-left and bottom-right with one array (easier impl)
             auto pts = det.denormalize({frame.rows,frame.cols});
 
             cv::rectangle(frame, cv::Point(pts[0],pts[1]),cv::Point(pts[2],pts[3]),
             cv::Scalar(10,245,10),1);           
-            //cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
-
+            
             auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
             auto gaze = gaze_ptr->getTensor<float>(gaze_ptr->getAllLayerNames()[0],0);
             
@@ -195,14 +175,10 @@ int main(){
             {127,255,0},
             };            
             for(size_t lm_i = 0;lm_i < landmarks.size()/2;lm_i++){
-                //std::cout<<lm_i<<"\n";
                 // 0,1 - left eye, 2,3 - right eye, 4,5 - nose tip, 6,7 - left mouth, 8,9 - right mouth
                 auto x = landmarks[lm_i*2], y = landmarks[lm_i*2+1];
                 auto point = det.map_point(x,y).denormalize({frame.rows,frame.cols});
-                //std::cout<<lm_i<<" "<<x<<" "<<y<<" "<<point[0]<<" "<<point[1]<<"\n";
                 if(lm_i <= 1){ // Draw arrows from left eye & right eye
-                    
-                    //std::cout<<"=====================\n"<<point[0]<<" "<<point[1]<<"\n"<<(point[0]+gaze_x*5)<<" "<<(point[1]-gaze_y*5)<<"\n";
                     cv::arrowedLine(frame, cv::Point(point[0],point[1]), cv::Point((point[0] + gaze_x*5), (point[1] - gaze_y*5)), cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]), 3);
                 }
                 else cv::circle(frame,cv::Point(point[0],point[1]),2,cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]),2);
