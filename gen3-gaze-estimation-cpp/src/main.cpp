@@ -21,9 +21,14 @@ int main(){
     cam->setFps(20);
     cam->setBoardSocket(dai::CameraBoardSocket::CAM_A);
 
+    auto sync = pipeline.create<dai::node::Sync>();
+    sync->setRunOnHost(true);
+    sync->setSyncThreshold(std::chrono::nanoseconds(500'000'000)); // 0.5 sec
+    auto msgs_queue = sync->out.createOutputQueue();
 
-    std::map<std::string,std::shared_ptr<dai::MessageQueue>> queues;
-    queues["color"] = cam->video.createOutputQueue();
+    //std::map<std::string,std::shared_ptr<dai::MessageQueue>> queues;
+    //queues["color"] = cam->video.createOutputQueue();
+    cam->video.link(sync->inputs["color"]); 
 
     // ImageManip that will crop the frame before sending it to the Face detection NN node
     auto face_det_manip = pipeline.create<dai::node::ImageManip>();
@@ -41,7 +46,8 @@ int main(){
     // Link Face ImageManip -> Face detection NN node
     face_det_manip->out.link(face_det_nn->input);
 
-    queues["detection"] = face_det_nn->out.createOutputQueue();
+    //queues["detection"] = face_det_nn->out.createOutputQueue();
+    face_det_nn->out.link(sync->inputs["detection"]);
 
     //=================[ SCRIPT NODE ]=================
     // Script node will take the output from the face detection NN as an input and set ImageManipConfig
@@ -85,7 +91,8 @@ int main(){
     landmark_nn->out.link(script->inputs["landmark_in"]);
     landmark_nn->passthrough.link(script->inputs["landmark_pass"]);
 
-    queues["landmarks"] = landmark_nn->out.createOutputQueue();
+    //queues["landmarks"] = landmark_nn->out.createOutputQueue();
+    landmark_nn->out.link(sync->inputs["landmarks"]);
 
     //=================[ LEFT EYE CROP ]=================
     auto left_manip = pipeline.create<dai::node::ImageManip>();
@@ -119,7 +126,9 @@ int main(){
         gaze_nn->inputs[nn_name].setReusePreviousMessage(false);
     }
     
-    queues["gaze"] = gaze_nn->out.createOutputQueue();
+    //queues["gaze"] = gaze_nn->out.createOutputQueue();
+    gaze_nn->out.link(sync->inputs["gaze"]);
+
 
     //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
     //# Will be fixed in depthai 2.24
@@ -128,21 +137,28 @@ int main(){
     script->inputs["none"].setMaxSize(1);
   
     //==================================================
-    TwoStageHostSeqSync sync;
+    //TwoStageHostSeqSync sync;
+
+    
     // landmarks,gaze
     std::vector<std::string> names = {"color","detection" , "landmarks","gaze"};
     pipeline.start();
     
     while(pipeline.isRunning()) {
+        // ???
+        /*
         for(auto name : names){
             if(queues[name]->has()){
                 auto msg = queues[name];
-                sync.add_msg(msg,name);
+                sync->inputs[name].send(msg->get<dai::Buffer>());
+                
+                //sync.add_msg(msg,name);
                 if(name == "color"){
                     cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
                 }
             }
         }
+        */
      
         int key = cv::waitKey(1);
         if(key == 'q' || key == 'Q') {
@@ -150,11 +166,16 @@ int main(){
             break;
         }
     
-        auto msgs = sync.get_msgs();
-        if(msgs.second == -1) continue;
+        //auto msgs = sync.get_msgs();
+        auto msgs = msgs_queue->get<dai::MessageGroup>(); 
+        if(msgs == nullptr) continue;
+        
+        auto frame = msgs->get<dai::ImgFrame>("color")->getCvFrame();
+        auto dets = msgs->get<dai::ImgDetections>("detection")->detections;
 
-        auto frame = msgs.first["color"][0]->get<dai::ImgFrame>()->getCvFrame();
-        auto dets = msgs.first["detection"][0]->get<dai::ImgDetections>()->detections;
+        //auto frame = msgs->data["color"][0]->get<dai::ImgFrame>()->getCvFrame();
+        //auto dets = msgs.first["detection"][0]->get<dai::ImgDetections>()->detections;
+        
         for(size_t i = 0; i < dets.size();i++){
             auto detection = dets[i];
             BoundingBox det(detection);
@@ -164,12 +185,14 @@ int main(){
             cv::rectangle(frame, cv::Point(pts[0],pts[1]),cv::Point(pts[2],pts[3]),
             cv::Scalar(10,245,10),1);           
             
-            auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
+            //auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
+            auto gaze_ptr = msgs->get<dai::NNData>("gaze");
             auto gaze = gaze_ptr->getTensor<float>(gaze_ptr->getAllLayerNames()[0],0);
             
             auto gaze_x = (int)(gaze[0]*100.f), gaze_y = (int)(gaze[1]*100.f);
 
-            auto landmarks_ptr = msgs.first["landmarks"][i]->get<dai::NNData>();
+            //auto landmarks_ptr = msgs.first["landmarks"][i]->get<dai::NNData>();
+            auto landmarks_ptr = msgs->get<dai::NNData>("landmarks");
             auto xlandmarks = landmarks_ptr->getTensor<float>(landmarks_ptr->getAllLayerNames()[0],0);
             std::vector<float> landmarks(xlandmarks.begin(),xlandmarks.end());
 
