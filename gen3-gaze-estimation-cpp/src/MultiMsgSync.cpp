@@ -28,25 +28,29 @@ class TwoStageHostSeqSync{
         //std::cout<<"f: "<<f<<"\n";
         auto seq = std::to_string(f); // getSequenceNum() doesnt exist 
         // print(f"Got {name}, seq: {seq}")
+        msgs[seq][name].push_back(msg);
+        /*
         if(name == "gaze" || name == "landmarks"){
             // Append msg to an array
-            std::cout<<"gl\n";
+            //std::cout<<"gl\n";
             msgs[seq][name].push_back(msg);
             // print(f'Added gaze seq {seq}, total len {len(self.msgs[seq]["gaze"])}')
         }else if(name == "detection"){
             // Save detection msg in map
-            std::cout<<"=======================================\n";
+            //std::cout<<"=======================================\n";
             msgs[seq][name].push_back(msg);
             // never used??
             //msgs[seq]["len"].push_back(msg->get<dai::ImgDetections>()->detections.size()); // also doesnt exist
         }else if(name == "color") {
             // Save color frame in map
-            std::cout<<"c\n";
+            //std::cout<<"c\n";
             msgs[seq][name].push_back(msg); 
         }        
+        */
     }   
 
     std::pair<std::map<std::string,std::vector<std::shared_ptr<dai::MessageQueue>>>,int> get_msgs(){
+        //std::cout<<"msgs size: "<<msgs.size()<<"\n";
         std::vector<std::string> seq_remove;
         
         for(auto it = msgs.begin(); it != msgs.end();it++){
@@ -61,13 +65,13 @@ class TwoStageHostSeqSync{
                 //std::cout<<"lmao1\n";
                 // Check if all detected objects (faces) have finished gaze (age/gender) inference
                 if(0 < r_msgs["gaze"].size()){
-                    std::cout<<"lmao2\n";
+                    //std::cout<<"lmao2\n";
                     // print(f"Synced msgs with sequence number {seq}", msgs)
                     // We have synced msgs, remove previous msgs (memory cleaning)
                     for(auto rm : seq_remove){
                         msgs[rm].clear();
                     }
-                    
+                    //std::cout<<"lmao3\n";
                     return {r_msgs,0}; // Returned synced msgs
                 }
             }

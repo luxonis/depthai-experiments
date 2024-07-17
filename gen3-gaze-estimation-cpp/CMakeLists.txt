@@ -6,7 +6,8 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/depthai-core EXCLUDE_FROM_ALL)
 # Create a project with name 'gen3'
 set(TARGET_NAME gen3)
 project(${TARGET_NAME})
-
+#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_CXX_FLAGS "-<g")
 # Dependencies (optional, only used for example)
 find_package(OpenCV REQUIRED)
 

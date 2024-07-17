@@ -7,8 +7,6 @@
 #include "bbox.cpp"
 
 int main(){
-    try{
-
     dai::Pipeline pipeline(true);
     pipeline.setOpenVINOVersion(dai::OpenVINO::VERSION_2021_4);
     std::tuple<int,int> VIDEO_SIZE = {1072,1072};
@@ -151,7 +149,7 @@ int main(){
                     cv::imshow("video",msg->get<dai::ImgFrame>()->getCvFrame());
                     //cv::imshow("video",q->get<dai::ImgFrame>()->getCvFrame());  
                 }
-                else std::cout<<name<<"\n";
+                //else std::cout<<name<<"\n";
             }
         }
      
@@ -160,21 +158,20 @@ int main(){
             pipeline.stop();
             break;
         }
-            
+    
         auto msgs = sync.get_msgs();
         if(msgs.second == -1) continue;
-        std::cout<<"====================================================================================\n";
+        //std::cout<<"====================================================================================\n";
 
         auto frame = msgs.first["color"][0]->get<dai::ImgFrame>()->getCvFrame();
         auto dets = msgs.first["detection"][0]->get<dai::ImgDetections>()->detections;
         for(size_t i = 0; i < dets.size();i++){
-            auto &detection = dets[i];
+            //std::cout<<dets.size()<<"\n";
+            auto detection = dets[i];
             BoundingBox det(detection);
-            // shape = height,width,channels
-            // seems to be (1072,1072,3)
             //auto [tl,br] = det.denormalize(frame.shape);
             //replaced top-left and bottom-right with one array (easier impl)
-            auto pts = det.denormalize({1072,1072,3});
+            auto pts = det.denormalize({frame.rows,frame.cols});
 
             cv::rectangle(frame, cv::Point(pts[0],pts[1]),cv::Point(pts[2],pts[3]),
             cv::Scalar(10,245,10),1);           
@@ -183,18 +180,24 @@ int main(){
             auto gaze_ptr = msgs.first["gaze"][i]->get<dai::NNData>();
             auto gaze = gaze_ptr->getTensor<float>(gaze_ptr->getAllLayerNames()[0],0);
             
-            auto gaze_x = (int)gaze[0], gaze_y = (int)gaze[1];
+            auto gaze_x = (int)gaze[0]*100, gaze_y = (int)gaze[1]*100;
 
             auto landmarks_ptr = msgs.first["landmarks"][i]->get<dai::NNData>();
             auto landmarks = landmarks_ptr->getTensor<float>(landmarks_ptr->getAllLayerNames()[0],0);
-        
-
-            int colors[5][3] = { {0,127,255}, {0,127,255}, {255,0,127}, {127,255,0}, {127,255,0} };            
-            for(int lm_i = 0;i < landmarks.size()/2;lm_i++){
+            //std::cout<<landmarks.size()<<"\n";
+            
+            int colors[5][3] = { 
+            {0,127,255}, 
+            {0,127,255}, 
+            {255,0,127}, 
+            {127,255,0}, 
+            {127,255,0},
+            };            
+            for(size_t lm_i = 0;lm_i < landmarks.size()/2;lm_i++){
+                //std::cout<<lm_i<<"\n";
                 // 0,1 - left eye, 2,3 - right eye, 4,5 - nose tip, 6,7 - left mouth, 8,9 - right mouth
                 auto x = landmarks[lm_i*2], y = landmarks[lm_i*2+1];
-                // again,should be frame.shape
-                auto point = det.map_point(x,y).denormalize({1072,1072,3});
+                auto point = det.map_point(x,y).denormalize({frame.rows,frame.cols});
                 if(lm_i <= 1){ // Draw arrows from left eye & right eye
                     cv::arrowedLine(frame, cv::Point(point[0],point[1]), cv::Point((point[0] + gaze_x*5), (point[1] - gaze_y*5)), cv::Scalar(colors[lm_i][0],colors[lm_i][1],colors[lm_i][2]), 3);
                 }
@@ -204,9 +207,6 @@ int main(){
         }
         
         cv::imshow("Lasers",frame);      
-    }
-    } catch(const std::exception &e){
-        std::cerr<<e.what()<<"\n";
     }
     return 0;
 }

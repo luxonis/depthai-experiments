@@ -30,11 +30,6 @@ class BoundingBox{
         Denormalize the bounding box to pixel coordinates (0..frame width, 0..frame height).
         Useful when you want to draw the bounding box on the frame.
 
-        Args:
-            frame_shape: Shape of the frame (height, width)
-
-        Returns:
-            Tuple of two points (top-left, bottom-right) in pixel coordinates
         */
         return {
             (int)(frame_shape[1] * xmin),(int)(frame_shape[0] * ymin),
@@ -48,12 +43,6 @@ class BoundingBox{
         Example: You run face detection, create BoundingBox from the result, and also run
         facial landmarks detection on the cropped frame of the face. The landmarks are relative
         to the face bounding box, but you want to draw them on the original frame.
-
-        Args:
-            x: x coordinate of the point inside the bounding box (0..1)
-            y: y coordinate of the point inside the bounding box (0..1)
-        Returns:
-            Point in absolute coordinates (0..1)
         */
         float mapped_x = xmin + width * x, mapped_y = ymin + height * y;
         return Point(mapped_x, mapped_y);
