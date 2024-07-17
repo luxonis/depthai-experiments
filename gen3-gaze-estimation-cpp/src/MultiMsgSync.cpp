@@ -41,7 +41,6 @@ class TwoStageHostSeqSync{
             if(r_msgs.count("color") > 0 && r_msgs.count("detection") > 0){
                 // Check if all detected objects (faces) have finished gaze (age/gender) inference
                 if(0 < r_msgs["gaze"].size()){
-                    // print(f"Synced msgs with sequence number {seq}", msgs)
                     // We have synced msgs, remove previous msgs (memory cleaning)
                     for(auto rm : seq_remove){
                         msgs[rm].clear();

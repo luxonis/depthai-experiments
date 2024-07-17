@@ -120,6 +120,12 @@ int main(){
     }
     
     queues["gaze"] = gaze_nn->out.createOutputQueue();
+
+    //# Workaround, so NNData (output of gaze_nn) will take seq_num from this message (FW bug)
+    //# Will be fixed in depthai 2.24
+    gaze_nn->passthroughs["left_eye_image"].link(script->inputs["none"]);
+    script->inputs["none"].setBlocking(false);
+    script->inputs["none"].setMaxSize(1);
   
     //==================================================
     TwoStageHostSeqSync sync;

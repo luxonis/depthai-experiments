@@ -22,6 +22,14 @@ target_link_libraries(${TARGET_NAME}
         ${OpenCV_LIBS} # optional, used for example
 )
 
+# Copy files to /build 
+file(COPY script.py DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY face-detection-retail-0004.blob DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY gaze-estimation-adas-0002.blob DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY head-pose-estimation-adas-0001.blob DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY landmarks-regression-retail-0009.blob DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+
+
 # Set some errors
 if(NOT MSVC)
     target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
