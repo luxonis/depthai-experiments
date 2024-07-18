@@ -23,11 +23,12 @@ int main(){
 
     auto sync = pipeline.create<dai::node::Sync>();
     sync->setRunOnHost(true);
-    sync->setSyncThreshold(std::chrono::nanoseconds(500'000'000)); // 0.5 sec
+    //sync->setSyncThreshold(std::chrono::nanoseconds(500'000'000)); // 0.5 sec
     auto msgs_queue = sync->out.createOutputQueue();
 
     //std::map<std::string,std::shared_ptr<dai::MessageQueue>> queues;
     //queues["color"] = cam->video.createOutputQueue();
+    //auto videoOut = cam->video.createOutputQueue();
     cam->video.link(sync->inputs["color"]); 
 
     // ImageManip that will crop the frame before sending it to the Face detection NN node
@@ -146,6 +147,9 @@ int main(){
     
     while(pipeline.isRunning()) {
         // ???
+        std::cout<<"main loop\n";
+        //if(videoOut->has())
+        //    cv::imshow("video",videoOut->get<dai::ImgFrame>()->getCvFrame());
         /*
         for(auto name : names){
             if(queues[name]->has()){
@@ -165,11 +169,12 @@ int main(){
             pipeline.stop();
             break;
         }
-    
+        //continue;
         //auto msgs = sync.get_msgs();
         auto msgs = msgs_queue->get<dai::MessageGroup>(); 
+        std::cout<<"ASD\n";
         if(msgs == nullptr) continue;
-        
+        std::cout<<"here\n";
         auto frame = msgs->get<dai::ImgFrame>("color")->getCvFrame();
         auto dets = msgs->get<dai::ImgDetections>("detection")->detections;
 
