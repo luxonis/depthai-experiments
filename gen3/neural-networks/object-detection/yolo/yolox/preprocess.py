@@ -7,7 +7,7 @@ import numpy as np
 class Preprocess(dai.node.ThreadedHostNode):
     def __init__(self) -> None:
         super().__init__()
-        self.input = dai.Node.Input(self, blocking=False, queueSize=4)
+        self.input = dai.Node.Input(self)
         self.output = dai.Node.Output(self)
 
 

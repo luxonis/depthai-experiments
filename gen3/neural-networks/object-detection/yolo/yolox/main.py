@@ -33,6 +33,8 @@ with dai.Pipeline() as pipeline:
         std=(0.229, 0.224, 0.225),
         shape=SHAPE
     )
+    preprocess.input.setBlocking(False)
+    preprocess.input.setMaxSize(4)
     camera.preview.link(preprocess.input)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
