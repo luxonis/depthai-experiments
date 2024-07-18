@@ -29,10 +29,12 @@ with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
     left = pipeline.create(dai.node.MonoCamera)
+    left.setFps(2)
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
 
     right = pipeline.create(dai.node.MonoCamera)
+    right.setFps(2)
     right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
     right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
 
