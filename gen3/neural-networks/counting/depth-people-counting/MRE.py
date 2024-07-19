@@ -52,8 +52,6 @@ class TestPassthrough(dai.node.ThreadedHostNode):
             tstamp = datetime.timedelta(seconds = self.timestamp // 1000,
                                         milliseconds = self.timestamp % 1000)
             buffer.setTimestamp(tstamp)
-            # buffer.setWidth(640)
-            # buffer.setHeight(480)
             buffer.setTimestampDevice(tstamp)
             buffer.setType(dai.ImgFrame.Type.RAW8)
             
@@ -74,10 +72,12 @@ with dai.Pipeline() as pipeline:
     left = pipeline.create(dai.node.ReplayVideo)
     left.setReplayVideoFile(path / 'left.mp4')
     left.setOutFrameType(dai.ImgFrame.Type.RAW8)
+    left.setSize(300, 300)
 
     right = pipeline.create(dai.node.ReplayVideo)
     right.setReplayVideoFile(path / 'right.mp4')
     right.setOutFrameType(dai.ImgFrame.Type.RAW8)
+    right.setSize(300, 300)
 
     # monoLeft = pipeline.create(dai.node.MonoCamera)
     # monoRight = pipeline.create(dai.node.MonoCamera)
