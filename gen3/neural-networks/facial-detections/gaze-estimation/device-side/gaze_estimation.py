@@ -22,15 +22,15 @@ class GazeEstimation(dai.node.HostNode):
     def process(self, 
                 img_frame: dai.ImgFrame, 
                 gaze_synced: dai.Buffer,
-                landmarks_syced: dai.Buffer
+                landmarks_synced: dai.Buffer
         ) -> None:
         assert(isinstance(gaze_synced, DetectedRecognitions))
-        assert(isinstance(landmarks_syced, DetectedRecognitions))
+        assert(isinstance(landmarks_synced, DetectedRecognitions))
         
         frame: np.ndarray = img_frame.getCvFrame()
         dets: list[dai.ImgDetection] = gaze_synced.img_detections.detections
         gaze_nn = gaze_synced.nn_data
-        landmarks_nn = landmarks_syced.nn_data
+        landmarks_nn = landmarks_synced.nn_data
         for i, detection in enumerate(dets):
             tl, br = self._denormalize_bounding_box(detection, frame.shape)
             cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
