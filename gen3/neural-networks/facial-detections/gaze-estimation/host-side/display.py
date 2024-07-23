@@ -1,4 +1,3 @@
-import time
 import cv2
 import depthai as dai
 
@@ -12,6 +11,7 @@ class Display(dai.node.HostNode):
         self._camera = camera
         self._wnd_text = "Camera view" if camera else "Video view"
         self.link_args(img_frames)
+        self.sendProcessingToPipeline(True)
         return self
     
 
