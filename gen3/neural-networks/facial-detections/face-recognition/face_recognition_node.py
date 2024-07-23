@@ -4,6 +4,7 @@ import numpy as np
 
 from face_recognition import FaceRecognition
 from text_helper import TextHelper
+from detected_recognitions import DetectedRecognitions
 
 
 class FaceRecognitionNode(dai.node.HostNode):
@@ -20,7 +21,8 @@ class FaceRecognitionNode(dai.node.HostNode):
     
 
     def process(self, color: dai.ImgFrame, detected_recognitions) -> None:
-            detections: dai.ImgDetections = detected_recognitions.detections
+            assert(isinstance(detected_recognitions, DetectedRecognitions))
+            detections: dai.ImgDetections = detected_recognitions.img_detections
             recognitions: list[dai.NNData] = detected_recognitions.nn_data
 
             frame = color.getCvFrame()

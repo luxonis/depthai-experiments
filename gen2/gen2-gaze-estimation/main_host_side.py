@@ -11,6 +11,7 @@ import numpy as np
 from math import cos, sin
 
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
 parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
@@ -63,6 +64,8 @@ def frame_norm(frame, bbox):
 
 
 def to_planar(arr: np.ndarray, shape: tuple) -> list:
+    if arr.size == 0:
+        return []
     return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
 
 
@@ -156,6 +159,7 @@ def create_pipeline():
     gaze_nn = pipeline.create(depthai.node.NeuralNetwork)
     path = blobconverter.from_zoo("gaze-estimation-adas-0002", shaves=4,
         compile_params=['-iop head_pose_angles:FP16,right_eye_image:U8,left_eye_image:U8'],
+        version="2021.4"
     )
     gaze_nn.setBlobPath(path)
     gaze_nn_xin = pipeline.create(depthai.node.XLinkIn)
