@@ -5,22 +5,10 @@ import numpy as np
 import blobconverter
 from utility.fps_handler import FPSHandler
 
+
 MOBILENET_DETECTOR_PATH = str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
 OBJECTRON_CHAIR_PATH = "models/objectron_chair_openvino_2021.4_6shave.blob"
 INPUT_W, INPUT_H = 427, 267
-
-class Display(dai.node.HostNode):
-    def __init__(self):
-        self.input = self.createInput()
-        super().__init__()
-
-
-    def build(self) -> "Display":
-        return self
-    
-
-    def process(self) -> None:
-        pass
 
 
 class DisplayChairDetections(dai.node.HostNode):
@@ -116,8 +104,7 @@ class DisplayChairDetections(dai.node.HostNode):
 
             frame = cv2.hconcat([frame, frame_synced])
 
-            # cv2.imshow("Objectron", frame)
-            self.out.send(frame)
+            cv2.imshow("Objectron", frame)
 
         if cv2.waitKey(1) == ord('q'):
             self.stopPipeline()
@@ -180,7 +167,7 @@ with dai.Pipeline() as pipeline:
     script_pp.outputs['manip_cfg'].link(manip_pose.inputConfig)
     script_pp.outputs['manip_img'].link(manip_pose.inputImage)
 
-    # # 2nd stage pose NN
+    # 2nd stage pose NN
     nn_pose = pipeline.create(dai.node.NeuralNetwork)
     nn_pose.setBlobPath(OBJECTRON_CHAIR_PATH)
     manip_pose.out.link(nn_pose.input)
@@ -193,10 +180,6 @@ with dai.Pipeline() as pipeline:
         pose_frame_out=nn_pose.passthrough,
         cfg_out=script_pp.outputs['manip_cfg']        
     )
-
-    display = pipeline.create(Display).build()
-
-    detector.out.link(display.input)
 
     print("pipeline created")
     pipeline.run()
