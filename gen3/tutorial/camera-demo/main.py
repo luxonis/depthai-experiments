@@ -6,6 +6,8 @@ import depthai as dai
 import os
 import argparse
 from pathlib import Path
+import datetime
+from time import sleep
 
 '''
 If one or more of the additional depth modes (lrcheck, extended, subpixel)
@@ -50,6 +52,7 @@ print("    Median filtering:  ", median)
 # TODO add API to read this from device / calib data
 right_intrinsic = [[860.0, 0.0, 640.0], [0.0, 860.0, 360.0], [0.0, 0.0, 1.0]]
 dataset_size = 2
+frame_interval = 500
 
 pcl_converter = None
 if point_cloud:
@@ -61,35 +64,6 @@ if point_cloud:
         pcl_converter = PointCloudVisualizer(right_intrinsic, 1280, 720)
     else:
         print("Disabling point-cloud visualizer, as out_rectified is not set")
-
-
-def create_video_from_images(nameOfImage, videoName):
-    dirname = os.path.dirname(__file__)
-    filename = os.path.join(dirname, 'dataset', '0', nameOfImage + '.png')
-    videoName = os.path.join(dirname, videoName)
-
-    print(os.path.exists(filename))
-
-    frame = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
-    height, width = frame.shape
-    
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video = cv2.VideoWriter(videoName, fourcc, 1.0, (width, height))
-
-    if not video.isOpened():
-        raise ValueError("Failed to open VideoWriter.")
-
-    for index in range(0, dataset_size):
-        # Read the first image to get the frame dimensions
-        filename = os.path.join(dirname, 'dataset', str(index), nameOfImage + '.png')
-
-        frame = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
-        height, width = frame.shape
-
-        video.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-
-    # Release the video writer
-    video.release()
 
 
 def create_rgb_cam_pipeline(pipeline : dai.Pipeline):
@@ -155,51 +129,82 @@ def create_stereo_depth_pipeline(pipeline : dai.Pipeline):
     )
 
 
-def create_stereo_depth_pipeline_from_dataset(pipeline : dai.Pipeline, videos : list):
+def create_stereo_depth_pipeline_from_dataset(pipeline : dai.Pipeline):
     print("video input -> STEREO -> XLINK OUT")
 
-    dirname = os.path.dirname(__file__)
+    host1 = pipeline.create(TestSource)
+    host1.set_instance_num(dai.CameraBoardSocket.CAM_B)
+    host1.set_name('in_left')
+    host2 = pipeline.create(TestSource)
+    host2.set_instance_num(dai.CameraBoardSocket.CAM_C)
+    host2.set_name('in_right')
 
-    in_left_video : dai.node.ReplayVideo = pipeline.create(dai.node.ReplayVideo)
-    in_left_video.setReplayVideoFile(os.path.join(dirname, videos[0]))
-    in_left_video.setOutFrameType(dai.ImgFrame.Type.NV12)
-    in_left_video.setLoop(True)
+    image_manip_left = pipeline.create(dai.node.ImageManip)
+    # image_manip_left.initialConfig.setFrameType(dai.ImgFrame.Type.RAW8)
+    host1.output.link(image_manip_left.inputImage)
 
-    in_right_video : dai.node.ReplayVideo = pipeline.create(dai.node.ReplayVideo)
-    in_right_video.setReplayVideoFile(os.path.join(dirname, videos[1]))
-    in_right_video.setOutFrameType(dai.ImgFrame.Type.NV12)
-    in_right_video.setLoop(True)
+    image_manip_right = pipeline.create(dai.node.ImageManip)
+    # image_manip_right.initialConfig.setFrameType(dai.ImgFrame.Type.RAW8)
+    host2.output.link(image_manip_right.inputImage)
 
-    imageManipLeft = pipeline.create(dai.node.ImageManip)
-    imageManipLeft.initialConfig.setResize(1280, 720)
-    imageManipLeft.initialConfig.setFrameType(dai.ImgFrame.Type.RAW8)
-    in_left_video.out.link(imageManipLeft.inputImage)
-
-    imageManipRight = pipeline.create(dai.node.ImageManip)
-    imageManipRight.initialConfig.setResize(1280, 720)
-    imageManipRight.initialConfig.setFrameType(dai.ImgFrame.Type.RAW8)
-    in_right_video.out.link(imageManipRight.inputImage)
-
-    stereo = pipeline.create(dai.node.StereoDepth).build(imageManipLeft.out, imageManipRight.out)
-
+    stereo = pipeline.create(dai.node.StereoDepth).build(left=image_manip_left.out, right=image_manip_right.out)
+    
     stereo.initialConfig.setConfidenceThreshold(200)
     stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
     stereo.initialConfig.setMedianFilter(median) # KERNEL_7x7 default
-    stereo.setLeftRightCheck(lrcheck)
-    stereo.setExtendedDisparity(extended)
-    stereo.setSubpixel(subpixel)
-
-    # stereo.setEmptyCalibration() # Set if the input frames are already rectified
+    stereo.setLeftRightCheck(True)
+    stereo.setExtendedDisparity(False)
+    stereo.setSubpixel(False)
     stereo.setInputResolution(1280, 720)
 
-
     pipeline.create(DisplayStereo).build(
-        monoLeftOut=imageManipLeft.out,
-        monoRightOut=imageManipRight.out,
+        monoLeftOut=stereo.syncedLeft,
+        monoRightOut=stereo.syncedRight,
         dispOut=stereo.disparity,
         depthOut=stereo.depth
     )
 
+
+class TestSource(dai.node.ThreadedHostNode):
+    def __init__(self):
+        super().__init__()
+        self.output = self.createOutput()
+        self.instance_num = None
+        self.timestamp = 0
+        self.index = 0
+        self.name = None
+
+    def run(self):
+        while self.isRunning():
+            buffer = dai.ImgFrame()
+            path = 'dataset/' + str(self.index) + '/' + self.name + '.png'
+            data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
+            tstamp = datetime.timedelta(seconds = self.timestamp // 1000,
+                                        milliseconds = self.timestamp % 1000)
+            buffer.setData(data)
+            buffer.setTimestamp(tstamp)
+            buffer.setTimestampDevice(tstamp)
+            buffer.setInstanceNum(self.instance_num)
+            buffer.setType(dai.ImgFrame.Type.RAW8)
+            buffer.setWidth(1280)
+            buffer.setHeight(720)
+
+            self.output.send(buffer)
+            if self.timestamp == 0:
+                self.output.send(buffer)
+
+            print("Sent frame: {:25s}".format(path), 'timestamp_ms:', self.timestamp)
+            self.timestamp += frame_interval
+            self.index = (self.index + 1) % dataset_size
+
+            if 1: # Optional delay between iterations, host driven pipeline
+                sleep(frame_interval / 1000)
+
+    def set_instance_num(self, instance_num):
+        self.instance_num = instance_num
+
+    def set_name(self, name):
+        self.name = name
 
 
 # The operations done here seem very CPU-intensive, TODO
@@ -326,6 +331,7 @@ class DisplayStereo(dai.node.HostNode):
         return self
     
     def process(self, monoLeftFrame : dai.ImgFrame, monoRightFrame : dai.ImgFrame, dispFrame : dai.ImgFrame, depthFrame : dai.ImgFrame) -> None:
+        
         cv2.imshow("rectified_left", self.mono_convert_to_cv2_frame(monoLeftFrame))
         cv2.imshow("rectified_right", self.mono_convert_to_cv2_frame(monoRightFrame))
         cv2.imshow("disparity", self.disparity_convert_to_cv2_frame(dispFrame))
@@ -381,45 +387,11 @@ def test_pipeline():
         # create_rgb_cam_pipeline(pipeline)
         # create_mono_cam_pipeline(pipeline)
 
-        create_video_from_images("in_left", "in_left.mp4")
-        create_video_from_images("in_right", "in_right.mp4")
 
-        create_stereo_depth_pipeline_from_dataset(pipeline, ["in_left.mp4", "in_right.mp4"])
+        create_stereo_depth_pipeline_from_dataset(pipeline)
 
  
         pipeline.run()
-
-
-    # with dai.Device() as device:
-    #     # Need to set a timestamp for input frames, for the sync stage in Stereo node
-    #     timestamp_ms = 0
-    #     index = 0
-    #     while True:
-    #         # Handle input streams, if any
-    #         if in_q_list:
-    #             dataset_size = 2  # Number of image pairs
-    #             frame_interval_ms = 33
-    #             for i, q in enumerate(in_q_list):
-    #                 name = q.getName()
-    #                 path = 'dataset/' + str(index) + '/' + name + '.png'
-    #                 data = cv2.imread(path, cv2.IMREAD_GRAYSCALE).reshape(720*1280)
-    #                 tstamp = datetime.timedelta(seconds = timestamp_ms // 1000,
-    #                                             milliseconds = timestamp_ms % 1000)
-    #                 img = dai.ImgFrame()
-    #                 img.setData(data)
-    #                 img.setTimestamp(tstamp)
-    #                 img.setInstanceNum(inStreamsCameraID[i])
-    #                 img.setType(dai.ImgFrame.Type.RAW8)
-    #                 img.setWidth(1280)
-    #                 img.setHeight(720)
-    #                 q.send(img)
-    #                 if timestamp_ms == 0:  # Send twice for first iteration
-    #                     q.send(img)
-    #                 print("Sent frame: {:25s}".format(path), 'timestamp_ms:', timestamp_ms)
-    #             timestamp_ms += frame_interval_ms
-    #             index = (index + 1) % dataset_size
-    #             if 1: # Optional delay between iterations, host driven pipeline
-    #                 sleep(frame_interval_ms / 1000)
 
 
 test_pipeline()

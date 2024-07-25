@@ -7,14 +7,14 @@ import depthai as dai
 from face_recognition import FaceRecognition
 from face_recognition_node import FaceRecognitionNode
 from detections_recognitions_sync import DetectionsRecognitionsSync
-
+import cv2
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-name", "--name", type=str, help="Name of the person for database saving")
 
 args = parser.parse_args()
 
-VIDEO_SIZE = (1072, 1072)
+VIDEO_SIZE = (1280, 800)
 databases = "databases"
 if not os.path.exists(databases):
     os.mkdir(databases)
@@ -25,9 +25,9 @@ with dai.Pipeline() as pipeline:
     print("Creating Color Camera...")
     cam = pipeline.create(dai.node.ColorCamera).build()
     # For ImageManip rotate you need input frame of multiple of 16
-    cam.setPreviewSize(1072, 1072)
+    cam.setPreviewSize(1280, 800)
     cam.setVideoSize(VIDEO_SIZE)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
 
@@ -36,9 +36,9 @@ with dai.Pipeline() as pipeline:
     # wait (freeze). Copying frames and setting ImageManip pool size to
     # higher number will fix this issue.
     copy_manip = pipeline.create(dai.node.ImageManip)
-    cam.preview.link(copy_manip.inputImage)
     copy_manip.setNumFramesPool(20)
     copy_manip.setMaxOutputFrameSize(1072*1072*3)
+    cam.preview.link(copy_manip.inputImage)
 
     # ImageManip that will crop the frame before sending it to the Face detection NN node
     face_det_manip = pipeline.create(dai.node.ImageManip)
@@ -110,6 +110,29 @@ with dai.Pipeline() as pipeline:
     )
 
     print("Pipeline created.")
-    pipeline.run()
+    # pipeline.run()
+
+    rgb_q = cam.video.createOutputQueue()
+    detec = sync_node.output.createOutputQueue()
+
+    pipeline.start()
+
+    while pipeline.isRunning():
+        
+        if rgb_q.has() and detec.has():
+            video = rgb_q.tryGet()
+            det = detec.tryGet()
+
+            detections: dai.ImgDetections = det.detections
+            recognitions: list[dai.NNData] = det.nn_data
+
+            frame = video.getCvFrame()
+            dets = detections.detections
+
+            cv2.imshow("color", frame)
+
+        if cv2.waitKey(1) == ord('q'):
+            break
+    
 
     print("Pipeline ended.")
