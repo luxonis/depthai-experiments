@@ -10,20 +10,15 @@ from gaze_estimation import GazeEstimation
 from display import Display
 from batching_neural_network import BatchingNeuralNetwork
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
-parser.add_argument('-cam', '--camera', action="store_true", help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
 parser.add_argument('-vid', '--video', type=str, help="Path to video file to be used for inference (conflicts with -cam)")
 parser.add_argument('-laz', '--lazer', action="store_true", help="Lazer mode")
 args = parser.parse_args()
 
 debug = not args.no_debug
 camera = not args.video
-
-if args.camera and args.video:
-    raise ValueError("Incorrect command line parameters! \"-cam\" cannot be used with \"-vid\"!")
-elif args.camera is False and args.video is None:
-    raise ValueError("Missing inference source! Either use \"-cam\" to run on DepthAI camera or \"-vid <path>\" to run on video file")
 
 print("Creating pipeline...")
 with dai.Pipeline() as pipeline:
