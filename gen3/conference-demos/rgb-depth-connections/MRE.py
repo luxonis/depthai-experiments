@@ -4,6 +4,7 @@ import cv2
 import depthai as dai
 import numpy as np
 import blobconverter
+import datetime
 
 class Display(dai.node.HostNode):
     def __init__(self) -> None:       
@@ -25,6 +26,29 @@ class Display(dai.node.HostNode):
     # def process(self, rgb_frame : dai.ImgFrame, in_nn : dai.SpatialImgDetections) -> None: # synced
     #     print("ok")
     #     pass
+
+
+frameInterval = 33
+class TestPassthrough(dai.node.ThreadedHostNode):
+    def __init__(self):
+        super().__init__()
+        self.input = self.createInput()
+        self.output = self.createOutput()
+        self.timestamp = 0
+        self.instanceNum = None
+
+
+    def run(self):
+        while self.isRunning():
+            buffer : dai.Buffer = self.input.get()
+
+            tstamp = datetime.timedelta(seconds = self.timestamp // 1000,
+                                        milliseconds = self.timestamp % 1000)
+            buffer.setTimestamp(tstamp)
+            buffer.setTimestampDevice(tstamp)
+            
+            self.output.send(buffer)
+            self.timestamp += frameInterval
 
 
 with dai.Pipeline() as pipeline:
@@ -49,7 +73,9 @@ with dai.Pipeline() as pipeline:
     monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
     monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=monoLeft.out, right=monoRight.out)
+    stereo = pipeline.create(dai.node.StereoDepth)
+    monoLeft.out.link(stereo.left)
+    monoRight.out.link(stereo.right)
 
     # setting node configs
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
@@ -73,6 +99,14 @@ with dai.Pipeline() as pipeline:
 
     camRgb.preview.link(spatialDetectionNetwork.input)
     stereo.depth.link(spatialDetectionNetwork.inputDepth)
+
+    host1 = pipeline.create(TestPassthrough)
+    host2 = pipeline.create(TestPassthrough)
+    host3 = pipeline.create(TestPassthrough)
+
+    host1.output.link(camRgb.preview)
+    host2.output.link(spatialDetectionNetwork.passthroughDepth)
+    host3.output.link(spatialDetectionNetwork.out)
 
     pipeline.create(Display).build(
         cam_rgb=camRgb.preview,

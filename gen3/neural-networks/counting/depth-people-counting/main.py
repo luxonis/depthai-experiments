@@ -2,7 +2,6 @@
 import cv2
 import depthai as dai
 import numpy as np
-# from depthai_sdk import Replay
 import argparse
 from pathlib import Path
 import datetime
@@ -27,9 +26,6 @@ class TextHelper:
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', default='depth-people-counting-01', type=str, help="Path to depthai-recording")
 args = parser.parse_args()
-
-def to_planar(arr: np.ndarray) -> list:
-    return arr.transpose(2, 0, 1).flatten()
 
 THRESH_DIST_DELTA = 0.5
 class PeopleCounter:
@@ -82,20 +78,90 @@ class Display(dai.node.HostNode):
     def __init__(self):
         super().__init__()
 
-    def build(self, leftOut, rightOut, depth, disp):
-        self.link_args(leftOut, rightOut, depth, disp)
+
+    def build(self, disp_out : dai.Node.Output, tracklets : dai.Node.Output, detInQ, frameInQ):
+        self.text = TextHelper()
+        self.counter = PeopleCounter()
+        self.detInQ = detInQ
+        self.frameInQ = frameInQ
+
+        self.link_args(disp_out, tracklets)
         self.sendProcessingToPipeline(True)
         return self
     
-    def process(self, leftFrame : dai.Buffer, rightFrame : dai.Buffer, depth, disp):
-        assert (isinstance(leftFrame, dai.ImgFrame))
-        assert (isinstance(rightFrame, dai.ImgFrame))
 
-        cv2.imshow("left", leftFrame.getCvFrame())
-        cv2.imshow("right", rightFrame.getCvFrame())
+    def process(self, disp, tracklets):
+        depthFrame = disp.getFrame()
+        depthFrame = (depthFrame*self.disparity_multiplier).astype(np.uint8)
+        depthRgb = cv2.applyColorMap(depthFrame, cv2.COLORMAP_JET)  
 
-        if cv2.waitKey(1) == ord('q'):
+        if tracklets is not None:
+            self.counter.new_tracklets(tracklets.tracklets)
+
+        # Crop only the corridor:
+        
+        cropped = depthFrame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
+        cv2.imshow('Crop', cropped)
+
+        ret, thresh = cv2.threshold(cropped, 125, 145, cv2.THRESH_BINARY)
+
+        blob = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (37,37)))
+        # cv2.imshow('blob', blob)
+
+        edged = cv2.Canny(blob, 20, 80)
+        # cv2.imshow('Canny', edged)
+
+        contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+
+        dets = dai.ImgDetections()
+        if len(contours) != 0:
+            c = max(contours, key = cv2.contourArea)
+            x,y,w,h = cv2.boundingRect(c)
+            # cv2.imshow('Rect', text.rectangle(blob, (x,y), (x+w, y+h)))
+            x += DETECTION_ROI[0]
+            y += DETECTION_ROI[1]
+            area = w*h
+
+            if 15000 < area:
+                # Send the detection to the device - ObjectTracker node
+                det = dai.ImgDetection()
+                det.label = 1
+                det.confidence=1.0
+                det.xmin = x
+                det.ymin = y
+                det.xmax = x + w
+                det.ymax = y + h
+                dets.detections = [det]
+
+                # Draw rectangle on the biggest countour
+                self.text.rectangle(depthRgb, (x, y), (x+w, y+h), size=2.5)
+
+        self.detInQ.send(dets)
+        imgFrame = dai.ImgFrame()
+        imgFrame.setData(self.to_planar(depthRgb))
+        imgFrame.setType(dai.ImgFrame.Type.BGR888p)
+        imgFrame.setWidth(depthRgb.shape[0])
+        imgFrame.setHeight(depthRgb.shape[1])
+        self.frameInQ.send(imgFrame)
+
+        self.text.rectangle(depthRgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
+        self.text.putText(depthRgb, str(self.counter), (20, 40))
+
+        cv2.imshow('depth', depthRgb)
+
+        key = cv2.waitKey(1)
+        if key == ord('q'):
             self.stopPipeline()
+        # elif key == 32: # Space
+        #     self.togglePause()
+    
+
+    def set_disparity_multiplier(self, disp_multiplier):
+        self.disparity_multiplier = disp_multiplier
+
+    def to_planar(self, arr: np.ndarray) -> list:
+        return arr.transpose(2, 0, 1).flatten()
+
 
 frameInterval = 33
 class TestPassthrough(dai.node.ThreadedHostNode):
@@ -106,6 +172,7 @@ class TestPassthrough(dai.node.ThreadedHostNode):
         self.timestamp = 0
         self.instanceNum = None
 
+
     def run(self):
         while self.isRunning():
             buffer : dai.ImgFrame = self.input.get()
@@ -114,35 +181,34 @@ class TestPassthrough(dai.node.ThreadedHostNode):
             tstamp = datetime.timedelta(seconds = self.timestamp // 1000,
                                         milliseconds = self.timestamp % 1000)
             buffer.setTimestamp(tstamp)
-            buffer.setWidth(1280)
-            buffer.setHeight(720)
             buffer.setTimestampDevice(tstamp)
-            buffer.setType(dai.ImgFrame.Type.RAW8)
-
-            # if self.timestamp == 0:
-            #     self.output.send(buffer)
+            buffer.setType(dai.ImgFrame.Type.GRAY8)
+            
             self.output.send(buffer)
-
-            # print('timestamp_ms:', self.timestamp)
             self.timestamp += frameInterval
+
 
     def setInstanceNum(self, instanceNum):
         self.instanceNum = instanceNum
 
 
-with dai.Pipeline() as pipeline:
+def to_planar(arr: np.ndarray) -> list:
+    return arr.transpose(2, 0, 1).flatten()
 
-    #TODO video input
+
+with dai.Pipeline() as pipeline:
 
     path = Path(args.path).resolve().absolute()
 
     left = pipeline.create(dai.node.ReplayVideo)
     left.setReplayVideoFile(path / 'left.mp4')
-    left.setOutFrameType(dai.ImgFrame.Type.RAW8)
+    left.setOutFrameType(dai.ImgFrame.Type.GRAY8) # RAW8
+    left.setSize(1280, 800)
 
     right = pipeline.create(dai.node.ReplayVideo)
     right.setReplayVideoFile(path / 'right.mp4')
-    right.setOutFrameType(dai.ImgFrame.Type.RAW8)
+    right.setOutFrameType(dai.ImgFrame.Type.GRAY8) # RAW8
+    right.setSize(1280, 800)
     
     pipeline.setCalibrationData(dai.CalibrationHandler(str(path / 'calib.json')))
 
@@ -156,141 +222,105 @@ with dai.Pipeline() as pipeline:
 
     stereo = pipeline.create(dai.node.StereoDepth).build(left=host1.output, right=host2.output)
 
-    stereo.initialConfig.setConfidenceThreshold(200)
-    stereo.setRectifyEdgeFillColor(0) # Black, to better see the cutout
     stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7) # KERNEL_7x7 default
     stereo.setLeftRightCheck(True)
-    stereo.setExtendedDisparity(False)
     stereo.setSubpixel(False)
-    stereo.setInputResolution(1280, 720)
 
-    pipeline.create(Display).build(
-        leftOut=host1.output,
-        rightOut=host2.output,
-        depth=stereo.depth,
-        disp=stereo.disparity
-    )
+    objectTracker = pipeline.create(dai.node.ObjectTracker)
+    objectTracker.inputTrackerFrame.setBlocking(True)
+    objectTracker.inputDetectionFrame.setBlocking(True)
+    objectTracker.inputDetections.setBlocking(True)
+    objectTracker.setDetectionLabelsToTrack([1])  # track only person
+    # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
+    objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
+    # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
+    objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.UNIQUE_ID)
 
-    pipeline.run()
+    print("pipeline created")
 
-    # # Create Replay object
-    # replay = Replay(args.path)
+    detInQ = objectTracker.inputDetections.createInputQueue()
+    frameInQ = objectTracker.inputDetectionFrame.createInputQueue()
 
-    # # Initialize the pipeline. This will create required XLinkIn's and connect them together
-    # pipeline, nodes = replay.initPipeline()
+    tracklets_out = objectTracker.out.createOutputQueue()
+    depth_q_out = stereo.disparity.createOutputQueue()
 
-    # nodes.stereo.initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7) # KERNEL_7x7 default
-    # nodes.stereo.setLeftRightCheck(True)
-    # # nodes.stereo.setSubpixel(True)
+    disparityMultiplier = 255 / stereo.initialConfig.getMaxDisparity()
+    text = TextHelper()
+    counter = PeopleCounter()
 
-    # depthOut = pipeline.createXLinkOut()
-    # depthOut.setStreamName("depthOut")
-    # nodes.stereo.disparity.link(depthOut.input)
 
-    # objectTracker = pipeline.createObjectTracker()
-    # objectTracker.inputTrackerFrame.setBlocking(True)
-    # objectTracker.inputDetectionFrame.setBlocking(True)
-    # objectTracker.inputDetections.setBlocking(True)
-    # objectTracker.setDetectionLabelsToTrack([1])  # track only person
-    # # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS
-    # objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
-    # # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
-    # objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.UNIQUE_ID)
+    pipeline.start()
 
-    # # Linking
-    # xinFrame = pipeline.createXLinkIn()
-    # xinFrame.setStreamName("frameIn")
-    # xinFrame.out.link(objectTracker.inputDetectionFrame)
+    while pipeline.isRunning():
+        depthFrame = depth_q_out.get().getFrame()
+        depthFrame = (depthFrame*disparityMultiplier).astype(np.uint8)
+        depthRgb = cv2.applyColorMap(depthFrame, cv2.COLORMAP_JET)
 
-    # # Maybe we need to send the old frame here, not sure
-    # xinFrame.out.link(objectTracker.inputTrackerFrame)
+        trackletsIn = tracklets_out.tryGet()
+        if trackletsIn is not None:
+            counter.new_tracklets(trackletsIn.tracklets)
+            print("new tracklets")
 
-    # xinDet = pipeline.createXLinkIn()
-    # xinDet.setStreamName("detIn")
-    # xinDet.out.link(objectTracker.inputDetections)
-
-    # trackletsOut = pipeline.createXLinkOut()
-    # trackletsOut.setStreamName("trackletsOut")
-    # objectTracker.out.link(trackletsOut.input)
-
-# with dai.Device(pipeline) as device:
-#     replay.createQueues(device)
-
-#     depthQ = device.getOutputQueue(name="depthOut", maxSize=4, blocking=False)
-#     trackletsQ = device.getOutputQueue(name="trackletsOut", maxSize=4, blocking=False)
-
-#     detInQ = device.getInputQueue("detIn")
-#     frameInQ = device.getInputQueue("frameIn")
-
-#     disparityMultiplier = 255 / nodes.stereo.initialConfig.getMaxDisparity()
-
-#     text = TextHelper()
-#     counter = PeopleCounter()
-
-#     while replay.sendFrames():
-#         depthFrame = depthQ.get().getFrame()
-#         depthFrame = (depthFrame*disparityMultiplier).astype(np.uint8)
-#         depthRgb = cv2.applyColorMap(depthFrame, cv2.COLORMAP_JET)
-
-#         trackletsIn = trackletsQ.tryGet()
-#         if trackletsIn is not None:
-#             counter.new_tracklets(trackletsIn.tracklets)
-
-#         # Crop only the corridor:
+        # Crop only the corridor:
         
-#         cropped = depthFrame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
-#         cv2.imshow('Crop', cropped)
+        cropped = depthFrame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
+        cv2.imshow('Crop', cropped)
 
-#         ret, thresh = cv2.threshold(cropped, 125, 145, cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(cropped, 125, 145, cv2.THRESH_BINARY)
 
-#         blob = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (37,37)))
-#         # cv2.imshow('blob', blob)
+        blob = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (37,37)))
+        # cv2.imshow('blob', blob)
 
-#         edged = cv2.Canny(blob, 20, 80)
-#         # cv2.imshow('Canny', edged)
+        edged = cv2.Canny(blob, 20, 80)
+        # cv2.imshow('Canny', edged)
 
-#         contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
-#         dets = dai.ImgDetections()
-#         if len(contours) != 0:
-#             c = max(contours, key = cv2.contourArea)
-#             x,y,w,h = cv2.boundingRect(c)
-#             # cv2.imshow('Rect', text.rectangle(blob, (x,y), (x+w, y+h)))
-#             x += DETECTION_ROI[0]
-#             y += DETECTION_ROI[1]
-#             area = w*h
+        dets = dai.ImgDetections()
+        if len(contours) != 0:
+            c = max(contours, key = cv2.contourArea)
+            x,y,w,h = cv2.boundingRect(c)
+            # cv2.imshow('Rect', text.rectangle(blob, (x,y), (x+w, y+h)))
+            x += DETECTION_ROI[0]
+            y += DETECTION_ROI[1]
+            area = w*h
 
-#             if 15000 < area:
-#                 # Send the detection to the device - ObjectTracker node
-#                 det = dai.ImgDetection()
-#                 det.label = 1
-#                 det.confidence=1.0
-#                 det.xmin = x
-#                 det.ymin = y
-#                 det.xmax = x + w
-#                 det.ymax = y + h
-#                 dets.detections = [det]
+            if 15000 < area:
+                # Send the detection to the device - ObjectTracker node
+                det = dai.ImgDetection()
+                det.label = 1
+                det.confidence=1.0
+                det.xmin = x
+                det.ymin = y
+                det.xmax = x + w
+                det.ymax = y + h
+                dets.detections = [det]
 
-#                 # Draw rectangle on the biggest countour
-#                 text.rectangle(depthRgb, (x, y), (x+w, y+h), size=2.5)
+                # Draw rectangle on the biggest countour
+                text.rectangle(depthRgb, (x, y), (x+w, y+h), size=2.5)
 
-#         detInQ.send(dets)
-#         imgFrame = dai.ImgFrame()
-#         imgFrame.setData(to_planar(depthRgb))
-#         imgFrame.setType(dai.RawImgFrame.Type.BGR888p)
-#         imgFrame.setWidth(depthRgb.shape[0])
-#         imgFrame.setHeight(depthRgb.shape[1])
-#         frameInQ.send(imgFrame)
+        detInQ.send(dets)
+        imgFrame = dai.ImgFrame()
+        imgFrame.setFrame(to_planar(depthRgb))
+        imgFrame.setType(dai.ImgFrame.Type.BGR888p)
+        imgFrame.setWidth(depthRgb.shape[0])
+        imgFrame.setHeight(depthRgb.shape[1])
+        frameInQ.send(imgFrame)
 
-#         text.rectangle(depthRgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
-#         text.putText(depthRgb, str(counter), (20, 40))
+        text.rectangle(depthRgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
+        text.putText(depthRgb, str(counter), (20, 40))
 
-#         cv2.imshow('depth', depthRgb)
+        cv2.imshow('depth', depthRgb)
 
-#         key = cv2.waitKey(1)
-#         if key == ord('q'):
-#             break
-#         elif key == 32: # Space
-#             replay.togglePause()
+        key = cv2.waitKey(1)
+        if key == ord('q'):
+            break
 
-#     print('End of the recording')
+
+    print("pipeline finished")
+
+    # objectTracker.inputDetectionFrame .. frameIn
+    # objectTracker.inputDetections .. detIn
+
+    # stereo.disparity .. depthOut
+    # objectTracker.out .. trackletsOut
