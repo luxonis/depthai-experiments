@@ -51,6 +51,29 @@ class TestPassthrough(dai.node.ThreadedHostNode):
             self.timestamp += frameInterval
 
 
+# class HostSync:
+#     def __init__(self):
+#         self.dict = {}
+
+#     def add_msg(self, name, msg):
+#         seq = str(msg.getSequenceNum())
+#         if seq not in self.dict:
+#             self.dict[seq] = {}
+#         # print(f"Adding {name} with seq `{seq}`")
+#         self.dict[seq][name] = msg
+
+#     def get_msgs(self):
+#         remove = []
+#         for name in self.dict:
+#             remove.append(name)
+#             if len(self.dict[name]) == 3:
+#                 ret = self.dict[name]
+#                 for rm in remove:
+#                     del self.dict[rm]
+#                 return ret
+#         return None
+
+
 with dai.Pipeline() as pipeline:
 
     # Define sources and outputs
@@ -100,13 +123,14 @@ with dai.Pipeline() as pipeline:
     camRgb.preview.link(spatialDetectionNetwork.input)
     stereo.depth.link(spatialDetectionNetwork.inputDepth)
 
-    host1 = pipeline.create(TestPassthrough)
-    host2 = pipeline.create(TestPassthrough)
-    host3 = pipeline.create(TestPassthrough)
+    # host1 = pipeline.create(TestPassthrough)
+    # host2 = pipeline.create(TestPassthrough)
+    # host3 = pipeline.create(TestPassthrough)
 
-    host1.output.link(camRgb.preview)
-    host2.output.link(spatialDetectionNetwork.passthroughDepth)
-    host3.output.link(spatialDetectionNetwork.out)
+    # check how is it done
+    # host1.output.link(camRgb.preview)
+    # host2.output.link(spatialDetectionNetwork.passthroughDepth)
+    # host3.output.link(spatialDetectionNetwork.out)
 
     pipeline.create(Display).build(
         cam_rgb=camRgb.preview,

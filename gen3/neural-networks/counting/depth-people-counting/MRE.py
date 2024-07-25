@@ -144,11 +144,12 @@ with dai.Pipeline() as pipeline:
     print("pipeline created")
 
     detInQ = objectTracker.inputDetections.createInputQueue()
+
     frameInQ = objectTracker.inputDetectionFrame.createInputQueue()
     frameInQ2 = objectTracker.inputTrackerFrame.createInputQueue()
 
-    tracklets_out = objectTracker.out.createOutputQueue()
     depth_q_out = stereo.disparity.createOutputQueue()
+    tracklets_out = objectTracker.out.createOutputQueue()
 
     disparityMultiplier = 255 / stereo.initialConfig.getMaxDisparity()
     text = TextHelper()
@@ -166,6 +167,9 @@ with dai.Pipeline() as pipeline:
         trackletsIn : dai.Tracklets = tracklets_out.tryGet()
         if trackletsIn is not None:
             counter.new_tracklets(trackletsIn.tracklets)
+            print("new")
+        else:
+            print("no new")
 
         # GET CONTOURS
         cropped = depthFrame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
@@ -202,18 +206,18 @@ with dai.Pipeline() as pipeline:
 
         detInQ.send(dets)
         imgFrame = dai.ImgFrame()
-        imgFrame.setData(to_planar(depthRgb))
         imgFrame.setType(dai.ImgFrame.Type.BGR888p)
+        imgFrame.setFrame(to_planar(depthRgb))
         imgFrame.setWidth(depthRgb.shape[0])
         imgFrame.setHeight(depthRgb.shape[1])
         frameInQ.send(imgFrame)
 
-        # imgFrame2 = dai.ImgFrame()
-        # imgFrame2.setData(to_planar(depthRgb))
-        # imgFrame2.setType(dai.ImgFrame.Type.BGR888p)
-        # imgFrame2.setWidth(depthRgb.shape[0])
-        # imgFrame2.setHeight(depthRgb.shape[1])
-        # frameInQ2.send(depthRgb)
+        imgFrame2 = dai.ImgFrame()
+        imgFrame2.setType(dai.ImgFrame.Type.BGR888p)
+        imgFrame2.setFrame(to_planar(depthRgb))
+        imgFrame2.setWidth(depthRgb.shape[0])
+        imgFrame2.setHeight(depthRgb.shape[1])
+        frameInQ2.send(imgFrame2)
 
         text.rectangle(depthRgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
         text.putText(depthRgb, str(counter), (20, 40))

@@ -35,6 +35,11 @@ class DisplayEmotions(dai.node.HostNode):
             y = (bbox[1] + bbox[3]) // 2
             cv2.putText(frame, emotion_name, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
             cv2.putText(frame, emotion_name, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
+            if stereo:
+                # You could also get detection.spatialCoordinates.x and detection.spatialCoordinates.y coordinates
+                coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
+                cv2.putText(frame, coords, (bbox[0], y + 35), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
+                cv2.putText(frame, coords, (bbox[0], y + 35), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
 
         cv2.imshow("Camera", frame)     
 
@@ -52,6 +57,9 @@ emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
+
+    # stereo = 1 < len(device.getConnectedCameras())
+    stereo = False
 
     print("Creating Color Camera...")
     cam = pipeline.create(dai.node.ColorCamera)
@@ -71,8 +79,29 @@ with dai.Pipeline(device) as pipeline:
     face_det_manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
     copy_manip.out.link(face_det_manip.inputImage)
 
-    print("OAK-1 detected, app won't display spatial coordiantes")
-    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    if stereo:
+        monoLeft = pipeline.create(dai.node.MonoCamera)
+        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoLeft.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+
+        monoRight = pipeline.create(dai.node.MonoCamera)
+        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+
+        stereo = pipeline.create(dai.node.StereoDepth).build(left=monoLeft.out, right=monoRight.out)
+        stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+
+        # Spatial Detection network if OAK-D
+        print("OAK-D detected, app will display spatial coordiantes")
+        face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork).build()
+        face_det_nn.setBoundingBoxScaleFactor(0.8)
+        face_det_nn.setDepthLowerThreshold(100)
+        face_det_nn.setDepthUpperThreshold(5000)
+        stereo.depth.link(face_det_nn.inputDepth)
+    else: # Detection network if OAK-1
+        print("OAK-1 detected, app won't display spatial coordiantes")
+        face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
 
     face_det_nn.setConfidenceThreshold(0.5)
     face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))

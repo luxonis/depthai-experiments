@@ -202,12 +202,12 @@ with dai.Pipeline() as pipeline:
 
     left = pipeline.create(dai.node.ReplayVideo)
     left.setReplayVideoFile(path / 'left.mp4')
-    left.setOutFrameType(dai.ImgFrame.Type.GRAY8) # RAW8
+    left.setOutFrameType(dai.ImgFrame.Type.RAW8)
     left.setSize(1280, 800)
 
     right = pipeline.create(dai.node.ReplayVideo)
     right.setReplayVideoFile(path / 'right.mp4')
-    right.setOutFrameType(dai.ImgFrame.Type.GRAY8) # RAW8
+    right.setOutFrameType(dai.ImgFrame.Type.RAW8) 
     right.setSize(1280, 800)
     
     pipeline.setCalibrationData(dai.CalibrationHandler(str(path / 'calib.json')))
@@ -259,7 +259,6 @@ with dai.Pipeline() as pipeline:
         trackletsIn = tracklets_out.tryGet()
         if trackletsIn is not None:
             counter.new_tracklets(trackletsIn.tracklets)
-            print("new tracklets")
 
         # Crop only the corridor:
         
@@ -318,9 +317,3 @@ with dai.Pipeline() as pipeline:
 
 
     print("pipeline finished")
-
-    # objectTracker.inputDetectionFrame .. frameIn
-    # objectTracker.inputDetections .. detIn
-
-    # stereo.disparity .. depthOut
-    # objectTracker.out .. trackletsOut

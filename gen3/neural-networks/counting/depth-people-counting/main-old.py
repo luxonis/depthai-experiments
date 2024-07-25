@@ -137,6 +137,9 @@ with dai.Device(pipeline) as device:
         trackletsIn = trackletsQ.tryGet()
         if trackletsIn is not None:
             counter.new_tracklets(trackletsIn.tracklets)
+            print("new")
+        else:
+            print("no new")
 
         # Crop only the corridor:
         
