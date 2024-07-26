@@ -32,24 +32,32 @@ enc_opts = {
     'jpeg': dai.VideoEncoderProperties.Profile.MJPEG,
 }
 
-# Create pipeline
-pipeline = dai.Pipeline()
 
-# Define sources and output
-camRgb = pipeline.create(dai.node.ColorCamera)
-videoEnc = pipeline.create(dai.node.VideoEncoder)
-xout = pipeline.create(dai.node.XLinkOut)
-xout.setStreamName("enc")
+class PlayEncodedVideo(dai.node.HostNode):
+    def __init__(self) -> None:
+        super().__init__()
 
-# Properties
-camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-camRgb.setResolution(res_opts[args.resolution])
-camRgb.setFps(args.fps)
-videoEnc.setDefaultProfilePreset(camRgb.getFps(), enc_opts[args.encode])
+    
+    def build(self, enc_out : dai.Node.Output) -> "PlayEncodedVideo":
+        self.link_args(enc_out)
+        self.sendProcessingToPipeline(True)
+        self.inputs['encoded_vid'].setBlocking(True)
+        self.inputs['encoded_vid'].setMaxSize(30)
+        return self
+    
 
-# Linking
-camRgb.video.link(videoEnc.input)
-videoEnc.bitstream.link(xout.input)
+    def process(self, encoded_vid) -> None:
+        try:
+            data = encoded_vid.getData()
+            if args.verbose:
+                latms = (dai.Clock.now() - encoded_vid.getTimestamp()).total_seconds() * 1000
+                # Writing to a different channel (stderr)
+                # Also `ffplay` is printing things, adding a separator
+                print(f'Latency: {latms:.3f} ms === ', file=sys.stderr)
+            proc.stdin.write(data)
+        except:
+            self.stopPipeline()
+
 
 width, height = 720, 500
 command = [
@@ -72,22 +80,28 @@ try:
 except:
     exit("Error: cannot run ffplay!\nTry running: sudo apt install ffmpeg")
 
-# Connect to device and start pipeline
-with dai.Device(pipeline) as device:
-    # Output queue will be used to get the encoded data from the output defined above
-    q = device.getOutputQueue(name="enc", maxSize=30, blocking=True)
 
-    try:
-        while True:
-            pkt = q.get()  # Blocking call, will wait until new data has arrived
-            data = pkt.getData()
-            if args.verbose:
-                latms = (dai.Clock.now() - pkt.getTimestamp()).total_seconds() * 1000
-                # Writing to a different channel (stderr)
-                # Also `ffplay` is printing things, adding a separator
-                print(f'Latency: {latms:.3f} ms === ', file=sys.stderr)
-            proc.stdin.write(data)
-    except:
-        pass
+with dai.Pipeline() as pipeline:
+    # Define sources and output
+    camRgb = pipeline.create(dai.node.ColorCamera)
+    videoEnc = pipeline.create(dai.node.VideoEncoder)
+
+    # Properties
+    camRgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+    camRgb.setResolution(res_opts[args.resolution])
+    camRgb.setFps(args.fps)
+    videoEnc.setDefaultProfilePreset(camRgb.getFps(), enc_opts[args.encode])
+
+    # Linking
+    camRgb.video.link(videoEnc.input)
+
+    pipeline.create(PlayEncodedVideo).build(
+        enc_out=videoEnc.bitstream
+    )
+
+    print("pipeline created")
+    pipeline.run()
+    print("pipeline finished")
 
     proc.stdin.close()
+    print("process closed")
