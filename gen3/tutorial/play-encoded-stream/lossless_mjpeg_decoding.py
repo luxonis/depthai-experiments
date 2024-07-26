@@ -28,7 +28,7 @@ class DecodeFrames(dai.node.HostNode):
             if frames:
                 frame = frames[0].to_ndarray(format='bgr24')
                 print(f"AV decode frame in {(time.perf_counter() - start) * 1000} milliseconds")
-                cv2.imshow('frame', frame)
+                cv2.imshow("Preview", frame)
 
         if cv2.waitKey(1) == ord('q'):
             self.stopPipeline()
@@ -39,6 +39,7 @@ with dai.Pipeline() as pipeline:
     camRgb = pipeline.create(dai.node.ColorCamera)
     camRgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
     camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    camRgb.setFps(8)
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
     videoEnc.setDefaultProfilePreset(camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
