@@ -62,10 +62,49 @@ with dai.Pipeline() as pipeline:
     detection_nn.input.setMaxSize(1)
     downscale_manip.out.link(detection_nn.input) # Downscaled 300x300 frames
 
+    # Script node will sync high-res frames with ImgDetections
+    # Object detections will get synced with the frames.
+    script = pipeline.create(dai.node.Script)
+    # Stream NN detections to Script npode
+    detection_nn.out.link(script.inputs["nn"])
+    # Stream high-res frames to Script node
+    camRgb.preview.link(script.inputs["frames"])
+    # script.inputs["frames"].setBlocking(False)
+    # Currenly there are no bindings for ImgDetections.getSequenceNum() inside Script node
+    detection_nn.passthrough.link(script.inputs['passthrough'])
+
+    script.setScript("""
+    l = [] # List of images
+
+    # So the correct frame will be the first in the list
+    def get_latest_frame(seq):
+        global l
+        for i, frame in enumerate(l):
+            if seq == frame.getSequenceNum():
+                # node.warn(f"List len {len(l)} Frame with same seq num: {i},seq {seq}")
+                l = l[i:]
+                break
+        return l[0]
+
+    while True:
+        l.append(node.io['frames'].get())
+
+        face_dets = node.io['nn'].tryGet()
+        # node.warn(f"Faces detected: {len(face_dets)}")
+        if face_dets is not None:
+            seq = node.io['passthrough'].get().getSequenceNum()
+            if len(l) == 0: continue
+
+            # Sync detection with frame and send them both to the host
+            node.io['img_out'].send(get_latest_frame(seq))
+            node.io['det_out'].send(face_dets)
+
+            l.pop(0) # Remove matching frame from the list
+    """)
 
     pipeline.create(Display).build(
-        rgb_out=camRgb.preview,
-        det_out=detection_nn.out
+        rgb_out=script.outputs['img_out'],
+        det_out=script.outputs['det_out']
     )
 
     print("pipeline created")
