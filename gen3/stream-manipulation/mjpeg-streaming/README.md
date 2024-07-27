@@ -5,7 +5,9 @@ This script allows you to:
 
 ## Demo
 
-[![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)]## Installation
+[![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)]
+
+## Installation
 
 ```
 python3 -m pip install -r requirements.txt
