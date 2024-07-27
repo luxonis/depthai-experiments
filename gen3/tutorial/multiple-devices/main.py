@@ -65,16 +65,3 @@ with contextlib.ExitStack() as stack:
 
 print('Devices closed')
 
-####################################
-
-device_infos = dai.Device.getAllAvailableDevices()
-device = dai.Device(device_infos[0])
-
-
-
-with dai.Pipeline(device) as pipeline:
-
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
-
-
-

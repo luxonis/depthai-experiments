@@ -2,34 +2,41 @@ import depthai as dai
 import threading
 import contextlib
 import cv2
-import time
 
 
 def filterInternalCameras(devices : list[dai.DeviceInfo]):
     filtered_devices = []
+    for d in devices:
+        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
+            filtered_devices.append(d)
 
-    
+    return filtered_devices
+
+
+def run_pipeline(pipeline : dai.Pipeline):
+    pipeline.run()
+
 
 class Display(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-
     
+
     def build(self, cam_out : dai.Node.Output) -> "Display":
         self.link_args(cam_out)
         self.sendProcessingToPipeline(True)
         return self
     
-
     def process(self, in_frame : dai.ImgFrame) -> None:
-        cv2.imshow("rgb", in_frame.getCvFrame())
 
+        cv2.imshow("rgb", in_frame.getCvFrame())
         if cv2.waitKey(1) == ord('q'):
+
             self.stopPipeline()
 
 
 # This can be customized to pass multiple parameters
-def getPipeline(dev, stereo):
+def getPipeline(dev : dai.Device, stereo : bool):
     pipeline = dai.Pipeline(dev)
 
     # Define a source - color camera
@@ -50,7 +57,7 @@ def getPipeline(dev, stereo):
     return pipeline
 
 
-def worker(dev_info, stack, dic):
+def pair_device_with_pipeline(dev_info, stack, dic : list):
     openvino_version = dai.OpenVINO.Version.VERSION_2021_4
     device: dai.Device = stack.enter_context(dai.Device(openvino_version, dev_info, False))
 
@@ -63,29 +70,27 @@ def worker(dev_info, stack, dic):
     print("   >>> Cameras:", *[c.name for c in cameras])
     print("   >>> USB speed:", usb_speed.name)
 
-
-    dic["pipeline-" + mxid] = getPipeline(device, len(cameras)==3)
-
-device_infos = dai.Device.getAllAvailableDevices()
-print(f'Found {len(device_infos)} devices')
+    dic.append(getPipeline(device, len(cameras)==3))
 
 
+devices = filterInternalCameras(dai.Device.getAllAvailableDevices())
+print(f'Found {len(devices)} internal devices')
 
 
 with contextlib.ExitStack() as stack:
-    pipelines = {}
-    threads = []
-    for dev in device_infos:
-        thread = threading.Thread(target=worker, args=(dev, stack, pipelines))
+    pipelines = []
+    threads : list[threading.Thread] = []
+    
+    for dev in devices:
+        pair_device_with_pipeline(dev, stack, pipelines)
+
+    for pipeline in pipelines:
+        thread = threading.Thread(target=run_pipeline, args=(pipeline,))
         thread.start()
         threads.append(thread)
 
     for t in threads:
-        t.join() # Wait for all threads to finish
-
-
-    for pipeline in pipelines:
-        pipeline.run()
+        t.join()
 
 
 print('Devices closed')
