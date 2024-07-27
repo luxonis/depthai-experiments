@@ -1,0 +1,5 @@
+opencv-python==4.10.0.84
+depthai~=3.0a
+foxglove-websocket==0.1.2
+numpy==1.26.4
+open3d==0.18.0

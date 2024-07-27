@@ -3,11 +3,6 @@ import math
 import depthai as dai
 import numpy as np
 
-VISUALIZE = False
-
-if VISUALIZE:
-    import open3d as o3d
-
 class StereoInference:
     def __init__(self, device: dai.Device, resolution_num, width, heigth) -> None:
         calibData = device.readCalibration()
@@ -88,9 +83,6 @@ class Triangulation(dai.node.HostNode):
         self.sendProcessingToPipeline(True)
         self._stereoInference = StereoInference(device, resolution_number, width=300, heigth=300)
 
-        if VISUALIZE:
-            self._vis = o3d.visualization.Visualizer()
-            self._vis.create_window()
         return self
 
     def process(self, face_left: dai.Buffer, face_right: dai.Buffer,
@@ -134,18 +126,7 @@ class Triangulation(dai.node.HostNode):
                         y += y_delta
                         self._textHelper.putText(combined, s, (10, y))
 
-            if VISUALIZE:
-                # For 3d point projection.
-                pcl = o3d.geometry.PointCloud()
-                pcl.points = o3d.utility.Vector3dVector(spatials)
-                self._vis.clear_geometries()
-                self._vis.add_geometry(pcl)
-
         cv2.imshow("Combined frame", np.concatenate((frame_left, combined, frame_right), axis=1))
-
-        if VISUALIZE:
-            self._vis.poll_events()
-            self._vis.update_renderer()
 
         if cv2.waitKey(1) == ord('q'):
             print("Pipeline exited.")
