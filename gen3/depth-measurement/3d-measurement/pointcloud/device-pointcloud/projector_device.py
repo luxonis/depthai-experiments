@@ -7,7 +7,7 @@ class PointCloudVisualizer():
         # Transform from camera to world orientation (Note the absolute position won't be correct)
         self.R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
         self.vis = o3d.visualization.Visualizer()
-        self.vis.create_window("[DepthAI] Open3D integration demo", 960, 540)
+        self.vis.create_window("[DepthAI] Open3D pointcloud demo", 960, 540)
         self.isstarted = False
 
     def visualize_pcl(self, pcl_data, downsample=False):

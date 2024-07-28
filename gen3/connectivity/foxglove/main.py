@@ -49,6 +49,9 @@ async def main():
         stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
+        """ In-place post-processing configuration for a stereo depth node
+        The best combo of filters is application specific. Hard to say there is a one size fits all.
+        They also are not free. Even though they happen on device, you pay a penalty in fps. """
         stereo.initialConfig.postProcessing.speckleFilter.enable = True
         stereo.initialConfig.postProcessing.speckleFilter.speckleRange = 60
         stereo.initialConfig.postProcessing.temporalFilter.enable = True
@@ -85,6 +88,7 @@ async def main():
         right_q = right.out.createOutputQueue(blocking=False, maxSize=1)
         pcl_q = nn.out.createOutputQueue(blocking=False, maxSize=8)
 
+        print("Pipeline created.")
         pipeline.start()
 
         # Start server and wait for foxglove connection
@@ -116,8 +120,8 @@ async def main():
                 if args.pointcloud and pcl_q.has():
                     pointcloud = pcl_q.get()
 
-                    first_layer_data = pointcloud.getAllLayerNames()[0]
-                    pcl_data = pointcloud.getTensor(first_layer_data).flatten().reshape(1, 3, resolution[0], resolution[1])
+                    first_layer_name = pointcloud.getAllLayerNames()[0]
+                    pcl_data = pointcloud.getTensor(first_layer_name).flatten().reshape(1, 3, resolution[0], resolution[1])
                     pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
 
                     process_pointcloud.visualize_pcl(pcl_data, downsample=downsample_pcl)
