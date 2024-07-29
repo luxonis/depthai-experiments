@@ -7,32 +7,28 @@ def add_msg(msg, name, seq = None):
     if seq is None:
         seq = msg.getSequenceNum()
     seq = str(seq)
-    # node.warn(f"New msg {name}, seq {seq}")
 
-    # Each seq number has it's own dict of msgs
     if seq not in msgs:
         msgs[seq] = dict()
     msgs[seq][name] = msg
 
-    # To avoid freezing (not necessary for this ObjDet model)
     if 15 < len(msgs):
         node.warn(f"Removing first element! len {len(msgs)}")
-        msgs.popitem() # Remove first element
+        msgs.popitem()
+
 
 def get_msgs():
     global msgs
-    seq_remove = [] # Arr of sequence numbers to get deleted
+    seq_remove = []
     for seq, syncMsgs in msgs.items():
-        seq_remove.append(seq) # Will get removed from dict if we find synced msgs pair
-        # node.warn(f"Checking sync {seq}")
+        seq_remove.append(seq)
 
-        # Check if we have both detections and color frame with this sequence number
-        if len(syncMsgs) == 2: # 1 frame, 1 detection
+        if len(syncMsgs) == 2:
             for rm in seq_remove:
                 del msgs[rm]
-            # node.warn(f"synced {seq}. Removed older sync values. len {len(msgs)}")
-            return syncMsgs # Returned synced msgs
+            return syncMsgs
     return None
+
 
 def correct_bb(xmin,ymin,xmax,ymax):
     if xmin < 0: xmin = 0.001
@@ -50,9 +46,7 @@ while True:
 
     face_dets = node.io['face_det_in'].tryGet()
     if face_dets is not None:
-        # TODO: in 2.18.0.0 use face_dets.getSequenceNum()
-        passthrough = node.io['passthrough'].get()
-        seq = passthrough.getSequenceNum()
+        seq = face_dets.getSequenceNum()
         add_msg(face_dets, 'dets', seq)
 
     sync_msgs = get_msgs()
@@ -63,7 +57,6 @@ while True:
             cfg = ImageManipConfig()
             bb = correct_bb(det.xmin-0.03, det.ymin-0.03, det.xmax+0.03, det.ymax+0.03)
             cfg.setCropRect(*bb)
-            # node.warn(f"Sending {i + 1}. det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
             cfg.setResize(60, 60)
             cfg.setKeepAspectRatio(False)
             node.io['manip_cfg'].send(cfg)

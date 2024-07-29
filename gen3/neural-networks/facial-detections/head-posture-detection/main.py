@@ -55,11 +55,9 @@ with dai.Pipeline(device) as pipeline:
 
     image_manip_script = pipeline.create(dai.node.Script)
     face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
-
-    face_det_nn.passthrough.link(image_manip_script.inputs['passthrough'])
     cam.preview.link(image_manip_script.inputs['preview'])
-
     image_manip_script.setScriptPath(Path(__file__).parent / 'script.py')
+
     recognition_manip = pipeline.create(dai.node.ImageManip)
     recognition_manip.initialConfig.setResize(60, 60)
     recognition_manip.inputConfig.setWaitForMessage(True)
