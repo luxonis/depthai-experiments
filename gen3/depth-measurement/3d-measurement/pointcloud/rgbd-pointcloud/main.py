@@ -4,7 +4,8 @@ import depthai as dai
 from host_pointcloud import Pointcloud
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--mono', default=False, action="store_true", help="use mono frame instead of color frame")
+parser.add_argument('-m', '--mono', default=False, action="store_true"
+                    , help="use mono frame for pointcloud coloring instead of color frame")
 args = parser.parse_args()
 
 device = dai.Device()
@@ -12,7 +13,7 @@ with dai.Pipeline(device) as pipeline:
 
     print("Creating pipeline...")
     calib_data = device.readCalibration()
-    device.setIrLaserDotProjectorIntensity(1200)
+    device.setIrLaserDotProjectorIntensity(1)
 
     left = pipeline.create(dai.node.MonoCamera)
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
@@ -47,7 +48,7 @@ with dai.Pipeline(device) as pipeline:
         width, height = right.getResolutionSize()
         intrinsics = calib_data.getCameraIntrinsics(dai.CameraBoardSocket.CAM_C, dai.Size2f(width, height))
     else:
-        cam = camRgb = pipeline.create(dai.node.ColorCamera)
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setIspScale(1, 3)
         cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)

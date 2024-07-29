@@ -25,5 +25,5 @@ python3 main.py
 ```
 optional arguments:
   -h, --help            show this help message and exit
-  -m, --mono            use mono frame instead of color frame
+  -m, --mono            use mono frame for pointcloud coloring instead of color frame
 ```
