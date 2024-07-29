@@ -1,0 +1,3 @@
+blobconverter==1.3.0
+depthai~=3.0a
+numpy~=1.0
