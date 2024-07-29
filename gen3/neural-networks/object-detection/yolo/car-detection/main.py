@@ -37,7 +37,7 @@ with dai.Pipeline() as pipeline:
         replay.setSize(nn_input_shape)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
     
-    nn = pipeline.create(dai.node.YoloDetectionNetwork).build()
+    nn = pipeline.create(dai.node.YoloDetectionNetwork)
     nn.setBlobPath(args.model)
     
     with open(str(Path(args.config).resolve())) as file:

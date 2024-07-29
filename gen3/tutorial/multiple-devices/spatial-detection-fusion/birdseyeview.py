@@ -1,5 +1,4 @@
 from camera import Camera
-from typing import List
 import numpy as np
 import cv2
 import collections
@@ -7,7 +6,7 @@ import collections
 class BirdsEyeView:
     colors = [(0, 255, 255), (255, 0, 255), (255, 255, 0), (0,0,255), (0,255,0), (255,0,0)]
 
-    def __init__(self, cameras: List[Camera], width, height, scale, trail_length=300):
+    def __init__(self, cameras: list[Camera], width, height, scale, trail_length=300):
         self.cameras = cameras
         self.width = width
         self.height = height
@@ -126,4 +125,3 @@ class BirdsEyeView:
         self.draw_groups(groups)
 
         cv2.imshow("Bird's Eye View", self.img)
-        

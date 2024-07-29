@@ -17,14 +17,8 @@ class Camera:
         self.device_info = device_info
         self.friendly_id = friendly_id
         self.mxid = device_info.getMxId()
-        self._create_pipeline()
-        self.device = dai.Device(self.pipeline, self.device_info)
-
-        self.rgb_queue = self.device.getOutputQueue(name="rgb", maxSize=1, blocking=False)
-        self.still_queue = self.device.getOutputQueue(name="still", maxSize=1, blocking=False)
-        self.control_queue = self.device.getInputQueue(name="control")
-        self.nn_queue = self.device.getOutputQueue(name="nn", maxSize=1, blocking=False)
-        self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=1, blocking=False)
+        self.device = dai.Device(self.device_info)
+        self._create_pipeline(self.device)
 
         self.window_name = f"[{self.friendly_id}] Camera - mxid: {self.mxid}"
         if show_video:
@@ -39,7 +33,6 @@ class Camera:
         print("=== Connected to " + self.device_info.getMxId())
 
     def __del__(self):
-        self.device.close()
         print("=== Closed " + self.device_info.getMxId())
 
     def _load_calibration(self):
@@ -50,8 +43,8 @@ class Camera:
         except:
             raise RuntimeError(f"Could not load calibration data for camera {self.mxid} from {path}!")
 
-    def _create_pipeline(self):
-        pipeline = dai.Pipeline()
+    def _create_pipeline(self, device):
+        pipeline = dai.Pipeline(device)
 
         # RGB cam -> 'rgb'
         cam_rgb = pipeline.create(dai.node.ColorCamera)
@@ -60,25 +53,20 @@ class Camera:
         cam_rgb.setInterleaved(False)
         cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         cam_rgb.setPreviewKeepAspectRatio(False)
-        xout_rgb = pipeline.createXLinkOut()
-        xout_rgb.setStreamName("rgb")
 
         # Depth cam -> 'depth'
         mono_left = pipeline.create(dai.node.MonoCamera)
         mono_right = pipeline.create(dai.node.MonoCamera)
         mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        mono_left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
         mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        mono_right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
         cam_stereo = pipeline.create(dai.node.StereoDepth)
         cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-        cam_stereo.setDepthAlign(dai.CameraBoardSocket.RGB) # Align depth map to the perspective of RGB camera, on which inference is done
+        cam_stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A) # Align depth map to the perspective of RGB camera, on which inference is done
         cam_stereo.setOutputSize(mono_left.getResolutionWidth(), mono_left.getResolutionHeight())
         mono_left.out.link(cam_stereo.left)
         mono_right.out.link(cam_stereo.right)
-
-        xout_depth = pipeline.create(dai.node.XLinkOut)
-        xout_depth.setStreamName("depth")
 
         # Spatial detection network -> 'nn'
         spatial_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
@@ -88,29 +76,22 @@ class Camera:
         spatial_nn.setBoundingBoxScaleFactor(0.2)
         spatial_nn.setDepthLowerThreshold(100)
         spatial_nn.setDepthUpperThreshold(5000)
-        xout_nn = pipeline.create(dai.node.XLinkOut)
-        xout_nn.setStreamName("nn")
 
         cam_rgb.preview.link(spatial_nn.input)
-        # cam_rgb.preview.link(xout_rgb.input)
         cam_stereo.depth.link(spatial_nn.inputDepth)
-        spatial_nn.passthrough.link(xout_rgb.input)
-        spatial_nn.passthroughDepth.link(xout_depth.input)
-        spatial_nn.out.link(xout_nn.input)
-
 
         # Still encoder -> 'still'
         still_encoder = pipeline.create(dai.node.VideoEncoder)
         still_encoder.setDefaultProfilePreset(1, dai.VideoEncoderProperties.Profile.MJPEG)
         cam_rgb.still.link(still_encoder.input)
-        xout_still = pipeline.createXLinkOut()
-        xout_still.setStreamName("still")
-        still_encoder.bitstream.link(xout_still.input)
 
-        # Camera control -> 'control'
-        control = pipeline.create(dai.node.XLinkIn)
-        control.setStreamName('control')
-        control.out.link(cam_rgb.inputControl)
+        self.rgb_queue = cam_rgb.preview.createOutputQueue(maxSize=1, blocking=False)
+        self.still_queue = still_encoder.bitstream.createOutputQueue(maxSize=1, blocking=False)
+        self.control_queue = cam_rgb.inputConfig.createInputQueue()
+        self.nn_queue = spatial_nn.out.createOutputQueue(maxSize=1, blocking=False)
+        self.depth_queue = spatial_nn.passthroughDepth.createOutputQueue(maxSize=1, blocking=False)
+
+        pipeline.start()
 
         self.pipeline = pipeline
 

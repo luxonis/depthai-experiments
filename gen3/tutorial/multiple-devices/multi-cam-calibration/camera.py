@@ -10,12 +10,8 @@ class Camera:
         self.device_info = device_info
         self.friendly_id = friendly_id
         self.mxid = device_info.getMxId()
-        self._create_pipeline()
-        self.device = dai.Device(self.pipeline, self.device_info)
-
-        self.rgb_queue = self.device.getOutputQueue(name="rgb", maxSize=1, blocking=False)
-        self.still_queue = self.device.getOutputQueue(name="still", maxSize=1, blocking=False)
-        self.control_queue = self.device.getInputQueue(name="control")
+        self.device = dai.Device(self.device_info)
+        self._create_pipeline(self.device)
 
         self.window_name = f"[{self.friendly_id}] Camera - mxid: {self.mxid}"
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
@@ -40,12 +36,13 @@ class Camera:
 
         print("=== Connected to " + self.device_info.getMxId())
 
+
     def __del__(self):
-        self.device.close()
         print("=== Closed " + self.device_info.getMxId())
     
-    def _create_pipeline(self):
-        pipeline = dai.Pipeline()
+
+    def _create_pipeline(self, device):
+        pipeline = dai.Pipeline(device)
 
         # RGB cam -> 'rgb'
         cam_rgb = pipeline.create(dai.node.ColorCamera)
@@ -54,24 +51,20 @@ class Camera:
         cam_rgb.setInterleaved(False)
         cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         cam_rgb.setPreviewKeepAspectRatio(False)
-        xout_rgb = pipeline.createXLinkOut()
-        xout_rgb.setStreamName("rgb")
-        cam_rgb.preview.link(xout_rgb.input)
 
         # Still encoder -> 'still'
         still_encoder = pipeline.create(dai.node.VideoEncoder)
         still_encoder.setDefaultProfilePreset(1, dai.VideoEncoderProperties.Profile.MJPEG)
         cam_rgb.still.link(still_encoder.input)
-        xout_still = pipeline.createXLinkOut()
-        xout_still.setStreamName("still")
-        still_encoder.bitstream.link(xout_still.input)
 
-        # Camera control -> 'control'
-        control = pipeline.create(dai.node.XLinkIn)
-        control.setStreamName('control')
-        control.out.link(cam_rgb.inputControl)
+        self.rgb_queue = cam_rgb.preview.createOutputQueue(maxSize=1, blocking=False)
+        self.still_queue = still_encoder.bitstream.createOutputQueue(maxSize=1, blocking=False)
+        self.control_queue = cam_rgb.inputControl.createInputQueue()
+
+        pipeline.start()
 
         self.pipeline = pipeline
+
 
     def update(self):
         in_rgb = self.rgb_queue.tryGet()
@@ -82,6 +75,7 @@ class Camera:
         self.frame_rgb = in_rgb.getCvFrame()
 
         cv2.imshow(self.window_name, self.frame_rgb)
+
 
     def capture_still(self, timeout_ms: int = 1000):
         print("capturing still")
@@ -107,6 +101,7 @@ class Camera:
 
         return still_rgb
 
+
     def draw_origin(self, frame_rgb: np.ndarray):
         points, _ = cv2.projectPoints(
             np.float64([[0, 0, 0], [0.1, 0, 0], [0, 0.1, 0], [0, 0, -0.1]]), 
@@ -120,6 +115,7 @@ class Camera:
         reprojection = cv2.line(reprojection, tuple(p_0[0]), tuple(p_z[0]), (255, 0, 0), 5)
 
         return reprojection
+
 
     def estimate_pose(self):
         frame_rgb = self.capture_still()

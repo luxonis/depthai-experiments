@@ -2,10 +2,26 @@ import cv2
 import depthai as dai
 from birdseyeview import BirdsEyeView
 from camera import Camera
-from typing import List
 import config
 
-device_infos = dai.Device.getAllAvailableDevices()
+
+def filterInternalCameras(devices : list[dai.DeviceInfo]):
+    filtered_devices = []
+    for d in devices:
+        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
+            filtered_devices.append(d)
+
+    return filtered_devices
+
+
+def get_pipelines(cameras):
+    pipelines = []
+    for camera in cameras:
+        pipelines.append(camera.pipeline)
+    return pipelines
+
+
+device_infos = filterInternalCameras(dai.Device.getAllAvailableDevices())
 if len(device_infos) == 0:
     raise RuntimeError("No devices found!")
 else:
@@ -13,7 +29,7 @@ else:
 
 device_infos.sort(key=lambda x: x.getMxId(), reverse=True) # sort the cameras by their mxId
 
-cameras: List[Camera] = []
+cameras: list[Camera] = []
 
 friendly_id = 0
 for device_info in device_infos:
@@ -23,7 +39,7 @@ for device_info in device_infos:
 
 birds_eye_view = BirdsEyeView(cameras, config.size[0], config.size[1], config.scale)
 
-while True:
+while all(pipeline.isRunning() for pipeline in get_pipelines(cameras)):
     key = cv2.waitKey(1)
 
     # QUIT - press `q` to quit

@@ -59,7 +59,7 @@ threads : list[threading.Thread] = []
 pipelines = []
 
 for dev in devices:
-    thread = threading.Thread(target=worker, args=(dev,  queues, pipelines))
+    thread = threading.Thread(target=worker, args=(dev, queues, pipelines))
     thread.start()
     threads.append(thread)
 
