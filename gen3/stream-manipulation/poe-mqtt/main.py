@@ -1,6 +1,5 @@
 import depthai as dai
 import blobconverter
-import time
 
 # Change the IP to your MQTT broker!
 MQTT_BROKER = "test.mosquitto.org"
