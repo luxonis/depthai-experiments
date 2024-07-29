@@ -3,11 +3,6 @@
 This example demonstrates how to run 2 stage inference with DepthAI library.
 It recognizes whether (all) detected faces on the frame are wearing face masks. Demo uses [face-detection-retail-0004](https://docs.openvino.ai/2021.4/omz_models_model_face_detection_retail_0004.html) model to detect faces, crops them on the device using Script node, and then sends face frames to [sbd_mask_classification_224x224](https://github.com/luxonis/depthai-model-zoo/tree/main/models/sbd_mask_classification_224x224) model which performs Mask/No-Mask classification.
 
-## Tutorial
-
-We wrote a [Deploying Custom Models](https://docs.luxonis.com/en/latest/pages/tutorials/deploying-custom-model/) that provides
-step-by-step details on how to convert, compile and deploy the SBD-Mask (custom model). Deployment part focuses on how this demo was coded.
-
 ## Demo
 
 https://user-images.githubusercontent.com/18037362/171852659-2b0d127d-5b45-4c8f-b0a8-cc152f5a92a0.mp4
