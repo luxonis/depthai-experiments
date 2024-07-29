@@ -1,0 +1,2 @@
+blobconverter==1.3.0
+depthai==2.19.1.0
