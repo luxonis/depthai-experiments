@@ -15,8 +15,7 @@ class HeadPostureDetection(dai.node.HostNode):
         self._line_type = cv2.LINE_AA
 
 
-    def build(self, img_frames: dai.Node.Output, detected_recognitions: dai.Node.Output, stereo: bool) -> "HeadPostureDetection":
-        self._stereo = stereo
+    def build(self, img_frames: dai.Node.Output, detected_recognitions: dai.Node.Output) -> "HeadPostureDetection":
         self.link_args(img_frames, detected_recognitions)
         return self
     
