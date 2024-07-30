@@ -18,37 +18,18 @@ parser.add_argument('-t', '--dev_timestamp', default=False, action='store_true',
 
 args = parser.parse_args()
 
+
 cam_list = ['left', 'rgb', 'right']
 cam_socket_opts = {
-    'rgb'  : dai.CameraBoardSocket.RGB,
-    'left' : dai.CameraBoardSocket.LEFT,
-    'right': dai.CameraBoardSocket.RIGHT,
+    'rgb'  : dai.CameraBoardSocket.CAM_C,
+    'left' : dai.CameraBoardSocket.CAM_A,
+    'right': dai.CameraBoardSocket.CAM_B,
 }
 cam_instance = {
     'rgb'  : 0,
     'left' : 1,
     'right': 2,
 }
-
-# Start defining a pipeline
-pipeline = dai.Pipeline()
-
-cam = {}
-xout = {}
-for c in cam_list:
-    xout[c] = pipeline.create(dai.node.XLinkOut)
-    xout[c].setStreamName(c)
-    if c == 'rgb':
-        cam[c] = pipeline.create(dai.node.ColorCamera)
-        cam[c].setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        cam[c].setIspScale(720, 1080)  # 1920x1080 -> 1280x720
-        cam[c].isp.link(xout[c].input)
-    else:
-        cam[c] = pipeline.create(dai.node.MonoCamera)
-        cam[c].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-        cam[c].out.link(xout[c].input)
-    cam[c].setBoardSocket(cam_socket_opts[c])
-    cam[c].setFps(args.fps)
 
 
 def get_seq(packet):
@@ -91,15 +72,31 @@ class PairingSystem:
                 del self.seq_packets[key]
 
 
-# Pipeline defined, now the device is assigned and pipeline is started
-with dai.Device(pipeline) as device:
-    tstart = time.monotonic()  # applied as an offset
+with dai.Pipeline() as pipeline:
 
+    mono_left = pipeline.create(dai.node.MonoCamera)
+    mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+    mono_left.setFps(args.fps)
+    mono_left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+
+    mono_right = pipeline.create(dai.node.MonoCamera)
+    mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+    mono_right.setFps(args.fps)
+    mono_right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
+    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam_rgb.setPreviewSize(1080, 720)
+
+    tstart = time.monotonic()  # applied as an offset
     saveidx = 0
 
-    q = {}
-    for c in cam_list:
-        q[c] = device.getOutputQueue(name=c, maxSize=4, blocking=False)
+    q = {
+        "left" : mono_left.out.createOutputQueue(), 
+        "rgb" : cam_rgb.preview.createOutputQueue(), 
+        "right" : mono_right.out.createOutputQueue()
+    }  
+    
     ps = PairingSystem()
 
     window = ' + '.join(cam_list)
@@ -111,7 +108,11 @@ with dai.Device(pipeline) as device:
         print("   num    [seconds]  diff[ms]    diff[ms]  delta")
 
     seq_prev = -1
-    while True:
+
+    pipeline.start()
+
+    while pipeline.isRunning():
+        
         # instead of get (blocking) used tryGet (nonblocking) which will return the available data or None otherwise
         for c in cam_list:
             ps.add_packet(q[c].tryGet())
@@ -141,10 +142,10 @@ with dai.Device(pipeline) as device:
                 rgb_left_diff   = (tstamp['rgb']   - tstamp['left']) * 1000
                 right_left_diff = (tstamp['right'] - tstamp['left']) * 1000
                 if (args.verbose > 1 or seq_diff != 1
-                                     or abs(rgb_left_diff)   > 0.15
-                                     or abs(right_left_diff) > 0.05):
+                                    or abs(rgb_left_diff)   > 0.15
+                                    or abs(right_left_diff) > 0.05):
                     print('{:6d} {:12.6f} {:9.3f}   {:9.3f}'.format(
-                          seq, tstamp['left'], rgb_left_diff, right_left_diff), end='')
+                        seq, tstamp['left'], rgb_left_diff, right_left_diff), end='')
                     if seq_diff != 1: print('   ', seq_diff - 1, end='')
                     print()
             frame_final = np.hstack(([frame[c] for c in cam_list]))

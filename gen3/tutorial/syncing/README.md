@@ -34,6 +34,10 @@ This example demonstrates how to  frames using their sequence numbers, from all 
 This allows displaying frames taken in exact same moment. For a better visualization, all 3 streams are horizontally stacked:
 left + rgb + right.
 
+### Implicit
+
+Showcasing implicit synchronization using host nodes.
+
 Image captured running with `python3 host-frame-sync.py -d`
 
 ![demo](https://user-images.githubusercontent.com/60824841/125710596-f490d5f5-49c5-41b9-a318-d62046450665.png)
