@@ -146,13 +146,13 @@ with dai.Device() as device:
         if not synced: return
 
         fps.nextIter()
-        print('FPS', fps.fps())
+        # print('FPS', fps.fps())
         rgb_ts, rgb = synced['rgb']
         stereo_ts, disp = synced['disp']
         imuTs, imu = synced['imu']
-        print(f"[Seq {rgb.getSequenceNum()}] Mid of RGB exposure ts: {td2ms(rgb_ts)}ms, RGB ts: {td2ms(rgb.getTimestampDevice())}ms, RGB exposure time: {td2ms(rgb.getExposureTime())}ms")
-        print(f"[Seq {disp.getSequenceNum()}] Mid of Stereo exposure ts: {td2ms(stereo_ts)}ms, Disparity ts: {td2ms(disp.getTimestampDevice())}ms, Stereo exposure time: {td2ms(disp.getExposureTime())}ms")
-        print(f"[Seq {imu.acceleroMeter.sequence}] IMU ts: {td2ms(imuTs)}ms")
+        # print(f"[Seq {rgb.getSequenceNum()}] Mid of RGB exposure ts: {td2ms(rgb_ts)}ms, RGB ts: {td2ms(rgb.getTimestampDevice())}ms, RGB exposure time: {td2ms(rgb.getExposureTime())}ms")
+        # print(f"[Seq {disp.getSequenceNum()}] Mid of Stereo exposure ts: {td2ms(stereo_ts)}ms, Disparity ts: {td2ms(disp.getTimestampDevice())}ms, Stereo exposure time: {td2ms(disp.getExposureTime())}ms")
+        # print(f"[Seq {imu.acceleroMeter.sequence}] IMU ts: {td2ms(imuTs)}ms")
         print('-----------')
 
         frameRgb = rgb.getCvFrame()
@@ -170,6 +170,8 @@ with dai.Device() as device:
         blended = cv2.addWeighted(frameRgb, rgbWeight, frameDisp, depthWeight, 0)
         cv2.imshow(blendedWindowName, blended)
 
+    iter_count = 0
+
     while True:
         for name in ['rgb', 'disp', 'imu']:
             msg = device.getOutputQueue(name).tryGet()
@@ -179,10 +181,14 @@ with dai.Device() as device:
                         imuPacket: dai.IMUPacket
                         ts = imuPacket.acceleroMeter.getTimestampDevice()
                         new_msg(imuPacket, name, ts)
+                    print("imu", iter_count)
                 else:
                     msg: dai.ImgFrame
                     ts = msg.getTimestampDevice(dai.CameraExposureOffset.MIDDLE)
                     new_msg(msg, name, ts)
+                    print("rgb / disp", iter_count)
 
         if cv2.waitKey(1) == ord('q'):
             break
+        
+        iter_count += 1
