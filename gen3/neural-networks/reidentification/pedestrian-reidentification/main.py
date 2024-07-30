@@ -17,6 +17,7 @@ with dai.Pipeline() as pipeline:
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
     cam.setPreviewNumFramesPool(10)
+    cam.setFps(15)
 
     person_det_manip = pipeline.create(dai.node.ImageManip)
     person_det_manip.initialConfig.setResize(544, 320)
