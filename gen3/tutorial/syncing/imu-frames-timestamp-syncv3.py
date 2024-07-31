@@ -25,52 +25,19 @@ class Display(dai.node.HostNode):
 
 
     def build(self, cam_isp : dai.Node.Output, disparity_out : dai.Node.Output, imu_out : dai.Node.Output) -> "Display":
-        # self.fps = FPSHandler()
-        # self.blendedWindowName = "rgb-depth"
-        # cv2.namedWindow(self.blendedWindowName)
-        # cv2.createTrackbar('RGB Weight %', self.blendedWindowName, int(rgbWeight*100), 100, self.updateBlendWeights)
 
-        self.link_args(cam_isp, disparity_out, imu_out)
+        self.link_args(cam_isp, imu_out)
         self.sendProcessingToPipeline(True)
         return self
     
 
-    def process(self, in_frame : dai.Buffer, disp_in : dai.Buffer, imu_in : dai.Buffer) -> None:
+    def process(self, in_frame : dai.Buffer, imu : dai.Buffer) -> None:
         assert(isinstance(in_frame, dai.ImgFrame))
-        assert(isinstance(disp_in, dai.ImgFrame))
+        # assert(isinstance(disp_in, dai.ImgFrame))
 
         frameRgb = in_frame.getCvFrame()
-        # frameDisp = disp_in.getFrame()
 
-        # self.fps.next_iter()
-        # print('FPS', self.fps.fps())
-
-        # frames = {
-        #     'rgb' : frameRgb,
-        #     'disp' : frameDisp,
-        #     'imu' : imu_in
-        # }
-
-        # for imu_packet in imu_in.packets:
-        #     imu_packet : dai.IMUPacket
-        #     rgb_ts = in_frame.getTimestampDevice(dai.CameraExposureOffset.MIDDLE)
-        #     disp_ts = disp_in.getTimestampDevice(dai.CameraExposureOffset.MIDDLE)
-        #     imu_ts = imu_packet.acceleroMeter.getTimestampDevice()
-        #     self.print_stats(frames, rgb_ts, disp_ts, imu_ts)
-
-        # maxDisparity = 95
-        # frameDisp = (frameDisp * 255. / maxDisparity).astype(np.uint8)
-
-        # frameDisp = cv2.applyColorMap(frameDisp, cv2.COLORMAP_TURBO)
-        # frameDisp = np.ascontiguousarray(frameDisp)
-
-        # # Need to have both frames in BGR format before blending
-        # if len(frameDisp.shape) < 3:
-        #     frameDisp = cv2.cvtColor(frameDisp, cv2.COLOR_GRAY2BGR)
-        # blended = cv2.addWeighted(frameRgb, rgbWeight, frameDisp, depthWeight, 0)
-        # cv2.imshow(self.blendedWindowName, blended)
-
-        cv2.imshow(self.blendedWindowName, frameRgb)
+        cv2.imshow("frame", frameRgb)
 
         if cv2.waitKey(1) == ord('q'):
             self.stopPipeline()
