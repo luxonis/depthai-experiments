@@ -13,7 +13,6 @@ class CumulativeObjectCounting(dai.node.HostNode):
         self._frame_count = 0
         self._axis = True
         self._roi_position = 0.5
-        self._show = True
         self._trackable_objects: dict[int, TrackableObject] = {}
         self._counter = [0, 0, 0, 0]
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
@@ -31,10 +30,6 @@ class CumulativeObjectCounting(dai.node.HostNode):
 
     def set_roi_position(self, roi_position: float) -> None:
         self._roi_position = roi_position
-    
-
-    def set_show(self, show: bool) -> None:
-        self._show = show
     
     
     def process(self, img_frame: dai.Buffer, tracklets: dai.Tracklets) -> None:

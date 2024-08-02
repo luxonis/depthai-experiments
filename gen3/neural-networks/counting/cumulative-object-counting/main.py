@@ -57,7 +57,6 @@ with dai.Pipeline() as pipeline:
     counting = pipeline.create(CumulativeObjectCounting).build(video_out, objectTracker.out)
     counting.set_axis(args.axis)
     counting.set_roi_position(args.roi_position)
-    counting.set_show(args.show)
 
     if args.save_path:
         img_manip = pipeline.create(dai.node.ImageManip)
