@@ -1,37 +1,10 @@
 #!/usr/bin/env python3
 
-import cv2
 import depthai as dai
 import argparse
-from datetime import timedelta
-import math
-
-def filter_internal_cameras(devices : list[dai.DeviceInfo]):
-    filtered_devices = []
-    for d in devices:
-        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
-            filtered_devices.append(d)
-
-    return filtered_devices
-
-
-def check_sync(queues, timestamp):
-    matching_frames = []
-    for q in queues:
-        for i, msg in enumerate(q['msgs']):
-            time_diff = abs(msg.getTimestamp() - timestamp)
-            # So below 17ms @ 30 FPS => frames are in sync
-            if time_diff <= timedelta(milliseconds=math.ceil(500 / args.fps)):
-                matching_frames.append(i)
-                break
-
-    if len(matching_frames) == len(queues):
-        # We have all frames synced. Remove the excess ones
-        for i, q in enumerate(queues):
-            q['msgs'] = q['msgs'][matching_frames[i]:]
-        return True
-    else:
-        return False
+import threading
+from multiple_devices_utilities import OpencvManager
+from multiple_devices_utilities import filter_internal_cameras
 
 
 parser = argparse.ArgumentParser(epilog='Press C to capture a set of frames.')
@@ -40,43 +13,17 @@ parser.add_argument('-f', '--fps', type=float, default=30,
 
 args = parser.parse_args()
 
-cam_socket_opts = {
-    'rgb'  : dai.CameraBoardSocket.CAM_A,
-    'left' : dai.CameraBoardSocket.CAM_B,
-    'right': dai.CameraBoardSocket.CAM_C,
-}
-cam_instance = {
-    'rgb'  : 0,
-    'left' : 1,
-    'right': 2,
-}
+
+def run_pipeline(pipeline : dai.Pipeline) -> None:
+    pipeline.run()
 
 
-# class Display(dai.node.HostNode):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-
-#     def build(self, rgb_out : dai.Node.Output, left_out : dai.Node.Output, right_out : dai.Node.Output, d_mxid) -> "Display":
-#         self.d_mxid = d_mxid
-#         self.link_args(rgb_out, left_out, right_out)
-#         self.sendProcessingToPipeline(True)
-#         return self
-    
-
-#     def process(self, rgb_frame : dai.ImgFrame, left_frame : dai.ImgFrame, right_frame : dai.ImgFrame) -> None:
-
-#         cv2.imshow("left - " + self.d_mxid, left_frame.getCvFrame())
-#         cv2.imshow("rgb - " + self.d_mxid, rgb_frame.getCvFrame())
-#         cv2.imshow("right - " + self.d_mxid, right_frame.getCvFrame())
-
-#         if cv2.waitKey(1) == ord('q'):
-#             self.stopPipeline()
-
-
-def create_pipeline(device : dai.Device, stereo : bool, queues : list):
+def get_pipeline(device : dai.Device, stereo : bool, callback : callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(device)
-    d_mxid = device.getMxId()
+
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
+    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam_rgb.setIspScale(1, 3)
 
     if stereo:
         mono_left = pipeline.create(dai.node.MonoCamera)
@@ -89,62 +36,105 @@ def create_pipeline(device : dai.Device, stereo : bool, queues : list):
         mono_right.setFps(args.fps)
         mono_right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
 
-        left_out = mono_left.out.createOutputQueue(maxSize=4, blocking=False)
-        right_out = mono_right.out.createOutputQueue(maxSize=4, blocking=False)
-
-        queues.append({
-            'queue' : left_out,
-            'msgs' : [],
-            'name' : "left - " + d_mxid
-        })
-        queues.append({
-            'queue' : right_out,
-            'msgs' : [],
-            'name' : "right - " + d_mxid
-        })
-
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
-    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam_rgb.setIspScale(1, 3)
-
-    rgb_out = cam_rgb.preview.createOutputQueue(maxSize=4, blocking=False)
-    queues.append({
-        'queue' : rgb_out,
-        'msgs' : [],
-        'name' : "rgb - " + d_mxid
-    })
+        pipeline.create(DisplayStereo, callback, device.getMxId()).build(
+            d_mxid=device.getMxId(),
+            rgb_out=cam_rgb.preview,
+            left_out=mono_left.out,
+            right_out=mono_right.out,
+        )
+    else:
+        pipeline.create(Display, callback, device.getMxId()).build(
+            d_mxid=device.getMxId(),
+            rgb_out=cam_rgb.preview,
+        )
 
     return pipeline
 
 
-device_infos = filter_internal_cameras(dai.Device.getAllAvailableDevices())
+def pair_device_with_pipeline(dev_info, pipelines : list, callback : callable) -> None:
+    device: dai.Device = dai.Device(dev_info)
 
-if len(device_infos) == 0: raise RuntimeError("No devices found!")
-else: print("Found", len(device_infos), "devices")
-queues = []
-pipelines = []
+    stereo = len(device.getConnectedCameras())==3
 
-for device_info in device_infos:
-    device = dai.Device(device_info)
+    if stereo: 
+        manager.set_custom_keys(["left - "+ str(device.getMxId()), 
+                                "rgb - " + str(device.getMxId()),
+                                "right - " + str(device.getMxId())])   
+    else: 
+        manager.set_custom_keys(["rgb - " + str(device.getMxId())])
 
-    stereo = 1 < len(device.getConnectedCameras())
-
-    pipeline = create_pipeline(device, stereo, queues)
-    pipelines.append(pipeline)
-    pipeline.start()
+    pipelines.append(get_pipeline(device, stereo, callback))
 
 
-while all(pipeline.isRunning() for pipeline in pipelines):
+class Display(dai.node.HostNode):
+    def __init__(self, frame_callback : callable, d_mxid : str) -> None:
+        super().__init__()
+        self.callback = frame_callback
+        self.d_mxid = d_mxid
+
+
+    def build(self, rgb_out : dai.Node.Output, d_mxid : str) -> "Display":
+        
+        self.d_mxid = d_mxid
+        self.link_args(rgb_out)
+        self.sendProcessingToPipeline(True)
+        return self
     
-    for queue in queues:
-        msg = queue['queue'].tryGet()
-        if msg is not None:
-            queue['msgs'].append(msg)
-            if check_sync(queues, msg.getTimestamp()):
-                for q in queues:
-                    frame = q['msgs'].pop(0).getCvFrame()
-                    cv2.imshow(q['name'], frame)
+
+    def process(self, rgb_frame : dai.ImgFrame) -> None:
+
+        self.callback(rgb_frame.getCvFrame(), "rgb - " + str(self.d_mxid))
 
 
-    if cv2.waitKey(1) == ord('q'):
-        break
+class DisplayStereo(dai.node.HostNode):
+    def __init__(self, frame_callback : callable, d_mxid : str) -> None:
+        super().__init__()
+        self.callback = frame_callback
+        self.d_mxid = d_mxid
+
+
+    def build(self, rgb_out : dai.Node.Output, d_mxid : str, left_out : dai.Node.Output, 
+              right_out : dai.Node.Output) -> "DisplayStereo":
+        
+        self.d_mxid = d_mxid
+
+        self.link_args(rgb_out, left_out, right_out)
+        self.sendProcessingToPipeline(True)
+        return self
+    
+
+    def process(self, rgb_frame : dai.ImgFrame, left_frame : dai.ImgFrame, 
+                right_frame : dai.ImgFrame) -> None:
+
+        self.callback(left_frame.getCvFrame(), "right - " + str(self.d_mxid))
+        self.callback(right_frame.getCvFrame(), "left - " + str(self.d_mxid))
+        self.callback(rgb_frame.getCvFrame(), "rgb - " + str(self.d_mxid))
+
+
+devices = filter_internal_cameras(dai.Device.getAllAvailableDevices())
+
+if len(devices) == 0: raise RuntimeError("No devices found!")
+else: print("Found", len(devices), "devices")
+
+
+pipelines : list[dai.Pipeline] = []
+threads : list[threading.Thread] = []
+manager = OpencvManager()
+
+for dev in devices:
+    pair_device_with_pipeline(dev, pipelines, manager.set_frame)
+
+for pipeline in pipelines:
+    thread = threading.Thread(target=run_pipeline, args=(pipeline,))
+    thread.start()
+    threads.append(thread)
+
+manager.run()
+
+for pipeline in pipelines:
+    pipeline.stop()
+
+for t in threads:
+    t.join()
+
+print("Devices closed")
