@@ -23,7 +23,7 @@ with dai.Pipeline() as pipeline:
     nn.setBlobPath(blobconverter.from_zoo(name="efficientnet-b0", zoo_type="depthai", shaves=6, version="2021.4"))
 
     if camera:
-        cam = pipeline.create(dai.node.ColorCamera).build()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(224, 224)
         cam.setInterleaved(False)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
