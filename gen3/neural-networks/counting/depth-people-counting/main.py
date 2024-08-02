@@ -224,7 +224,7 @@ with dai.Pipeline() as pipeline:
 
     stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7) # KERNEL_7x7 default
     stereo.setLeftRightCheck(True)
-    stereo.setSubpixel(False)
+    # stereo.setSubpixel(False)
 
     objectTracker = pipeline.create(dai.node.ObjectTracker)
     objectTracker.inputTrackerFrame.setBlocking(True)

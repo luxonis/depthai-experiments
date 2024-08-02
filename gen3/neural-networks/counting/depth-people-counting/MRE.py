@@ -2,7 +2,6 @@
 import cv2
 import depthai as dai
 import numpy as np
-import argparse
 from pathlib import Path
 import datetime
 
@@ -10,7 +9,7 @@ DETECTION_ROI = (200,300,1000,700) # Specific to `depth-person-counting-01` reco
 path = Path('depth-people-counting-01').resolve().absolute()
 
 
-class TextHelper:
+class TextHelper: # not important
     def __init__(self) -> None:
         self.bg_color = (0, 0, 0)
         self.color = (255, 255, 255)
@@ -25,61 +24,16 @@ class TextHelper:
         cv2.rectangle(frame, topLeft, bottomRight, self.color, int(size))
         return frame
 
+text = TextHelper()
 
-THRESH_DIST_DELTA = 0.5
-class PeopleCounter:
-    def __init__(self):
-        self.tracking = {}
-        self.lost_cnt = {}
-        self.people_counter = [0,0,0,0] # Up, Down, Left, Right
-
-    def __str__(self) -> str:
-        return f"Left: {self.people_counter[2]}, Right: {self.people_counter[3]}"
-
-    def tracklet_removed(self, coords1, coords2):
-        deltaX = coords2[0] - coords1[0]
-        # print('Delta X', deltaX)
-
-        if THRESH_DIST_DELTA < abs(deltaX):
-            self.people_counter[2 if 0 > deltaX else 3] += 1
-            direction = "left" if 0 > deltaX else "right"
-            print(f"Person moved {direction}")
-
-    def get_centroid(self, roi):
-        x1 = roi.topLeft().x
-        y1 = roi.topLeft().y
-        x2 = roi.bottomRight().x
-        y2 = roi.bottomRight().y
-        return ((x2+x1)/2, (y2+y1)/2)
-
-    def new_tracklets(self, tracklets):
-        for t in tracklets:
-            # If new tracklet, save its centroid
-            if t.status == dai.Tracklet.TrackingStatus.NEW:
-                self.tracking[str(t.id)] = self.get_centroid(t.roi)
-                self.lost_cnt[str(t.id)] = 0
-            elif t.status == dai.Tracklet.TrackingStatus.TRACKED:
-                self.lost_cnt[str(t.id)] = 0
-            elif t.status == dai.Tracklet.TrackingStatus.LOST:
-                self.lost_cnt[str(t.id)] += 1
-                # Tracklet has been lost for too long
-                if 10 < self.lost_cnt[str(t.id)]:
-                    self.lost_cnt[str(t.id)] = -999
-                    self.tracklet_removed(self.tracking[str(t.id)], self.get_centroid(t.roi))
-            elif t.status == dai.Tracklet.TrackingStatus.REMOVED:
-                if 0 <= self.lost_cnt[str(t.id)]:
-                    self.lost_cnt[str(t.id)] = -999
-                    self.tracklet_removed(self.tracking[str(t.id)], self.get_centroid(t.roi))
-
-
-frameInterval = 33
-class TestPassthrough(dai.node.ThreadedHostNode):
+class TestPassthrough(dai.node.ThreadedHostNode): # not important
     def __init__(self):
         super().__init__()
         self.input = self.createInput()
         self.output = self.createOutput()
         self.timestamp = 0
         self.instanceNum = None
+        self.frameInterval = 33
 
 
     def run(self):
@@ -91,17 +45,63 @@ class TestPassthrough(dai.node.ThreadedHostNode):
                                         milliseconds = self.timestamp % 1000)
             buffer.setTimestamp(tstamp)
             buffer.setTimestampDevice(tstamp)
-            buffer.setType(dai.ImgFrame.Type.RAW8)
             
             self.output.send(buffer)
-            self.timestamp += frameInterval
+            self.timestamp += self.frameInterval
 
 
     def setInstanceNum(self, instanceNum):
         self.instanceNum = instanceNum
 
 
-def to_planar(arr: np.ndarray) -> list:
+class InputsConnector(dai.node.ThreadedHostNode):
+    def __init__(self):
+        super().__init__()
+        self.input = self.createInput()
+        self.output = self.createOutput()
+
+    def run(self):
+        while self.isRunning():
+            buffer = self.input.get()
+            self.output.send(buffer)
+
+
+def get_detections(contours): # not important
+    dets = dai.ImgDetections()
+    if len(contours) != 0:
+        c = max(contours, key = cv2.contourArea)
+        x,y,w,h = cv2.boundingRect(c)
+        x += DETECTION_ROI[0]
+        y += DETECTION_ROI[1]
+        area = w*h
+
+        if 15000 < area:
+            # Send the detection to the device - ObjectTracker node
+            det = dai.ImgDetection()
+            det.label = 1
+            det.confidence=1.0
+            det.xmin = x
+            det.ymin = y
+            det.xmax = x + w
+            det.ymax = y + h
+            dets.detections = [det]
+
+            # Draw rectangle on the biggest countour
+            text.rectangle(depthRgb, (x, y), (x+w, y+h), size=2.5)
+    return dets
+
+
+def get_contours(depthFrame): # not important
+    cropped = depthFrame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
+    ret, thresh = cv2.threshold(cropped, 125, 145, cv2.THRESH_BINARY)
+    blob = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (37,37)))
+    edged = cv2.Canny(blob, 20, 80)
+    contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+
+    return contours
+
+
+def to_planar(arr: np.ndarray) -> list: # not important
     return arr.transpose(2, 0, 1).flatten()
 
 
@@ -141,87 +141,50 @@ with dai.Pipeline() as pipeline:
     objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
     objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.UNIQUE_ID)
 
-    print("pipeline created")
+
+    ### problem ###
+    connect_node = pipeline.create(InputsConnector)
+
+    connect_node.output.link(objectTracker.inputDetectionFrame)
+    # connect_node.output.link(objectTracker.inputTrackerFrame)
+    
+    frameInQ = connect_node.input.createInputQueue()
+    ### problem ###
 
     detInQ = objectTracker.inputDetections.createInputQueue()
-
-    frameInQ = objectTracker.inputDetectionFrame.createInputQueue()
-    frameInQ2 = objectTracker.inputTrackerFrame.createInputQueue()
 
     depth_q_out = stereo.disparity.createOutputQueue()
     tracklets_out = objectTracker.out.createOutputQueue()
 
-    disparityMultiplier = 255 / stereo.initialConfig.getMaxDisparity()
-    text = TextHelper()
-    counter = PeopleCounter()
-
-
+    print("pipeline created")
     pipeline.start()
 
     while pipeline.isRunning():
         depthFrame = depth_q_out.get().getFrame()
-        depthFrame = (depthFrame*disparityMultiplier).astype(np.uint8)
+        depthFrame = (depthFrame*(255 / stereo.initialConfig.getMaxDisparity())).astype(np.uint8)
         depthRgb = cv2.applyColorMap(depthFrame, cv2.COLORMAP_JET)
 
-        # trackletsIn is ALWAYS None in v3, in v2 it is almost never None
-        trackletsIn : dai.Tracklets = tracklets_out.tryGet()
+        trackletsIn = tracklets_out.tryGet()
         if trackletsIn is not None:
-            counter.new_tracklets(trackletsIn.tracklets)
-            print("new")
+            pass
         else:
-            print("no new")
+            print('no new tracklets')
 
-        # GET CONTOURS
-        cropped = depthFrame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
-        ret, thresh = cv2.threshold(cropped, 125, 145, cv2.THRESH_BINARY)
-        blob = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (37,37)))
-        edged = cv2.Canny(blob, 20, 80)
-        contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
-
-        dets = dai.ImgDetections()
-        if len(contours) != 0:
-            # PROGRAM DOES GET HERE !
-
-            c = max(contours, key = cv2.contourArea)
-            x,y,w,h = cv2.boundingRect(c)
-            x += DETECTION_ROI[0]
-            y += DETECTION_ROI[1]
-            area = w*h
-
-            if 15000 < area:
-                # PROGRAM DOES GET HERE !
-
-                # Send the detection to the device - ObjectTracker node
-                det = dai.ImgDetection()
-                det.label = 1
-                det.confidence=1.0
-                det.xmin = x
-                det.ymin = y
-                det.xmax = x + w
-                det.ymax = y + h
-                dets.detections = [det]
-
-                # Draw rectangle on the biggest countour
-                text.rectangle(depthRgb, (x, y), (x+w, y+h), size=2.5)
+        contours = get_contours(depthFrame)
+        dets = get_detections(contours)   
 
         detInQ.send(dets)
+
+        ### problem ###
         imgFrame = dai.ImgFrame()
         imgFrame.setType(dai.ImgFrame.Type.BGR888p)
         imgFrame.setFrame(to_planar(depthRgb))
         imgFrame.setWidth(depthRgb.shape[0])
         imgFrame.setHeight(depthRgb.shape[1])
         frameInQ.send(imgFrame)
-
-        imgFrame2 = dai.ImgFrame()
-        imgFrame2.setType(dai.ImgFrame.Type.BGR888p)
-        imgFrame2.setFrame(to_planar(depthRgb))
-        imgFrame2.setWidth(depthRgb.shape[0])
-        imgFrame2.setHeight(depthRgb.shape[1])
-        frameInQ2.send(imgFrame2)
+        ### problem ###
 
         text.rectangle(depthRgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
-        text.putText(depthRgb, str(counter), (20, 40))
-
         cv2.imshow('depth', depthRgb)
 
         key = cv2.waitKey(1)

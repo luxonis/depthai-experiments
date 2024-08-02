@@ -2,92 +2,139 @@
 
 import depthai as dai
 import threading
-import contextlib
 import cv2
-import time
 import blobconverter
+
+
+class OpencvManager:
+    def __init__(self, keys : list[int]):
+        self.newFrameEvent = threading.Event()
+        self.lock = threading.Lock()
+        self.frames : dict[int, dai.ImgFrame] = self._init_dictionary(keys)
+        self.detections : dict[int, dai.ImgDetections] = self._init_dictionary(keys)
+
+
+    def run(self) -> None:
+        while True:
+            self.newFrameEvent.wait()
+            for dx_id in self.detections.keys():
+                if self.detections[dx_id] is not None:
+
+                    frame = self.frames[dx_id].getCvFrame()
+                    for detection in self.detections[dx_id].detections:
+                        ymin = int(300*detection.ymin)
+                        xmin = int(300*detection.xmin)
+                        cv2.putText(frame, labelMap[detection.label], (xmin + 10, ymin + 20), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255))
+                        cv2.putText(frame, f"{int(detection.confidence * 100)}%", (xmin + 10, ymin + 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255))
+                        cv2.rectangle(frame, (xmin, ymin), (int(300*detection.xmax), int(300*detection.ymax)), (255,255,255), 2)
+
+                    cv2.imshow(f"Preview - {dx_id}", frame)
+
+                    if cv2.waitKey(1) == ord('q'):
+                        return
+    
+
+    def set_outputs(self, frame : dai.ImgFrame, detections : dai.ImgDetections, dx_id : int) -> None:
+        with self.lock:
+            self.frames[dx_id] = frame
+            self.detections[dx_id] = detections
+            self.newFrameEvent.set()
+
+    
+    def _init_dictionary(self, keys : list[int]) -> dict:
+        dic = dict()
+        for key in keys:
+            dic[key] = None
+        return dic
+
+
+class Display(dai.node.HostNode):
+    def __init__(self, callback : callable, dx_id : int) -> None:
+        super().__init__()
+        self.callback = callback
+        self.dx_id = dx_id  
+
+
+    def build(self, cam_out : dai.Node.Output, det_out : dai.Node.Output) -> "Display":
+        self.link_args(cam_out, det_out)
+        self.sendProcessingToPipeline(True)
+        return self
+    
+
+    def process(self, in_frame : dai.ImgFrame, in_det : dai.ImgDetections) -> None:
+        self.callback(in_frame, in_det, self.dx_id)
+
+
+def filterInternalCameras(devices : list[dai.DeviceInfo]):
+    filtered_devices = []
+    for d in devices:
+        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
+            filtered_devices.append(d)
+
+    return filtered_devices
+
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
-# This can be customized to pass multiple parameters
-def getPipeline():
-    # Start defining a pipeline
-    pipeline = dai.Pipeline()
 
-    # Define a source - color camera
+def run_pipeline(pipeline : dai.Pipeline) -> None:
+    pipeline.run()
+
+
+def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
+    pipeline = dai.Pipeline(dev)
+
     cam_rgb = pipeline.create(dai.node.ColorCamera)
-    # For the demo, just set a larger RGB preview size for OAK-D
     cam_rgb.setPreviewSize(300, 300)
-    cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+    cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setInterleaved(False)
 
-    detector = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    detector : dai.node.MobileNetDetectionNetwork = pipeline.create(dai.node.MobileNetDetectionNetwork)
     detector.setConfidenceThreshold(0.5)
     detector.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
     cam_rgb.preview.link(detector.input)
 
-    # Create output
-    xout_rgb = pipeline.create(dai.node.XLinkOut)
-    xout_rgb.setStreamName("rgb")
-    detector.passthrough.link(xout_rgb.input)
-
-    xout_nn = pipeline.create(dai.node.XLinkOut)
-    xout_nn.setStreamName("nn")
-    detector.out.link(xout_nn.input)
+    pipeline.create(Display, callback, dev.getMxId()).build(
+        cam_out=cam_rgb.preview,
+        det_out=detector.out
+    )
 
     return pipeline
 
-def worker(device_info, stack, devices):
-    openvino_version = dai.OpenVINO.Version.VERSION_2021_4
-    usb2_mode = False
-    device = stack.enter_context(dai.Device(openvino_version, device_info, usb2_mode))
+def pair_device_with_pipeline(device_info : dai.DeviceInfo, pipelines : list[dai.Pipeline], callback : callable) -> None:
+    device = dai.Device(device_info)
 
-    # Note: currently on POE, DeviceInfo.getMxId() and Device.getMxId() are different!
-    print("=== Connected to " + device_info.getMxId())
-    device.startPipeline(getPipeline())
-
-    # Output queue will be used to get the rgb frames from the output defined above
-    devices[device.getMxId()] = {
-        'rgb': device.getOutputQueue(name="rgb"),
-        'nn': device.getOutputQueue(name="nn"),
-    }
+    mxid = device_info.getMxId()
+    print("=== Connected to " + mxid)
+    
+    pipeline : dai.Pipeline = getPipeline(device, callback)
+    pipelines.append(pipeline)
 
 
-# https://docs.python.org/3/library/contextlib.html#contextlib.ExitStack
-with contextlib.ExitStack() as stack:
-    device_infos = dai.Device.getAllAvailableDevices()
-    if len(device_infos) == 0:
-        raise RuntimeError("No devices found!")
-    else:
-        print("Found", len(device_infos), "devices")
-    devices = {}
-    threads = []
+devices = filterInternalCameras(dai.Device.getAllAvailableDevices())
+if len(devices) == 0:
+    raise RuntimeError("No devices found!")
+else:
+    print("Found", len(devices), "devices")
 
-    for device_info in device_infos:
-        thread = threading.Thread(target=worker, args=(device_info, stack, devices))
-        thread.start()
-        threads.append(thread)
+pipelines : list[dai.Pipeline] = []
+threads : list[threading.Thread] = []
+manager = OpencvManager([device.getMxId() for device in devices])
 
-    for t in threads:
-        t.join() # Wait for all threads to finish (to connect to devices)
+for dev in devices:
+    pair_device_with_pipeline(dev, pipelines, manager.set_outputs)
 
-    while True:
-        for mxid, q in devices.items():
-            if q['nn'].has():
-                dets = q['nn'].get().detections
-                frame = q['rgb'].get().getCvFrame()
+for pipeline in pipelines:
+    thread = threading.Thread(target=run_pipeline, args=(pipeline,))
+    thread.start()
+    threads.append(thread)
 
-                for detection in dets:
-                    ymin = int(300*detection.ymin)
-                    xmin = int(300*detection.xmin)
-                    cv2.putText(frame, labelMap[detection.label], (xmin + 10, ymin + 20), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255))
-                    cv2.putText(frame, f"{int(detection.confidence * 100)}%", (xmin + 10, ymin + 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255))
-                    cv2.rectangle(frame, (xmin, ymin), (int(300*detection.xmax), int(300*detection.ymax)), (255,255,255), 2)
-                # Show the frame
+manager.run()
 
-                cv2.imshow(f"Preview - {mxid}", frame)
+for pipeline in pipelines:
+    pipeline.stop()
 
-        if cv2.waitKey(1) == ord('q'):
-            break
+for t in threads:
+    t.join() # Wait for all threads to finish (to connect to devices)

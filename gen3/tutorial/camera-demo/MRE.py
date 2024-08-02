@@ -176,52 +176,53 @@ def test_pipeline():
             depthOut=stereo.depth
         )
 
+        pipeline.run()
  
-        left_q = stereo.syncedLeft.createOutputQueue(maxSize=4, blocking=False)
-        # right_q = stereo.syncedRight.createOutputQueue(maxSize=4, blocking=False)
+        # left_q = stereo.syncedLeft.createOutputQueue(maxSize=4, blocking=False)
+        # # right_q = stereo.syncedRight.createOutputQueue(maxSize=4, blocking=False)
 
-        # disp_q = stereo.disparity.createOutputQueue()
-        # depth_q = stereo.depth.createOutputQueue()
+        # # disp_q = stereo.disparity.createOutputQueue()
+        # # depth_q = stereo.depth.createOutputQueue()
 
-        img_q = image_manip_left.out.createOutputQueue()
+        # img_q = image_manip_left.out.createOutputQueue()
 
-        host_q = host1.output.createOutputQueue()
+        # host_q = host1.output.createOutputQueue()
 
-        pipeline.start()
+        # pipeline.start()
 
-        while pipeline.isRunning():
+        # while pipeline.isRunning():
             
-            left = left_q.tryGet()
-            # right = right_q.tryGet()
+        #     left = left_q.tryGet()
+        #     # right = right_q.tryGet()
 
-            # disp = disp_q.tryGet()
-            # depth = depth_q.tryGet()
+        #     # disp = disp_q.tryGet()
+        #     # depth = depth_q.tryGet()
 
-            img = img_q.tryGet()
-            host = host_q.tryGet()
+        #     img = img_q.tryGet()
+        #     host = host_q.tryGet()
             
-            if left != None:
-                print(left.getCvFrame())
-                cv2.imshow("left", left.getCvFrame())
-            else:
-                print("none")
+        #     if left != None:
+        #         print(left.getCvFrame())
+        #         cv2.imshow("left", left.getCvFrame())
+        #     else:
+        #         print("none")
 
-            if img != None:
-                print(img.getCvFrame())
-                cv2.imshow("img", img.getCvFrame())
-            else:
-                print("none")
+        #     if img != None:
+        #         print(img.getCvFrame())
+        #         cv2.imshow("img", img.getCvFrame())
+        #     else:
+        #         print("none")
 
-            if host != None:
-                print(host.getCvFrame())
-                cv2.imshow("host", host.getCvFrame())
-            else:
-                print("none")
+        #     if host != None:
+        #         print(host.getCvFrame())
+        #         cv2.imshow("host", host.getCvFrame())
+        #     else:
+        #         print("none")
 
-            if cv2.waitKey(1) == ord('q'):
-                break
+        #     if cv2.waitKey(1) == ord('q'):
+        #         break
 
-            sleep(1)
+        #     sleep(1)
 
 
 test_pipeline()

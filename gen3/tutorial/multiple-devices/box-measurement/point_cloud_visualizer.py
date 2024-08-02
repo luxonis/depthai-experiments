@@ -42,13 +42,13 @@ class PointCloudVisualizer:
         if l*w*h > config.min_box_size:
             print(f"Box size: {l:.2f} x {w:.2f} x {h:.2f}")
 
-        self.vizualise_box()
+            self.vizualise_box()
 
-        for camera in self.cameras:
-            if camera.image_frame is not None:
-                img = camera.depth_visualization_frame if camera.show_depth else camera.image_frame
-                img = self.vizualise_box_2d(img, camera.intrinsics, camera.distortion_coeffs, camera.world_to_cam, camera.point_cloud_alignment)
-                cv2.imshow(camera.window_name, img)
+            for camera in self.cameras:
+                if camera.image_frame is not None:
+                    img = camera.depth_visualization_frame if camera.show_depth else camera.image_frame
+                    img = self.vizualise_box_2d(img, camera.intrinsics, camera.distortion_coeffs, camera.world_to_cam, camera.point_cloud_alignment)
+                    cv2.imshow(camera.window_name, img)
 
 
     def vizualise_box(self):

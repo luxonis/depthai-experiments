@@ -126,6 +126,8 @@ with dai.Pipeline(device) as pipeline:
     imu.setMaxBatchReports(10)
 
     sync_node = pipeline.create(dai.node.Sync)
+    sync_node.setSyncThreshold(timedelta(milliseconds=11))
+    
     camRgb.isp.link(sync_node.inputs['rgb'])
     stereo.disparity.link(sync_node.inputs['disp'])
     imu.out.link(sync_node.inputs['imu'])
