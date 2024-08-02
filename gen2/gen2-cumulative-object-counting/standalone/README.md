@@ -2,7 +2,7 @@
 
 ![cumulative object counting](https://raw.githubusercontent.com/TannerGilbert/Tensorflow-2-Object-Counting/master/doc/cumulative_object_counting.PNG) 
 
-This example is an extension of Cumulative object counting that can be used in standalone mode. It works by first uploading the pipeline to the Oak camera along with instructions to create a websocket server and send datastream upon connection. The host side (eg. PC) works by decoding the bitstream and showing both the camera stream as well as NN output.
+This example is an extension of Cumulative object counting that can be used in standalone mode. It works by first uploading the pipeline to the Oak camera along with instructions to create a websocket server and send datastream upon connection. For this to work you need to have a [camera that supports standalone mode](https://docs.luxonis.com/software/depthai/standalone/). The host side (eg. PC) works by decoding the bitstream and showing both the camera stream as well as NN output.
 
 ## Installation
 
@@ -17,7 +17,7 @@ Run the uploader script - it will flash the pipeline to the Oak device.
 python3 oak.py 
 ```
 
-Replace `OAK_IP` in host.py script with Oak camera ip (find camera ip using [device manager](https://docs.luxonis.com/projects/api/en/latest/components/bootloader/#device-manager)). 
+Replace `OAK_IP` in host.py script with Oak camera ip.
 
 Run the host file:
 ```
