@@ -12,13 +12,6 @@ Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis 
 
 [![License Plates recognition](https://user-images.githubusercontent.com/5244214/111202991-c62f3980-85c4-11eb-8bce-a3c517abeca1.gif)](https://www.youtube.com/watch?v=tB_-mVVNIro "License Plates recognition on DepthAI")
 
-## Pre-requisites
-
-Install requirements:
-```
-python3 -m pip install -r requirements.txt
-```
-
 ## Installation
 
 ```
