@@ -19,6 +19,7 @@ LABEL_MAP = [
 ]
 COLORS = np.random.random(size=(256, 3)) * 256
 
+
 class MaskRCNN(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()

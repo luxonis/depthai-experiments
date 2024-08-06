@@ -1,0 +1,6 @@
+opencv-python==4.5.1.48
+numpy==1.19.5
+depthai~=3.0a
+blobconverter==1.4.3
+onnxruntime==1.16.3
+gdown==5.2.0
