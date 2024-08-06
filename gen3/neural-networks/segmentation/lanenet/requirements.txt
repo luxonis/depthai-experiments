@@ -1,0 +1,5 @@
+opencv-python==4.5.1.48
+numpy==1.19.5
+depthai~=3.0a
+gdown==5.2.0
+scikit-learn==1.5.1
