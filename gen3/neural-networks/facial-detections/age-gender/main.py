@@ -29,7 +29,7 @@ with dai.Pipeline() as pipeline:
     face_manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
     cam.preview.link(face_manip.inputImage)
 
-    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork).build()
+    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
     face_det_nn.setBoundingBoxScaleFactor(0.8)
     face_det_nn.setDepthLowerThreshold(100)

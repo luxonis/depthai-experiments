@@ -35,7 +35,6 @@ class MaskRCNN(dai.node.HostNode):
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
         frame = preview.getCvFrame()
-        # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         boxes = nn.getTensor("DetectionOutput_647").squeeze()
         masks = nn.getTensor("Sigmoid_733")
 
