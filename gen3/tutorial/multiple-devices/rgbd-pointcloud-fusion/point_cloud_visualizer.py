@@ -5,8 +5,7 @@ import numpy as np
 import config
 
 class PointCloudVisualizer:
-    def __init__(self, cameras: List[Camera]):
-        self.cameras = cameras
+    def __init__(self):
         self.point_cloud = o3d.geometry.PointCloud()
 
         self.point_cloud_window = o3d.visualization.VisualizerWithKeyCallback()
@@ -24,8 +23,6 @@ class PointCloudVisualizer:
 
         self.running = True
 
-        while self.running:
-            self.update()
 
     def update(self):
         self.point_cloud.clear()

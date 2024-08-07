@@ -157,6 +157,7 @@ with dai.Device(pipeline) as device:
         contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
         dets = dai.ImgDetections()
+        print(len(contours))
         if len(contours) != 0:
             c = max(contours, key = cv2.contourArea)
             x,y,w,h = cv2.boundingRect(c)

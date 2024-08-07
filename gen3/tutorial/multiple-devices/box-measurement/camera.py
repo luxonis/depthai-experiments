@@ -213,3 +213,4 @@ class Camera:
         self.point_cloud.colors = point_cloud.colors
 
         return self.point_cloud
+    

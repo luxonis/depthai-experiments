@@ -1,60 +1,181 @@
 import cv2
 import depthai as dai
-from birdseyeview import BirdsEyeView
-from camera import Camera
-import config
 import threading
 import numpy as np
+import blobconverter
+from detection import Detection
+import os
+import config
+from birdseyeview import BirdsEyeView
 
+
+label_map = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
+            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
 class OpencvManager:
     def __init__(self):
         self.newFrameEvent = threading.Event()
         self.lock = threading.Lock()
         self.keys = []
-        self.frames : dict[str, np.ndarray] = {}
-        self.ctrl_queues : dict[str, dai.InputQueue] = {}
-        self.cam_stills : dict[str, dai.MessageQueue] = {}
-        self.intrinsic_mats : dict[int, np.ndarray] = {}
-        self.cameras : dict[int, str] = {}
-        self.dx_ids : dict[int, str] = {}
-        self.selected_camera = None
-
+        self.frames : dict[str, dai.ImgFrame] = {} # window_name -> frame
+        self.detections : dict[str, dai.SpatialImgDetections] = {} # window_name -> detections
+        self.depth_frames : dict[str, np.ndarray] = {} # window_name -> depth_frame
+        self.dx_ids : dict[str, str] = {} # window_name -> device_id
+        self.show_detph = False
+        self.detected_objects: list[Detection] = []
+        self.cam_to_world : dict[str, any] = {} # device_id -> cam_to_world 
+        self.friendly_id : dict[str, int] = {} # device_id -> friendly_id
 
     def run(self) -> None:
         for window_name in self.frames.keys():
             cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(window_name, 640, 360)
 
+        self._load_calibration()
+        self._birds_eye_view = BirdsEyeView(self.cam_to_world, self.friendly_id, 
+                                            config.size[0], config.size[1], config.scale)
+
         while True:
             self.newFrameEvent.wait()
             for name in self.frames.keys():
-                if self.frames[name] is not None:
+                if self.frames[name] is not None and self.depth_frames[name] is not None:
                     key = cv2.waitKey(1)
 
                     # QUIT - press `q` to quit
                     if key == ord('q'):
+                        for dx_id in self.dx_ids.values():
+                            print("=== Closed " + dx_id)
                         return
 
                     # TOGGLE DEPTH VIEW - press `d` to toggle depth view
                     if key == ord('d'):
-                        for camera in cameras:
-                            camera.show_detph = not camera.show_detph
+                        self.show_detph = not self.show_detph
 
-                    for camera in cameras:
-                        camera.update()
+                    self._update(self.frames[name], self.detections[name], self.depth_frames[name], name)
 
-                    birds_eye_view.render()
+                    self._birds_eye_view.render(self.detected_objects)
                     
 
-    def set_frame(self, frame : dai.ImgFrame, window_name : str) -> None:
+    def set_frame(self, frame : dai.ImgFrame, detections : dai.SpatialImgDetections, 
+                  depth_frame : np.ndarray, window_name : str) -> None:
         with self.lock:
             self.frames[window_name] = frame
+            self.detections[window_name] = detections
+            self.depth_frames[window_name] = depth_frame
             self.newFrameEvent.set()
 
     
-    def set_params(self) -> None:
-        pass
+    def set_params(self, window_name : str, dx_id : str, friendly_id : int) -> None:
+        self.dx_ids[window_name] = dx_id
+        self.friendly_id[dx_id] = friendly_id + 1
+
+
+    def set_custom_key(self, key : str) -> None:
+        self.keys.append(key)
+        self._init_frames()
+
+
+    def _init_frames(self) -> None:
+        for key in self.keys:
+            if key not in self.frames.keys():
+                self.frames[key] = None
+
+
+    def _load_calibration(self):
+        path = os.path.join(os.path.dirname(__file__), f"{config.calibration_data_dir}")
+        try:
+            for dx_id in self.dx_ids.values():
+                extrinsics = np.load(f"{path}/extrinsics_{dx_id}.npz")
+                self.cam_to_world[dx_id] = extrinsics["cam_to_world"]
+        except:
+            raise RuntimeError(f"Could not load calibration data for camera {dx_id} from {path}!")
+
+
+    def _update(self, in_rgb : dai.ImgFrame, in_nn : dai.SpatialImgDetections, 
+                in_depth : dai.ImgFrame, window_name : str) -> None:
+        depth_frame = in_depth.getFrame() # depthFrame values are in millimeters
+        depth_frame_color = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        depth_frame_color = cv2.equalizeHist(depth_frame_color)
+        depth_frame_color = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_HOT)
+
+        self.frame_rgb = in_rgb.getCvFrame()
+
+        if self.show_detph:
+            visualization = depth_frame_color.copy()
+        else:
+            visualization = self.frame_rgb.copy()
+        visualization = cv2.resize(visualization, (640, 360), interpolation = cv2.INTER_NEAREST)
+
+        height = visualization.shape[0]
+        width  = visualization.shape[1]
+
+        detections = []
+        if in_nn is not None:
+            detections = in_nn.detections
+
+        self.detected_objects = []
+
+        for detection in detections:
+            roi = detection.boundingBoxMapping.roi
+            roi = roi.denormalize(width, height)
+            top_left = roi.topLeft()
+            bottom_right = roi.bottomRight()
+            xmin = int(top_left.x)
+            ymin = int(top_left.y)
+            xmax = int(bottom_right.x)
+            ymax = int(bottom_right.y)
+
+            x1 = int(detection.xmin * width)
+            x2 = int(detection.xmax * width)
+            y1 = int(detection.ymin * height)
+            y2 = int(detection.ymax * height)
+
+            try:
+                label = label_map[detection.label]
+            except:
+                label = detection.label
+
+            if self.cam_to_world[self.dx_ids[window_name]] is not None:
+                pos_camera_frame = np.array([[detection.spatialCoordinates.x / 1000, -detection.spatialCoordinates.y / 1000, detection.spatialCoordinates.z / 1000, 1]]).T
+                # pos_camera_frame = np.array([[0, 0, detection.spatialCoordinates.z/1000, 1]]).T
+                pos_world_frame = self.cam_to_world[self.dx_ids[window_name]] @ pos_camera_frame
+
+                self.detected_objects.append(Detection(label, detection.confidence, pos_world_frame, self.friendly_id[self.dx_ids[window_name]]))
+
+            cv2.rectangle(visualization, (xmin, ymin), (xmax, ymax), (100, 0, 0), 2)
+            cv2.rectangle(visualization, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            cv2.putText(visualization, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, "{:.2f}".format(detection.confidence*100), (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(visualization, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+
+
+        cv2.imshow(window_name, visualization)
+
+class Display(dai.node.HostNode):
+    def __init__(self, callback_frame : callable, window_name : str) -> None:
+        super().__init__()
+        self.callback_frame = callback_frame
+        self.widnow_name = window_name
+
+
+    def build(self, cam_rgb : dai.Node.Output, nn_out : dai.Node.Output, depth_out : dai.Node.Output) -> "Display":
+        self.inputs['rgb_frame'].setBlocking(False)
+        self.inputs['rgb_frame'].setMaxSize(1)
+        self.inputs['nn_out'].setBlocking(False)
+        self.inputs['nn_out'].setMaxSize(1)
+        self.inputs['depth_frame'].setBlocking(False)
+        self.inputs['depth_frame'].setMaxSize(1)
+
+        self.link_args(cam_rgb, nn_out, depth_out)
+        self.sendProcessingToPipeline(True)
+        return self
+
+
+    def process(self, rgb_frame : dai.ImgFrame, nn_out : dai.SpatialImgDetections, depth_frame : dai.ImgFrame) -> None:
+        
+        self.callback_frame(rgb_frame, nn_out, depth_frame, self.widnow_name)
 
 
 def filter_internal_cameras(devices : list[dai.DeviceInfo]) -> list[dai.DeviceInfo]:
@@ -70,42 +191,64 @@ def run_pipeline(pipeline : dai.Pipeline) -> None:
     pipeline.run()
 
 
-def get_pipelines(device : dai.Device, callback_frame : callable, callback_params : callable, friendly_id : int) -> dai.Pipeline:
+def get_pipelines(device : dai.Device, callback_frame : callable, friendly_id : int) -> dai.Pipeline:
     pipeline = dai.Pipeline(device)
 
     # RGB cam -> 'rgb'
     cam_rgb = pipeline.create(dai.node.ColorCamera)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-    cam_rgb.setPreviewSize(640, 360)
+    cam_rgb.setPreviewSize(300, 300)
     cam_rgb.setInterleaved(False)
     cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
     cam_rgb.setPreviewKeepAspectRatio(False)
 
-    # Still encoder -> 'still'
-    still_encoder = pipeline.create(dai.node.VideoEncoder)
-    still_encoder.setDefaultProfilePreset(1, dai.VideoEncoderProperties.Profile.MJPEG)
-    cam_rgb.still.link(still_encoder.input)
+    # Depth cam -> 'depth'
+    mono_left = pipeline.create(dai.node.MonoCamera)
+    mono_right = pipeline.create(dai.node.MonoCamera)
+    mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    mono_left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    mono_right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    cam_stereo = pipeline.create(dai.node.StereoDepth)
+    cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    cam_stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A) # Align depth map to the perspective of RGB camera, on which inference is done
+    cam_stereo.setOutputSize(mono_left.getResolutionWidth(), mono_left.getResolutionHeight())
+    mono_left.out.link(cam_stereo.left)
+    mono_right.out.link(cam_stereo.right)
+
+    # Spatial detection network -> 'nn'
+    spatial_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+    spatial_nn.setBlobPath(blobconverter.from_zoo(name='mobilenet-ssd', shaves=6))
+    spatial_nn.setConfidenceThreshold(0.6)
+    spatial_nn.input.setBlocking(False)
+    spatial_nn.setBoundingBoxScaleFactor(0.2)
+    spatial_nn.setDepthLowerThreshold(100)
+    spatial_nn.setDepthUpperThreshold(5000)
+
+    cam_rgb.preview.link(spatial_nn.input)
+    cam_stereo.depth.link(spatial_nn.inputDepth)
 
     window_name = f"[{friendly_id + 1}] Camera - mxid: {device.getMxId()}"
     manager.set_custom_key(window_name)
+    manager.set_params(window_name, device.getMxId(), friendly_id)
 
-    pipeline.create(Display, callback_frame, callback_params, window_name, device, friendly_id).build(
-        cam_preview=cam_rgb.preview,
-        cam_still=still_encoder.bitstream,
-        ctrl_queue=cam_rgb.inputControl.createInputQueue()
+    pipeline.create(Display, callback_frame, window_name).build(
+        cam_rgb=cam_rgb.preview,
+        nn_out=spatial_nn.out,
+        depth_out=spatial_nn.passthroughDepth
     )
 
     return pipeline
 
 
 def pair_device_with_pipeline(dev_info : dai.DeviceInfo, pipelines : list, callback_frame : callable, 
-                              callback_params : callable, friendly_id : int) -> None:
+                              friendly_id : int) -> None:
 
     device: dai.Device = dai.Device(dev_info)
 
     print("=== Connected to " + dev_info.getMxId())
 
-    pipelines.append(get_pipelines(device, callback_frame, callback_params,friendly_id))
+    pipelines.append(get_pipelines(device, callback_frame, friendly_id))
 
 
 devices = filter_internal_cameras(dai.Device.getAllAvailableDevices())
@@ -114,14 +257,13 @@ if len(devices) == 0:
 else:
     print("Found", len(devices), "devices")
 
-devices.sort(key=lambda x: x.getMxId(), reverse=True) # sort the cameras by their mxId
 
 pipelines : list[dai.Pipeline] = []
 threads : list[threading.Thread] = []
 manager = OpencvManager()
 
 for friendly_id, dev in enumerate(devices):
-    pair_device_with_pipeline(dev, pipelines, manager.set_frame, manager.set_params, friendly_id)
+    pair_device_with_pipeline(dev, pipelines, manager.set_frame, friendly_id)
 
 for pipeline in pipelines:
     thread = threading.Thread(target=run_pipeline, args=(pipeline,))
@@ -138,4 +280,4 @@ for thread in threads:
 
 print("Devices closed")
 
-# birds_eye_view = BirdsEyeView(cameras, config.size[0], config.size[1], config.scale)
+# _birds_eye_view = BirdsEyeView(cameras, config.size[0], config.size[1], config.scale)

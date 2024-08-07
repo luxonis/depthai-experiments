@@ -17,7 +17,7 @@ class Camera:
         self._create_pipeline()
         self.device = dai.Device(self.pipeline, self.device_info)
 
-        self.device.setIrLaserDotProjectorBrightness(1200)
+        # self.device.setIrLaserDotProjectorBrightness(1200)
 
         self.image_queue = self.device.getOutputQueue(name="image", maxSize=10, blocking=False)
         self.depth_queue = self.device.getOutputQueue(name="depth", maxSize=10, blocking=False)

@@ -86,7 +86,7 @@ def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(dev)
 
     cam_rgb = pipeline.create(dai.node.ColorCamera)
-    cam_rgb.setPreviewSize(300, 300)
+    cam_rgb.setPreviewSize(300, 300)  
     cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam_rgb.setInterleaved(False)
