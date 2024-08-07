@@ -28,7 +28,6 @@ class ObjectLocalizer(dai.node.HostNode):
     def process(self, cam: dai.ImgFrame, nn: dai.NNData, manip: dai.ImgFrame) -> None:
         frame: np.ndarray = cam.getCvFrame()
         frame_manip = manip.getCvFrame()
-        frame_manip = cv2.cvtColor(frame_manip, cv2.COLOR_RGB2BGR)
 
         detection_boxes = nn.getTensor("ExpandDims").astype(np.float16).reshape((100, 4))
         detection_scores = nn.getTensor("ExpandDims_2").astype(np.float16).reshape((100,))

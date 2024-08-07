@@ -19,7 +19,7 @@ with dai.Pipeline() as pipeline:
     nn.setBlobPath(Path("flower.blob").resolve().absolute())
 
     if camera:
-        cam = pipeline.create(dai.node.ColorCamera).build()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(480, 480)
         cam.setInterleaved(False)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)

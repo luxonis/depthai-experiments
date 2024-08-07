@@ -26,7 +26,7 @@ with dai.Pipeline() as pipeline:
     detection_nn.input.setBlocking(False)
 
     # Define camera
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(VIDEO_WIDTH, VIDEO_HEIGHT)
     cam.setInterleaved(False)
     cam.setFps(60)

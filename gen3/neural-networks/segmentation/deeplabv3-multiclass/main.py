@@ -28,7 +28,7 @@ with dai.Pipeline() as pipeline:
         cam = pipeline.create(dai.node.MonoCamera)
         cam.setBoardSocket(dai.CameraBoardSocket.CAM_C)
     else:
-        cam = pipeline.create(dai.node.ColorCamera).build()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(nn_shape)
         cam.setInterleaved(False)
         cam.preview.link(nn.input)

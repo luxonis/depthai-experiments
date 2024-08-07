@@ -8,7 +8,7 @@ TARGET_SHAPE = (400, 400)
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     # Color cam: 1920x1080
     # Mono cam: 640x400

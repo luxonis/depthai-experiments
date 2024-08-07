@@ -2,14 +2,17 @@ import cv2
 import depthai as dai
 import numpy as np
 
-class DepthMBNV2(dai.node.HostNode):
+
+class DepthEstimation(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, preview: dai.Node.Output, nn: dai.Node.Output, nn_shape: tuple[int, int]) -> "DepthMBNV2":
+    def build(self, preview: dai.Node.Output, nn: dai.Node.Output, nn_shape: tuple[int, int], mbnv2: bool) -> "DepthEstimation":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)
-        self.nn_shape = (nn_shape[0]//2, nn_shape[1]//2)
+
+        self.mbnv2 = mbnv2
+        self.nn_shape = (nn_shape[0]//2, nn_shape[1]//2) if mbnv2 else nn_shape
         return self
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
@@ -28,9 +31,12 @@ class DepthMBNV2(dai.node.HostNode):
         depth_relative = 255 - depth_relative
         depth_relative = cv2.applyColorMap(depth_relative, cv2.COLORMAP_INFERNO)
 
-        frame = cv2.resize(frame, (self.nn_shape[1], self.nn_shape[0]))
+        if self.mbnv2:
+            frame = cv2.resize(frame, (self.nn_shape[1], self.nn_shape[0]))
+
         cv2.imshow("Depth", np.concatenate([frame, depth_relative], axis=1))
 
         if cv2.waitKey(1) == ord('q'):
             print("Pipeline exited.")
             self.stopPipeline()
+
