@@ -31,7 +31,7 @@ Run the application
 ```
 python3 main.py
 
-arguments:
+optional arguments:
   -h, --help            show this help message and exit
   -v VIDEO_PATH, --video VIDEO_PATH
                         Path to video to use for inference. Default: vids/vid3.mp4
