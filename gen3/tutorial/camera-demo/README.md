@@ -2,7 +2,7 @@
 This example shows how to use the DepthAI/megaAI/OAK cameras in the Gen3 Pipeline Builder over USB.  
 
 ### Install Dependencies:
-`python3 install_requirements.py`
+`pip install -r requirements.txt`
 
 ### Running Example As-Is:
 `python3 main.py` - run
