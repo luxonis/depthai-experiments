@@ -112,10 +112,21 @@ class Passthrough(dai.node.ThreadedHostNode):
 
     def run(self):
         while self.isRunning():
-            buffer : dai.ImgFrame = self.input.get()
+            depthFrame : dai.ImgFrame = self.input.get().getFrame()
+            depthFrame = (depthFrame*disparityMultiplier).astype(np.uint8)
+            depthRgb = cv2.applyColorMap(depthFrame, cv2.COLORMAP_JET)
 
-            buffer.setType(dai.ImgFrame.Type.BGR888p)
-            self.output.send(buffer)
+            imgFrame = dai.ImgFrame()
+            imgFrame.setData(self.to_planar(depthRgb))
+            imgFrame.setType(dai.ImgFrame.Type.BGR888p)
+            imgFrame.setWidth(depthRgb.shape[0])
+            imgFrame.setHeight(depthRgb.shape[1])
+
+            self.output.send(imgFrame)
+
+
+    def to_planar(self, arr: np.ndarray) -> list:
+        return arr.transpose(2, 0, 1).flatten()
 
 
 with dai.Pipeline() as pipeline:
@@ -124,40 +135,30 @@ with dai.Pipeline() as pipeline:
 
     left = pipeline.create(dai.node.ReplayVideo)
     left.setReplayVideoFile(path / 'left.mp4')
-    left.setOutFrameType(dai.ImgFrame.Type.RAW8)
+    left.setOutFrameType(dai.ImgFrame.Type.NV12)
     # left.setSize(1280, 800)
 
     right = pipeline.create(dai.node.ReplayVideo)
     right.setReplayVideoFile(path / 'right.mp4')
-    right.setOutFrameType(dai.ImgFrame.Type.RAW8) 
+    right.setOutFrameType(dai.ImgFrame.Type.NV12) 
     # right.setSize(1280, 800)
     
     pipeline.setCalibrationData(dai.CalibrationHandler(str(path / 'calib.json')))
-
-    left_manip = pipeline.create(dai.node.ImageManip)
-    left_manip.initialConfig.setResize(1280, 800)
-    left_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    left_manip.setMaxOutputFrameSize(1280*800*3)
-    left.out.link(left_manip.inputImage)
-
-    right_manip = pipeline.create(dai.node.ImageManip)
-    right_manip.initialConfig.setResize(1280, 800)
-    right_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    right_manip.setMaxOutputFrameSize(1280*800*3)
-    right.out.link(right_manip.inputImage)
 
     host1 = pipeline.create(PassthroughSetInstanceNum)
     host1.setInstanceNum(dai.CameraBoardSocket.CAM_B)
     host2 = pipeline.create(PassthroughSetInstanceNum)
     host2.setInstanceNum(dai.CameraBoardSocket.CAM_C)
 
-    left_manip.out.link(host1.input)
-    right_manip.out.link(host2.input)
+    left.out.link(host1.input)
+    right.out.link(host2.input)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(left=host1.output, right=host2.output)
-    # stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7) # KERNEL_7x7 default
+    stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7) # KERNEL_7x7 default
+    # stereo.initialConfig.setConfidenceThreshold(200)
     stereo.setLeftRightCheck(True)
-    # stereo.setSubpixel(False)
+    stereo.setSubpixel(False)
+    stereo.setSubpixelFractionalBits(3)
 
     objectTracker = pipeline.create(dai.node.ObjectTracker)
     objectTracker.inputTrackerFrame.setBlocking(True)
@@ -180,8 +181,8 @@ with dai.Pipeline() as pipeline:
 
     detInQ = objectTracker.inputDetections.createInputQueue()
 
-    tracklets_out = objectTracker.out.createOutputQueue()
-    depth_q_out = stereo.disparity.createOutputQueue()
+    tracklets_out = objectTracker.out.createOutputQueue(maxSize=4, blocking=False)
+    depth_q_out = stereo.disparity.createOutputQueue(maxSize=4, blocking=False)
 
     disparityMultiplier = 255 / stereo.initialConfig.getMaxDisparity()
 
@@ -196,15 +197,11 @@ with dai.Pipeline() as pipeline:
         depthFrame = (depthFrame*disparityMultiplier).astype(np.uint8)
         depthRgb = cv2.applyColorMap(depthFrame, cv2.COLORMAP_JET)
 
-        trackletsIn = tracklets_out.tryGet()
+        trackletsIn : dai.Tracklets = tracklets_out.tryGet()
         if trackletsIn is not None:
             counter.new_tracklets(trackletsIn.tracklets)
-            print("new")
-        else:
-            print("no new")
-
+  
         # Crop only the corridor:
-        
         cropped = depthFrame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
         cv2.imshow('Crop', cropped)
 
@@ -214,12 +211,11 @@ with dai.Pipeline() as pipeline:
         # cv2.imshow('blob', blob)
 
         edged = cv2.Canny(blob, 20, 80)
-        # cv2.imshow('Canny', edged)
+        cv2.imshow('Canny', edged)
 
         contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
         dets = dai.ImgDetections()
-        print(len(contours))
         if len(contours) != 0:
             c = max(contours, key = cv2.contourArea)
             x,y,w,h = cv2.boundingRect(c)

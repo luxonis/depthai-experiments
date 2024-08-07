@@ -8,7 +8,7 @@ class Pointcloud(dai.node.HostNode):
         super().__init__()
 
     def build(self, color: dai.Node.Output, left: dai.Node.Output, right: dai.Node.Output,
-              depth: dai.Node.Output, cam_intrinsics: list, shape: tuple[int, int]) -> "Pointcloud":
+              depth: dai.Node.Output, cam_intrinsics: list, shape) -> "Pointcloud":
         self.link_args(color, left, right, depth)
         self.sendProcessingToPipeline(True)
 

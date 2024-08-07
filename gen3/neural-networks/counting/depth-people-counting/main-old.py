@@ -152,7 +152,7 @@ with dai.Device(pipeline) as device:
         # cv2.imshow('blob', blob)
 
         edged = cv2.Canny(blob, 20, 80)
-        # cv2.imshow('Canny', edged)
+        cv2.imshow('Canny', edged)
 
         contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
