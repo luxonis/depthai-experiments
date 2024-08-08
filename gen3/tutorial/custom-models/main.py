@@ -34,8 +34,7 @@ class DisplayAll(dai.node.HostNode):
 
 
     def get_frame_diff(self, data: dai.NNData, shape):
-        first_layer_name = data.getAllLayerNames()[0]
-        diff = np.array(data.getTensor(first_layer_name).astype(np.float16).flatten()).reshape(shape)
+        diff = data.getFirstTensor().flatten().reshape(shape)
         colorize = cv2.normalize(diff, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         return cv2.applyColorMap(colorize, cv2.COLORMAP_JET)
     

@@ -27,8 +27,7 @@ class DisplayEmotions(dai.node.HostNode):
             bbox = self.frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
             rec = recognitions[i]
-            firstLayer = rec.getAllLayerNames()[0]
-            emotion_results = rec.getTensor(firstLayer).astype(np.float16).flatten()
+            emotion_results = rec.getFirstTensor().astype(np.float16).flatten()
             emotion_name = emotions[np.argmax(emotion_results)]
 
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)

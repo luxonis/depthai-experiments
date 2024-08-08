@@ -47,8 +47,7 @@ class OCR(dai.node.HostNode):
             self.stopPipeline()
 
 def decode_text(recognition: dai.NNData):
-    first_layer_name = recognition.getAllLayerNames()[0]
-    data = recognition.getTensor(first_layer_name).flatten().reshape(30, 1, 37)
+    data = recognition.getFirstTensor().flatten().reshape(30, 1, 37)
     decoded_text = CODEC.decode(data)[0]
 
     return decoded_text

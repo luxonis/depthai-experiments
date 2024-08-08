@@ -1,7 +1,6 @@
 import cv2
 import depthai as dai
 
-
 class PeopleTracker(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()

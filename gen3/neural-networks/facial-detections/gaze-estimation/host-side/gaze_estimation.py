@@ -64,7 +64,7 @@ class GazeEstimation(dai.node.HostNode):
             self.output.send(img_frame)
             return
         
-        batches = gaze_nn.getTensor(gaze_layers[0]).shape[0]
+        batches = gaze_nn.getFirstTensor().shape[0]
         left_bbox = left_bbox_buffer.getData()
         right_bbox = right_bbox_buffer.getData()
         gaze = gaze_nn.getFirstTensor()

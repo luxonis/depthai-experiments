@@ -1,5 +1,5 @@
-numpy~=1.19.5
+numpy~=2.O
 numba
 opencv-python
 argparse
-depthai~=3.0a
+depthai~=3.0a1

@@ -17,9 +17,7 @@ class DepthEstimation(dai.node.HostNode):
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
         frame = preview.getCvFrame()
-
-        first_layer_name = nn.getAllLayerNames()[0]
-        data = nn.getTensor(first_layer_name).flatten().reshape(self.nn_shape)
+        data = nn.getFirstTensor().flatten().reshape(self.nn_shape)
 
         # Scale depth to get relative depth
         d_min = np.min(data)

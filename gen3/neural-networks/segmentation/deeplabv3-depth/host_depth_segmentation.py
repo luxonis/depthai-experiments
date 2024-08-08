@@ -21,8 +21,7 @@ class DepthSegmentation(dai.node.HostNode):
     def process(self, preview: dai.ImgFrame, nn: dai.NNData, disparity: dai.ImgFrame) -> None:
         frame = preview.getCvFrame()
         target_shape = (frame.shape[0], frame.shape[1])
-        first_layer = nn.getAllLayers()[0]
-        data = nn.getTensor(first_layer.name).astype(np.int32).flatten().reshape(self.nn_shape)
+        data = nn.getFirstTensor().astype(np.int32).flatten().reshape(self.nn_shape)
         output_colors = cv2.resize(self.decode_deeplabv3p(data), target_shape)
 
         disp_frame = (disparity.getFrame() * self.disp_multiplier).astype(np.uint8)

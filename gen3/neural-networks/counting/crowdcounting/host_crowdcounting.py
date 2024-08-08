@@ -14,9 +14,8 @@ class Crowdcounting(dai.node.HostNode):
         return self
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
-        first_layer_name = nn.getAllLayerNames()[0]
         # Density map output is 1/8 of input size
-        data = nn.getTensor(first_layer_name).astype(np.float16).flatten().reshape((30, 52))
+        data = nn.getFirstTensor().astype(np.float16).flatten().reshape((30, 52))
         # Predicted count is the sum of the density map
         count = np.sum(data)
         frame = preview.getCvFrame()
