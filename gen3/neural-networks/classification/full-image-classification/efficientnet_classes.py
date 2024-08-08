@@ -1000,4 +1000,3 @@ def class_names():
           'ear, spike, capitulum',
           'toilet tissue, toilet paper, bathroom tissue']
     return class_names
-
