@@ -5,7 +5,7 @@ This example shows an implementation of neural network models for depth estimati
   - [Monocular Depth Estimation with Transfer Learning pretrained MobileNetV2](https://github.com/alinstein/Depth_estimation) on DepthAI. Blob is created with ONNX from [PINTO's Model ZOO](https://github.com/PINTO0309/PINTO_model_zoo/blob/main/149_depth_estimation)
   - [MegaDepth](https://github.com/zl548/MegaDepth) on DepthAI.  Blob is created with ONNX from [PINTO's Model ZOO](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/153_MegaDepth)
 
-There are five available blob's for different input sizes:
+There are five available blobs for different models and input sizes:
 
 * `fast_depth_256x320_openvino_2021.4_6shave`, for 256x320 (H x W) input, which runs with ~30 FPS.
 * `fast_depth_480x640_openvino_2021.4_6shave`, for 480x640 (H x W) input, which runs with ~10 FPS.

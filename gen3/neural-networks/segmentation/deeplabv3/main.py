@@ -1,23 +1,36 @@
 import depthai as dai
 import argparse
 import blobconverter
-from host_person_segmentation import PersonSegmentation
+
+from pathlib import Path
+from host_deeplab_segmentation import DeeplabSegmentation
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-s", "--size", choices=["256", "513"], default="256", type=str
-                    , help="Choose between 2 sizes of the neural network (the smaller one is default)")
+parser.add_argument("-nn", "--neural-network", choices=["multiclass", "person_small", "person_large"]
+                    , default="multiclass", type=str
+                    , help="Choose the neural network model used for segmentation (multiclass is default)")
 parser.add_argument("-cam", "--cam_input", choices=["left", "rgb", "right"], default="rgb", type=str
                     , help="Choose camera for inference source (rgb is default)")
 args = parser.parse_args()
 
 cam_source = args.cam_input
-nn_shape = (int(args.size), int(args.size))
+nn_shape = None
+nn_path = None
+
+if args.neural_network == "multiclass":
+    nn_shape = (256, 256)
+    nn_path = Path("model/deeplab_v3_plus_mnv2_decoder_256_openvino_2021.4.blob").resolve().absolute()
+elif args.neural_network == "person_small":
+    nn_shape = (256, 256)
+    nn_path = blobconverter.from_zoo(name="deeplab_v3_mnv2_256x256", zoo_type="depthai", shaves=6)
+elif args.neural_network == "person_large":
+    nn_shape = (513, 513)
+    nn_path = blobconverter.from_zoo(name="deeplab_v3_mnv2_513x513", zoo_type="depthai", shaves=6)
 
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn_path = blobconverter.from_zoo(name=f"deeplab_v3_mnv2_{args.size}x{args.size}", zoo_type="depthai", shaves=6)
     nn.setBlobPath(nn_path)
     nn.setNumPoolFrames(4)
     nn.input.setBlocking(False)
@@ -44,11 +57,16 @@ with dai.Pipeline() as pipeline:
         cam.out.link(manip.inputImage)
         manip.out.link(nn.input)
 
-    person_segmentation = pipeline.create(PersonSegmentation).build(
+    multiclass_segmentation = pipeline.create(DeeplabSegmentation).build(
         preview=nn.passthrough,
         nn=nn.out,
-        nn_shape=nn_shape
+        nn_shape=nn_shape,
+        multiclass=(args.neural_network == "multiclass")
     )
+    multiclass_segmentation.inputs["preview"].setBlocking(False)
+    multiclass_segmentation.inputs["preview"].setMaxSize(4)
+    multiclass_segmentation.inputs["nn"].setBlocking(False)
+    multiclass_segmentation.inputs["nn"].setMaxSize(4)
 
     print("Pipeline created.")
     pipeline.run()
