@@ -245,9 +245,7 @@ def pair_device_with_pipeline(dev_info : dai.DeviceInfo, pipelines : list, callb
                               friendly_id : int) -> None:
 
     device: dai.Device = dai.Device(dev_info)
-
     print("=== Connected to " + dev_info.getMxId())
-
     pipelines.append(get_pipelines(device, callback_frame, friendly_id))
 
 
