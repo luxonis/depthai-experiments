@@ -129,6 +129,8 @@ with dai.Device(pipeline) as device:
     text = TextHelper()
     counter = PeopleCounter()
 
+    frame_count = 1
+
     while replay.sendFrames():
         depthFrame = depthQ.get().getFrame()
         depthFrame = (depthFrame*disparityMultiplier).astype(np.uint8)
@@ -136,10 +138,10 @@ with dai.Device(pipeline) as device:
 
         trackletsIn = trackletsQ.tryGet()
         if trackletsIn is not None:
+            if trackletsIn.tracklets != []:
+                print("not none")
             counter.new_tracklets(trackletsIn.tracklets)
-            print("new")
-        else:
-            print("no new")
+
 
         # Crop only the corridor:
         
@@ -157,7 +159,6 @@ with dai.Device(pipeline) as device:
         contours, hierarchy = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
         dets = dai.ImgDetections()
-        print(len(contours))
         if len(contours) != 0:
             c = max(contours, key = cv2.contourArea)
             x,y,w,h = cv2.boundingRect(c)
@@ -181,6 +182,7 @@ with dai.Device(pipeline) as device:
                 text.rectangle(depthRgb, (x, y), (x+w, y+h), size=2.5)
 
         detInQ.send(dets)
+        
         imgFrame = dai.ImgFrame()
         imgFrame.setData(to_planar(depthRgb))
         imgFrame.setType(dai.RawImgFrame.Type.BGR888p)
@@ -190,8 +192,10 @@ with dai.Device(pipeline) as device:
 
         text.rectangle(depthRgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
         text.putText(depthRgb, str(counter), (20, 40))
+        text.putText(depthRgb, str(frame_count), (100, 100))
 
         cv2.imshow('depth', depthRgb)
+        frame_count += 1
 
         key = cv2.waitKey(1)
         if key == ord('q'):

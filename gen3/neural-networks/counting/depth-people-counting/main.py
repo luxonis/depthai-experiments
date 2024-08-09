@@ -101,7 +101,7 @@ class PassthroughSetInstanceNum(dai.node.ThreadedHostNode):
         self.instanceNum = instanceNum
 
 
-class Passthrough(dai.node.ThreadedHostNode):
+class EditFramePassthrough(dai.node.ThreadedHostNode):
     def __init__(self):
         super().__init__()
         self.input = self.createInput()
@@ -145,17 +145,16 @@ with dai.Pipeline() as pipeline:
     
     pipeline.setCalibrationData(dai.CalibrationHandler(str(path / 'calib.json')))
 
-    host1 = pipeline.create(PassthroughSetInstanceNum)
-    host1.setInstanceNum(dai.CameraBoardSocket.CAM_B)
-    host2 = pipeline.create(PassthroughSetInstanceNum)
-    host2.setInstanceNum(dai.CameraBoardSocket.CAM_C)
+    left_instance_num_setter = pipeline.create(PassthroughSetInstanceNum)
+    left_instance_num_setter.setInstanceNum(dai.CameraBoardSocket.CAM_B)
+    right_instance_num_setter = pipeline.create(PassthroughSetInstanceNum)
+    right_instance_num_setter.setInstanceNum(dai.CameraBoardSocket.CAM_C)
 
-    left.out.link(host1.input)
-    right.out.link(host2.input)
+    left.out.link(left_instance_num_setter.input)
+    right.out.link(right_instance_num_setter.input)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=host1.output, right=host2.output)
+    stereo = pipeline.create(dai.node.StereoDepth).build(left=left_instance_num_setter.output, right=right_instance_num_setter.output)
     stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7) # KERNEL_7x7 default
-    # stereo.initialConfig.setConfidenceThreshold(200)
     stereo.setLeftRightCheck(True)
     stereo.setSubpixel(False)
     stereo.setSubpixelFractionalBits(3)
@@ -170,12 +169,12 @@ with dai.Pipeline() as pipeline:
     # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
     objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.UNIQUE_ID)
 
-    host = pipeline.create(Passthrough)
+    frame_editor = pipeline.create(EditFramePassthrough)
 
-    stereo.disparity.link(host.input)
+    stereo.disparity.link(frame_editor.input)
 
-    host.output.link(objectTracker.inputTrackerFrame)
-    host.output.link(objectTracker.inputDetectionFrame)
+    frame_editor.output.link(objectTracker.inputDetectionFrame)
+    frame_editor.output.link(objectTracker.inputTrackerFrame)
 
     print("pipeline created")
 
@@ -189,7 +188,7 @@ with dai.Pipeline() as pipeline:
     text = TextHelper()
     counter = PeopleCounter()
 
-
+    frame_count = 0
     pipeline.start()
 
     while pipeline.isRunning():
@@ -242,8 +241,10 @@ with dai.Pipeline() as pipeline:
 
         text.rectangle(depthRgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
         text.putText(depthRgb, str(counter), (20, 40))
+        text.putText(depthRgb, str(frame_count), (100, 100))
 
         cv2.imshow('depth', depthRgb)
+        frame_count += 1
 
         key = cv2.waitKey(1)
         if key == ord('q'):
