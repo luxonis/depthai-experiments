@@ -68,11 +68,17 @@ with dai.Pipeline() as pipeline:
     camRgb.preview.link(nn_edge.input)
 
     # DIFF
+    img_manip = pipeline.create(dai.node.ImageManip)
+    img_manip.initialConfig.setResize(720, 720) 
+    img_manip.setMaxOutputFrameSize(720*720*3)
+
+    camRgb.preview.link(img_manip.inputImage)
+
     nn_diff = pipeline.create(dai.node.NeuralNetwork)
     nn_diff.setBlobPath("models/diff_openvino_2021.4_6shave.blob")
 
     script = pipeline.create(dai.node.Script)
-    camRgb.preview.link(script.inputs['in'])
+    img_manip.out.link(script.inputs['in'])
     script.setScript("""
     old = node.io['in'].get()
     while True:
