@@ -18,10 +18,7 @@ with dai.Pipeline(device) as pipeline:
     cam.setFps(15)
     cam.setInterleaved(False)
 
-    detection_nn = pipeline.create(dai.node.YoloDetectionNetwork).build(cam.preview, dai.NNArchive(archivePath))
-    detection_nn.setNumClasses(80)
-    detection_nn.setCoordinateSize(4)
-    detection_nn.setIouThreshold(0.5)
+    detection_nn = pipeline.create(dai.node.DetectionNetwork).build(cam.preview, dai.NNArchive(archivePath))
     detection_nn.setConfidenceThreshold(0.5)
 
     script = pipeline.create(dai.node.Script)
