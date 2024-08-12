@@ -7,20 +7,22 @@ from detections_recognitions_sync import DetectionsRecognitionsSync
 
 LABELS = ['Person', 'Bicycle', 'Car', 'Motorbike', 'Aeroplane', 'Bus', 'Train', 'Truck', 'Boat', 'Traffic Light', 'Fire Hydrant', 'Stop Sign', 'Parking Meter', 'Bench', 'Bird', 'Cat', 'Dog', 'Horse', 'Sheep', 'Cow', 'Elephant', 'Bear', 'Zebra', 'Giraffe', 'Backpack', 'Umbrella', 'Handbag', 'Tie', 'Suitcase', 'Frisbee', 'Skis', 'Snowboard', 'Sports Ball', 'Kite', 'Baseball Bat', 'Baseball Glove', 'Skateboard', 'Surfboard', 'Tennis Racket', 'Bottle', 'Wine Glass', 'Cup', 'Fork', 'Knife', 'Spoon', 'Bowl', 'Banana', 'Apple', 'Sandwich', 'Orange', 'Broccoli', 'Carrot', 'Hot Dog', 'Pizza', 'Donut', 'Cake', 'Chair', 'Sofa', 'Pottedplant', 'Bed', 'Diningtable', 'Toilet', 'Tvmonitor', 'Laptop', 'Mouse', 'Remote', 'Keyboard', 'Cell Phone', 'Microwave', 'Oven', 'Toaster', 'Sink', 'Refrigerator', 'Book', 'Clock', 'Vase', 'Scissors', 'Teddy Bear', 'Hair Drier', 'Toothbrush']
 
-with dai.Pipeline() as pipeline:
+device = dai.Device()
+model_description = dai.NNModelDescription(modelSlug="yolov6n", platform=device.getPlatform().name, modelVersionSlug="r2-coco-512x288")
+archivePath = dai.getModelFromZoo(model_description)
+
+with dai.Pipeline(device) as pipeline:
     cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(640, 352)
+    cam.setPreviewSize(512, 288) 
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
     cam.setFps(15)
     cam.setInterleaved(False)
 
-    detection_nn = pipeline.create(dai.node.YoloDetectionNetwork)
-    detection_nn.setBlob(blobconverter.from_zoo("yolov6nr3_coco_640x352", zoo_type="depthai", shaves=6))
+    detection_nn = pipeline.create(dai.node.YoloDetectionNetwork).build(cam.preview, dai.NNArchive(archivePath))
     detection_nn.setNumClasses(80)
     detection_nn.setCoordinateSize(4)
     detection_nn.setIouThreshold(0.5)
     detection_nn.setConfidenceThreshold(0.5)
-    cam.preview.link(detection_nn.input)
 
     script = pipeline.create(dai.node.Script)
     detection_nn.out.link(script.inputs['detections'])
