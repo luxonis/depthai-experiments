@@ -4,7 +4,11 @@ import depthai as dai
 import threading
 import cv2
 import blobconverter
+from utility import filter_internal_cameras, run_pipeline
 
+
+labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
+            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
 class OpencvManager:
     def __init__(self, keys : list[int]):
@@ -65,39 +69,19 @@ class Display(dai.node.HostNode):
         self.callback(in_frame, in_det, self.dx_id)
 
 
-def filterInternalCameras(devices : list[dai.DeviceInfo]):
-    filtered_devices = []
-    for d in devices:
-        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
-            filtered_devices.append(d)
-
-    return filtered_devices
-
-
-labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
-
-
-def run_pipeline(pipeline : dai.Pipeline) -> None:
-    pipeline.run()
-
-
 def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(dev)
 
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
-    cam_rgb.setPreviewSize(300, 300)
-    cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam_rgb.setInterleaved(False)
+    cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    rgb_preview = cam_rgb.requestOutput(size=(300, 300), type=dai.ImgFrame.Type.BGR888p)
 
     detector : dai.node.MobileNetDetectionNetwork = pipeline.create(dai.node.MobileNetDetectionNetwork)
     detector.setConfidenceThreshold(0.5)
     detector.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
-    cam_rgb.preview.link(detector.input)
+    rgb_preview.link(detector.input)
 
     pipeline.create(Display, callback, dev.getMxId()).build(
-        cam_out=cam_rgb.preview,
+        cam_out=rgb_preview,
         det_out=detector.out
     )
 
@@ -113,7 +97,7 @@ def pair_device_with_pipeline(device_info : dai.DeviceInfo, pipelines : list[dai
     pipelines.append(pipeline)
 
 
-devices = filterInternalCameras(dai.Device.getAllAvailableDevices())
+devices = filter_internal_cameras(dai.Device.getAllAvailableDevices())
 if len(devices) == 0:
     raise RuntimeError("No devices found!")
 else:

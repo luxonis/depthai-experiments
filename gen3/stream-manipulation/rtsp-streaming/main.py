@@ -1,7 +1,6 @@
 import depthai as dai
 from host_stream_output import StreamOutput
 
-
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")

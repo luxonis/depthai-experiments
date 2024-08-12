@@ -1,7 +1,7 @@
 import depthai as dai
 import threading
 import cv2
-
+from utility import filter_internal_cameras, run_pipeline
 
 class OpencvManager:
     def __init__(self, keys : list[int]):
@@ -36,15 +36,6 @@ class OpencvManager:
         return dic
 
 
-def filter_internal_cameras(devices : list[dai.DeviceInfo]) -> list:
-    filtered_devices = []
-    for d in devices:
-        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
-            filtered_devices.append(d)
-
-    return filtered_devices
-
-
 class DisplayDecodedVideo(dai.node.HostNode):
     def __init__(self, callback : callable, dx_id : int) -> None:
         super().__init__()
@@ -62,28 +53,15 @@ class DisplayDecodedVideo(dai.node.HostNode):
         self.callback(bitstream, self.dx_id)
 
 
-def filter_internal_cameras(devices : list[dai.DeviceInfo]) -> list[dai.DeviceInfo]:
-    filtered_devices = []
-    for d in devices:
-        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
-            filtered_devices.append(d)
-
-    return filtered_devices
-
-
-def run_pipeline(pipeline : dai.Pipeline) -> None:
-    pipeline.run()
-
-
-def getPipeline(dev, callback : callable) -> dai.Pipeline:
+def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(dev)
 
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+    camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    rgb_video = camRgb.requestOutput(size=(1920, 1080), fps=30) 
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
-    videoEnc.setDefaultProfilePreset(camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-    camRgb.video.link(videoEnc.input)
+    videoEnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
+    rgb_video.link(videoEnc.input)
 
     pipeline.create(DisplayDecodedVideo, callback, dev.getMxId()).build(
         bitstream_out=videoEnc.bitstream

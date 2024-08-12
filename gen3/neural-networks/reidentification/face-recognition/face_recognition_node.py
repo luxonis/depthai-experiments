@@ -31,8 +31,7 @@ class FaceRecognitionNode(dai.node.HostNode):
             for i, detection in enumerate(dets):
                 bbox = self._frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
-                firstLayer = recognitions[i].getAllLayerNames()[0]
-                features = recognitions[i].getTensor(firstLayer).astype(np.float16).flatten()
+                features = recognitions[i].getFirstTensor().astype(np.float16).flatten()
                 conf, name = self._face_recognition.new_recognition(features)
                 self._text_helper.putText(frame, f"{name} {(100*conf):.0f}%", (bbox[0] + 10,bbox[1] + 35))
 

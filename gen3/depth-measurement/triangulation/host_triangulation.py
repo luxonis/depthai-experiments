@@ -145,8 +145,7 @@ class Triangulation(dai.node.HostNode):
             width = det.xmax - det.xmin
             height = det.ymax - det.ymin
 
-            first_layer_name = nn_landmarks.getAllLayerNames()[0]
-            landmarks = nn_landmarks.getTensor(first_layer_name).astype(np.float16).reshape(5, 2)
+            landmarks = nn_landmarks.getFirstTensor().astype(np.float16).reshape(5, 2)
 
             landmarks_xy = []
             for landmark in landmarks:

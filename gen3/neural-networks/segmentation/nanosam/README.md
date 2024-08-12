@@ -6,6 +6,8 @@
 
 Note that embedder is trained for an image with 1024 x 1024 input, so it is relatively slow on the OAK (~2 FPS). Because it uses learnable positional encoding, it would have to be re-trained for smaller input shape and consequently faster inference. Please refer to offical repository for training information and license.
 
+Also note that ONNX is not supported on numpy 2 so you need to use numpy 1.x
+
 ## Installation
 
 ```

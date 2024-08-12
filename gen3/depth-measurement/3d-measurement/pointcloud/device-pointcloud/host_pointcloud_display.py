@@ -19,8 +19,7 @@ class PointcloudDisplay(dai.node.HostNode):
         return self
 
     def process(self, preview: dai.ImgFrame, pointcloud: dai.NNData) -> None:
-        first_layer_name = pointcloud.getAllLayerNames()[0]
-        pcl_data = pointcloud.getTensor(first_layer_name).flatten().reshape(1, 3, self.shape[0], self.shape[1])
+        pcl_data = pointcloud.getFirstTensor().flatten().reshape(1, 3, self.shape[0], self.shape[1])
         pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
         self.pcl_converter.visualize_pcl(pcl_data, downsample=DOWNSAMPLE_PCL)
 

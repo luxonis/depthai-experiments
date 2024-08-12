@@ -1,6 +1,6 @@
 imutils==0.5.3
 concurrent-log-handler==0.9.16
-opencv-python==4.5.1.48
+opencv-python==4.10.0.84
 scipy
-depthai~=3.0.0a1
-numpy~=1.0
+depthai~=3.0a1
+numpy~=2.0

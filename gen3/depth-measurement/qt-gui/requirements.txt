@@ -1,4 +1,5 @@
 opencv-python==4.10.0.84
-depthai~=3.0a
+depthai~=3.0a1
 blobconverter==1.4.3
 pyqt5==5.15.10
+numpy~=2.0

@@ -2,7 +2,7 @@ import depthai as dai
 import threading
 import cv2
 import threading
-
+from utility import filter_internal_cameras, run_pipeline
 
 class OpencvManager:
     def __init__(self, keys : list[int]):
@@ -35,19 +35,6 @@ class OpencvManager:
         return dic
 
 
-def filter_internal_cameras(devices : list[dai.DeviceInfo]) -> list:
-    filtered_devices = []
-    for d in devices:
-        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
-            filtered_devices.append(d)
-
-    return filtered_devices
-
-
-def run_pipeline(pipeline : dai.Pipeline) -> None:
-    pipeline.run()
-
-
 class Display(dai.node.HostNode):
     def __init__(self, frameCallback : callable, dx_id : int) -> None:
         super().__init__()
@@ -65,22 +52,15 @@ class Display(dai.node.HostNode):
         self.callback(in_frame.getCvFrame(), self.dx_id)
 
 
-def getPipeline(dev : dai.Device, stereo : bool, callback : callable) -> dai.Pipeline:
+def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
 
     pipeline = dai.Pipeline(dev)
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
+    cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
-    if stereo:
-        cam_rgb.setPreviewSize(600, 300)
-    else:
-        cam_rgb.setPreviewSize(300, 300)
-
-    cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam_rgb.setInterleaved(False)
+    rgb_preview = cam_rgb.requestOutput(size=(600, 300))
 
     pipeline.create(Display, callback, dev.getMxId()).build(
-        cam_out=cam_rgb.preview
+        cam_out=rgb_preview
     )
 
     return pipeline
@@ -98,7 +78,7 @@ def pair_device_with_pipeline(dev_info : dai.DeviceInfo, pipelines : list, callb
     print("   >>> Cameras:", *[c.name for c in cameras])
     print("   >>> USB speed:", usb_speed.name)
 
-    pipelines.append(getPipeline(device, len(cameras)==3, callback))
+    pipelines.append(getPipeline(device, callback))
 
 
 devices = filter_internal_cameras(dai.Device.getAllAvailableDevices())

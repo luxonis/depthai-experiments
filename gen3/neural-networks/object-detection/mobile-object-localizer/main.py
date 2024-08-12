@@ -32,7 +32,7 @@ PREVIEW_HEIGHT = 360
 
 print("Creating pipeline...")
 with dai.Pipeline() as pipeline:
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(PREVIEW_WIDTH, PREVIEW_HEIGHT)
     cam.setInterleaved(False)
     cam.setFps(40)

@@ -1,6 +1,6 @@
-# Gen2 multiple devices per host
+# Gen3 multiple devices per host
 
-This example shows how you can use multiple DepthAI's on a single host. The demo will find all devices connected to the host and display an RGB preview from each of them. Preview size will depend on the device type - if device has mono cameras, the rgb preview will be `600x300`, otherwise it will be `300x300`. In other words,  pipeline that will get uploaded to the device will depend on the device model (OAK-1/OAK-D).
+This example shows how you can use multiple DepthAI's on a single host. The demo will find all devices connected to the host and display an RGB preview from each of them.
 
 ## Demo
 

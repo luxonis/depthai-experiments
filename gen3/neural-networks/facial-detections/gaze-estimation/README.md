@@ -1,6 +1,4 @@
-[中文文档](README.zh-CN.md)
-
-# [Gen2] Gaze estimation
+# Gaze estimation
 
 This example demonstrates how to run 3 stage inference (3-series, 2-parallel) using DepthAI.
 

@@ -3,4 +3,4 @@ onnx-simplifier
 torch
 kornia
 onnx
-depthai==2.16.0.0
+depthai~=3.0a1

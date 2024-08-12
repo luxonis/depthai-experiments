@@ -48,7 +48,6 @@ def setup_venv_exe(dir, f=None):
     env_exe = os.path.join(env_bin, 'python3')
 
     try:
-        pass
         subprocess.run(env_exe + " -m pip install -r requirements.txt -r requirements.txt --pre"
                    " --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/"
                    , shell=True, cwd=dir, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

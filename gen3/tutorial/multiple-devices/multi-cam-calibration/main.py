@@ -5,7 +5,7 @@ import os
 import config
 import numpy as np
 import time
-
+from utility import filter_internal_cameras, run_pipeline
 
 class OpencvManager:
     def __init__(self):
@@ -77,6 +77,7 @@ class OpencvManager:
         self.cameras[friendly_id] = window_name
         self.dx_ids[friendly_id] = device.getMxId()
         self.intrinsic_mats[friendly_id] = np.array(device.readCalibration().getCameraIntrinsics(dai.CameraBoardSocket.CAM_A, 3840, 2160))
+        self.selected_camera = 1
 
 
     def set_custom_key(self, key : str) -> None:
@@ -200,14 +201,6 @@ class OpencvManager:
             print("Could not save calibration data")
 
 
-def filter_internal_cameras(devices : list[dai.DeviceInfo]) -> list[dai.DeviceInfo]:
-    filtered_devices = []
-    for d in devices:
-        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
-            filtered_devices.append(d)
-
-    return filtered_devices
-
 
 class Display(dai.node.HostNode):
     def __init__(self, callback_frame : callable, callback_params : callable, window_name : str, device : dai.Device, friendly_id : int) -> None:
@@ -236,31 +229,21 @@ class Display(dai.node.HostNode):
         self.callback_frame(in_frame.getCvFrame(), self.window_name)
 
 
-def run_pipeline(pipeline : dai.Pipeline) -> None:
-    pipeline.run()
-
-
 def get_pipelines(device : dai.Device, callback_frame : callable, callback_params : callable, friendly_id : int) -> dai.Pipeline:
     pipeline = dai.Pipeline(device)
 
-    # RGB cam -> 'rgb'
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
-    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-    cam_rgb.setPreviewSize(640, 360)
-    cam_rgb.setInterleaved(False)
-    cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    cam_rgb.setPreviewKeepAspectRatio(False)
+    cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    rgb_preview = cam_rgb.requestOutput(size=(640, 360))
 
-    # Still encoder -> 'still'
     still_encoder = pipeline.create(dai.node.VideoEncoder)
     still_encoder.setDefaultProfilePreset(1, dai.VideoEncoderProperties.Profile.MJPEG)
-    cam_rgb.still.link(still_encoder.input)
+    rgb_preview.link(still_encoder.input)
 
     window_name = f"[{friendly_id + 1}] Camera - mxid: {device.getMxId()}"
     manager.set_custom_key(window_name)
 
     pipeline.create(Display, callback_frame, callback_params, window_name, device, friendly_id).build(
-        cam_preview=cam_rgb.preview,
+        cam_preview=rgb_preview,
         cam_still=still_encoder.bitstream,
         ctrl_queue=cam_rgb.inputControl.createInputQueue()
     )
@@ -272,10 +255,8 @@ def pair_device_with_pipeline(dev_info : dai.DeviceInfo, pipelines : list, callb
                               callback_params : callable, friendly_id : int) -> None:
 
     device: dai.Device = dai.Device(dev_info)
-
     print("=== Connected to " + dev_info.getMxId())
-
-    pipelines.append(get_pipelines(device, callback_frame, callback_params,friendly_id))
+    pipelines.append(get_pipelines(device, callback_frame, callback_params, friendly_id))
 
 
 devices = filter_internal_cameras(dai.Device.getAllAvailableDevices())
@@ -283,8 +264,6 @@ if len(devices) == 0:
     raise RuntimeError("No devices found!")
 else:
     print("Found", len(devices), "devices")
-
-devices.sort(key=lambda x: x.getMxId(), reverse=True)
 
 
 pipelines : list[dai.Pipeline] = []

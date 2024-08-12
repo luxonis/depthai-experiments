@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 import csv
-from pathlib import Path
 import blobconverter
 import depthai as dai
 
+from pathlib import Path
 from class_saver import ClassSaver
 
 # Start defining a pipeline

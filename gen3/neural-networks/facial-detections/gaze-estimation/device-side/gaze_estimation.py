@@ -34,12 +34,10 @@ class GazeEstimation(dai.node.HostNode):
         for i, detection in enumerate(dets):
             tl, br = self._denormalize_bounding_box(detection, frame.shape)
             cv2.rectangle(frame, tl, br, (10, 245, 10), 1)
-            gaze_first_layer = gaze_nn[i].getAllLayerNames()[0]
-            gaze = gaze_nn[i].getTensor(gaze_first_layer).astype(np.float16).flatten()
+            gaze = gaze_nn[i].getFirstTensor().astype(np.float16).flatten()
             gaze_x, gaze_y = (gaze * 100).astype(int)[:2]
 
-            landmarks_first_layer = landmarks_nn[i].getAllLayerNames()[0]
-            landmarks = landmarks_nn[i].getTensor(landmarks_first_layer).astype(np.float16).flatten()
+            landmarks = landmarks_nn[i].getFirstTensor().astype(np.float16).flatten()
             colors = [(0, 127, 255), (0, 127, 255), (255, 0, 127), (127, 255, 0), (127, 255, 0)]
             for lm_i in range(0, len(landmarks) // 2):
                 x, y = landmarks[lm_i*2:lm_i*2+2]

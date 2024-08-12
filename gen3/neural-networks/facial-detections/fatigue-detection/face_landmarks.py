@@ -18,8 +18,7 @@ class FaceLandmarks:
         mouth = []
         hand_points = []
 
-        first_layer_name = nndata.getAllLayerNames()[0]
-        out = np.array(nndata.getTensor(first_layer_name).flatten())
+        out = nndata.getFirstTensor().flatten()
         face_coords = self.normalize_face_coords(face_frame, face_coords_float)
         self.frame = face_frame
         result = self.frame_norm(face_frame,*out)
