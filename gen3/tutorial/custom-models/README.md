@@ -1,5 +1,5 @@
 
-## [Gen2] Creating custom models
+## [Gen3] Creating custom models
 
 This experiment can be used as a tutorial on how users can create custom models with
 PyTorch/Kornia, convert them and run them on the DepthAI.

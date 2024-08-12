@@ -54,7 +54,7 @@ with dai.Pipeline() as pipeline:
     camRgb.setPreviewSize(SHAPE, SHAPE)
     camRgb.setInterleaved(False)
     camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
     # BLUR
     nn_blur = pipeline.create(dai.node.NeuralNetwork)
