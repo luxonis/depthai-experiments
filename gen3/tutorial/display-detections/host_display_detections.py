@@ -10,11 +10,13 @@ class DisplayDetections(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
+
     def build(self, full: dai.Node.Output, square: dai.Node.Output
               , passthrough: dai.Node.Output, nn: dai.Node.Output) -> "DisplayDetections":
         self.link_args(full, square, passthrough, nn)
         self.sendProcessingToPipeline(True)
         return self
+
 
     def process(self, full: dai.ImgFrame, square: dai.ImgFrame
                 , passthrough: dai.ImgFrame, detections: dai.ImgDetections) -> None:
@@ -25,6 +27,8 @@ class DisplayDetections(dai.node.HostNode):
         if cv2.waitKey(1) == ord('q'):
             print("Pipeline exited.")
             self.stopPipeline()
+
+
     def frameNorm(self, frame, bbox, center):
         normVals = np.full(4, frame.shape[0])
         ret = (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
@@ -32,6 +36,7 @@ class DisplayDetections(dai.node.HostNode):
         if center:
             ret[::2] += (frame.shape[1] - frame.shape[0])//2
         return ret
+
 
     def displayDetections(self, frame, detections, center):
         color = (255, 0, 0)

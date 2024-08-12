@@ -37,7 +37,7 @@ class DisplayDetections(dai.node.HostNode):
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
     cam.setInterleaved(False)
     cam.setIspScale(1, 3)  # 4k -> 720P
@@ -48,7 +48,7 @@ with dai.Pipeline() as pipeline:
     crop.initialConfig.setResize(300, 300)
     cam.preview.link(crop.inputImage)
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn.setConfidenceThreshold(0.5)
     nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=5))
     crop.out.link(nn.input)

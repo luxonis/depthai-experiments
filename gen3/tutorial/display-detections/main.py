@@ -2,10 +2,13 @@ import depthai as dai
 import blobconverter
 from host_display_detections import DisplayDetections
 
+modelDescription = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+archivePath = dai.getModelFromZoo(modelDescription)
+
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
     cam.setInterleaved(False)
     cam.setIspScale(1, 3)  # 4k -> 720P
@@ -22,9 +25,12 @@ with dai.Pipeline() as pipeline:
     crop_nn.initialConfig.setResize(300, 300)
     cam.preview.link(crop_nn.inputImage)
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn.setConfidenceThreshold(0.5)
-    nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=5))
+    
+    nnArchive = dai.NNArchive(archivePath)
+    nn.setBlob(nnArchive.getSuperBlob().getBlobWithNumShaves(5))
+
     crop_nn.out.link(nn.input)
 
     display = pipeline.create(DisplayDetections).build(
