@@ -81,7 +81,7 @@ class HumanMachineSafety(dai.node.HostNode):
 
 
     # Calculate spatial coordinates from depth map and bounding box (ROI)
-    def calc_spatials(self, bbox, depth, averaging_method=np.mean):
+    def calc_spatials(self, bbox, depth: np.ndarray, averaging_method=np.mean):
         xmin, ymin, xmax, ymax = bbox
         # Decrese the ROI to 1/3 of the original ROI
         deltaX = int((xmax - xmin) * 0.33)
@@ -101,6 +101,10 @@ class HumanMachineSafety(dai.node.HostNode):
         # Calculate the average depth in the ROI.
         depthROI = depth[ymin:ymax, xmin:xmax]
         inThreshRange = (self._depth_thresh_low < depthROI) & (depthROI < self._depth_thresh_high)
+
+        depthROIinRange = depthROI[inThreshRange]
+        if depthROIinRange.size == 0:
+            return None
 
         averageDepth = averaging_method(depthROI[inThreshRange])
 
@@ -214,7 +218,7 @@ class HumanMachineSafety(dai.node.HostNode):
                 continue
             self.draw_bbox(bbox, color)
             x,y,z,cx,cy = spatialCoords
-            annotate(f"X: {int(x)} mm", (bbox[0], bbox[1]))
+            annotate(f"X: {int(x)} mm", (bbox[0], bbox[1]))#TODO: fix can be NaN
             annotate(f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15))
             annotate(f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30))
             return spatialCoords

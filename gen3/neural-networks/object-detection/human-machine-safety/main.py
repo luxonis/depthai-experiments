@@ -1,6 +1,4 @@
 # coding=utf-8
-import numpy as np
-import cv2
 import blobconverter
 import depthai as dai
 
@@ -17,11 +15,13 @@ DANGEROUS_OBJECTS = ["bottle"]
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
+device = dai.Device()
+modelDescription = dai.NNModelDescription(modelSlug="mediapipe-palm-detection", platform="RVC2", modelVersionSlug="128x128")
+archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 
 print("Creating pipeline...")
-device = dai.Device()
 with dai.Pipeline(device) as pipeline:
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setIspScale(2, 3) # To match 720P mono cameras
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
@@ -30,40 +30,42 @@ with dai.Pipeline(device) as pipeline:
     cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
     cam.setPreviewSize(300, 300)
     cam.setInterleaved(False)
-
-    vid_q = cam.isp.createOutputQueue()
-
-    print(f"Creating palm detection Neural Network...")
-    model_nn = pipeline.create(dai.node.NeuralNetwork)
-    model_nn.setBlobPath(blobconverter.from_zoo(name="palm_detection_128x128", zoo_type="depthai", shaves=6))
-    model_nn.input.setBlocking(False)
+    cam.setFps(15)
 
     # For Palm-detection NN
     manip = pipeline.create(dai.node.ImageManip)
     manip.initialConfig.setResize(128, 128)
     cam.preview.link(manip.inputImage)
-    manip.out.link(model_nn.input)
 
-    palm_q = model_nn.out.createOutputQueue()
+    print(f"Creating palm detection Neural Network...")
+    model_nn = pipeline.create(dai.node.NeuralNetwork)
+    manip.out.link(model_nn.input)
+    model_nn.setNNArchive(dai.NNArchive(archivePath), 5)
+    model_nn.input.setBlocking(False)
 
     # Creating left/right mono cameras for StereoDepth
     left = pipeline.create(dai.node.MonoCamera)
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
     left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    left.setFps(15)
 
     right = pipeline.create(dai.node.MonoCamera)
     right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
     right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    right.setFps(15)
 
     # Create StereoDepth node that will produce the depth map
     stereo: dai.node.StereoDepth = pipeline.create(dai.node.StereoDepth).build(left.out, right.out)
     stereo.initialConfig.setConfidenceThreshold(245)
     stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
+    stereo.setSubpixelFractionalBits(3)
     stereo.setLeftRightCheck(True)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    sdn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork).build()
-    sdn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
+    sdn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+    blob_path = blobconverter.from_zoo(name="mobilenet-ssd", shaves=5)
+    sdn.setBlobPath(blob_path)
+    sdn.setNumShavesPerInferenceThread(5)
     sdn.setConfidenceThreshold(0.5)
     sdn.input.setBlocking(False)
     sdn.setBoundingBoxScaleFactor(0.2)
@@ -72,9 +74,6 @@ with dai.Pipeline(device) as pipeline:
 
     cam.preview.link(sdn.input)
     stereo.depth.link(sdn.inputDepth)
-
-    det_q = sdn.out.createOutputQueue()
-    depth_q = sdn.passthroughDepth.createOutputQueue()
     
     human_machine_safety = pipeline.create(HumanMachineSafety).build(
         in_rgb=cam.isp,
