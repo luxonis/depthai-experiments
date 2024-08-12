@@ -1,7 +1,7 @@
 Palm detection
 ================
 
-This example demonstrates the Gen2 Pipeline Builder running 
+This example demonstrates the Gen3 Pipeline Builder running 
 [palm detection network](https://github.com/google-ai-edge/mediapipe/blob/master/docs/solutions/hands.md)  
 
 ## Demo:
