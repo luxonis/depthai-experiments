@@ -5,7 +5,7 @@ from host_qr_scanner import QRScanner
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setPreviewSize(1080, 1080)
     cam.setInterleaved(False)
@@ -18,7 +18,7 @@ with dai.Pipeline() as pipeline:
     manip.initialConfig.setFrameType(dai.ImgFrame.Type.GRAY8)
     cam.preview.link(manip.inputImage)
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn.setConfidenceThreshold(0.3)
     nn.setBlobPath(blobconverter.from_zoo(name="qr_code_detection_384x384", zoo_type="depthai", shaves=6))
     nn.input.setMaxSize(1)
