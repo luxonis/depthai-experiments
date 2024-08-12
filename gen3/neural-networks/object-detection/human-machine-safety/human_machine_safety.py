@@ -43,34 +43,20 @@ class HumanMachineSafety(dai.node.HostNode):
 
 
     def process(self, in_rgb: dai.ImgFrame, in_det: dai.ImgDetections, in_depth: dai.ImgFrame, palm_in: dai.NNData) -> None:
-        detections = []
-        depth_frame = None
-        depth_frame_color = None
-        frame = None
+        frame = self._crop_to_rect(in_rgb.getCvFrame())
+        detections = in_det.detections
 
-        if in_rgb is not None:
-            frame = self._crop_to_rect(in_rgb.getCvFrame())
+        depth_frame = self._crop_to_rect(in_depth.getFrame())
+        depth_frame_color = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        depth_frame_color = cv2.equalizeHist(depth_frame_color)
+        depth_frame_color = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET)
 
-        # Check for mobilenet detections
-        if in_det is not None:
-            detections = in_det.detections
-
-        if in_depth is not None:
-            depth_frame = self._crop_to_rect(in_depth.getFrame())
-            depth_frame_color = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            depth_frame_color = cv2.equalizeHist(depth_frame_color)
-            depth_frame_color = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET)
-
-        if palm_in is not None and frame is not None and depth_frame is not None:
-            try:
-                self.parse(
-                    in_palm_detections=palm_in,
-                    detections=detections,
-                    frame=frame,
-                    depth=depth_frame,
-                    depthColored=depth_frame_color)
-            except StopIteration:
-                self.stopPipeline()
+        self._parse(
+            in_palm_detections=palm_in,
+            detections=detections,
+            frame=frame,
+            depth=depth_frame,
+            depthColored=depth_frame_color)
 
 
     def _crop_to_rect(self, frame: np.ndarray) -> np.ndarray:
@@ -81,7 +67,7 @@ class HumanMachineSafety(dai.node.HostNode):
 
 
     # Calculate spatial coordinates from depth map and bounding box (ROI)
-    def calc_spatials(self, bbox, depth: np.ndarray, averaging_method=np.mean):
+    def _calc_spatials(self, bbox, depth: np.ndarray, averaging_method=np.mean):
         xmin, ymin, xmax, ymax = bbox
         # Decrese the ROI to 1/3 of the original ROI
         deltaX = int((xmax - xmin) * 0.33)
@@ -126,7 +112,7 @@ class HumanMachineSafety(dai.node.HostNode):
         return (x,y,z, centroidX, centroidY)
 
 
-    def calc_spatial_distance(self, spatialCoords, frame: np.ndarray, detections: list[dai.SpatialImgDetection]):
+    def _calc_spatial_distance(self, spatialCoords, frame: np.ndarray, detections: list[dai.SpatialImgDetection]):
         x,y,z, centroidX, centroidY = spatialCoords
         annotate = self._annotate_fun(frame, (0, 0, 25), fontScale=1.7)
 
@@ -161,7 +147,7 @@ class HumanMachineSafety(dai.node.HostNode):
         cv2.imshow("color", frame)
 
 
-    def draw_bbox(self, bbox, color):
+    def draw_bbox(self, debug_frame: np.ndarray, depthFrameColor: np.ndarray, bbox, color):
         def draw(img):
             cv2.rectangle(
                 img=img,
@@ -170,11 +156,11 @@ class HumanMachineSafety(dai.node.HostNode):
                 color=color,
                 thickness=2,
             )
-        draw(self.debug_frame)
-        draw(self.depthFrameColor)
+        draw(debug_frame)
+        draw(depthFrameColor)
 
 
-    def draw_detections(self, frame: np.ndarray, detections: list[dai.SpatialImgDetection]):
+    def _draw_detections(self, frame: np.ndarray, detections: list[dai.SpatialImgDetection]):
         color = (250,0,0)
         annotate = self._annotate_fun(frame, (0, 0, 25))
 
@@ -205,55 +191,54 @@ class HumanMachineSafety(dai.node.HostNode):
         return math.atan(math.tan(self._monoHFOV / 2.0) * offset / (self._depthWidth / 2.0))
 
 
-    def draw_palm_detection(self, palm_coords, depth):
+    def _draw_palm_detection(self, debug_frame: np.ndarray, palm_coords, depth, depthColored: np.ndarray):
         if palm_coords is None:
             return None
 
         color = (10,245,10)
-        annotate = self._annotate_fun(self.debug_frame, color)
+        annotate = self._annotate_fun(debug_frame, color)
 
         for bbox in palm_coords:
-            spatialCoords = self.calc_spatials(bbox, depth)
+            spatialCoords = self._calc_spatials(bbox, depth)
             if spatialCoords is None: # Box of size 0
                 continue
-            self.draw_bbox(bbox, color)
+            self.draw_bbox(debug_frame, depthColored, bbox, color)
             x,y,z,cx,cy = spatialCoords
-            annotate(f"X: {int(x)} mm", (bbox[0], bbox[1]))#TODO: fix can be NaN
+            annotate(f"X: {int(x)} mm", (bbox[0], bbox[1]))
             annotate(f"Y: {int(y)} mm", (bbox[0], bbox[1] + 15))
             annotate(f"Z: {int(z)} mm", (bbox[0], bbox[1] + 30))
             return spatialCoords
 
 
-    def parse(self, in_palm_detections, detections, frame, depth, depthColored):
-        self.debug_frame = frame.copy()
-        self.depthFrameColor = depthColored
-        annotate = self._annotate_fun(self.debug_frame, (50,220,110), fontScale=1.4)
+    def _parse(self, in_palm_detections: dai.NNData, detections: list[dai.SpatialImgDetection], frame: np.ndarray, depth: np.ndarray, depthColored: np.ndarray) -> None:
+        debug_frame = frame.copy()
+        annotate = self._annotate_fun(debug_frame, (50,220,110), fontScale=1.4)
 
         # Parse palm detection output
         palm_coords = self._palmDetection.run_palm(
-            self.debug_frame,
+            debug_frame,
             in_palm_detections)
         # Calculate and draw spatial coordinates of the palm
-        spatialCoords = self.draw_palm_detection(palm_coords, depth)
+        spatialCoords = self._draw_palm_detection(debug_frame, palm_coords, depth, depthColored)
         # Calculate distance, show warning
         if spatialCoords is not None:
-            self.calc_spatial_distance(spatialCoords,self.debug_frame, detections)
+            self._calc_spatial_distance(spatialCoords, debug_frame, detections)
 
         # Mobilenet detections
-        self.draw_detections(self.debug_frame, detections)
+        self._draw_detections(debug_frame, detections)
         # Put text 3 times for the bold appearance
         annotate(f"Distance: {int(self._distance)} mm", (50,700))
         annotate(f"Distance: {int(self._distance)} mm", (51,700))
         annotate(f"Distance: {int(self._distance)} mm", (52,700))
-        cv2.imshow("color", self.debug_frame)
+        cv2.imshow("color", debug_frame)
 
-        if self.depthFrameColor is not None:
-            self.draw_detections(self.depthFrameColor, detections)
-            cv2.imshow("depth", self.depthFrameColor)
+        if depthColored is not None:
+            self._draw_detections(depthColored, detections)
+            cv2.imshow("depth", depthColored)
 
         if cv2.waitKey(1) == ord("q"):
+            self.stopPipeline()
             cv2.destroyAllWindows()
-            raise StopIteration()
         
     
     def _annotate_fun(self, img, color, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, **kwargs):
