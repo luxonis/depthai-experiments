@@ -1,8 +1,9 @@
 import cv2
 import depthai as dai
 import numpy as np
+from detected_recognitions import DetectedRecognitions
 
-emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
+emotions = ['Anger','Contempt','Disgust','Fear','Happiness','Neutral','Sadness','Surprise']
 
 class DisplayEmotions(dai.node.HostNode):
     def __init__(self):
@@ -16,9 +17,11 @@ class DisplayEmotions(dai.node.HostNode):
         return self
     
 
-    def process(self, rgb_frame : dai.ImgFrame, detected_recognitions) -> None:
+    def process(self, rgb_frame : dai.ImgFrame, detected_recognitions: dai.Buffer) -> None:
         frame = rgb_frame.getCvFrame()
-        detections: dai.ImgDetections = detected_recognitions.detections
+
+        assert(isinstance(detected_recognitions, DetectedRecognitions))
+        detections: dai.SpatialImgDetections = detected_recognitions.detections
         recognitions: list[dai.NNData] = detected_recognitions.nn_data
 
         dets = detections.detections

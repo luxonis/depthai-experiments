@@ -6,6 +6,9 @@ from emotions_recognition import DisplayEmotions
 
 
 device = dai.Device()
+recognition_model_description = dai.NNModelDescription(modelSlug="emotion-recognition", platform=device.getPlatform().name, modelVersionSlug="260x260")
+recognition_model_path = dai.getModelFromZoo(recognition_model_description)
+
 with dai.Pipeline(device) as pipeline:
 
     stereo = 1 < len(device.getConnectedCameras())
@@ -17,6 +20,7 @@ with dai.Pipeline(device) as pipeline:
     cam.setInterleaved(False)
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
     cam.setPreviewNumFramesPool(15)
+    cam.setFps(10)
 
     # ImageManip that will crop the frame before sending it to the Face detection NN node
     face_det_manip = pipeline.create(dai.node.ImageManip)
@@ -68,7 +72,7 @@ with dai.Pipeline(device) as pipeline:
     image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
 
     manip_manip = pipeline.create(dai.node.ImageManip)
-    manip_manip.initialConfig.setResize(64, 64)
+    manip_manip.initialConfig.setResize(260, 260) 
     manip_manip.inputConfig.setWaitForMessage(True)
     image_manip_script.outputs['manip_cfg'].link(manip_manip.inputConfig)
     image_manip_script.outputs['manip_img'].link(manip_manip.inputImage)
@@ -76,7 +80,9 @@ with dai.Pipeline(device) as pipeline:
     # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
     # face that was detected by the face-detection NN.
     emotions_nn = pipeline.create(dai.node.NeuralNetwork)
-    emotions_nn.setBlobPath(blobconverter.from_zoo(name="emotions-recognition-retail-0003", shaves=5))
+    emotions_nn.setNNArchive(dai.NNArchive(recognition_model_path), numShaves=5)
+    emotions_nn.input.setBlocking(False)
+    emotions_nn.input.setMaxSize(2)
     manip_manip.out.link(emotions_nn.input)
 
     sync_node = pipeline.create(DetectionsRecognitionsSync).build()
