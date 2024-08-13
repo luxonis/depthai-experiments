@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import depthai as dai
+from typing import Tuple
 
 from projector_device import PointCloudVisualizer
 
@@ -11,7 +12,7 @@ class PointcloudDisplay(dai.node.HostNode):
         super().__init__()
         self.pcl_converter = PointCloudVisualizer()
 
-    def build(self, preview: dai.Node.Output, pointcloud: dai.Node.Output, depth_shape: tuple[int, int]) -> "PointcloudDisplay":
+    def build(self, preview: dai.Node.Output, pointcloud: dai.Node.Output, depth_shape: Tuple[int, int]) -> "PointcloudDisplay":
         self.link_args(preview, pointcloud)
         self.sendProcessingToPipeline(True)
 

@@ -35,7 +35,7 @@ device = dai.Device()
 with dai.Pipeline(device) as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setIspScale(1, 3)
 
     left = pipeline.create(dai.node.MonoCamera)
