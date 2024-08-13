@@ -5,7 +5,7 @@ from host_social_distancing import SocialDistancing
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(544, 320)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
@@ -23,7 +23,7 @@ with dai.Pipeline() as pipeline:
     stereo.initialConfig.setConfidenceThreshold(255)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork).build()
+    nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=5))
     nn.setConfidenceThreshold(0.5)
     nn.input.setBlocking(False)
