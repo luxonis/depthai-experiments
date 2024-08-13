@@ -1,9 +1,7 @@
-[中文文档](README.zh-CN.md)
-
 Fire detection
 ================
 
-This example demonstrates the Gen2 Pipeline Builder running [fire detection network](https://github.com/StephanXu/FireDetector/tree/python)  
+This example demonstrates the Gen3 Pipeline Builder running [fire detection network](https://github.com/StephanXu/FireDetector/tree/python)  
 
 ## Demo:
 

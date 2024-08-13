@@ -27,7 +27,7 @@ debug = not args.no_debug
 with dai.Pipeline() as pipeline:
     cam_size = (224, 224)
     if not args.video:
-        cam = pipeline.create(dai.node.ColorCamera).build()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(cam_size)
         cam.setResolution(
             dai.ColorCameraProperties.SensorResolution.THE_4_K
