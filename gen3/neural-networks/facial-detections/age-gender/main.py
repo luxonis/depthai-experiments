@@ -4,8 +4,13 @@ import depthai as dai
 from host_age_gender import AgeGender
 from detections_recognitions_sync import DetectionsRecognitionsSync
 
-with dai.Pipeline() as pipeline:
+device = dai.Device()
+#detection_model_description = dai.NNModelDescription(modelSlug="yunet", platform=device.getPlatform().name, modelVersionSlug="640x640")
+recognition_model_description = dai.NNModelDescription(modelSlug="age-gender-recognition", platform=device.getPlatform().name, modelVersionSlug="62x62")
+#detection_model_path = dai.getModelFromZoo(detection_model_description)
+recognition_model_path = dai.getModelFromZoo(recognition_model_description)
 
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(1080, 1080)
@@ -52,7 +57,7 @@ with dai.Pipeline() as pipeline:
     script.outputs['manip_img'].link(recognition_manip.inputImage)
 
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setBlobPath(blobconverter.from_zoo(name="age-gender-recognition-retail-0013", shaves=5))
+    recognition_nn.setNNArchive(dai.NNArchive(recognition_model_path), 5)
     recognition_manip.out.link(recognition_nn.input)
 
     sync = pipeline.create(DetectionsRecognitionsSync).build()
