@@ -4,7 +4,7 @@ This example shows an implementation of Mobile Object Localizer from [Tensorflow
 
 Blob is taken from [Pinto Model ZOO](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/151_object_detection_mobile_object_localizer).
 
-Input video is resized to 192 x 192 (W x H). Output is a list of 100 scores and bounding boxes (see implementation for details).
+Input video is resized to 300 x 300 (W x H). Output is a list of 100 scores and bounding boxes (see implementation for details).
 
 ![Image example](https://user-images.githubusercontent.com/18037362/140496684-e886fc00-612d-44dd-a6fe-c0d47988246f.gif)
 

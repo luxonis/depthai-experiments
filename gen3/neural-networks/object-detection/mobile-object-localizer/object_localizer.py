@@ -8,7 +8,7 @@ class ObjectLocalizer(dai.node.HostNode):
     def __init__(self) -> None:
         np.random.seed(0)
         self._colors_full = np.random.randint(255, size=(100, 3), dtype=int)
-        self._threshold = 0.2
+        self._threshold = 0.7
         self._counter = 0
         self._fps = 0
         self._start_time = time.time()
@@ -25,45 +25,43 @@ class ObjectLocalizer(dai.node.HostNode):
         self._threshold = threshold
 
 
-    def process(self, cam: dai.ImgFrame, nn: dai.NNData, manip: dai.ImgFrame) -> None:
+    def process(self, cam: dai.ImgFrame, nn: dai.ImgDetections, manip: dai.ImgFrame) -> None:
         frame: np.ndarray = cam.getCvFrame()
         frame_manip = manip.getCvFrame()
 
-        detection_boxes = nn.getTensor("ExpandDims").astype(np.float16).reshape((100, 4))
-        detection_scores = nn.getTensor("ExpandDims_2").astype(np.float16).reshape((100,))
+        detections = nn.detections
 
-        mask = detection_scores >= self._threshold
-        boxes = detection_boxes[mask]
-        colors = self._colors_full[mask]
-        scores = detection_scores[mask]
+        for i, detection in enumerate(detections):
+            if detection.confidence < self._threshold: continue
 
-        self._plot_boxes(frame, boxes, colors, scores)
-        self._plot_boxes(frame_manip, boxes, colors, scores)
+            color = (int(self._colors_full[i, 0]), int(self._colors_full[i, 1]), int(self._colors_full[i, 2]))
 
-        self._show_fps(frame)
+            self._draw_boxes(frame, detection, color, detection.confidence)
+            self._draw_boxes(frame_manip, detection, color, detection.confidence)
 
-        cv2.imshow("Localizer", frame)
-        cv2.imshow("Manip + NN", frame_manip)
+            cv2.imshow("Localizer", frame)
+            cv2.imshow("Manip + NN", frame_manip)
 
-        self._update_fps_counter()
+            self._show_fps(frame)
+            self._update_fps_counter()
 
         if cv2.waitKey(1) == ord('q'):
             self.stopPipeline()
 
-    
-    def _plot_boxes(self, frame: np.ndarray, boxes: np.ndarray, colors, scores) -> None:
-        color_black = (0, 0, 0)
-        for i in range(boxes.shape[0]):
-            box = boxes[i]
-            y1 = (frame.shape[0] * box[0]).astype(int)
-            y2 = (frame.shape[0] * box[2]).astype(int)
-            x1 = (frame.shape[1] * box[1]).astype(int)
-            x2 = (frame.shape[1] * box[3]).astype(int)
-            color = (int(colors[i, 0]), int(colors[i, 1]), int(colors[i, 2]))
 
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            cv2.rectangle(frame, (x1, y1), (x1 + 50, y1 + 15), color, -1)
-            cv2.putText(frame, f"{scores[i]:.2f}", (x1 + 10, y1 + 10), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color_black)
+    def _frame_norm(self, frame: np.ndarray, bbox: tuple):
+        norm_vals = np.full(len(bbox), frame.shape[0])
+        norm_vals[::2] = frame.shape[1]
+        return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
+    
+    
+    def _draw_boxes(self, frame: np.ndarray, detection: np.ndarray, color, scores) -> None:
+        color_black = (0, 0, 0)
+
+        bbox = self._frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+
+        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+        cv2.putText(frame, str(scores), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color_black) 
 
 
     def _show_fps(self, frame: np.ndarray) -> None:
