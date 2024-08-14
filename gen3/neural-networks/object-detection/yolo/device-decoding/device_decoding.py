@@ -3,17 +3,27 @@ import cv2
 import depthai as dai
 import numpy as np
 
+labels = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat", 
+          "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", 
+          "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", 
+          "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", 
+          "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", 
+          "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", 
+          "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", 
+          "pottedplant", "bed", "diningtable", "toilet", "tvmonitor", "laptop", "mouse", "remote", 
+          "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", 
+          "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"]
 
 class DeviceDecoding(dai.node.HostNode):
     def __init__(self) -> None:
         self._startTime = time.monotonic()
         self._color = (255, 255, 255)
-        self._labels = {}
+        self._labels = labels
         self._counter = 0
         super().__init__()
 
 
-    def build(self, images: dai.Node.Output, detections: dai.Node.Output, labels: dict) -> "DeviceDecoding":
+    def build(self, images: dai.Node.Output, detections: dai.Node.Output) -> "DeviceDecoding":
         self._labels = labels
         self.link_args(images, detections)
         self.sendProcessingToPipeline(True)
@@ -48,3 +58,5 @@ class DeviceDecoding(dai.node.HostNode):
         normVals = np.full(len(bbox), frame.shape[0])
         normVals[::2] = frame.shape[1]
         return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
+    
+
