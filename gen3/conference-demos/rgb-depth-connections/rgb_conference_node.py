@@ -28,7 +28,7 @@ class Display(dai.node.HostNode):
         self.text = TextHelper()
         self.title = TitleHelper()
         cv2.namedWindow("Luxonis", cv2.WND_PROP_FULLSCREEN)
-        cv2.setWindowProperty("Luxonis",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+        cv2.setWindowProperty("Luxonis", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
         self.jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
         self.jet_custom = self.jet_custom[::-1]
@@ -53,7 +53,7 @@ class Display(dai.node.HostNode):
         birds = self.birdseyeframe.copy()
 
         frame = rgb_frame.getCvFrame()
-        depthFrame = in_depth.getFrame()
+        depthFrame = in_depth.getCvFrame()
         detections = in_nn.detections
 
         depthFrameColor = cv2.normalize(depthFrame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)

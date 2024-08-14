@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import depthai as dai
-import blobconverter
 from rgb_conference_node import Display
+
+modelDescription = dai.NNModelDescription(modelSlug="yolov6n", platform="RVC2")
+archivePath = dai.getModelFromZoo(modelDescription)
 
 with dai.Pipeline() as pipeline:
 
@@ -12,7 +14,7 @@ with dai.Pipeline() as pipeline:
     camRgb.setPreviewKeepAspectRatio(False)
 
     # Properties
-    camRgb.setPreviewSize(416, 416)
+    camRgb.setPreviewSize(512, 288) 
     camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     camRgb.setInterleaved(False)
     camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
@@ -32,10 +34,10 @@ with dai.Pipeline() as pipeline:
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setLeftRightCheck(True)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    # stereo.inputConfig.setBlocking(False)
+    stereo.setSubpixel(False)
 
-    nnPath = blobconverter.from_zoo(name="yolov4_tiny_coco_416x416", zoo_type="depthai", shaves=5)
-    spatialDetectionNetwork.setBlobPath(nnPath)
+    nn_archive = dai.NNArchive(archivePath)
+    spatialDetectionNetwork.setNNArchive(nn_archive)
     spatialDetectionNetwork.setConfidenceThreshold(0.3)
     spatialDetectionNetwork.input.setBlocking(False)
     spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
