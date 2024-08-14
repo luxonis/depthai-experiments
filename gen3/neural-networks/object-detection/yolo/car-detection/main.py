@@ -48,7 +48,7 @@ with dai.Pipeline() as pipeline:
 
     pipeline.create(CarDetection).build(
         img_frame=output, 
-        detections=nn.out
+        detections=nn.out,
         )
     
     print("Pipeline created")
