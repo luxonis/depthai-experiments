@@ -1,13 +1,14 @@
 import cv2
 import depthai as dai
 import numpy as np
+from pyzbar.pyzbar import decode
+
 
 DECODE = True
 
 class QRScanner(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self.detector = cv2.QRCodeDetector() if DECODE else None
 
     def build(self, preview: dai.Node.Output, nn: dai.Node.Output) -> "QRScanner":
         self.link_args(preview, nn)
@@ -37,15 +38,20 @@ class QRScanner(dai.node.HostNode):
 
     def decode(self, frame, bbox):
         assert(DECODE)
+        if bbox[1] == bbox[3] or bbox[0] == bbox[2]:
+            print("Detection bbox is empty")
+            return ""
 
         img = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-        data, vertices_array, binary_qrcode = self.detector.detectAndDecode(img)
+        data = decode(img)
         if data:
-            print("Decoded text", data)
-            return data
+            text = data[0].data.decode("utf-8")
+            print("Decoded text", text)
+            return text
         else:
             print("Decoding failed")
             return ""
+
 
 def expandDetection(det, percent):
     percent /= 100

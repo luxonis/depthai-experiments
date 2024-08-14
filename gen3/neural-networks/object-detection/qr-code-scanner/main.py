@@ -10,8 +10,7 @@ with dai.Pipeline() as pipeline:
     cam.setPreviewSize(1080, 1080)
     cam.setInterleaved(False)
     cam.initialControl.setManualFocus(145)
-    # 30 fps because the cv2 QR decoder bottlenecks the pipeline
-    cam.setFps(30)
+    cam.setFps(20)
 
     manip = pipeline.create(dai.node.ImageManip)
     manip.initialConfig.setResize(384, 384)
