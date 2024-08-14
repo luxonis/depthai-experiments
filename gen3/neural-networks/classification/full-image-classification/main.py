@@ -14,16 +14,20 @@ parser.add_argument('-vid', '--video', type=str
 args = parser.parse_args()
 
 nn_shape = None
-nn_path = None
+blob = None
+
+device = dai.Device()
 
 if args.neural_network == "efficientnet":
-    nn_shape = (224, 224)
-    nn_path = blobconverter.from_zoo(name="efficientnet-b0", zoo_type="depthai", shaves=6, version="2021.4")
+    model_description = dai.NNModelDescription(modelSlug="efficientnet-lite", platform=device.getPlatform().name, modelVersionSlug="300x300")
+    nn_shape = (300, 300)
+    archive_path = dai.getModelFromZoo(model_description)
+    blob = dai.NNArchive(archive_path).getSuperBlob().getBlobWithNumShaves(6)
 elif args.neural_network == "flowers":
     nn_shape = (180, 180)
-    nn_path = Path("model/flower.blob").resolve().absolute()
+    blob = dai.OpenVINO.Blob(Path("model/flower.blob").resolve().absolute())
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
 
     print("Creating pipeline...")
     if args.video:
@@ -49,7 +53,7 @@ with dai.Pipeline() as pipeline:
     preview.link(manip.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(nn_path)
+    nn.setBlob(blob)
     manip.out.link(nn.input)
 
     classification = pipeline.create(ImageClassification).build(

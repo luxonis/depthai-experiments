@@ -24,7 +24,9 @@ class ImageClassification(dai.node.HostNode):
         assert (isinstance(preview, dai.ImgFrame))
 
         frame = preview.getCvFrame()
-        data = softmax(nn.getFirstTensor().flatten())
+        data = nn.getFirstTensor().flatten()
+        if not self.efficientnet:
+            data = softmax(data)
 
         result_conf = np.max(data)
         if result_conf > (0.2 if self.efficientnet else 0.5):
