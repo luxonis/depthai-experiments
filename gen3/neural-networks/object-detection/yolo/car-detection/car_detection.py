@@ -3,6 +3,7 @@ import depthai as dai
 import numpy as np
 from fps import FPS
 
+CAR_DETECTION_LABEL = 2
 
 class CarDetection(dai.node.HostNode):
     FONT = cv2.FONT_HERSHEY_SIMPLEX
@@ -26,8 +27,9 @@ class CarDetection(dai.node.HostNode):
 
         if detections is not None:
             for detection in detections.detections:
-                tl, br = self.denormalize(detection.xmin, detection.ymin, detection.xmax, detection.ymax, frame.shape)
-                self.draw_bbox(frame, tl, br, (0, 255, 0), 1)
+                if detection.label == CAR_DETECTION_LABEL:
+                    tl, br = self.denormalize(detection.xmin, detection.ymin, detection.xmax, detection.ymax, frame.shape)
+                    self.draw_bbox(frame, tl, br, (0, 255, 0), 1)
                 
         text = f'FPS: {self.fps_counter.fps():.1f}'
         self.fps_counter.next_iter()
