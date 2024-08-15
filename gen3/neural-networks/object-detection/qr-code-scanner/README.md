@@ -1,10 +1,7 @@
 # QR Code detection
 
-This demo uses [qr_code_detection_384x384](https://github.com/luxonis/depthai-model-zoo/tree/main/models/qr_code_detection_384x384) neural network to detect QR codes.
+This demo uses [qrdet:nano-288x512](https://hub.luxonis.com/ai/models/d1183a0f-e9a0-4fa2-8437-f2f5b0181739?view=page) neural network to detect QR codes.
 
-## Tutorial
-
-We wrote a [Deploying QR code detector model](https://docs.luxonis.com/en/latest/pages/tutorials/deploying-custom-model/#qr-code-detector) tutorial that provides step-by-step details on how to convert, compile and deploy a custom AI model (WeChat QR Code detection model) to the device. Deployment part focuses on how this demo was developed.
 
 ## Demo
 
@@ -12,7 +9,7 @@ We wrote a [Deploying QR code detector model](https://docs.luxonis.com/en/latest
 
 ## Decoding
 
-Inside the `host_qr_scanner.py` code you have an option (`DECODE=True`) to also decode the QR code detected. Decoding is performed on the host using the OpenCV library.
+Inside the `host_qr_scanner.py` code you have an option (`DECODE=True`) to also decode the QR code detected. Decoding is performed on the host using the pyzbar library.
 
 ## Installation
 

@@ -1,6 +1,7 @@
 import depthai as dai
 from host_qr_scanner import QRScanner
 
+# if model changed change README
 model_description = dai.NNModelDescription(modelSlug="qrdet", platform="RVC2")
 archivePath = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archivePath)
