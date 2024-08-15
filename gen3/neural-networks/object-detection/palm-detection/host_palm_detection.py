@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 import depthai as dai
 import cv2
@@ -40,7 +41,7 @@ class PalmDetection(dai.node.HostNode):
         shape = (128, 128)
         num_keypoints = 7
         min_score_thresh = 0.7
-        anchors = np.load("anchors_palm.npy")
+        anchors = np.load((Path(__file__).parent / "anchors_palm.npy").resolve())
 
         raw_box_tensor = nn_data.getTensor("regressors").reshape(-1, 896, 18)  # regress
         raw_score_tensor = nn_data.getTensor("classificators").reshape(-1, 896, 1)  # classification

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
@@ -110,7 +111,7 @@ with dai.Pipeline() as pipeline:
 
     # Define a neural network that will detect text
     detection_nn = pipeline.create(dai.node.NeuralNetwork)
-    detection_nn.setBlobPath(nn_path)
+    detection_nn.setBlobPath(Path(__file__).parent / nn_path)
     detection_nn.setNumPoolFrames(4)
     detection_nn.input.setBlocking(False)
     detection_nn.setNumInferenceThreads(2)
