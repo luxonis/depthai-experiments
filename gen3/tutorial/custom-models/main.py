@@ -1,3 +1,4 @@
+from pathlib import Path
 import depthai as dai
 import cv2
 import numpy as np
@@ -58,13 +59,13 @@ with dai.Pipeline() as pipeline:
 
     # BLUR
     nn_blur = pipeline.create(dai.node.NeuralNetwork)
-    nn_blur.setBlobPath("models/blur_simplified_openvino_2021.4_6shave.blob")
+    nn_blur.setBlobPath(Path(__file__).parent / "models/blur_simplified_openvino_2021.4_6shave.blob")
 
     camRgb.preview.link(nn_blur.input)
 
     # EDGE
     nn_edge = pipeline.create(dai.node.NeuralNetwork)
-    nn_edge.setBlobPath("models/edge_simplified_openvino_2021.4_6shave.blob")
+    nn_edge.setBlobPath(Path(__file__).parent / "models/edge_simplified_openvino_2021.4_6shave.blob")
     camRgb.preview.link(nn_edge.input)
 
     # DIFF
@@ -75,7 +76,7 @@ with dai.Pipeline() as pipeline:
     camRgb.preview.link(img_manip.inputImage)
 
     nn_diff = pipeline.create(dai.node.NeuralNetwork)
-    nn_diff.setBlobPath("models/diff_openvino_2021.4_6shave.blob")
+    nn_diff.setBlobPath(Path(__file__).parent / "models/diff_openvino_2021.4_6shave.blob")
 
     script = pipeline.create(dai.node.Script)
     img_manip.out.link(script.inputs['in'])
@@ -114,7 +115,7 @@ with dai.Pipeline() as pipeline:
     right.out.link(manipRight.inputImage)
 
     nn_concat = pipeline.create(dai.node.NeuralNetwork)
-    nn_concat.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
+    nn_concat.setBlobPath(Path(__file__).parent / "models/concat_openvino_2021.4_6shave.blob")
     nn_concat.setNumInferenceThreads(2)
 
     manipLeft.out.link(nn_concat.inputs['img1'])

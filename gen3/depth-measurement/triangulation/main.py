@@ -17,7 +17,7 @@ def populate_pipeline(p: dai.Pipeline, left: bool, resolution: dai.MonoCameraPro
     face_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
     cam.out.link(face_manip.inputImage)
 
-    face_nn = p.create(dai.node.MobileNetDetectionNetwork).build()
+    face_nn = p.create(dai.node.MobileNetDetectionNetwork)
     face_nn.setConfidenceThreshold(0.2)
     face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version="2021.4"))
     face_manip.out.link(face_nn.input)

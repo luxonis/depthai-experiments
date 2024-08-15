@@ -5,7 +5,7 @@ from host_depth_driven_focus import DepthDrivenFocus
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(300, 300)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setVideoSize(1080, 1080)
@@ -24,7 +24,7 @@ with dai.Pipeline() as pipeline:
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     stereo.setExtendedDisparity(True)
 
-    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork).build()
+    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.4)
     face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5, version='2021.4'))
     face_det_nn.setBoundingBoxScaleFactor(0.5)

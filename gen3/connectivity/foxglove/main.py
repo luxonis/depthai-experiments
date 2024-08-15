@@ -30,7 +30,7 @@ async def main():
     with dai.Pipeline(device) as pipeline:
 
         print("Creating pipeline...")
-        cam = pipeline.create(dai.node.ColorCamera).build()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setIspScale(1, 3)
 
         left = pipeline.create(dai.node.MonoCamera)
@@ -64,7 +64,7 @@ async def main():
         stereo.initialConfig.costMatching.linearEquationParameters.beta = 2
 
         nn = pipeline.create(dai.node.NeuralNetwork)
-        nn.setBlobPath(Path("model/pointcloud_640x400.blob").resolve().absolute())
+        nn.setBlobPath(Path(__file__).parent / "model/pointcloud_640x400.blob")
         stereo.depth.link(nn.inputs["depth"])
         # Only send xyz data once, and always reuse the message
         nn.inputs["xyz"].setReusePreviousMessage(True)

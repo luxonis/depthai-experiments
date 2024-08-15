@@ -86,7 +86,7 @@ class Worker(QRunnable):
         with dai.Pipeline() as pipeline:
 
             print("Creating pipeline...")
-            cam = pipeline.create(dai.node.ColorCamera).build()
+            cam = pipeline.create(dai.node.ColorCamera)
             cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
             cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
             cam.setPreviewSize(848, 480)
