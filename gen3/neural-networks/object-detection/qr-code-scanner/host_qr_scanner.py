@@ -19,8 +19,9 @@ class QRScanner(dai.node.HostNode):
         frame = preview.getCvFrame()
 
         for det in detections.detections:
-            expandDetection(det, 2)
+            # expandDetection(det, 2)
             bbox = frameNorm(frame, (det.xmin, det.ymin, det.xmax, det.ymax))
+            # bbox = (np.array((det.xmin, det.ymin, det.xmax, det.ymax)) * frame.shape[0]).astype(np.float16)
 
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color=(0, 0, 255), thickness=2)
             cv2.putText(frame, f"{int(det.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 20)

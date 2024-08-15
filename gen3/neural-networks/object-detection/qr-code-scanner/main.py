@@ -1,6 +1,9 @@
 import depthai as dai
-import blobconverter
 from host_qr_scanner import QRScanner
+
+model_description = dai.NNModelDescription(modelSlug="qrdet", platform="RVC2")
+archivePath = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archivePath)
 
 with dai.Pipeline() as pipeline:
 
@@ -13,16 +16,13 @@ with dai.Pipeline() as pipeline:
     cam.setFps(20)
 
     manip = pipeline.create(dai.node.ImageManip)
-    manip.initialConfig.setResize(384, 384)
-    manip.initialConfig.setFrameType(dai.ImgFrame.Type.GRAY8)
+    manip.initialConfig.setResize(512, 288) 
+    manip.initialConfig.setKeepAspectRatio(False)
     cam.preview.link(manip.inputImage)
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    nn.setConfidenceThreshold(0.3)
-    nn.setBlobPath(blobconverter.from_zoo(name="qr_code_detection_384x384", zoo_type="depthai", shaves=6))
+    nn = pipeline.create(dai.node.DetectionNetwork).build(nnArchive=nn_archive, input=manip.out, confidenceThreshold=0.3)
     nn.input.setMaxSize(1)
     nn.input.setBlocking(False)
-    manip.out.link(nn.input)
 
     scanner = pipeline.create(QRScanner).build(
         preview=cam.preview,
