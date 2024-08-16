@@ -1,10 +1,17 @@
 import depthai as dai
-import blobconverter
 
 from pathlib import Path
 from os.path import isfile
 from download import download_decoder
 from host_nanosam_main import NanoSAM
+
+modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="coco-416x416") 
+archivePath = dai.getModelFromZoo(modelDescription)
+nn_archive_det = dai.NNArchive(archivePath)
+
+# modelDescription = dai.NNModelDescription(modelSlug="resnet18-image-encoder", platform="RVC2", modelVersionSlug="1024x1024") # private model
+archivePath = "./models/nanosam_resnet18_image_encoder_1024x1024.rvc2.tar.xz" 
+nn_archive_enc = dai.NNArchive(archivePath)
 
 detection_shape = (416, 416)
 nn_shape = (1024, 1024)
@@ -28,20 +35,22 @@ with dai.Pipeline() as pipeline:
     cam.preview.link(manip.inputImage)
 
     detection_nn = pipeline.create(dai.node.YoloDetectionNetwork)
-    detection_nn.setBlobPath(blobconverter.from_zoo("yolov6n_coco_416x416", shaves = 6, zoo_type = "depthai", use_cache=True))
+    detection_nn.setBlob(nn_archive_det.getSuperBlob().getBlobWithNumShaves(6))
+    # detection_nn.setNNArchive(nn_archive)
     detection_nn.setNumClasses(80)
     detection_nn.setCoordinateSize(4)
     detection_nn.setAnchors([])
     detection_nn.setAnchorMasks({})
     detection_nn.setIouThreshold(0.45)
     detection_nn.setConfidenceThreshold(0.5)
-    detection_nn.setNumInferenceThreads(1)
+    detection_nn.setNumInferenceThreads(2)
     manip.out.link(detection_nn.input)
 
     embedding_nn = pipeline.create(dai.node.NeuralNetwork)
-    embedding_nn.setBlobPath(blobconverter.from_zoo("nanosam_resnet18_image_encoder_1024x1024", shaves = 6
-                                                    , zoo_type = "depthai", version="2022.1", use_cache=True))
-    embedding_nn.setNumInferenceThreads(1)
+    # embedding_nn.setBlobPath(blobconverter.from_zoo("nanosam_resnet18_image_encoder_1024x1024", shaves = 6
+    #                                                 , zoo_type = "depthai", version="2022.1", use_cache=True))
+    embedding_nn.setNNArchive(nn_archive_enc)
+    embedding_nn.setNumInferenceThreads(2)
     cam.preview.link(embedding_nn.input)
 
     nanosam = pipeline.create(NanoSAM).build(
