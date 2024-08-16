@@ -6,10 +6,12 @@ class PeopleCounter(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
+
     def build(self, preview: dai.Node.Output, nn: dai.Node.Output) -> "PeopleCounter":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)
         return self
+
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
         frame = preview.getCvFrame()
