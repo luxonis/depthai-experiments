@@ -2,7 +2,7 @@ from imutils.video import FPS
 import depthai as dai
 
 
-class FPSCounter(dai.node.ThreadedHostNode):
+class FPSCounter(dai.node.HostNode):
     def __init__(self):
         super().__init__()
         self._counter = FPS()
@@ -11,7 +11,7 @@ class FPSCounter(dai.node.ThreadedHostNode):
 
     def build(self, data: dai.Node.Output) -> "FPSCounter":
         self._counter.start()
-        self._data_q = data.createOutputQueue()
+        self.link_args(data)
         return self
     
 
@@ -19,10 +19,8 @@ class FPSCounter(dai.node.ThreadedHostNode):
         self._name = name
 
 
-    def run(self) -> None:
-        while self.isRunning():
-            self._data_q.get()
-            self._counter.update()
+    def process(self, _: dai.Buffer) -> None:
+        self._counter.update()
 
 
     def onStop(self) -> None:
