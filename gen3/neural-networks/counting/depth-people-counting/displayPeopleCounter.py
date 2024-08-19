@@ -2,6 +2,7 @@ import depthai as dai
 import numpy as np
 import cv2
 from utility import TextHelper, PeopleCounter, DETECTION_ROI
+from typing import Sequence
 
 
 class DisplayPeopleCounter(dai.node.HostNode):
@@ -41,7 +42,8 @@ class DisplayPeopleCounter(dai.node.HostNode):
         self.det_in_q.send(dets)
 
         img_frame = dai.ImgFrame()
-        img_frame.setCvFrame(depth_rgb, dai.ImgFrame.Type.BGR888p)
+        img_frame.setCvFrame(depth_rgb, dai.ImgFrame.Type.BGR888p) # works
+        
         self.frame_in_q.send(img_frame)
 
         self.text.rectangle(depth_rgb, (DETECTION_ROI[0], DETECTION_ROI[1]), (DETECTION_ROI[2], DETECTION_ROI[3]))
@@ -53,12 +55,12 @@ class DisplayPeopleCounter(dai.node.HostNode):
             self.stopPipeline()
 
     
-    def frame_norm(self, frame, bbox):
+    def frame_norm(self, frame, bbox) -> tuple[float, float, float, float]:
         width, height = frame.shape[0] + DETECTION_ROI[0], frame.shape[1] + DETECTION_ROI[1]
         return bbox[0] / width, bbox[1] / height, bbox[2] / width, bbox[3] / height
 
 
-    def get_detections(self, contours, depth_rgb):
+    def get_detections(self, contours, depth_rgb) -> dai.ImgDetections:
 
         dets = dai.ImgDetections()
         if len(contours) != 0:
@@ -81,7 +83,7 @@ class DisplayPeopleCounter(dai.node.HostNode):
         return dets
 
 
-    def get_contours(self, depth_frame):
+    def get_contours(self, depth_frame) -> Sequence[np.ndarray]:
         cropped = depth_frame[DETECTION_ROI[1]:DETECTION_ROI[3], DETECTION_ROI[0]:DETECTION_ROI[2]]
         _, thresh = cv2.threshold(cropped, 125, 145, cv2.THRESH_BINARY)
         blob = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (37,37)))
@@ -89,4 +91,8 @@ class DisplayPeopleCounter(dai.node.HostNode):
         contours, _ = cv2.findContours(edged,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
         return contours
+    
+
+    def to_planar(self, arr: np.ndarray) -> list:
+        return arr.transpose(2, 0, 1).flatten()
     
