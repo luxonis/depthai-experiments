@@ -34,7 +34,7 @@ class CumulativeObjectCounting(dai.node.HostNode):
     
     def process(self, img_frame: dai.Buffer, tracklets: dai.Tracklets) -> None:
         assert(isinstance(img_frame, dai.ImgFrame))
-        frame: np.ndarray = img_frame.getCvFrame()
+        frame = img_frame.getCvFrame()
 
         self._draw_fps(frame)
         self._frame_count += 1
@@ -59,9 +59,9 @@ class CumulativeObjectCounting(dai.node.HostNode):
         self._draw_roi_line(frame, height, width)
         self._draw_count_and_status(frame)
 
-        img_frame.setType(dai.ImgFrame.Type.BGR888i)
-        img_frame.setFrame(frame)
-        self.output.send(img_frame)
+        out_frame = dai.ImgFrame()
+        out_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888i)
+        self.output.send(out_frame)
 
 
     def _draw_fps(self, frame: np.ndarray) -> None:
