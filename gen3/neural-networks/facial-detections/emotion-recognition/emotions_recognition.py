@@ -3,7 +3,8 @@ import depthai as dai
 import numpy as np
 from detected_recognitions import DetectedRecognitions
 
-emotions = ['Anger','Contempt','Disgust','Fear','Happiness','Neutral','Sadness','Surprise']
+
+emotions = ['Neutral', 'Happy', 'Surprise', 'Sad', 'Anger', 'Disgust', 'Fear', 'Contempt']
 
 class DisplayEmotions(dai.node.HostNode):
     def __init__(self):
