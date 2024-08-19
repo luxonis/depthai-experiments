@@ -31,7 +31,7 @@ class DisplayEmotions(dai.node.HostNode):
             bbox = self.frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
             rec = recognitions[i]
-            emotion_results = rec.getFirstTensor().astype(np.float16).flatten()
+            emotion_results = self.softmax(rec.getFirstTensor().astype(np.float16).flatten())
             emotion_name = emotions[np.argmax(emotion_results)]
 
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (10, 245, 10), 2)
@@ -54,3 +54,8 @@ class DisplayEmotions(dai.node.HostNode):
         normVals = np.full(len(bbox), frame.shape[0])
         normVals[::2] = frame.shape[1]
         return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
+
+
+    def softmax(self, x: np.ndarray) -> np.ndarray:
+        e_x = np.exp(x - np.max(x))
+        return e_x / e_x.sum(axis=0)
