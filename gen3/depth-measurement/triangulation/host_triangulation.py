@@ -133,7 +133,7 @@ class Triangulation(dai.node.HostNode):
             self.stopPipeline()
 
     def process_side(self, frame_face: dai.ImgFrame, nn_face: dai.ImgDetections
-                     , nn_landmarks: dai.NNData, left: bool) -> (np.ndarray, list[(int, int)]):
+                     , nn_landmarks: dai.NNData, left: bool) -> tuple[np.ndarray, list[(int, int)]]:
         frame = frame_face.getCvFrame()
         color = self._leftColor if left else self._rightColor
         displayDetections(frame, nn_face.detections)
