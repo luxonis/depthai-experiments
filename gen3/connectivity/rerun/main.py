@@ -8,7 +8,7 @@ async def main():
     with dai.Pipeline(device) as pipeline:
 
         print("Creating pipeline...")
-        cam = pipeline.create(dai.node.ColorCamera).build()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setIspScale(1, 3)
         cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
