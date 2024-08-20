@@ -1,8 +1,14 @@
 # coding=utf-8
-import blobconverter
 import depthai as dai
 
 from human_machine_safety import HumanMachineSafety
+
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
+
+modelDescription = dai.NNModelDescription(modelSlug="mediapipe-palm-detection", platform="RVC2", modelVersionSlug="128x128")
+archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 
 DEPTH_THRESH_HIGH = 3000
 DEPTH_THRESH_LOW = 500
@@ -15,11 +21,8 @@ DANGEROUS_OBJECTS = ["bottle"]
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
-device = dai.Device()
-modelDescription = dai.NNModelDescription(modelSlug="mediapipe-palm-detection", platform="RVC2", modelVersionSlug="128x128")
-archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 
-print("Creating pipeline...")
+device = dai.Device()
 with dai.Pipeline(device) as pipeline:
     cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -63,8 +66,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
     sdn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    blob_path = blobconverter.from_zoo(name="mobilenet-ssd", shaves=5)
-    sdn.setBlobPath(blob_path)
+    sdn.setNNArchive(nn_archive)
     sdn.setNumShavesPerInferenceThread(5)
     sdn.setConfidenceThreshold(0.5)
     sdn.input.setBlocking(False)
@@ -86,11 +88,11 @@ with dai.Pipeline(device) as pipeline:
     human_machine_safety.set_depth_thresh_low(DEPTH_THRESH_LOW)
     human_machine_safety.set_depth_thresh_high(DEPTH_THRESH_HIGH)
     human_machine_safety.set_warning_dist(WARNING_DIST)
-    print("Pipeline created.")
 
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.CAM_B in cams and dai.CameraBoardSocket.CAM_C in cams
     if not depth_enabled:
         raise RuntimeError("Unable to run this experiment on device without depth capabilities! (Available cameras: {})".format(cams))
     
+    print("Pipeline created.")
     pipeline.run()
