@@ -9,6 +9,10 @@ device = dai.Device()
 recognition_model_description = dai.NNModelDescription(modelSlug="emotion-recognition", platform=device.getPlatform().name, modelVersionSlug="gray-64x64")
 recognition_model_path = dai.getModelFromZoo(recognition_model_description)
 
+face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
+face_det_nn_archive = dai.NNArchive(face_det_archive_path)
+
 with dai.Pipeline(device) as pipeline:
 
     stereo = 1 < len(device.getConnectedCameras())
@@ -55,7 +59,8 @@ with dai.Pipeline(device) as pipeline:
         face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 
     face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
+    # face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
+    face_det_nn.setNNArchive(face_det_nn_archive)
     face_det_manip.out.link(face_det_nn.input)
 
     # Script node will take the output from the face detection NN as an input and set ImageManipConfig
