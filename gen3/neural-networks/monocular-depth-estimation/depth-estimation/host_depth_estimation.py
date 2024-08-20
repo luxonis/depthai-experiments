@@ -12,12 +12,12 @@ class DepthEstimation(dai.node.HostNode):
         self.sendProcessingToPipeline(True)
 
         self.mbnv2 = mbnv2
-        self.nn_shape = (nn_shape[0]//2, nn_shape[1]//2) if mbnv2 else nn_shape
+        self.nn_shape = (nn_shape[1]//2, nn_shape[0]//2) if mbnv2 else nn_shape 
         return self
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
         frame = preview.getCvFrame()
-        data = nn.getFirstTensor().flatten().reshape(self.nn_shape)
+        data = nn.getFirstTensor().flatten().reshape((self.nn_shape[1], self.nn_shape[0]))
 
         # Scale depth to get relative depth
         d_min = np.min(data)
@@ -30,7 +30,7 @@ class DepthEstimation(dai.node.HostNode):
         depth_relative = cv2.applyColorMap(depth_relative, cv2.COLORMAP_INFERNO)
 
         if self.mbnv2:
-            frame = cv2.resize(frame, (self.nn_shape[1], self.nn_shape[0]))
+            frame = cv2.resize(frame, self.nn_shape)
 
         cv2.imshow("Depth", np.concatenate([frame, depth_relative], axis=1))
 
