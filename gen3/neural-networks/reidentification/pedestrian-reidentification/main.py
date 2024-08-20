@@ -6,6 +6,13 @@ from fps_drawer import FPSDrawer
 from detections_recognitions_sync import DetectionsRecognitionsSync
 from pedestrian_reidentification import PedestrianReidentification
 
+person_model_description = dai.NNModelDescription(modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640")
+person_archive_path = dai.getModelFromZoo(person_model_description)
+person_nn_archive = dai.NNArchive(person_archive_path)
+
+recognition_model_description = dai.NNModelDescription(modelSlug="person-reidentification-retail", platform="RVC2", modelVersionSlug="0288")
+recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
+recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 
 with dai.Pipeline() as pipeline:
     pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
@@ -26,7 +33,8 @@ with dai.Pipeline() as pipeline:
 
     person_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     person_nn.setConfidenceThreshold(0.5)
-    person_nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=6))
+    # person_nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=6))
+    person_nn.setNNArchive(person_nn_archive)
     person_det_manip.out.link(person_nn.input)
 
     image_manip_script = pipeline.create(dai.node.Script)
@@ -42,7 +50,8 @@ with dai.Pipeline() as pipeline:
 
     print("Creating Recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setBlobPath(blobconverter.from_zoo(name="person-reidentification-retail-0288", shaves=6))
+    # recognition_nn.setBlobPath(blobconverter.from_zoo(name="person-reidentification-retail-0288", shaves=6))
+    recognition_nn.setNNArchive(recognition_nn_archive)
     recognition_manip.out.link(recognition_nn.input)
 
     detections_sync = pipeline.create(DetectionsRecognitionsSync).build()
@@ -53,6 +62,9 @@ with dai.Pipeline() as pipeline:
     fps_drawer = pipeline.create(FPSDrawer)
     cam.preview.link(fps_drawer.input)
 
-    pedestrian_reidentification = pipeline.create(PedestrianReidentification).build(fps_drawer.output, detections_sync.output)
+    pedestrian_reidentification = pipeline.create(PedestrianReidentification).build(
+        fps_drawer.output, 
+        detections_sync.output
+    )
     
     pipeline.run()
