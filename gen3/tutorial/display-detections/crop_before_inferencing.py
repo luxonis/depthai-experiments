@@ -1,19 +1,19 @@
 import depthai as dai
-import blobconverter
 import cv2
 import numpy as np
 
-# MobilenetSSD label texts
-labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
 
 class DisplayCropDetections(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, rgb: dai.Node.Output, crop: dai.Node.Output, nn: dai.Node.Output) -> "DisplayCropDetections":
+    def build(self, rgb: dai.Node.Output, crop: dai.Node.Output, nn: dai.Node.Output, label_map: list[str]) -> "DisplayCropDetections":
         self.link_args(rgb, crop, nn)
         self.sendProcessingToPipeline(True)
+        self.label_map = label_map
         return self
 
     def process(self, rgb: dai.ImgFrame, crop: dai.ImgFrame, detections: dai.ImgDetections) -> None:
@@ -35,7 +35,7 @@ class DisplayCropDetections(dai.node.HostNode):
         color = (255, 0, 0)
         for detection in detections:
             bbox = self.frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-            cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+            cv2.putText(frame, self.label_map[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
 
@@ -56,13 +56,15 @@ with dai.Pipeline() as pipeline:
 
     nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn.setConfidenceThreshold(0.5)
-    nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=5))
+    nn.setNNArchive(nn_archive)
+    label_map = nn.getClasses()
     crop.out.link(nn.input)
 
     display = pipeline.create(DisplayCropDetections).build(
         rgb=cam.video,
         crop=crop.out,
-        nn=nn.out
+        nn=nn.out,
+        label_map=label_map
     )
 
     print("Pipeline created.")
