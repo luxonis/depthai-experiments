@@ -12,6 +12,10 @@ parser.add_argument('-t', '--threshold', default=0.25, type=float
                     , help="Minimum distance the person has to move (across the x/y axis) to be considered a real movement. Default: 0.25")
 args = parser.parse_args()
 
+model_description = dai.NNModelDescription(modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
+
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
@@ -33,7 +37,8 @@ with dai.Pipeline() as pipeline:
         preview = cam.preview
 
     nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=7))
+    # nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=7))
+    nn.setNNArchive(nn_archive)
     nn.setConfidenceThreshold(0.5)
     nn.input.setBlocking(False)
     preview.link(nn.input)
