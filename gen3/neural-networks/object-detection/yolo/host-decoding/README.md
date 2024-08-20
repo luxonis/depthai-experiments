@@ -4,9 +4,9 @@ This example shows how to run YoloV5 object detection on DepthAI with decoding o
 
 The following *.blob*s are available:
 
-* *yolov5s_sku_openvino_2021.4_6shave.blob*: pretrained on YoloV5s on 3 epochs of SKU-110K dataset as can also be seen in the Colab.
 * *yolov5s_default_openvino_2021.4_6shave.blob*: pretrained version of YoloV5s on Coco dataset.
 * *yolov5m_default_openvino_2021.4_6shave*: heavier version (YoloV5m) pretrained on Coco dataset.
+* *yolov5s_sku_openvino_2021.4_6shave.blob*: pretrained on YoloV5s on 3 epochs of SKU-110K dataset as can also be seen in the Colab.
 
 For differences between YoloV5s and YoloV5m please refer to the [ultralytics/yolov5](https://github.com/ultralytics/yolov5).
 
@@ -17,6 +17,8 @@ See the example of a model pretrained on SKU-110K dataset in action:
 ![Example Image](https://user-images.githubusercontent.com/56075061/145186805-38e3115d-94fa-4850-9ec4-c34f90c05d30.gif)
 
 ## Pre-requisites
+
+Python 3.8.19 is needed to run this example.
 
 1. Install requirements:
    ```
