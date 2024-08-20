@@ -1,4 +1,4 @@
-## [Gen2] Mobile Object Localizer on DepthAI
+## [Gen3] Mobile Object Localizer on DepthAI
 
 This example shows an implementation of Mobile Object Localizer from [Tensorflow Hub](https://tfhub.dev/google/lite-model/object_detection/mobile_object_localizer_v1/1/default/1).
 

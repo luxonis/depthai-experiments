@@ -16,6 +16,8 @@ Example shows input video with overlay of lane and line segmentation and vehicle
 
 ## Pre-requisites
 
+Python 3.8.19 is required.
+
 1. Install requirements:
    ```
    python3 -m pip install -r requirements.txt

@@ -4,7 +4,7 @@ import numpy as np
 import onnxruntime as ort
 import cv2
 
-DECODER_PATH = "/Users/danielnicik/PycharmProjects/depthai-experiments/gen3/neural-networks/segmentation/nanosam/onnx_decoder/mobile_sam_mask_decoder.onnx"
+DECODER_PATH = "./onnx_decoder/mobile_sam_mask_decoder.onnx"
 
 class ONNXDecoder:
     def __init__(self):

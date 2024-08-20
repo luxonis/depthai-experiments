@@ -63,7 +63,7 @@ while True:
             correct_bb(det)
             cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
             # node.warn(f"Sending {i + 1}. age/gender det. Seq {seq}. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
-            cfg.setResize(260, 260)
+            cfg.setResize(64, 64)
             cfg.setKeepAspectRatio(False)
             node.io['manip_cfg'].send(cfg)
             node.io['manip_img'].send(img)

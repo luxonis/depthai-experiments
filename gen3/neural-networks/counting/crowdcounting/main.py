@@ -1,9 +1,14 @@
-from pathlib import Path
-import depthai as dai
 import argparse
+import depthai as dai
+from pathlib import Path
+
 from host_crowdcounting import Crowdcounting
 from download import download_vids
 from os.path import isfile
+
+modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="r2-coco-512x288")
+archivePath = dai.getModelFromZoo(modelDescription)
+nn_archive = dai.NNArchive(archivePath)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--video-path', type=str, help="Path to the video input for inference. Default: vids/virat.mp4"
@@ -52,3 +57,4 @@ with dai.Pipeline() as pipeline:
 
     print("Pipeline created.")
     pipeline.run()
+    print("Pipeline exited.")

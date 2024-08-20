@@ -6,12 +6,14 @@ class Crowdcounting(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
+
     def build(self, preview: dai.Node.Output, nn: dai.Node.Output
               , nn_shape: tuple[int, int]) -> "Crowdcounting":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)
         self.nn_shape = nn_shape
         return self
+
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
         # Density map output is 1/8 of input size
@@ -21,15 +23,15 @@ class Crowdcounting(dai.node.HostNode):
         frame = preview.getCvFrame()
 
         label_count = "Predicted count: {:.2f}".format(count)
-        cv2.putText(frame, label_count, (20, 30), cv2.FONT_HERSHEY_TRIPLEX, 0.8, (255, 0, 0))
+        cv2.putText(frame, label_count, (20, 30), cv2.FONT_HERSHEY_TRIPLEX, 0.8, (0, 255, 255))  
 
         output_colors = self.decode_density_map(data)
         frame = cv2.addWeighted(frame, 1, output_colors, 0.5, 0)
         cv2.imshow("Predict count", frame)
 
         if cv2.waitKey(1) == ord('q'):
-            print("Pipeline exited.")
             self.stopPipeline()
+
 
     def decode_density_map(self, output_tensor):
         output = np.array(output_tensor) * 255

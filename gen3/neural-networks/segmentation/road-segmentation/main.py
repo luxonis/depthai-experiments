@@ -1,7 +1,9 @@
-import blobconverter
 import depthai as dai
-
 from host_road_segmentation import RoadSegmentation
+
+# modelDescription = dai.NNModelDescription(modelSlug="road-segmentation-adas", platform="RVC2", modelVersionSlug="0001-896x512") # private model
+archivePath = "./model/road-segmentation-adas-0001.rvc2.tar.xz"
+nn_archive = dai.NNArchive(archivePath)
 
 nn_shape = (896, 512)
 
@@ -15,7 +17,7 @@ with dai.Pipeline() as pipeline:
     cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(blobconverter.from_zoo(name="road-segmentation-adas-0001", shaves=6))
+    nn.setNNArchive(nn_archive)
     cam.preview.link(nn.input)
 
     road_segmentation = pipeline.create(RoadSegmentation).build(

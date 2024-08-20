@@ -3,6 +3,10 @@ import depthai as dai
 import re
 from host_triangulation import Triangulation
 
+faceDet_modelDescription = dai.NNModelDescription(modelSlug="yunet", platform="RVC2")
+faceDet_archivePath = dai.getModelFromZoo(faceDet_modelDescription)
+faceDet_nnarchive = dai.NNArchive(faceDet_archivePath)
+
 # Creates and connects nodes, once for the left camera and once for the right camera
 def populate_pipeline(p: dai.Pipeline, left: bool, resolution: dai.MonoCameraProperties.SensorResolution)\
         -> tuple[dai.Node.Output, dai.Node.Output, dai.Node.Output]:
@@ -12,14 +16,16 @@ def populate_pipeline(p: dai.Pipeline, left: bool, resolution: dai.MonoCameraPro
     cam.setResolution(resolution)
 
     face_manip = p.create(dai.node.ImageManip)
-    face_manip.initialConfig.setResize(300, 300)
+    face_manip.initialConfig.setResize(640, 640)
     # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
     face_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    face_manip.setMaxOutputFrameSize(640*640*3)
     cam.out.link(face_manip.inputImage)
 
     face_nn = p.create(dai.node.MobileNetDetectionNetwork)
     face_nn.setConfidenceThreshold(0.2)
     face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6, version="2021.4"))
+
     face_manip.out.link(face_nn.input)
 
     # Script node will take the output from the NN as an input, get the first bounding box

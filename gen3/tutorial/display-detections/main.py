@@ -1,9 +1,9 @@
 import depthai as dai
-import blobconverter
 from host_display_detections import DisplayDetections
 
-modelDescription = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
-archivePath = dai.getModelFromZoo(modelDescription)
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
 
 with dai.Pipeline() as pipeline:
 
@@ -25,13 +25,7 @@ with dai.Pipeline() as pipeline:
     crop_nn.initialConfig.setResize(300, 300)
     cam.preview.link(crop_nn.inputImage)
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    nn.setConfidenceThreshold(0.5)
-    
-    nnArchive = dai.NNArchive(archivePath)
-    nn.setBlob(nnArchive.getSuperBlob().getBlobWithNumShaves(5))
-
-    crop_nn.out.link(nn.input)
+    nn = pipeline.create(dai.node.DetectionNetwork).build(input=crop_nn.out, nnArchive=nn_archive)
 
     display = pipeline.create(DisplayDetections).build(
         full=cam.preview,

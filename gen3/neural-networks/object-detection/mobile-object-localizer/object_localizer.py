@@ -49,12 +49,6 @@ class ObjectLocalizer(dai.node.HostNode):
             self.stopPipeline()
 
 
-    def _frame_norm(self, frame: np.ndarray, bbox: tuple):
-        norm_vals = np.full(len(bbox), frame.shape[0])
-        norm_vals[::2] = frame.shape[1]
-        return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
-    
-    
     def _draw_boxes(self, frame: np.ndarray, detection: np.ndarray, color, scores) -> None:
         color_black = (0, 0, 0)
 
@@ -62,6 +56,12 @@ class ObjectLocalizer(dai.node.HostNode):
 
         cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
         cv2.putText(frame, str(scores), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color_black) 
+    
+    
+    def _frame_norm(self, frame: np.ndarray, bbox: tuple):
+        norm_vals = np.full(len(bbox), frame.shape[0])
+        norm_vals[::2] = frame.shape[1]
+        return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
 
 
     def _show_fps(self, frame: np.ndarray) -> None:

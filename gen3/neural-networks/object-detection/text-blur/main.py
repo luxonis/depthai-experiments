@@ -22,6 +22,12 @@ https://github.com/PINTO0309/PINTO_model_zoo/tree/main/145_text_detection_db,
 and exported with scaling and mean_values flag.
 '''
 
+
+# modelDescription = dai.NNModelDescription(modelSlug="text-detection-db", platform="RVC2")
+# archivePath = dai.getModelFromZoo(modelDescription)
+# nn_archive = dai.NNArchive(archivePath )
+
+
 # --------------- Arguments ---------------
 parser = argparse.ArgumentParser()
 parser.add_argument("-nn", "--nn_model", help="select model path for inference", default='models/text_detection_db_480x640_openvino_2021.4_6shave.blob', type=str)
@@ -111,7 +117,9 @@ with dai.Pipeline() as pipeline:
 
     # Define a neural network that will detect text
     detection_nn = pipeline.create(dai.node.NeuralNetwork)
+
     detection_nn.setBlobPath(Path(__file__).parent / nn_path)
+
     detection_nn.setNumPoolFrames(4)
     detection_nn.input.setBlocking(False)
     detection_nn.setNumInferenceThreads(2)
@@ -121,7 +129,7 @@ with dai.Pipeline() as pipeline:
     cam.setPreviewSize(NN_WIDTH, NN_HEIGHT)
     cam.setInterleaved(False)
     cam.setFps(40)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
     cam.preview.link(detection_nn.input)
 

@@ -1,27 +1,24 @@
 import depthai as dai
-import argparse
-import blobconverter
 from host_image_quality_assessment import ImageQualityAssessment
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-nn', '--nn_path', type=str, help="select model blob path for inference, defaults to image_quality_assessment_256x256_001 from model zoo", default=None)
-args = parser.parse_args()
+device = dai.Device()
+model_description = dai.NNModelDescription(modelSlug="image-quality-assessment", platform=device.getPlatform().name)
+nn_path = dai.getModelFromZoo(modelDescription=model_description)
 
-nn_path = args.nn_path if args.nn_path else blobconverter.from_zoo(name="image_quality_assessment_256x256", zoo_type="depthai", shaves=6)
+nn_archive = dai.NNArchive(nn_path)
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
-    cam.setPreviewSize(256, 256)
-    cam.setInterleaved(False)
+    cam = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    rgb_preview = cam.requestOutput(size=(256, 256), type=dai.ImgFrame.Type.BGR888p)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(nn_path)
-    cam.preview.link(nn.input)
+    nn.setNNArchive(nn_archive)
+    rgb_preview.link(nn.input)
 
     quality_assessment = pipeline.create(ImageQualityAssessment).build(
-        preview=cam.preview,
+        preview=rgb_preview,
         nn=nn.out
     )
 

@@ -19,17 +19,15 @@ class QRScanner(dai.node.HostNode):
         frame = preview.getCvFrame()
 
         for det in detections.detections:
-            # expandDetection(det, 2)
             bbox = frameNorm(frame, (det.xmin, det.ymin, det.xmax, det.ymax))
-            # bbox = (np.array((det.xmin, det.ymin, det.xmax, det.ymax)) * frame.shape[0]).astype(np.float16)
-
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color=(0, 0, 255), thickness=2)
-            cv2.putText(frame, f"{int(det.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 20)
-                        , cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), thickness=2)
             if DECODE:
                 text = self.decode(frame, bbox)
                 cv2.putText(frame, text, (bbox[0] + 10, bbox[1] - 30)
                             , cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), thickness=2)
+        
+            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color=(0, 0, 255), thickness=2)
+            cv2.putText(frame, f"{int(det.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 20)
+                        , cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), thickness=2)
 
         cv2.imshow("Preview", frame)
 
@@ -43,7 +41,9 @@ class QRScanner(dai.node.HostNode):
             print("Detection bbox is empty")
             return ""
 
+        bbox = expandBbox(bbox, frame, 5)
         img = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+
         data = decode(img)
         if data:
             text = data[0].data.decode("utf-8")
@@ -54,16 +54,16 @@ class QRScanner(dai.node.HostNode):
             return ""
 
 
-def expandDetection(det, percent):
-    percent /= 100
-    det.xmin -= percent
-    det.ymin -= percent
-    det.xmax += percent
-    det.ymax += percent
-    if det.xmin < 0: det.xmin = 0
-    if det.ymin < 0: det.ymin = 0
-    if det.xmax > 1: det.xmax = 1
-    if det.ymax > 1: det.ymax = 1
+def expandBbox(bbox: np.ndarray, frame: np.ndarray, percentage: float) -> np.ndarray:
+    bbox_copy = bbox.copy()
+    pixels_expansion_0 = (bbox_copy[3] - bbox_copy[1]) * (percentage / 100)
+    pixels_expansion_1 = (bbox_copy[2] - bbox_copy[0]) * (percentage / 100)
+    bbox_copy[0] = max(0, bbox_copy[0] - pixels_expansion_1)
+    bbox_copy[1] = max(0, bbox_copy[1] - pixels_expansion_0)
+    bbox_copy[2] = min(frame.shape[1], bbox_copy[2] + pixels_expansion_1)
+    bbox_copy[3] = min(frame.shape[0], bbox_copy[3] + pixels_expansion_0)
+    return bbox_copy
+
 
 def frameNorm(frame, bbox):
     normVals = np.full(len(bbox), frame.shape[0])
