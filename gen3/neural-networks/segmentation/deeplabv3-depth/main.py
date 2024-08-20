@@ -2,6 +2,10 @@ import depthai as dai
 import blobconverter
 from host_depth_segmentation import DepthSegmentation
 
+model_description = dai.NNModelDescription(modelSlug="deeplabv3", platform="RVC2", modelVersionSlug="256x256")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
+
 nn_shape = (256, 256)
 TARGET_SHAPE = (400, 400)
 
@@ -22,7 +26,7 @@ with dai.Pipeline() as pipeline:
     cam.isp.link(manip_cam.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(blobconverter.from_zoo(name="deeplab_v3_mnv2_256x256", zoo_type="depthai", shaves=6))
+    nn.setNNArchive(nn_archive)
     nn.input.setBlocking(False)
     nn.setNumInferenceThreads(2)
     cam.preview.link(nn.input)
