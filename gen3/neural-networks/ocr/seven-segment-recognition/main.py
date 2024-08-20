@@ -5,10 +5,14 @@ from host_seven_segment_recognition import SevenSegmentRecognition
 
 nn_shape = (750, 256)
 
+modelDescription = dai.NNModelDescription(modelSlug="7-segment-detection", platform="RVC2", modelVersionSlug="256x750")
+archivePath = dai.getModelFromZoo(modelDescription)
+nn_archive = dai.NNArchive(archivePath)
+
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(600, 600)
     cam.setFps(20)
 
@@ -18,7 +22,8 @@ with dai.Pipeline() as pipeline:
     cam.video.link(manip.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(blobconverter.from_zoo(name="7_segment_recognition_256x750", zoo_type="depthai", shaves=6))
+    # nn.setBlobPath(blobconverter.from_zoo(name="7_segment_recognition_256x750", zoo_type="depthai", shaves=6))
+    nn.setNNArchive(nn_archive)
     manip.out.link(nn.input)
 
     segment_recognition = pipeline.create(SevenSegmentRecognition).build(
