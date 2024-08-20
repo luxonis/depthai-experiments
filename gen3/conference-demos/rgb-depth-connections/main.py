@@ -2,8 +2,9 @@
 import depthai as dai
 from rgb_conference_node import Display
 
-modelDescription = dai.NNModelDescription(modelSlug="yolov6n", platform="RVC2")
+modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2")
 archivePath = dai.getModelFromZoo(modelDescription)
+
 
 with dai.Pipeline() as pipeline:
 
