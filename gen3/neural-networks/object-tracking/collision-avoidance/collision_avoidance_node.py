@@ -27,7 +27,7 @@ class CollisionAvoidanceNode(dai.node.HostNode):
     def _make_bird_frame(self):
         fov = 68.7938
         min_distance = 0.827
-        frame = np.zeros((384, 100, 3), np.uint8)
+        frame = np.zeros((288, 100, 3), np.uint8)
         min_y = int((1 - (min_distance - self.MIN_Z) / (self.MAX_Z - self.MIN_Z)) * frame.shape[0])
         cv2.rectangle(frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1)
 
