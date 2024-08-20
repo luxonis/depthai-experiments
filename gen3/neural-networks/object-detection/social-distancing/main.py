@@ -1,40 +1,39 @@
 import depthai as dai
-import blobconverter
 from host_social_distancing import SocialDistancing
 
-with dai.Pipeline() as pipeline:
+device = dai.Device()
+modelDescription = dai.NNModelDescription(modelSlug="person-detection-retail", platform=device.getPlatform().name, modelVersionSlug="0013-544x320")
+archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
+nnArchive = dai.NNArchive(archivePath)
+
+with dai.Pipeline(device) as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(544, 320)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+    cam = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    rgb = cam.requestOutput(size=(544, 320), type=dai.ImgFrame.Type.BGR888p, fps=20)
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    left = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_B)
+    right = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_C)
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
+    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.requestOutput((640, 400)), right=right.requestOutput((640, 400)))
     stereo.initialConfig.setConfidenceThreshold(255)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+    stereo.setOutputSize(544, 320)
 
-    nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=5))
-    nn.setConfidenceThreshold(0.5)
+    nn = pipeline.create(dai.node.SpatialDetectionNetwork)
+    nn.setNNArchive(nnArchive)
+
     nn.input.setBlocking(False)
+    nn.setConfidenceThreshold(0.5)
     nn.setBoundingBoxScaleFactor(0.5)
     nn.setDepthLowerThreshold(100)
     nn.setDepthUpperThreshold(5000)
-    cam.preview.link(nn.input)
+    
+    rgb.link(nn.input)
     stereo.depth.link(nn.inputDepth)
 
     social_distancing = pipeline.create(SocialDistancing).build(
-        preview=cam.preview,
+        preview=rgb,
         nn=nn.out
     )
     social_distancing.inputs["preview"].setBlocking(False)
@@ -44,3 +43,4 @@ with dai.Pipeline() as pipeline:
 
     print("Pipeline created.")
     pipeline.run()
+    print("Pipeline exited.")
