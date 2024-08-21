@@ -27,7 +27,7 @@ Run the application
 python3 main.py
 ```
 
-Open [`http://0.0.0.0:8080`](http://0.0.0.0:8080)
+Open [`http://0.0.0.0:8080`](http://0.0.0.0:8080) in Chrome
 
 ![localhost preview](https://user-images.githubusercontent.com/5244214/121889877-03b57700-cd1a-11eb-945c-7a4fe5ed29f1.png)
 
