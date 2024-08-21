@@ -4,7 +4,19 @@ This example allows you to stream frames using [MediaMTX](https://github.com/blu
 
 ## Installation
 
-Install [MediaMTX](https://github.com/bluenviron/mediamtx), you can either go with [standalone binary release](https://github.com/bluenviron/mediamtx/releases) or [docker image](https://github.com/bluenviron/mediamtx?tab=readme-ov-file#docker-image). Note that at least on MacOS
+Install [MediaMTX](https://github.com/bluenviron/mediamtx), you can either go with [standalone binary release](https://github.com/bluenviron/mediamtx/releases) or [docker image](https://github.com/bluenviron/mediamtx?tab=readme-ov-file#docker-image).
+
+You will also need to install `ffmpeg` library, as Python script uses it to forward encoded frames to the MediaMTX server.
+
+```bash
+# On Ubuntu
+sudo apt-get install ffmpeg
+# On MacOs
+brew install ffmpeg
+# On Windows (within Admin PowerShell):
+choco install ffmpeg
+# Or download from https://ffmpeg.org/download.html
+```
 
 ## Usage
 
@@ -32,11 +44,11 @@ python3 main.py
 To see the streamed frames, use a RTSP Client (e.g. VLC Network Stream) with the following link
 
 ```
-rtsp://localhost:8554/preview
+rtsp://localhost:8554/mystream
 ```
 
-On Ubuntu or Mac OS, you can use `ffplay` (part of `ffmpeg` library) to preview the stream, which will provide better performance than VLC (400ms latency vs >1sec latency).
+On Ubuntu or Mac OS, you can use `ffplay` (part of the `ffmpeg` library) to preview the stream, which will provide better performance than VLC (400ms latency vs >1sec latency).
 
 ```
-ffplay -fflags nobuffer -fflags discardcorrupt -flags low_delay -framedrop rtsp://localhost:8554/preview
+ffplay -fflags nobuffer -fflags discardcorrupt -flags low_delay -framedrop rtsp://localhost:8554/mystream
 ```
