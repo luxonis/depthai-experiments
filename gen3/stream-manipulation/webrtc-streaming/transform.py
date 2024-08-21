@@ -68,7 +68,7 @@ class VideoTransform(VideoStreamTrack):
         super().stop()
 
 
-def start_pipeline(pipeline, options):
+def start_pipeline(pipeline : dai.Pipeline, options):
     depth_flag = (options.camera_type == "depth")
     print("Creating pipeline...")
 
