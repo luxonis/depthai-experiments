@@ -56,6 +56,9 @@ class VideoTransform(VideoStreamTrack):
                         cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 0, 0))
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
 
+        if not self.depth_flag:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         # Output the frame
         return frame
 
@@ -69,7 +72,7 @@ def start_pipeline(pipeline, options):
     depth_flag = (options.camera_type == "depth")
     print("Creating pipeline...")
 
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(options.width, options.height)
     cam.setInterleaved(False)
     cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
@@ -81,7 +84,7 @@ def start_pipeline(pipeline, options):
         manip.initialConfig.setResize(*NN_SHAPES[options.nn])
         cam.preview.link(manip.inputImage)
 
-        nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+        nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
         nn.setConfidenceThreshold(0.5)
         nn.setBlobPath(blobconverter.from_zoo(options.nn, shaves=6))
         nn.setNumInferenceThreads(2)
