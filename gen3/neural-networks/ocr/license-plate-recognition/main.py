@@ -35,7 +35,7 @@ with dai.Pipeline() as pipeline:
     if args.video:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.video).resolve().absolute())
-        replay.setSize(672, 384)
+        replay.setSize(512, 288)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
         replay.setFps(FPS)
 
@@ -44,7 +44,7 @@ with dai.Pipeline() as pipeline:
 
     else:
         cam = pipeline.create(dai.node.ColorCamera)
-        cam.setPreviewSize(672, 384)
+        cam.setPreviewSize(512, 288)
         cam.setInterleaved(False)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
@@ -54,9 +54,10 @@ with dai.Pipeline() as pipeline:
         shaves = 6
 
     to_nn_manip = pipeline.create(dai.node.ImageManip)
-    to_nn_manip.initialConfig.setResize(300, 300)
+    to_nn_manip.initialConfig.setResize(640, 640)
     to_nn_manip.initialConfig.setKeepAspectRatio(False)
     to_nn_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    to_nn_manip.setMaxOutputFrameSize(640*640*3)
     preview.link(to_nn_manip.inputImage)
 
     plate_detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)

@@ -15,6 +15,9 @@ PLATE_LABELS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
 COLOR_LABELS = ["white", "gray", "yellow", "red", "green", "blue", "black"]
 CAR_TYPE_LABELS = ["car", "bus", "truck", "van"]
 
+COLOR = "tf.identity_1"
+TYPE = "tf.identity"
+
 class LicensePlateRecognition(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
@@ -118,8 +121,8 @@ def get_plate_from_nn(plate_data: dai.NNData) -> str:
     return plate_text
 
 def get_attributes_from_nn(car_data: dai.NNData) -> tuple[str, str, float, float]:
-    color = car_data.getTensor("color").flatten()
-    type = car_data.getTensor("type").flatten()
+    color = car_data.getTensor(COLOR).flatten()
+    type = car_data.getTensor(TYPE).flatten()
 
     color_string = COLOR_LABELS[color.argmax()]
     type_string = CAR_TYPE_LABELS[type.argmax()]
