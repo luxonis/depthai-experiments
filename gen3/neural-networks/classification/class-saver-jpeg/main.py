@@ -1,26 +1,23 @@
 import csv
-import blobconverter
 import depthai as dai
 
 from pathlib import Path
 from class_saver import ClassSaver
 
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300") # only for RVC2
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
+
 # Start defining a pipeline
 with dai.Pipeline() as pipeline:
-    # Define a source - color camera
-    cam_rgb = pipeline.create(dai.node.ColorCamera).build()
-    cam_rgb.setPreviewSize(300, 300)
-    cam_rgb.setInterleaved(False)
 
-    # Define a neural network that will make predictions based on the source frames
-    detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
-    detection_nn.setConfidenceThreshold(0.5)
-    detection_nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
-    cam_rgb.preview.link(detection_nn.input)
+    cam_rgb = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    rgb_preview = cam_rgb.requestOutput(size=(300, 300), type=dai.ImgFrame.Type.BGR888p)
+    
+    detection_nn = pipeline.create(dai.node.DetectionNetwork).build(input=rgb_preview, nnArchive=nn_archive, confidenceThreshold=0.5)
 
     # MobilenetSSD label texts
-    texts = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+    texts = detection_nn.getClasses()
     
     data_folder_path = Path(__file__).parent / Path('data/')
 
@@ -37,7 +34,7 @@ with dai.Pipeline() as pipeline:
         dataset.writeheader()
 
         class_saver = pipeline.create(ClassSaver).build(
-            rgb=cam_rgb.preview,
+            rgb=rgb_preview,
             nn_out=detection_nn.out,
             dataset=dataset,
             texts=texts)

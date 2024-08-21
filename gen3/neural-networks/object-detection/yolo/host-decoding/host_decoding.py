@@ -15,11 +15,11 @@ class HostDecoding(dai.node.HostNode):
         super().__init__()
 
 
-    def build(self, img_output: dai.Node.Output, nn_data:dai.Node.Output, nn_path: str, label_map: list[str]) -> "HostDecoding":
+    def build(self, img_output: dai.Node.Output, nn_path: str, nn_data: dai.NNData, label_map) -> "HostDecoding":
         self._nn_path = nn_path
         self._label_map = label_map
-        self.sendProcessingToPipeline(True)
         self.link_args(img_output, nn_data)
+        self.sendProcessingToPipeline(True) 
         return self
 
 
@@ -32,8 +32,7 @@ class HostDecoding(dai.node.HostNode):
 
 
     def process(self, img_frame: dai.ImgFrame, nn_data: dai.NNData) -> None:
-        print(type(nn_data))
-        frame = img_frame.getCvFrame()
+        frame : np.ndarray = img_frame.getCvFrame()
 
         output = nn_data.getTensor("output").astype(np.float16).reshape(10647, -1)
 

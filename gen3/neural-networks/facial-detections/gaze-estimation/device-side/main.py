@@ -13,7 +13,7 @@ with dai.Pipeline() as pipeline:
     pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_4)
     openvino_version = '2021.4'
 
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(1072, 1072)
     cam.setVideoSize(VIDEO_SIZE)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -28,7 +28,7 @@ with dai.Pipeline() as pipeline:
     cam.preview.link(face_det_manip.inputImage)
 
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.5)
     face_det_nn.setBlobPath(blobconverter.from_zoo(
         name="face-detection-retail-0004",

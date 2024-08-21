@@ -1,11 +1,15 @@
 import depthai as dai
-import blobconverter
 from host_people_counter import PeopleCounter
+
+# model_description = dai.NNModelDescription(modelSlug="person-detection-retail", platform="RVC2")
+# archivePath = dai.getModelFromZoo(model_description)
+archivePath = "./model/person-detection-retail-0013.rvc2.tar.xz" # bc model is private in hub
+nn_archive = dai.NNArchive(archivePath)
 
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(1080, 720)
     cam.setInterleaved(False)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -17,7 +21,7 @@ with dai.Pipeline() as pipeline:
     cam.preview.link(manip.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", zoo_type="intel", version="2021.4"))
+    nn.setNNArchive(nn_archive)
     manip.out.link(nn.input)
 
     classification = pipeline.create(PeopleCounter).build(

@@ -6,6 +6,10 @@ MQTT_BROKER = "test.mosquitto.org"
 MQTT_BROKER_PORT = 1883
 MQTT_TOPIC = "test_topic/detections"
 
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
+
 with dai.Pipeline() as pipeline:
     camRgb = pipeline.create(dai.node.ColorCamera)
     camRgb.setPreviewSize(300, 300)
@@ -14,7 +18,8 @@ with dai.Pipeline() as pipeline:
 
     nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn.setConfidenceThreshold(0.5)
-    nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
+    # nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
+    nn.setNNArchive(nn_archive)
     camRgb.preview.link(nn.input)
     
     script = pipeline.create(dai.node.Script)

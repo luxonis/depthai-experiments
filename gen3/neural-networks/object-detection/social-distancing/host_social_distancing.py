@@ -20,14 +20,16 @@ class SocialDistancing(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
         self.alerting = AlertingGate()
-        self.distance_bird_frame = make_bird_frame()
+        self.distance_bird_frame = self.make_bird_frame()
+
 
     def build(self, preview: dai.Node.Output, nn: dai.Node.Output) -> "SocialDistancing":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)
         return self
 
-    def process(self, preview: dai.ImgFrame, detections: dai.ImgDetections) -> None:
+
+    def process(self, preview: dai.ImgFrame, detections: dai.SpatialImgDetections) -> None:
         frame = preview.getCvFrame()
         bird_frame = self.distance_bird_frame.copy()
         height = frame.shape[0]
@@ -64,8 +66,8 @@ class SocialDistancing(dai.node.HostNode):
             cv2.putText(frame, "conf: {}".format(round(confidence, 1)), (x_min, y_min + 90), FONT, 0.5, COLOR)
             cv2.putText(frame, "label: {}".format(label, 1), (x_min, y_min + 110), FONT, 0.5, COLOR)
 
-            left, right = calc_x(depth_x)
-            top, bottom = calc_z(depth_z)
+            left, right = self.calc_x(depth_x)
+            top, bottom = self.calc_z(depth_z)
             cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
         distance_results = parse_distance(frame, bboxes)
@@ -76,52 +78,53 @@ class SocialDistancing(dai.node.HostNode):
 
         for result in distance_results:
             if result['dangerous']:
-                left, right = calc_x(result['detection1']['depth_x'])
-                top, bottom = calc_z(result['detection1']['depth_z'])
+                left, right = self.calc_x(result['detection1']['depth_x'])
+                top, bottom = self.calc_z(result['detection1']['depth_z'])
                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
-                left, right = calc_x(result['detection2']['depth_x'])
-                top, bottom = calc_z(result['detection2']['depth_z'])
+                left, right = self.calc_x(result['detection2']['depth_x'])
+                top, bottom = self.calc_z(result['detection2']['depth_z'])
                 cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
 
         combined = np.hstack((frame, bird_frame))
         cv2.imshow("Frame", combined)
 
         if cv2.waitKey(1) == ord('q'):
-            print("Pipeline exited.")
             self.stopPipeline()
 
 
-def calc_x(val):
-    norm = min(MAX_X, max(val, MIN_X))
-    center = (norm - MIN_X) / (MAX_X - MIN_X) * BIRD_FRAME_X
-    bottom_x = max(center - 2, 0)
-    top_x = min(center + 2, BIRD_FRAME_X)
-    return int(bottom_x), int(top_x)
+    def calc_x(self, val):
+        norm = min(MAX_X, max(val, MIN_X))
+        center = (norm - MIN_X) / (MAX_X - MIN_X) * BIRD_FRAME_X
+        bottom_x = max(center - 2, 0)
+        top_x = min(center + 2, BIRD_FRAME_X)
+        return int(bottom_x), int(top_x)
 
-def calc_z(val):
-    norm = min(MAX_Z, max(val, MIN_Z))
-    center = (1 - (norm - MIN_Z) / (MAX_Z - MIN_Z)) * BIRD_FRAME_Z
-    bottom_z = max(center - 2, 0)
-    top_z = min(center + 2, BIRD_FRAME_Z)
-    return int(bottom_z), int(top_z)
 
-def make_bird_frame():
-    fov = 68.7938
-    min_distance = 0.827
-    frame = np.zeros((BIRD_FRAME_Z, BIRD_FRAME_X, 3), np.uint8)
-    min_y = int((1 - (min_distance - MIN_Z) / (MAX_Z - MIN_Z)) * frame.shape[0])
-    cv2.rectangle(frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1)
+    def calc_z(self, val):
+        norm = min(MAX_Z, max(val, MIN_Z))
+        center = (1 - (norm - MIN_Z) / (MAX_Z - MIN_Z)) * BIRD_FRAME_Z
+        bottom_z = max(center - 2, 0)
+        top_z = min(center + 2, BIRD_FRAME_Z)
+        return int(bottom_z), int(top_z)
 
-    alpha = (180 - fov) / 2
-    center = int(frame.shape[1] / 2)
-    max_p = frame.shape[0] - int(math.tan(math.radians(alpha)) * center)
-    fov_cnt = np.array([
-        (0, frame.shape[0]),
-        (frame.shape[1], frame.shape[0]),
-        (frame.shape[1], max_p),
-        (center, frame.shape[0]),
-        (0, max_p),
-        (0, frame.shape[0]),
-    ])
-    cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
-    return frame
+
+    def make_bird_frame(self):
+        fov = 68.7938
+        min_distance = 0.827
+        frame = np.zeros((BIRD_FRAME_Z, BIRD_FRAME_X, 3), np.uint8)
+        min_y = int((1 - (min_distance - MIN_Z) / (MAX_Z - MIN_Z)) * frame.shape[0])
+        cv2.rectangle(frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1)
+
+        alpha = (180 - fov) / 2
+        center = int(frame.shape[1] / 2)
+        max_p = frame.shape[0] - int(math.tan(math.radians(alpha)) * center)
+        fov_cnt = np.array([
+            (0, frame.shape[0]),
+            (frame.shape[1], frame.shape[0]),
+            (frame.shape[1], max_p),
+            (center, frame.shape[0]),
+            (0, max_p),
+            (0, frame.shape[0]),
+        ])
+        cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
+        return frame

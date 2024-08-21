@@ -53,7 +53,7 @@ class East(dai.node.HostNode):
             dets.append(detection)
 
             # Draw detection crop area on input frame
-            points = np.int0(cv2.boxPoints(rect))
+            points = np.int64(cv2.boxPoints(rect))
             cv2.polylines(frame, [points], isClosed=True, color=(255, 0, 0), thickness=2, lineType=cv2.LINE_8)
 
         output_dets.detections = dets

@@ -7,12 +7,15 @@ from kalman_filter_node import KalmanFilterNode
 label_map = ['background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
             'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
 
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
 
 device = dai.Device()
 print("Creating pipeline...")
 with dai.Pipeline(device) as pipeline:
-    cam_rgb = pipeline.create(dai.node.ColorCamera).build()
-    detection_network = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork).build()
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
+    detection_network = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     mono_left = pipeline.create(dai.node.MonoCamera)
     mono_right = pipeline.create(dai.node.MonoCamera)
     stereo = pipeline.create(dai.node.StereoDepth).build(mono_left.out, mono_right.out)
@@ -31,7 +34,8 @@ with dai.Pipeline(device) as pipeline:
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    detection_network.setBlobPath(blobconverter.from_zoo(name='mobilenet-ssd', shaves=5))
+    # detection_network.setBlobPath(blobconverter.from_zoo(name='mobilenet-ssd', shaves=5))
+    detection_network.setNNArchive(nn_archive)
     detection_network.setConfidenceThreshold(0.7)
     detection_network.input.setBlocking(False)
     detection_network.setBoundingBoxScaleFactor(0.5)

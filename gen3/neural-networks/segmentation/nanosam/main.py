@@ -1,51 +1,38 @@
 import depthai as dai
-import blobconverter
 
-from pathlib import Path
-from os.path import isfile
-from download import download_decoder
 from host_nanosam_main import NanoSAM
+
+modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="coco-416x416") 
+archivePath = dai.getModelFromZoo(modelDescription)
+nn_archive_det = dai.NNArchive(archivePath)
+
+modelDescription = dai.NNModelDescription(modelSlug="nanosam-resnet18-image-encoder", platform="RVC2", modelVersionSlug="1024x1024")
+archivePath = dai.getModelFromZoo(modelDescription)
+nn_archive_enc = dai.NNArchive(archivePath)
 
 detection_shape = (416, 416)
 nn_shape = (1024, 1024)
 
-# Download onnx decoder
-if not isfile(Path("onnx_decoder/mobile_sam_mask_decoder.onnx").resolve().absolute()):
-    download_decoder()
-
 with dai.Pipeline() as pipeline:
 
-    print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(*nn_shape)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    cam.setInterleaved(False)
+    cam = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    rgb_previem = cam.requestOutput(size=nn_shape, type=dai.ImgFrame.Type.BGR888p) 
 
     manip = pipeline.create(dai.node.ImageManip)
     manip.initialConfig.setResize(*detection_shape)
     manip.inputConfig.setWaitForMessage(False)
-    cam.preview.link(manip.inputImage)
+    rgb_previem.link(manip.inputImage)
 
-    detection_nn = pipeline.create(dai.node.YoloDetectionNetwork)
-    detection_nn.setBlobPath(blobconverter.from_zoo("yolov6n_coco_416x416", shaves = 6, zoo_type = "depthai", use_cache=True))
-    detection_nn.setNumClasses(80)
-    detection_nn.setCoordinateSize(4)
-    detection_nn.setAnchors([])
-    detection_nn.setAnchorMasks({})
-    detection_nn.setIouThreshold(0.45)
-    detection_nn.setConfidenceThreshold(0.5)
-    detection_nn.setNumInferenceThreads(1)
-    manip.out.link(detection_nn.input)
+    detection_nn = pipeline.create(dai.node.DetectionNetwork).build(input=manip.out, nnArchive=nn_archive_det, confidenceThreshold=0.5)
+    detection_nn.setNumInferenceThreads(2)
 
     embedding_nn = pipeline.create(dai.node.NeuralNetwork)
-    embedding_nn.setBlobPath(blobconverter.from_zoo("nanosam_resnet18_image_encoder_1024x1024", shaves = 6
-                                                    , zoo_type = "depthai", version="2022.1", use_cache=True))
-    embedding_nn.setNumInferenceThreads(1)
-    cam.preview.link(embedding_nn.input)
+    embedding_nn.setNNArchive(nn_archive_enc)
+    embedding_nn.setNumInferenceThreads(2)
+    rgb_previem.link(embedding_nn.input)
 
     nanosam = pipeline.create(NanoSAM).build(
-        preview=cam.preview,
+        preview=rgb_previem,
         detections=detection_nn.out,
         nn=embedding_nn.out
     )
@@ -56,3 +43,4 @@ with dai.Pipeline() as pipeline:
 
     print("Pipeline created.")
     pipeline.run()
+    print("Pipeline finished.")

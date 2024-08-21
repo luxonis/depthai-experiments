@@ -3,9 +3,11 @@
 import depthai as dai
 import threading
 import cv2
-import blobconverter
 from utility import filter_internal_cameras, run_pipeline
 
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
 
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
@@ -75,9 +77,9 @@ def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
     cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     rgb_preview = cam_rgb.requestOutput(size=(300, 300), type=dai.ImgFrame.Type.BGR888p)
 
-    detector : dai.node.MobileNetDetectionNetwork = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    detector : dai.node.MobileNetDetectionNetwork = pipeline.create(dai.node.DetectionNetwork)
     detector.setConfidenceThreshold(0.5)
-    detector.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
+    detector.setNNArchive(nn_archive)
     rgb_preview.link(detector.input)
 
     pipeline.create(Display, callback, dev.getMxId()).build(

@@ -10,6 +10,10 @@ recognition_model_description = dai.NNModelDescription(modelSlug="age-gender-rec
 #detection_model_path = dai.getModelFromZoo(detection_model_description)
 recognition_model_path = dai.getModelFromZoo(recognition_model_description)
 
+face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
+face_det_nn_archive = dai.NNArchive(face_det_archive_path)
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.ColorCamera)
@@ -36,7 +40,8 @@ with dai.Pipeline(device) as pipeline:
     cam.preview.link(face_manip.inputImage)
 
     face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
+    # face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
+    face_det_nn.setNNArchive(face_det_nn_archive)
     face_det_nn.setBoundingBoxScaleFactor(0.8)
     face_det_nn.setDepthLowerThreshold(100)
     face_det_nn.setDepthUpperThreshold(5000)

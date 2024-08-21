@@ -13,13 +13,29 @@ args = parser.parse_args()
 
 FPS = 10
 
+plate_detection_model_description = dai.NNModelDescription(modelSlug="yolov8n-license-plate-detection", platform="RVC2", modelVersionSlug="640x640")
+plate_detection_archive_path = dai.getModelFromZoo(plate_detection_model_description)
+plate_detection_nn_archive = dai.NNArchive(plate_detection_archive_path)
+
+car_detection_model_description = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="r2-coco-512x288")
+car_detection_archive_path = dai.getModelFromZoo(car_detection_model_description)
+car_detection_nn_archive = dai.NNArchive(car_detection_archive_path)
+
+plate_recognition_model_description = dai.NNModelDescription(modelSlug="license-plate-recognition-barrier", platform="RVC2", modelVersionSlug="0007")
+plate_recognition_archive_path = dai.getModelFromZoo(plate_recognition_model_description)
+plate_recognition_nn_archive = dai.NNArchive(plate_recognition_archive_path)
+
+car_attribute_model_description = dai.NNModelDescription(modelSlug="vehicle-attributes-classification", platform="RVC2", modelVersionSlug="72x72")
+car_attribute_archive_path = dai.getModelFromZoo(car_attribute_model_description)
+car_attribute_nn_archive = dai.NNArchive(car_attribute_archive_path)
+
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
     if args.video:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.video).resolve().absolute())
-        replay.setSize(672, 384)
+        replay.setSize(512, 288)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
         replay.setFps(FPS)
 
@@ -27,8 +43,8 @@ with dai.Pipeline() as pipeline:
         shaves = 7
 
     else:
-        cam = pipeline.create(dai.node.ColorCamera).build()
-        cam.setPreviewSize(672, 384)
+        cam = pipeline.create(dai.node.ColorCamera)
+        cam.setPreviewSize(512, 288)
         cam.setInterleaved(False)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
@@ -38,22 +54,26 @@ with dai.Pipeline() as pipeline:
         shaves = 6
 
     to_nn_manip = pipeline.create(dai.node.ImageManip)
-    to_nn_manip.initialConfig.setResize(300, 300)
+    to_nn_manip.initialConfig.setResize(640, 640)
     to_nn_manip.initialConfig.setKeepAspectRatio(False)
     to_nn_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    to_nn_manip.setMaxOutputFrameSize(640*640*3)
     preview.link(to_nn_manip.inputImage)
 
-    plate_detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    plate_detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     plate_detection_nn.setConfidenceThreshold(0.5)
-    plate_detection_nn.setBlobPath(blobconverter.from_zoo(name="vehicle-license-plate-detection-barrier-0106"
-                                                          , shaves=shaves, version="2021.4"))
+    # plate_detection_nn.setBlobPath(blobconverter.from_zoo(name="vehicle-license-plate-detection-barrier-0106"
+                                                        #   , shaves=shaves, version="2021.4"))
+    plate_detection_nn.setNNArchive(plate_detection_nn_archive)
+
     plate_detection_nn.input.setBlocking(False)
     to_nn_manip.out.link(plate_detection_nn.input)
 
-    car_detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    car_detection_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     car_detection_nn.setConfidenceThreshold(0.5)
-    car_detection_nn.setBlobPath(blobconverter.from_zoo(name="vehicle-detection-adas-0002"
-                                                        , shaves=shaves, version="2021.4"))
+    # car_detection_nn.setBlobPath(blobconverter.from_zoo(name="vehicle-detection-adas-0002"
+                                                        # , shaves=shaves, version="2021.4"))
+    car_detection_nn.setNNArchive(car_detection_nn_archive)
     car_detection_nn.input.setBlocking(False)
     preview.link(car_detection_nn.input)
 
@@ -121,13 +141,15 @@ while True:
     script_car.outputs["config"].link(manip_car.inputConfig)
 
     plate_recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    plate_recognition_nn.setBlobPath(blobconverter.from_zoo(name="license-plate-recognition-barrier-0007"
-                                                            , shaves=shaves, version="2021.4"))
+    # plate_recognition_nn.setBlobPath(blobconverter.from_zoo(name="license-plate-recognition-barrier-0007"
+                                                            # , shaves=shaves, version="2021.4"))
+    plate_recognition_nn.setNNArchive(plate_detection_nn_archive)
     manip_plate.out.link(plate_recognition_nn.input)
 
     car_attribute_nn = pipeline.create(dai.node.NeuralNetwork)
-    car_attribute_nn.setBlobPath(blobconverter.from_zoo(name="vehicle-attributes-recognition-barrier-0039"
-                                                        , shaves=shaves, version="2021.4"))
+    # car_attribute_nn.setBlobPath(blobconverter.from_zoo(name="vehicle-attributes-recognition-barrier-0039"
+                                                        # , shaves=shaves, version="2021.4"))
+    car_attribute_nn.setNNArchive(car_attribute_nn_archive)
     manip_car.out.link(car_attribute_nn.input)
 
     plate_manip_sync = pipeline.create(DetectionsRecognitionsSync).build()

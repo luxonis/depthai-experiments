@@ -2,12 +2,14 @@ import cv2
 import depthai as dai
 import threading
 import numpy as np
-import blobconverter
 from detection import Detection
 import os
 import config
 from birdseyeview import BirdsEyeView
 
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
 
 label_map = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
@@ -218,7 +220,7 @@ def get_pipelines(device : dai.Device, callback_frame : callable, friendly_id : 
 
     # Spatial detection network -> 'nn'
     spatial_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    spatial_nn.setBlobPath(blobconverter.from_zoo(name='mobilenet-ssd', shaves=6))
+    spatial_nn.setBlob(nn_archive.getSuperBlob().getBlobWithNumShaves(7))
     spatial_nn.setConfidenceThreshold(0.6)
     spatial_nn.input.setBlocking(False)
     spatial_nn.setBoundingBoxScaleFactor(0.2)

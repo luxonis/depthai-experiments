@@ -7,10 +7,14 @@ MJPEG = False
 
 SCENE_SIZE = (1920, 1080)
 
+model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
+
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
     cam.setPreviewKeepAspectRatio(False)
@@ -18,8 +22,9 @@ with dai.Pipeline() as pipeline:
     cam.setInterleaved(False)
     cam.initialControl.setManualFocus(130)
 
-    mobilenet = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
-    mobilenet.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", zoo_type="depthai", shaves=5))
+    mobilenet = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    # mobilenet.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
+    mobilenet.setNNArchive(nn_archive)
     mobilenet.setConfidenceThreshold(0.7)
     cam.preview.link(mobilenet.input)
 

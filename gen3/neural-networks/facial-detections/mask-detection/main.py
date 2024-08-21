@@ -5,6 +5,13 @@ import depthai as dai
 from mask_detection import MaskDetection
 from detections_recognitions_sync import DetectionsRecognitionsSync
 
+face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
+face_det_nn_archive = dai.NNArchive(face_det_archive_path)
+
+recognition_model_description = dai.NNModelDescription(modelSlug="sdb-mask-classification", platform="RVC2", modelVersionSlug="224x224")
+recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
+recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 
 device = dai.Device()
 stereo = 1 < len(device.getConnectedCameras())
@@ -50,7 +57,8 @@ with dai.Pipeline(device) as pipeline:
         face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 
     face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+    # face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+    face_det_nn.setNNArchive(face_det_nn_archive)
     face_det_nn.input.setBlocking(False)
     face_det_nn.input.setMaxSize(1)
     face_det_manip.out.link(face_det_nn.input)
@@ -68,7 +76,8 @@ with dai.Pipeline(device) as pipeline:
 
     print("Creating recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setBlobPath(blobconverter.from_zoo(name="sbd_mask_classification_224x224", zoo_type="depthai", shaves=6))
+    # recognition_nn.setBlobPath(blobconverter.from_zoo(name="sbd_mask_classification_224x224", zoo_type="depthai", shaves=6))
+    recognition_nn.setNNArchive(recognition_nn_archive)
     recognition_manip.out.link(recognition_nn.input)
 
     recognition_sync = pipeline.create(DetectionsRecognitionsSync).build()

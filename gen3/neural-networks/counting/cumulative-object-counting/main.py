@@ -1,5 +1,4 @@
 from pathlib import Path
-import blobconverter
 import argparse
 import depthai as dai
 
@@ -8,7 +7,7 @@ from display import Display
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-m', '--model', type=str, help='File path of .blob file.')
+
 parser.add_argument('-v', '--video_path', type=str, default='',
                     help='Path to video. If empty OAK-RGB camera is used. (default=\'\')')
 parser.add_argument('-roi', '--roi_position', type=float,
@@ -19,29 +18,31 @@ parser.add_argument('-sp', '--save_path', type=str, default='',
                     help='Path to save the output. If None output won\'t be saved')
 args = parser.parse_args()
 
-if args.model is None:
-    args.model = blobconverter.from_zoo(name="mobilenet-ssd", shaves=7)
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
+
+OUTPUT_SIZE = (300, 300)
 
 with dai.Pipeline() as pipeline:
-    output_size = (300, 300)
     if args.video_path != '':
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setLoop(False)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
         replay.setReplayVideoFile(args.video_path)
-        replay.setSize(output_size)
+        replay.setSize(OUTPUT_SIZE)
         video_out = replay.out
         fps = replay.getFps()
     else:
         cam = pipeline.create(dai.node.ColorCamera)
-        cam.setPreviewSize(output_size)
+        cam.setPreviewSize(OUTPUT_SIZE)
         cam.setInterleaved(False)
         video_out = cam.preview
         fps = cam.getFps()
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+    nn = pipeline.create(dai.node.DetectionNetwork)
     nn.setConfidenceThreshold(0.5)
-    nn.setBlobPath(args.model)
+    nn.setNNArchive(nn_archive)
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
     video_out.link(nn.input)
@@ -54,7 +55,10 @@ with dai.Pipeline() as pipeline:
     nn.passthrough.link(objectTracker.inputDetectionFrame)
     nn.out.link(objectTracker.inputDetections)
 
-    counting = pipeline.create(CumulativeObjectCounting).build(video_out, objectTracker.out)
+    counting = pipeline.create(CumulativeObjectCounting).build(
+        img_frames=video_out, 
+        tracklets=objectTracker.out
+    )
     counting.set_axis(args.axis)
     counting.set_roi_position(args.roi_position)
 

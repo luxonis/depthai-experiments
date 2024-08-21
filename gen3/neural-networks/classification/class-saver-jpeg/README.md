@@ -1,6 +1,4 @@
-[中文文档](README.zh-CN.md)
-
-# Gen2 Class Saver (JPEG)
+# Gen3 Class Saver (JPEG)
 
 This example demonstrates how to run MobilenetSSD and collect images of detected objects, grouped by detection label.
 After running this script, DepthAI will start MobilenetSSD, and whenever it detects objects, it will add a dataset entry

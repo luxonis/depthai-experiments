@@ -19,11 +19,22 @@ databases = "databases"
 if not os.path.exists(databases):
     os.mkdir(databases)
 
+face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
+face_det_nn_archive = dai.NNArchive(face_det_archive_path)
+
+headpose_model_description = dai.NNModelDescription(modelSlug="head-pose-estimation-adas", platform="RVC2", modelVersionSlug="0001")
+headpose_archive_path = dai.getModelFromZoo(headpose_model_description)
+headpose_nn_archive = dai.NNArchive(headpose_archive_path)
+
+face_rec_model_description = dai.NNModelDescription(modelSlug="face-recognition-arcface", platform="RVC2", modelVersionSlug="112x112")
+face_rec_archive_path = dai.getModelFromZoo(face_rec_model_description)
+face_rec_nn_archive = dai.NNArchive(face_rec_archive_path)
 
 print("Creating pipeline...")
 with dai.Pipeline() as pipeline:
     print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     # For ImageManip rotate you need input frame of multiple of 16
     cam.setPreviewSize(1280, 800)
     cam.setVideoSize(VIDEO_SIZE)
@@ -47,9 +58,10 @@ with dai.Pipeline() as pipeline:
 
     # NeuralNetwork
     print("Creating Face Detection Neural Network...")
-    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+    # face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+    face_det_nn.setNNArchive(face_det_nn_archive)
     # Link Face ImageManip -> Face detection NN node
     face_det_manip.out.link(face_det_nn.input)
 
@@ -76,7 +88,8 @@ with dai.Pipeline() as pipeline:
     script.outputs['manip_img'].link(headpose_manip.inputImage)
 
     headpose_nn = pipeline.create(dai.node.NeuralNetwork)
-    headpose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=6))
+    # headpose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=6))
+    headpose_nn.setNNArchive(headpose_nn_archive)
     headpose_manip.out.link(headpose_nn.input)
 
     headpose_nn.out.link(script.inputs['headpose_in'])
@@ -92,7 +105,8 @@ with dai.Pipeline() as pipeline:
     script.outputs['manip2_img'].link(face_rec_manip.inputImage)
 
     face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
-    face_rec_nn.setBlobPath(blobconverter.from_zoo(name="face-recognition-arcface-112x112", zoo_type="depthai", shaves=6))
+    # face_rec_nn.setBlobPath(blobconverter.from_zoo(name="face-recognition-arcface-112x112", zoo_type="depthai", shaves=6))
+    face_rec_nn.setNNArchive(face_rec_nn_archive)
     face_rec_manip.out.link(face_rec_nn.input)
 
     sync_node = pipeline.create(DetectionsRecognitionsSync).build()
@@ -110,29 +124,5 @@ with dai.Pipeline() as pipeline:
     )
 
     print("Pipeline created.")
-    # pipeline.run()
-
-    rgb_q = cam.video.createOutputQueue()
-    detec = sync_node.output.createOutputQueue()
-
-    pipeline.start()
-
-    while pipeline.isRunning():
-        
-        if rgb_q.has() and detec.has():
-            video = rgb_q.tryGet()
-            det = detec.tryGet()
-
-            detections: dai.ImgDetections = det.detections
-            recognitions: list[dai.NNData] = det.nn_data
-
-            frame = video.getCvFrame()
-            dets = detections.detections
-
-            cv2.imshow("color", frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            break
-    
-
+    pipeline.run()
     print("Pipeline ended.")

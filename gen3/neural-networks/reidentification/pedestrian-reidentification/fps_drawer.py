@@ -23,10 +23,10 @@ class FPSDrawer(dai.node.ThreadedHostNode):
             fps = self._get_fps()
             self._draw_fps(frame, fps)
 
-            img_frame.setType(dai.ImgFrame.Type.BGR888i)
-            img_frame.setFrame(frame)
+            frame_retyped = dai.ImgFrame()
+            frame_retyped.setCvFrame(img_frame.getCvFrame(), dai.ImgFrame.Type.BGR888p)
 
-            self.output.send(img_frame)
+            self.output.send(frame_retyped)
 
 
     def _remove_old_frames(self, now: float) -> None:

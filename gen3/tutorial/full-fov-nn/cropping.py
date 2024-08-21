@@ -1,7 +1,10 @@
 import depthai as dai
-import blobconverter
 import cv2
 import numpy as np
+
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2") 
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
 
 # MobilenetSSD label texts
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
@@ -58,9 +61,9 @@ with dai.Pipeline() as pipeline:
     crop_manip.initialConfig.setResize(300, 300)
     cam.preview.link(crop_manip.inputImage)
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    nn = pipeline.create(dai.node.DetectionNetwork)
     nn.setConfidenceThreshold(0.5)
-    nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=5))
+    nn.setNNArchive(nn_archive)
     crop_manip.out.link(nn.input)
 
     cropped_fov = pipeline.create(CroppedFOV).build(

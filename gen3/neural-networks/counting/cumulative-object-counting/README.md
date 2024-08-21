@@ -15,8 +15,6 @@ usage: main.py [-h] [-m MODEL] [-v VIDEO_PATH] [-roi ROI_POSITION] [-a] [-sp SAV
 
 optional arguments:
   -h, --help            show this help message and exit
-  -m MODEL, --model MODEL
-                        File path of .blob file. (default: models/mobilenet-ssd.blob)
   -v VIDEO_PATH, --video_path VIDEO_PATH
                         Path to video. If empty OAK-RGB camera is used. (default='') (default: )
   -roi ROI_POSITION, --roi_position ROI_POSITION
@@ -28,7 +26,7 @@ optional arguments:
 
 Camera example:
 ```
-python main.py -m models/mobilenet-ssd.blob
+python main.py
 ```
 
 Video example:

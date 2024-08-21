@@ -13,6 +13,7 @@ class PedestrianReidentification(dai.node.HostNode):
 
     def build(self, img_frames: dai.Node.Output, detected_recognitions: dai.Node.Output) -> "PedestrianReidentification":
         self.link_args(img_frames, detected_recognitions)
+        self.sendProcessingToPipeline(True)
         return self
     
 

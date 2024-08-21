@@ -10,6 +10,10 @@ from host_stream_output import StreamOutput
 
 HTTP_SERVER_PORT = 8090
 
+modelDescription = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+archivePath = dai.getModelFromZoo(modelDescription)
+nn_archive = dai.NNArchive(archivePath)
+
 # HTTPServer MJPEG
 class VideoStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -42,8 +46,7 @@ th.start()
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
-    cam.setPreviewSize(300, 300)
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setInterleaved(False)
     cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
@@ -60,8 +63,9 @@ with dai.Pipeline() as pipeline:
     stereo.initialConfig.setConfidenceThreshold(255)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork).build()
-    nn.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=5))
+    nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+    #nn.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=5))
+    nn.setNNArchive(nn_archive)
     nn.setConfidenceThreshold(0.5)
     nn.input.setBlocking(False)
     nn.setBoundingBoxScaleFactor(0.5)
