@@ -15,7 +15,7 @@ with dai.Pipeline() as pipeline:
     camRgb.setPreviewKeepAspectRatio(False)
 
     # Properties
-    camRgb.setPreviewSize(512, 288) 
+    camRgb.setPreviewSize(416, 416) 
     camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     camRgb.setInterleaved(False)
     camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
