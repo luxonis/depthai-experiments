@@ -1,12 +1,11 @@
 from pathlib import Path
-import blobconverter
 import depthai as dai
 from detections_recognitions_sync import DetectionsRecognitionsSync
 from emotions_recognition import DisplayEmotions
 
 
 device = dai.Device()
-recognition_model_description = dai.NNModelDescription(modelSlug="emotion-recognition", platform=device.getPlatform().name, modelVersionSlug="gray-64x64")
+recognition_model_description = dai.NNModelDescription(modelSlug="emotion-recognition", platform=device.getPlatform().name, modelVersionSlug="260x260")
 recognition_model_path = dai.getModelFromZoo(recognition_model_description)
 
 face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
@@ -77,7 +76,7 @@ with dai.Pipeline(device) as pipeline:
     image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
 
     manip_manip = pipeline.create(dai.node.ImageManip)
-    manip_manip.initialConfig.setResize(64, 64) 
+    manip_manip.initialConfig.setResize(260, 260)  
     manip_manip.initialConfig.setFrameType(dai.ImgFrame.Type.GRAY8)
     manip_manip.inputConfig.setWaitForMessage(True)
     image_manip_script.outputs['manip_cfg'].link(manip_manip.inputConfig)
