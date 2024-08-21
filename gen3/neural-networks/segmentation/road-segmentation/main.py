@@ -1,8 +1,8 @@
 import depthai as dai
 from host_road_segmentation import RoadSegmentation
 
-# modelDescription = dai.NNModelDescription(modelSlug="road-segmentation-adas", platform="RVC2", modelVersionSlug="0001-896x512") # private model
-archivePath = "./model/road-segmentation-adas-0001.rvc2.tar.xz"
+modelDescription = dai.NNModelDescription(modelSlug="road-segmentation-adas", platform="RVC2", modelVersionSlug="0001-896x512") # private model
+archivePath = dai.getModelFromZoo(modelDescription)
 nn_archive = dai.NNArchive(archivePath)
 
 nn_shape = (896, 512)

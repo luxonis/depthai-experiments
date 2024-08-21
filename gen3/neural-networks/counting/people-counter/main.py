@@ -1,9 +1,9 @@
 import depthai as dai
 from host_people_counter import PeopleCounter
 
-# model_description = dai.NNModelDescription(modelSlug="person-detection-retail", platform="RVC2")
-# archivePath = dai.getModelFromZoo(model_description)
-archivePath = "./model/person-detection-retail-0013.rvc2.tar.xz" # bc model is private in hub
+# model_description = dai.NNModelDescription(modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640") # no parser yet
+model_description = dai.NNModelDescription(modelSlug="person-detection-retail", platform="RVC2")
+archivePath = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archivePath)
 
 with dai.Pipeline() as pipeline:
@@ -14,7 +14,7 @@ with dai.Pipeline() as pipeline:
     cam.setInterleaved(False)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
     manip = pipeline.create(dai.node.ImageManip)
     manip.initialConfig.setResize(544, 320)
