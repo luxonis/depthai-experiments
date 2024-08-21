@@ -3,6 +3,7 @@ from host_social_distancing import SocialDistancing
 
 device = dai.Device()
 modelDescription = dai.NNModelDescription(modelSlug="person-detection-retail", platform=device.getPlatform().name, modelVersionSlug="0013-544x320")
+# modelDescription = dai.NNModelDescription(modelSlug="scrfd-person-detection", platform=device.getPlatform().name, modelVersionSlug="2-5g-640x640") # no parser yet
 archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 nnArchive = dai.NNArchive(archivePath)
 
