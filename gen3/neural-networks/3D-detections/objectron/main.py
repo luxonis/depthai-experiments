@@ -2,11 +2,12 @@ import cv2
 import depthai as dai
 from functions import draw_box
 import numpy as np
-import blobconverter
 from utility.fps_handler import FPSHandler
 
+model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+archive_path = dai.getModelFromZoo(model_description)
+nn_archive = dai.NNArchive(archive_path)
 
-MOBILENET_DETECTOR_PATH = str(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
 OBJECTRON_CHAIR_PATH = "models/objectron_chair_openvino_2021.4_6shave.blob"
 INPUT_W, INPUT_H = 427, 267
 
@@ -121,7 +122,7 @@ with dai.Pipeline() as pipeline:
     cam.setPreviewSize(INPUT_W, INPUT_H)
     cam.setInterleaved(False)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
     cam.setPreviewKeepAspectRatio(True)
     cam.setFps(60)
 
@@ -131,8 +132,8 @@ with dai.Pipeline() as pipeline:
     manip_det.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
 
     # Mobilenet parameters
-    nn_det = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
-    nn_det.setBlobPath(MOBILENET_DETECTOR_PATH)
+    nn_det = pipeline.create(dai.node.DetectionNetwork)
+    nn_det.setNNArchive(nn_archive)
     nn_det.setConfidenceThreshold(0.5)
     nn_det.setNumInferenceThreads(2)
 
