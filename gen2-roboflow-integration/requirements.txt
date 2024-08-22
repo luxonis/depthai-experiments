@@ -1,4 +1,4 @@
-certifi==2023.7.22
+certifi==2024.7.4
 charset-normalizer==2.0.9
 depthai==2.16.0.0
 idna==3.3
