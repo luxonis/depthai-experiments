@@ -6,6 +6,7 @@ import depthai as dai
 ffmpeg_cmd = [
     'ffmpeg',
     '-re',  # Read input at native frame rate
+    '-f', 'h264',  # Input format is H264
     '-fflags', 'nobuffer',  # Disable buffering
     '-flags', 'low_delay',  # Low latency mode
     '-i', '-',  # Read input from stdin (your H264 stream)

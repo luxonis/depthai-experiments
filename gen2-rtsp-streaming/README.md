@@ -9,14 +9,18 @@ Install [MediaMTX](https://github.com/bluenviron/mediamtx), you can either go wi
 You will also need to install `ffmpeg` library, as Python script uses it to forward encoded frames to the MediaMTX server.
 
 ```bash
-# On Ubuntu
-sudo apt-get install ffmpeg
-# On MacOs
+# On Ubuntu 24.04 it should install 6.1.1:
+sudo apt install ffmpeg
+# On MacOs, should install 7.0.2:
 brew install ffmpeg
-# On Windows (within Admin PowerShell):
+# On Windows (within Admin PowerShell), should install 7.0.2:
 choco install ffmpeg
 # Or download from https://ffmpeg.org/download.html
 ```
+
+### Ubuntu challenges
+
+On Ubuntu 22.04 we encountered that `ffmpeg` is available up to only `4.2.2` with the default apt repo, which doesn't recognize the H264 stream correctly. After upgrading to **Ubuntu 24.04**, we were able to install `ffmpeg==6.1.1` and the code works as expected.
 
 ## Usage
 
