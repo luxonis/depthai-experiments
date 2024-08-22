@@ -1,3 +1,2 @@
 opencv-python==4.10.0.84
-blobconverter==1.4.3
 depthai~=3.0a1

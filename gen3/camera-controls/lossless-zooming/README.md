@@ -6,10 +6,6 @@ This demo shows how you can achieve lossless zooming on the device. Demo will zo
 
 [![Lossless Zooming](https://user-images.githubusercontent.com/18037362/144095838-d082040a-9716-4f8e-90e5-15bcb23115f9.gif)](https://youtu.be/8X0IcnkeIf8)
 
-### MJPEG
-
-You can turn `MJPEG` on or off. It's set to `True` by default, so cropped 1080P stream will get encoded into MJPEG on the device. On the host, it will just get decoded and shown to the user, but you could also save the MJPEG stream or stream it elsewhere.
-
 
 ## Installation
 
