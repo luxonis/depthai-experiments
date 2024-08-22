@@ -1,8 +1,10 @@
 import depthai as dai
-from host_road_segmentation import RoadSegmentation
 
-modelDescription = dai.NNModelDescription(modelSlug="road-segmentation-adas", platform="RVC2", modelVersionSlug="0001-896x512") # private model
-archivePath = dai.getModelFromZoo(modelDescription)
+from host_road_segmentation import RoadSegmentation
+from host_display import Display
+
+modelDescription = dai.NNModelDescription(modelSlug="road-segmentation-adas", platform="RVC2", modelVersionSlug="0001-896x512")
+archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 nn_archive = dai.NNArchive(archivePath)
 
 nn_shape = (896, 512)
@@ -26,6 +28,9 @@ with dai.Pipeline() as pipeline:
     )
     road_segmentation.inputs["preview"].setBlocking(False)
     road_segmentation.inputs["preview"].setMaxSize(4)
+
+    display = pipeline.create(Display).build(road_segmentation.output)
+    display.setName("Road Segmentation")
 
     print("Pipeline created.")
     pipeline.run()

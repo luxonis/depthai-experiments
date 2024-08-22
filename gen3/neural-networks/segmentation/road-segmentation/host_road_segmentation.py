@@ -13,9 +13,11 @@ class RoadSegmentation(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
+        self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+
     def build(self, preview: dai.Node.Output, nn: dai.Node.Output) -> "RoadSegmentation":
         self.link_args(preview, nn)
-        self.sendProcessingToPipeline(True)
+
         return self
 
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
@@ -28,9 +30,5 @@ class RoadSegmentation(dai.node.HostNode):
         if len(output_colors) > 0:
             cv2.addWeighted(frame, 1, cv2.resize(output_colors, frame.shape[:2][::-1]), 0.2, 0, frame)
 
-        cv2.imshow("Preview", frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            print("Pipeline exited.")
-            self.stopPipeline()
-
+        preview.setCvFrame(frame, dai.ImgFrame.Type.BGR888p)
+        self.output.send(preview)
