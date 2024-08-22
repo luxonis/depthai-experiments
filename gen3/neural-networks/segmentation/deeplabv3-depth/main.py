@@ -1,61 +1,45 @@
 import depthai as dai
-import blobconverter
+
 from host_depth_segmentation import DepthSegmentation
+from host_display import Display
 
 model_description = dai.NNModelDescription(modelSlug="deeplabv3", platform="RVC2", modelVersionSlug="256x256")
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
 nn_shape = (256, 256)
-TARGET_SHAPE = (400, 400)
 
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    # Color cam: 1920x1080
-    # Mono cam: 640x400
-    cam.setIspScale(2, 3)  # To match 400P mono cameras
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    cam.setPreviewSize(nn_shape)
-    cam.setInterleaved(False)
-
-    manip_cam = pipeline.create(dai.node.ImageManip)
-    manip_cam.initialConfig.setResize(*TARGET_SHAPE)
-    cam.isp.link(manip_cam.inputImage)
+    color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
     nn.setNNArchive(nn_archive)
     nn.input.setBlocking(False)
     nn.setNumInferenceThreads(2)
-    cam.preview.link(nn.input)
+    color.requestOutput((256, 256), dai.ImgFrame.Type.BGR888p).link(nn.input)
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
-
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-
-    stereo = pipeline.create(dai.node.StereoDepth)
+    stereo = pipeline.create(dai.node.StereoDepth).build(
+        left=left.requestOutput((400, 400), dai.ImgFrame.Type.BGR888p),
+        right=right.requestOutput((400, 400), dai.ImgFrame.Type.BGR888p)
+    )
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    left.out.link(stereo.left)
-    right.out.link(stereo.right)
-
-    manip_stereo = pipeline.create(dai.node.ImageManip)
-    manip_stereo.initialConfig.setResize(*TARGET_SHAPE)
-    stereo.disparity.link(manip_stereo.inputImage)
+    stereo.setOutputSize(400, 400)
 
     depth_segmentation = pipeline.create(DepthSegmentation).build(
-        preview=manip_cam.out,
+        preview=color.requestOutput((400, 400), dai.ImgFrame.Type.BGR888p),
         nn=nn.out,
-        disparity=manip_stereo.out,
+        disparity=stereo.disparity,
         nn_shape=nn_shape,
         max_disparity=stereo.initialConfig.getMaxDisparity()
     )
+
+    display = pipeline.create(Display).build(depth_segmentation.output)
+    display.setName("Depth Segmentation")
 
     print("Pipeline created.")
     pipeline.run()
