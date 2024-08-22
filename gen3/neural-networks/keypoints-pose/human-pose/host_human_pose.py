@@ -13,11 +13,11 @@ POSE_PAIRS = [[1, 2], [1, 5], [2, 3], [3, 4], [5, 6], [6, 7], [1, 8], [8, 9], [9
 class HumanPose(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
+
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
 
     def build(self, preview: dai.Node.Output, nn: dai.Node.Output) -> "HumanPose":
         self.link_args(preview, nn)
-        self.sendProcessingToPipeline(True)
         return self
 
     # Preview is actually type dai.ImgFrame here
@@ -34,9 +34,9 @@ class HumanPose(dai.node.HostNode):
         keypoint_id = 0
 
         for row in range(18):
-            probMap = outputs[0, row, :, :]
-            probMap = cv2.resize(probMap, (456, 256))
-            new_keypoints = getKeypoints(probMap, 0.3)
+            prob_map = outputs[0, row, :, :]
+            prob_map = cv2.resize(prob_map, (456, 256))
+            new_keypoints = getKeypoints(prob_map, 0.3)
             keypoints_list = np.vstack([keypoints_list, *new_keypoints])
             keypoints_with_id = []
 
@@ -68,13 +68,5 @@ class HumanPose(dai.node.HostNode):
                     A = np.int32(keypoints_list[index.astype(int), 1])
                     cv2.line(frame, scale((B[0], A[0])), scale((B[1], A[1])), COLORS[i], 3, cv2.LINE_AA)
 
-        output_frame = dai.ImgFrame()
-        output_frame.setType(dai.ImgFrame.Type.BGR888i)
-        output_frame.setFrame(frame)
-        output_frame.setWidth(preview.getWidth())
-        output_frame.setHeight(preview.getHeight())
-        output_frame.setTimestamp(preview.getTimestamp())
-        output_frame.setTimestampDevice(preview.getTimestampDevice())
-        output_frame.setInstanceNum(preview.getInstanceNum())
-
-        self.output.send(output_frame)
+        preview.setCvFrame(frame, dai.ImgFrame.Type.BGR888i)
+        self.output.send(preview)

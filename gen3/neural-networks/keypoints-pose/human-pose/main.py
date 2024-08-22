@@ -1,5 +1,4 @@
 import depthai as dai
-import blobconverter
 import argparse
 
 from host_human_pose import HumanPose
@@ -8,7 +7,6 @@ from pathlib import Path
 
 model_description = dai.NNModelDescription(modelSlug="human-pose-estimation", platform="RVC2", modelVersionSlug="0001-456x256")
 archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-vid', '--video', type=str
@@ -26,27 +24,21 @@ with dai.Pipeline() as pipeline:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.video).resolve().absolute())
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-
         replay.out.link(manip.inputImage)
+
     else:
-        cam = pipeline.create(dai.node.ColorCamera)
-        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-        cam.setIspScale(1, 5)
-        cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-        cam.initialControl.setManualFocus(130)
-        cam.setInterleaved(False)
-        cam.setPreviewSize(768, 432)
+        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        cam.requestOutput((768, 432), dai.ImgFrame.Type.BGR888p).link(manip.inputImage)
 
-        cam.preview.link(manip.inputImage)
-
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setNNArchive(nn_archive)
+    nn = pipeline.create(dai.node.NeuralNetwork).build(
+        output=manip.out,
+        nnArchive=dai.NNArchive(archive_path)
+    )
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
-    manip.out.link(nn.input)
 
     human_pose = pipeline.create(HumanPose).build(
-        preview=replay.out if args.video else cam.preview,
+        preview=replay.out if args.video else cam.requestOutput((768, 432), dai.ImgFrame.Type.BGR888p),
         nn=nn.out
     )
     human_pose.inputs["preview"].setBlocking(False)
@@ -54,9 +46,7 @@ with dai.Pipeline() as pipeline:
     human_pose.inputs["nn"].setBlocking(False)
     human_pose.inputs["nn"].setMaxSize(2)
 
-    display = pipeline.create(Display).build(
-        human_pose.output
-    )
+    display = pipeline.create(Display).build(human_pose.output)
     display.set_window_name("Preview")
 
     print("Pipeline created.")
