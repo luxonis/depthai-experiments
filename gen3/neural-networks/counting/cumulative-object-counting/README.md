@@ -31,7 +31,7 @@ python main.py
 
 Video example:
 ```
-python main.py -m models/mobilenet-ssd.blob -v demo/example_01.mp4 -a
+python main.py -v demo/example_01.mp4 -a
 ```
 
 

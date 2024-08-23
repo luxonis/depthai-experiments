@@ -1,15 +1,14 @@
-from pathlib import Path
 import argparse
 import depthai as dai
 
+from pathlib import Path
 from cumulative_object_counting import CumulativeObjectCounting
-from display import Display
+from host_fps_drawer import FPSDrawer
+from host_display import Display
 
-parser = argparse.ArgumentParser(
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-parser.add_argument('-v', '--video_path', type=str, default='',
-                    help='Path to video. If empty OAK-RGB camera is used. (default=\'\')')
+parser = argparse.ArgumentParser()
+parser.add_argument('-v', '--video_path', type=str, default="",
+                    help='Path to video. If empty OAK-RGB camera is used.')
 parser.add_argument('-roi', '--roi_position', type=float,
                     default=0.5, help='ROI Position (0-1)')
 parser.add_argument('-a', '--axis', default=True, action='store_false',
@@ -22,30 +21,26 @@ model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
-OUTPUT_SIZE = (300, 300)
-
 with dai.Pipeline() as pipeline:
-    if args.video_path != '':
+    if args.video_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setLoop(False)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
         replay.setReplayVideoFile(args.video_path)
-        replay.setSize(OUTPUT_SIZE)
+        replay.setSize((300, 300))
         video_out = replay.out
-        fps = replay.getFps()
-    else:
-        cam = pipeline.create(dai.node.ColorCamera)
-        cam.setPreviewSize(OUTPUT_SIZE)
-        cam.setInterleaved(False)
-        video_out = cam.preview
-        fps = cam.getFps()
 
-    nn = pipeline.create(dai.node.DetectionNetwork)
+    else:
+        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        video_out = cam.requestOutput((300, 300), dai.ImgFrame.Type.BGR888p)
+
+    nn = pipeline.create(dai.node.DetectionNetwork).build(
+        input=video_out,
+        nnArchive=dai.NNArchive(archive_path)
+    )
     nn.setConfidenceThreshold(0.5)
-    nn.setNNArchive(nn_archive)
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
-    video_out.link(nn.input)
 
     objectTracker = pipeline.create(dai.node.ObjectTracker)
     objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
@@ -62,11 +57,13 @@ with dai.Pipeline() as pipeline:
     counting.set_axis(args.axis)
     counting.set_roi_position(args.roi_position)
 
+    fps_drawer = pipeline.create(FPSDrawer).build(counting.output)
+    fps_drawer.setFpsPosition(FPSDrawer.Position.BOTTOM_LEFT)
+
     if args.save_path:
         img_manip = pipeline.create(dai.node.ImageManip)
-        img_manip.initialConfig.setResize(320, 320)
         img_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
-        counting.output.link(img_manip.inputImage)
+        fps_drawer.output.link(img_manip.inputImage)
 
         videoEncoder = pipeline.create(dai.node.VideoEncoder).build(img_manip.out)
         videoEncoder.setProfile(dai.VideoEncoderProperties.Profile.H264_MAIN)
@@ -75,6 +72,8 @@ with dai.Pipeline() as pipeline:
         record.setRecordVideoFile(Path(args.save_path))
         videoEncoder.out.link(record.input)
 
-    display = pipeline.create(Display).build(counting.output)
-    display.set_name("Cumulative Object Counting")
+    display = pipeline.create(Display).build(fps_drawer.output)
+    display.setName("Cumulative Object Counting")
+
+    print("Pipeline created.")
     pipeline.run()

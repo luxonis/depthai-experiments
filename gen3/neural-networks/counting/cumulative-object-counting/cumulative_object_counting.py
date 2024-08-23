@@ -16,28 +16,21 @@ class CumulativeObjectCounting(dai.node.HostNode):
         self._trackable_objects: dict[int, TrackableObject] = {}
         self._counter = [0, 0, 0, 0]
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
-
     
     def build(self, img_frames: dai.Node.Output, tracklets: dai.Node.Output) -> "CumulativeObjectCounting":
         self.link_args(img_frames, tracklets)
-        self.sendProcessingToPipeline(True)
+
         return self
-    
 
     def set_axis(self, axis: bool) -> None:
         self._axis = axis
-    
 
     def set_roi_position(self, roi_position: float) -> None:
         self._roi_position = roi_position
     
-    
     def process(self, img_frame: dai.Buffer, tracklets: dai.Tracklets) -> None:
         assert(isinstance(img_frame, dai.ImgFrame))
         frame = img_frame.getCvFrame()
-
-        self._draw_fps(frame)
-        self._frame_count += 1
 
         height, width = frame.shape[0], frame.shape[1]
 
@@ -63,12 +56,6 @@ class CumulativeObjectCounting(dai.node.HostNode):
         out_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888i)
         self.output.send(out_frame)
 
-
-    def _draw_fps(self, frame: np.ndarray) -> None:
-        cv2.putText(frame, "NN fps: {:.2f}".format(self._frame_count / (time.monotonic() - self._start_time)),
-                    (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color=(255, 255, 255))
-
-
     def _calculate_centroid(self, height: int, width: int, t: dai.Tracklet) -> tuple[int, int]:
         roi = t.roi.denormalize(width, height)
         x1 = int(roi.topLeft().x)
@@ -77,7 +64,6 @@ class CumulativeObjectCounting(dai.node.HostNode):
         y2 = int(roi.bottomRight().y)
         centroid = (int((x2-x1)/2+x1), int((y2-y1)/2+y1))
         return centroid
-    
 
     def _update_counter(self, height: int, width: int, to: TrackableObject, centroid: tuple[int, int]) -> None:
         if self._axis and not to.counted:
@@ -102,14 +88,12 @@ class CumulativeObjectCounting(dai.node.HostNode):
                 self._counter[2] += 1
                 to.counted = True
 
-
     def _draw_tracklet(self, frame: np.ndarray, t: dai.Tracklet, centroid: tuple[int, int]) -> None:
         text = "ID {}".format(t.id)
         cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         cv2.circle(
                     frame, (centroid[0], centroid[1]), 4, (255, 255, 255), -1)
-
 
     def _draw_roi_line(self, frame: np.ndarray, height: int, width: int) -> None:
         if self._axis:
@@ -118,7 +102,6 @@ class CumulativeObjectCounting(dai.node.HostNode):
         else:
             cv2.line(frame, (0, int(self._roi_position*height)),
                         (width, int(self._roi_position*height)), (0xFF, 0, 0), 5)
-            
     
     def _draw_count_and_status(self, frame: np.ndarray) -> None:
         font = cv2.FONT_HERSHEY_SIMPLEX
