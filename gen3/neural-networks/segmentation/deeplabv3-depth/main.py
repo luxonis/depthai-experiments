@@ -1,6 +1,7 @@
 import depthai as dai
 
 from host_depth_segmentation import DepthSegmentation
+from host_fps_drawer import FPSDrawer
 from host_display import Display
 
 model_description = dai.NNModelDescription(modelSlug="deeplabv3", platform="RVC2", modelVersionSlug="256x256")
@@ -38,7 +39,9 @@ with dai.Pipeline() as pipeline:
         max_disparity=stereo.initialConfig.getMaxDisparity()
     )
 
-    display = pipeline.create(Display).build(depth_segmentation.output)
+    fps_drawer = pipeline.create(FPSDrawer).build(depth_segmentation.output)
+
+    display = pipeline.create(Display).build(fps_drawer.output)
     display.setName("Depth Segmentation")
 
     print("Pipeline created.")

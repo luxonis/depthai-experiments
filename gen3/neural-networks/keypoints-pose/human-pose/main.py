@@ -2,6 +2,7 @@ import depthai as dai
 import argparse
 
 from host_human_pose import HumanPose
+from host_fps_drawer import FPSDrawer
 from display import Display
 from pathlib import Path
 
@@ -46,7 +47,9 @@ with dai.Pipeline() as pipeline:
     human_pose.inputs["nn"].setBlocking(False)
     human_pose.inputs["nn"].setMaxSize(2)
 
-    display = pipeline.create(Display).build(human_pose.output)
+    fps_drawer = pipeline.create(FPSDrawer).build(human_pose.output)
+
+    display = pipeline.create(Display).build(fps_drawer.output)
     display.set_window_name("Preview")
 
     print("Pipeline created.")

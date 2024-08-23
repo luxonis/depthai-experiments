@@ -2,6 +2,7 @@ import depthai as dai
 
 from depthai_nodes import YuNetParser
 from host_crop_face import CropFace
+from host_fps_drawer import FPSDrawer
 from host_display import Display
 
 model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="320x320")
@@ -12,13 +13,8 @@ with dai.Pipeline() as pipeline:
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     cam.initialControl.setManualFocus(130)
 
-    cap_nn = dai.ImgFrameCapability()
-    cap_nn.type = dai.ImgFrame.Type.BGR888p
-    cap_nn.size.fixed((320, 320))
-    cap_nn.resizeMode = dai.ImgResizeMode.STRETCH
-
     nn = pipeline.create(dai.node.NeuralNetwork).build(
-        cam.requestOutput(cap_nn, False),
+        cam.requestOutput((320, 320), dai.ImgFrame.Type.BGR888p, dai.ImgResizeMode.STRETCH),
         dai.NNArchive(archive_path)
     )
     nn.input.setBlocking(False)
@@ -35,8 +31,10 @@ with dai.Pipeline() as pipeline:
     cam.requestOutput((3840, 2160), dai.ImgFrame.Type.YUV420p).link(crop_manip.inputImage)
     crop_manip.inputImage.setBlocking(False)
 
+    fps_drawer = pipeline.create(FPSDrawer).build(nn.passthrough)
+
     display_zoom = pipeline.create(Display).build(crop_manip.out)
-    display_full = pipeline.create(Display).build(cam.requestOutput(cap_nn, False))
+    display_full = pipeline.create(Display).build(fps_drawer.output)
     display_zoom.setName("Zoom")
     display_full.setName("Full")
 

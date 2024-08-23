@@ -58,7 +58,6 @@ with dai.Pipeline() as pipeline:
     counting.set_roi_position(args.roi_position)
 
     fps_drawer = pipeline.create(FPSDrawer).build(counting.output)
-    fps_drawer.setFpsPosition(FPSDrawer.Position.BOTTOM_LEFT)
 
     if args.save_path:
         img_manip = pipeline.create(dai.node.ImageManip)

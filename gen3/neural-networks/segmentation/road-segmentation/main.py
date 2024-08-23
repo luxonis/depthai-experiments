@@ -1,6 +1,7 @@
 import depthai as dai
 
 from host_road_segmentation import RoadSegmentation
+from host_fps_drawer import FPSDrawer
 from host_display import Display
 
 modelDescription = dai.NNModelDescription(modelSlug="road-segmentation-adas", platform="RVC2", modelVersionSlug="0001-896x512")
@@ -29,7 +30,9 @@ with dai.Pipeline() as pipeline:
     road_segmentation.inputs["preview"].setBlocking(False)
     road_segmentation.inputs["preview"].setMaxSize(4)
 
-    display = pipeline.create(Display).build(road_segmentation.output)
+    fps_drawer = pipeline.create(FPSDrawer).build(road_segmentation.output)
+
+    display = pipeline.create(Display).build(fps_drawer.output)
     display.setName("Road Segmentation")
 
     print("Pipeline created.")
