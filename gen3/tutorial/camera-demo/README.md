@@ -1,26 +1,16 @@
 ## Gen3 Camera Demo
-This example shows how to use the DepthAI/megaAI/OAK cameras in the Gen3 Pipeline Builder over USB.  
+This example shows how to use the DepthAI/OAK cameras in the Gen3 Pipeline Builder over USB.  
 
-### Install Dependencies:
-`pip install -r requirements.txt`
+## Installation
 
-### Running Example As-Is:
-`python3 main.py` - run
-
-This will run subpixel disparity by default.
-
-### Real-Time Depth from DepthAI Stereo Pair
-
-StereoDepth configuration options:
 ```
-lrcheck  = True   # Better handling for occlusions
-extended = False  # Closer-in minimum depth, disparity range is doubled 
-subpixel = True   # Better accuracy for longer distance, fractional disparity 32-levels
+python3 -m pip install -r requirements.txt
 ```
 
-Select one pipeline to run:
+## Usage
+
+Run the application
+
 ```
-    # test_mono_cam_pipeline(pipeline)
-    # test_rgb_cam_pipeline(pipeline)
-    test_stereo_depth_pipeline(pipeline)
+python3 main.py
 ```
