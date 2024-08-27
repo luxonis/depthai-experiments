@@ -27,7 +27,10 @@ with dai.Pipeline() as pipeline:
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(False)
 
-    depth_parser = pipeline.create(DisplayDepth).build(stereo.disparity)
+    depth_parser = pipeline.create(DisplayDepth).build(
+        stereo.disparity,
+        stereo.initialConfig.getMaxDisparity()
+    )
 
     color_display = pipeline.create(Display).build(color.requestOutput(resolution))
     color_display.setName("Color camera")

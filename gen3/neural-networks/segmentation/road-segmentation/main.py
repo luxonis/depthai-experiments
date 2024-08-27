@@ -13,18 +13,15 @@ nn_shape = (896, 512)
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(nn_shape)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cam_preview = cam.requestOutput(nn_shape, dai.ImgFrame.Type.BGR888p)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
     nn.setNNArchive(nn_archive)
-    cam.preview.link(nn.input)
+    cam_preview.link(nn.input)
 
     road_segmentation = pipeline.create(RoadSegmentation).build(
-        preview=cam.preview,
+        preview=cam_preview,
         nn=nn.out
     )
     road_segmentation.inputs["preview"].setBlocking(False)

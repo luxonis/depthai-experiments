@@ -1,16 +1,18 @@
 import depthai as dai
 import cv2
-import threading
-
 
 class Display(dai.node.HostNode):
-    _lock = threading.Lock()
+    # Only one instance of this class can call cv2.waitKey at a time
     _wait_key_instance = None
 
     def __init__(self) -> None:
         super().__init__()
         self.name = "Display"
-        self.wait_for_exit = True
+        self.process_wait_key = False
+
+        if Display._wait_key_instance is None:
+            self.process_wait_key = True
+            Display._wait_key_instance = self
 
     def build(self, frame):
         self.sendProcessingToPipeline(True)
@@ -21,24 +23,16 @@ class Display(dai.node.HostNode):
         self.name = name
 
     def setWaitForExit(self, wait: bool) -> None:
-        self.wait_for_exit = wait
+        if Display._wait_key_instance is None and wait:
+            self.process_wait_key = True
+            Display._wait_key_instance = self
+        elif Display._wait_key_instance is self and not wait:
+            self.process_wait_key = False
+            Display._wait_key_instance = None
+
 
     def process(self, frame) -> None:
         cv2.imshow(self.name, frame.getCvFrame())
 
-        self.process_wait_key()
-
-    def process_wait_key(self):
-        # Makes sure that the wait key is only processed once
-        if self.wait_for_exit:
-            with self._lock:
-                if Display._wait_key_instance is None:
-                    Display._wait_key_instance = self
-
-                    try:
-                        if cv2.waitKey(1) == ord('q'):
-                            print("Pipeline exited.")
-                            self.stopPipeline()
-                    finally:
-                        Display._wait_key_instance = None
-
+        if self.process_wait_key and cv2.waitKey(1) == ord('q'):
+            self.stopPipeline()

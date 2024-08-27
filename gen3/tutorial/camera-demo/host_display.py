@@ -8,7 +8,6 @@ class Display(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
         self.name = "Display"
-        self.wait_for_exit = True
         self.process_wait_key = False
 
         if Display._wait_key_instance is None:
@@ -24,7 +23,13 @@ class Display(dai.node.HostNode):
         self.name = name
 
     def setWaitForExit(self, wait: bool) -> None:
-        self.wait_for_exit = wait
+        if Display._wait_key_instance is None and wait:
+            self.process_wait_key = True
+            Display._wait_key_instance = self
+        elif Display._wait_key_instance is self and not wait:
+            self.process_wait_key = False
+            Display._wait_key_instance = None
+
 
     def process(self, frame) -> None:
         cv2.imshow(self.name, frame.getCvFrame())

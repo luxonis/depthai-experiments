@@ -3,7 +3,7 @@ import argparse
 
 from host_human_pose import HumanPose
 from host_fps_drawer import FPSDrawer
-from display import Display
+from host_display import Display
 from pathlib import Path
 
 model_description = dai.NNModelDescription(modelSlug="human-pose-estimation", platform="RVC2", modelVersionSlug="0001-456x256")
@@ -32,7 +32,7 @@ with dai.Pipeline() as pipeline:
         cam.requestOutput((768, 432), dai.ImgFrame.Type.BGR888p).link(manip.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork).build(
-        output=manip.out,
+        input=manip.out,
         nnArchive=dai.NNArchive(archive_path)
     )
     nn.setNumInferenceThreads(2)
@@ -50,7 +50,7 @@ with dai.Pipeline() as pipeline:
     fps_drawer = pipeline.create(FPSDrawer).build(human_pose.output)
 
     display = pipeline.create(Display).build(fps_drawer.output)
-    display.set_window_name("Preview")
+    display.setName("Preview")
 
     print("Pipeline created.")
     pipeline.run()
