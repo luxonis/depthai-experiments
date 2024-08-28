@@ -8,15 +8,15 @@ class DisplayPointCloud(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
+        self.pcl_data = o3d.geometry.PointCloud()
+
         self.visualizer = o3d.visualization.VisualizerWithKeyCallback()
         self.visualizer.create_window()
         self.visualizer.register_key_callback(ord('q'), lambda vis: vis.destroy_window())
-        self.pcl_data = o3d.geometry.PointCloud()
+        self.visualizer.add_geometry(self.pcl_data)
 
         coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1000, origin=[0., 0., 0.])
         self.visualizer.add_geometry(coordinate_frame)
-
-        self.first_frame = True
 
     def build(self, preview: dai.Node.Output, pointcloud: dai.Node.Output) -> "DisplayPointCloud":
         self.link_args(preview, pointcloud)
@@ -34,12 +34,7 @@ class DisplayPointCloud(dai.node.HostNode):
         colors = (rgb_frame.reshape(-1, 3) / 255.0).astype(np.float64)
         self.pcl_data.colors = o3d.utility.Vector3dVector(colors)
 
-        if self.first_frame:
-            self.visualizer.add_geometry(self.pcl_data)
-            self.first_frame = False
-        else:
-            self.visualizer.update_geometry(self.pcl_data)
-
+        self.visualizer.update_geometry(self.pcl_data)
         self.visualizer.poll_events()
         self.visualizer.update_renderer()
 
