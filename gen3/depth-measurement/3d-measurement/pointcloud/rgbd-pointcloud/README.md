@@ -14,6 +14,8 @@ python3 -m pip install -r requirements.txt
 Running the command above also tries to install open3D which is required for this example.
 open3D is not supported by all platforms, but is required for pointcloud visualization.
 
+Warning: The experiment requires numpy version 1.*, numpy 2 is not supported due to open3d incompatibility.
+
 ## Usage
 
 Run the application
