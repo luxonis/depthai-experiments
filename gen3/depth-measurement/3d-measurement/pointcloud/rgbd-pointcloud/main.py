@@ -1,7 +1,7 @@
 import argparse
 import depthai as dai
 
-from host_pointcloud import Pointcloud
+from host_display_pointcloud import DisplayPointCloud
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mono', default=False, action="store_true"
@@ -58,22 +58,13 @@ with dai.Pipeline(device) as pipeline:
         width, height = cam.getIspSize()
         intrinsics = calib_data.getCameraIntrinsics(dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height))
 
-    pointcloud = pipeline.create(Pointcloud).build(
-        color=stereo.rectifiedRight if args.mono else cam.isp,
-        left=stereo.rectifiedLeft,
-        right=stereo.rectifiedRight,
-        depth=stereo.depth,
-        cam_intrinsics=intrinsics,
-        shape=(width, height)
+    pointcloud = pipeline.create(dai.node.PointCloud)
+    stereo.depth.link(pointcloud.inputDepth)
+
+    display_pointcloud = pipeline.create(DisplayPointCloud).build(
+        preview=stereo.rectifiedRight if args.mono else cam.isp,
+        pointcloud=pointcloud.outputPointCloud,
     )
-    pointcloud.inputs["color"].setBlocking(False)
-    pointcloud.inputs["color"].setMaxSize(1)
-    pointcloud.inputs["left"].setBlocking(False)
-    pointcloud.inputs["left"].setMaxSize(1)
-    pointcloud.inputs["right"].setBlocking(False)
-    pointcloud.inputs["right"].setMaxSize(1)
-    pointcloud.inputs["depth"].setBlocking(False)
-    pointcloud.inputs["depth"].setMaxSize(1)
 
     print("Pipeline created.")
     pipeline.run()
