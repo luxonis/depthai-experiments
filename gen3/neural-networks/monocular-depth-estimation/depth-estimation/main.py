@@ -6,7 +6,7 @@ from host_depth_estimation import DepthEstimation
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-nn', '--neural-network', type=str
-                    , choices=['fast_small', 'fast_large', 'mbnv_small', 'mbnv_large', 'mega'], default='mega'
+                    , choices=['fast_small', 'fast_large', 'mbnv_small', 'mbnv_large', 'mega'], default='fast_small'
                     , help="Choose the neural network model used for depth estimation (fast_small is default)")
 args = parser.parse_args()
 

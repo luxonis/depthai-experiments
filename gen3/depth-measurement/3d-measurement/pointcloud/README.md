@@ -11,7 +11,7 @@ Both of them try to install open3D which is required for this example. Open3D is
 
 ### RGB-D projection
 
-[RGB-D projection](rgbd-pointcloud) - Uses [open3d](http://www.open3d.org/)'s `PointCloud.create_from_depth_image()` function to calculate pointcloud from the depth map on the host. It also supports colorized pointcloud.
+[RGB-D projection](rgbd-pointcloud) - Caluclates pointcloud from the depth map. It also supports colorized pointcloud.
 
 ![img](https://user-images.githubusercontent.com/18037362/158277114-f1676487-e214-4872-a1b3-aa14131b666b.png)
 
