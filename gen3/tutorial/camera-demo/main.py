@@ -1,7 +1,7 @@
 import depthai as dai
 
 from host_display import Display
-from host_display_depth import DepthColorTransform
+from host_depth_color_transform import DepthColorTransform
 
 resolution = (1280, 720)
 
