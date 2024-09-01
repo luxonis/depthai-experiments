@@ -2,7 +2,6 @@
 
 import depthai as dai
 from calc import HostSpatialsCalc
-from utility import *
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:

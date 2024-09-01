@@ -2,7 +2,7 @@ import math
 import numpy as np
 import depthai as dai
 import cv2
-from utility import *
+from utility import TextHelper
 
 
 class HostSpatialsCalc(dai.node.HostNode):
