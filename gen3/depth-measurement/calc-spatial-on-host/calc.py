@@ -4,6 +4,7 @@ import depthai as dai
 import cv2
 from utility import *
 
+
 class HostSpatialsCalc(dai.node.HostNode):
     # We need device object to get calibration data
     def __init__(self):
@@ -30,6 +31,7 @@ class HostSpatialsCalc(dai.node.HostNode):
         self.sendProcessingToPipeline(True)
         print("Use WASD keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
         return self
+
 
     def process(self, disparity : dai.ImgFrame, depth : dai.ImgFrame) -> None:
         # Calculate spatial coordiantes from depth frame
@@ -68,15 +70,23 @@ class HostSpatialsCalc(dai.node.HostNode):
                 self.delta -= 1
                 self.setDeltaRoi(self.delta)
 
+
     def setLowerThreshold(self, threshold_low):
         self.THRESH_LOW = threshold_low
+
+
     def setUpperThreshold(self, threshold_low):
         self.THRESH_HIGH = threshold_low
+    
+    
     def setDeltaRoi(self, delta):
         self.DELTA = delta
+    
+    
     def setStereo(self, stereo):
         self.stereo = stereo
 
+    
     def _check_input(self, roi, frame): # Check if input is ROI or point. If point, convert to ROI
         if len(roi) == 4: return roi
         if len(roi) != 2: raise ValueError("You have to pass either ROI (4 values) or point (2 values)!")
@@ -86,9 +96,11 @@ class HostSpatialsCalc(dai.node.HostNode):
         y = min(max(roi[1], self.DELTA), frame.shape[0] - self.DELTA)
         return (x-self.DELTA,y-self.DELTA,x+self.DELTA,y+self.DELTA)
 
+    
     def _calc_angle(self, frame, offset, HFOV):
         return math.atan(math.tan(HFOV / 2.0) * offset / (frame.shape[1] / 2.0))
 
+    
     # roi has to be list of ints
     def calc_spatials(self, depthData, roi, averaging_method=np.mean):
 
@@ -104,9 +116,11 @@ class HostSpatialsCalc(dai.node.HostNode):
         # Required information for calculating spatial coordinates on the host
         HFOV = np.deg2rad(self.calibData.getFov(dai.CameraBoardSocket(depthData.getInstanceNum()), useSpec=False))
 
-
-        averageDepth = averaging_method(depthROI[inRange])
-
+        if inRange.any():
+            averageDepth = averaging_method(depthROI[inRange])
+        else:
+            averageDepth = np.nan
+        
         centroid = { # Get centroid of the ROI
             'x': int((xmax + xmin) / 2),
             'y': int((ymax + ymin) / 2)
