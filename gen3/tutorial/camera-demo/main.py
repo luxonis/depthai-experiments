@@ -1,7 +1,7 @@
 import depthai as dai
 
 from host_display import Display
-from host_display_depth import DisplayDepth
+from host_display_depth import DepthColorTransform
 
 resolution = (1280, 720)
 
@@ -27,7 +27,7 @@ with dai.Pipeline() as pipeline:
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(False)
 
-    depth_parser = pipeline.create(DisplayDepth).build(
+    depth_parser = pipeline.create(DepthColorTransform).build(
         stereo.disparity,
         stereo.initialConfig.getMaxDisparity()
     )

@@ -2,13 +2,13 @@ import depthai as dai
 import cv2
 import numpy as np
 
-class DisplayDepth(dai.node.HostNode):
+class DepthColorTransform(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
 
-    def build(self, depth_frame: dai.Node.Output, max_disparity: int) -> "DisplayDepth":
+    def build(self, depth_frame: dai.Node.Output, max_disparity: int) -> "DepthColorTransform":
         self.disp_multiplier = 255 / max_disparity
 
         self.link_args(depth_frame)
