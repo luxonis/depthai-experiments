@@ -23,11 +23,10 @@ class HostSpatialsCalc(dai.node.HostNode):
         super().__init__()
 
 
-    def build(self, stereo : dai.node.StereoDepth, calibData : dai.CalibrationHandler) -> "HostSpatialsCalc":
+    def build(self, disparity_frames: dai.Node.Output, depth_frames: dai.Node.Output, calibData : dai.CalibrationHandler) -> "HostSpatialsCalc":
         self.calibData = calibData
-        self.stereo = stereo
 
-        self.link_args(stereo.disparity, stereo.depth)
+        self.link_args(disparity_frames, depth_frames)
         self.sendProcessingToPipeline(True)
         print("Use WASD keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
         return self
@@ -37,11 +36,7 @@ class HostSpatialsCalc(dai.node.HostNode):
         # Calculate spatial coordiantes from depth frame
         spatials, centroid = self.calc_spatials(depth, (self.x, self.y)) # centroid == x/y in our case
 
-        # Get disparity frame for nicer depth visualization
         disp = disparity.getCvFrame()
-        disp = (disp * (255 / self.stereo.initialConfig.getMaxDisparity())).astype(np.uint8)
-        disp = cv2.applyColorMap(disp, cv2.COLORMAP_JET)
-
         self.text.rectangle(disp, (self.x-self.delta, self.y-self.delta), (self.x+self.delta, self.y+self.delta))
         self.text.putText(disp, "X: " + ("{:.1f}m".format(spatials['x']/1000) if not math.isnan(spatials['x']) else "--"), (self.x + 10, self.y + 20))
         self.text.putText(disp, "Y: " + ("{:.1f}m".format(spatials['y']/1000) if not math.isnan(spatials['y']) else "--"), (self.x + 10, self.y + 35))
@@ -82,11 +77,7 @@ class HostSpatialsCalc(dai.node.HostNode):
     def setDeltaRoi(self, delta):
         self.DELTA = delta
     
-    
-    def setStereo(self, stereo):
-        self.stereo = stereo
-
-    
+        
     def _check_input(self, roi, frame): # Check if input is ROI or point. If point, convert to ROI
         if len(roi) == 4: return roi
         if len(roi) != 2: raise ValueError("You have to pass either ROI (4 values) or point (2 values)!")

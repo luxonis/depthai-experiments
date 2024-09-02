@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import cv2
 import depthai as dai
 from calc import HostSpatialsCalc
+from host_depth_color_transform import DepthColorTransform
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
@@ -15,14 +17,17 @@ with dai.Pipeline(device) as pipeline:
     monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C)  
     
     stereo = pipeline.create(dai.node.StereoDepth).build(monoLeft.out, monoRight.out)
-
     stereo.initialConfig.setConfidenceThreshold(255)
     stereo.setLeftRightCheck(True)
     stereo.setSubpixel(False)
+
+    depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity, stereo.initialConfig.getMaxDisparity())
+    depth_color_transform.setColormap(cv2.COLORMAP_JET)
     
     calibdata = device.readCalibration()
     host = pipeline.create(HostSpatialsCalc).build(
-        stereo,
+        depth_color_transform.output,
+        stereo.depth,
         calibdata
     )
 
