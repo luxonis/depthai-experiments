@@ -9,6 +9,7 @@ class HostSpatialsCalc(dai.node.HostNode):
     # We need device object to get calibration data
     def __init__(self):
         # Values
+        super().__init__()
         self.DELTA = 5
         self.THRESH_LOW = 200 # 20cm
         self.THRESH_HIGH = 30000 # 30m
@@ -20,7 +21,8 @@ class HostSpatialsCalc(dai.node.HostNode):
         self.delta = 5
         self.setDeltaRoi(self.delta)
 
-        super().__init__()
+        self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+
 
 
     def build(self, disparity_frames: dai.Node.Output, depth_frames: dai.Node.Output, calibData : dai.CalibrationHandler) -> "HostSpatialsCalc":
@@ -34,6 +36,7 @@ class HostSpatialsCalc(dai.node.HostNode):
 
     def process(self, disparity : dai.ImgFrame, depth : dai.ImgFrame) -> None:
         # Calculate spatial coordiantes from depth frame
+        #TODO: make spatials calculation separate node
         spatials, centroid = self.calc_spatials(depth, (self.x, self.y)) # centroid == x/y in our case
 
         disp = disparity.getCvFrame()
@@ -42,9 +45,10 @@ class HostSpatialsCalc(dai.node.HostNode):
         self.text.putText(disp, "Y: " + ("{:.1f}m".format(spatials['y']/1000) if not math.isnan(spatials['y']) else "--"), (self.x + 10, self.y + 35))
         self.text.putText(disp, "Z: " + ("{:.1f}m".format(spatials['z']/1000) if not math.isnan(spatials['z']) else "--"), (self.x + 10, self.y + 50))
 
-        # Show the frame
-        cv2.imshow("depth", disp)
+        disparity.setCvFrame(disp, dai.ImgFrame.Type.BGR888i)
+        self.output.send(disparity)
 
+        #TODO: Add keyboard reader node
         key = cv2.waitKey(1)
         if key == ord('q'):
             self.stopPipeline()

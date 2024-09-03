@@ -4,6 +4,7 @@ import cv2
 import depthai as dai
 from calc import HostSpatialsCalc
 from host_depth_color_transform import DepthColorTransform
+from host_display import Display
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
@@ -25,11 +26,14 @@ with dai.Pipeline(device) as pipeline:
     depth_color_transform.setColormap(cv2.COLORMAP_JET)
     
     calibdata = device.readCalibration()
-    host = pipeline.create(HostSpatialsCalc).build(
+    spatials = pipeline.create(HostSpatialsCalc).build(
         depth_color_transform.output,
         stereo.depth,
         calibdata
     )
+
+    display = pipeline.create(Display).build(spatials.output)
+    display.setName("Depth")
 
     print("pipeline created")
     pipeline.run()
