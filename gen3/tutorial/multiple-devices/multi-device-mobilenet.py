@@ -77,7 +77,7 @@ def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
     cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     rgb_preview = cam_rgb.requestOutput(size=(300, 300), type=dai.ImgFrame.Type.BGR888p)
 
-    detector : dai.node.MobileNetDetectionNetwork = pipeline.create(dai.node.DetectionNetwork)
+    detector : dai.node.DetectionNetwork = pipeline.create(dai.node.DetectionNetwork)
     detector.setConfidenceThreshold(0.5)
     detector.setNNArchive(nn_archive)
     rgb_preview.link(detector.input)
