@@ -1,47 +1,19 @@
-import numpy as np
-import cv2
 import depthai as dai
 
-
-class DisplayDiff(dai.node.HostNode):
-    def __init__(self):
-        super().__init__()
-    
-
-    def build(self, colorOut : dai.Node.Output, nnOut : dai.Node.Output) -> "DisplayDiff":
-        self.link_args(colorOut, nnOut)
-        self.sendProcessingToPipeline(True)
-        return self
-    
-
-    def process(self, camColor : dai.ImgFrame, nnData : dai.NNData) -> None:
-        cv2.imshow("Diff", self.get_frame(nnData, (720, 720)))
-        cv2.imshow("Color", camColor.getCvFrame())
-
-        if cv2.waitKey(1) == ord('q'):
-            self.stopPipeline()      
-
-
-    def get_frame(self, data: dai.NNData, shape):
-        diff = data.getFirstTensor().astype(np.float16).flatten().reshape(shape)
-        colorize = cv2.normalize(diff, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        return cv2.applyColorMap(colorize, cv2.COLORMAP_JET)
+from host_nodes.host_diff import ColorizeDiff, DIFF_SHAPE
+from host_nodes.host_display import Display
 
 
 with dai.Pipeline() as pipeline:
-    pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
-
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setVideoSize(720, 720)
-    camRgb.setPreviewSize(720, 720)
-    camRgb.setInterleaved(False)
+    cam_rgb = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    preview = cam_rgb.requestOutput(size=DIFF_SHAPE, type=dai.ImgFrame.Type.BGR888p)
 
     # NN that detects faces in the image
     nn = pipeline.create(dai.node.NeuralNetwork)
     nn.setBlobPath("models/diff_openvino_2021.4_6shave.blob")
 
     script = pipeline.create(dai.node.Script)
-    camRgb.preview.link(script.inputs['in'])
+    preview.link(script.inputs['in'])
     script.setScript("""
     old = node.io['in'].get()
     while True:
@@ -53,9 +25,13 @@ with dai.Pipeline() as pipeline:
     script.outputs['img1'].link(nn.inputs['img1'])
     script.outputs['img2'].link(nn.inputs['img2'])
 
-    pipeline.create(DisplayDiff).build(
-        camRgb.preview,
-        nn.out
+    colorized = pipeline.create(ColorizeDiff).build(
+        nnOut=nn.out
     )
+    
+    diff = pipeline.create(Display).build(frame=colorized.output)
+    diff.setName("Diff")
+    rgb = pipeline.create(Display).build(frame=preview)
+    rgb.setName("Color")
 
     pipeline.run()

@@ -1,48 +1,21 @@
-import numpy as np
-import cv2
 import depthai as dai
-import os
 
-SHAPE = 300
-
-class DisplayConcat(dai.node.HostNode):
-    def __init__(self):
-        self.shape = (3, SHAPE, SHAPE * 3)
-        super().__init__()
-
-
-    def build(self, nn_out : dai.Node.Output) -> "DisplayConcat":
-        self.link_args(nn_out)
-        self.sendProcessingToPipeline(True)
-        return self
-    
-    
-    def process(self, nn_data : dai.NNData):
-        inNn = np.array(nn_data.getData())
-        frame = inNn.view(np.float16).reshape(self.shape).transpose(1, 2, 0).astype(np.uint8).copy()
-
-        cv2.imshow("Concat", frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            self.stopPipeline()
+from host_nodes.host_concat import ReshapeNNOutputConcat, CONCAT_SHAPE
+from host_nodes.host_display import Display
 
 
 with dai.Pipeline() as pipeline:
-    pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setPreviewSize(SHAPE, SHAPE)
-    camRgb.setInterleaved(False)
-    camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
-
+    cam_rgb = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    preview = cam_rgb.requestOutput(size=(CONCAT_SHAPE, CONCAT_SHAPE), type=dai.ImgFrame.Type.BGR888p)    
+    
     left = pipeline.create(dai.node.MonoCamera)
     left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
 
     # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
     manipLeft = pipeline.create(dai.node.ImageManip)
-    manipLeft.initialConfig.setResize(SHAPE, SHAPE)
+    manipLeft.initialConfig.setResize(CONCAT_SHAPE, CONCAT_SHAPE)
     # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
     manipLeft.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
     left.out.link(manipLeft.inputImage)
@@ -53,7 +26,7 @@ with dai.Pipeline() as pipeline:
 
     # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
     manipRight = pipeline.create(dai.node.ImageManip)
-    manipRight.initialConfig.setResize(SHAPE, SHAPE)
+    manipRight.initialConfig.setResize(CONCAT_SHAPE, CONCAT_SHAPE)
     # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
     manipRight.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
     right.out.link(manipRight.inputImage)
@@ -63,11 +36,14 @@ with dai.Pipeline() as pipeline:
     nn.setNumInferenceThreads(2)
 
     manipLeft.out.link(nn.inputs['img1'])
-    camRgb.preview.link(nn.inputs['img2'])
+    preview.link(nn.inputs['img2'])
     manipRight.out.link(nn.inputs['img3'])
 
-    pipeline.create(DisplayConcat).build(
-        nn.out
+    reshape = pipeline.create(ReshapeNNOutputConcat).build(
+        nn_out=nn.out
     )
+    
+    concat = pipeline.create(Display).build(frame=reshape.output)
+    concat.setName("Concat")
 
     pipeline.run()
