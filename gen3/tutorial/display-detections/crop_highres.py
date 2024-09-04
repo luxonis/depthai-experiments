@@ -1,68 +1,38 @@
 import depthai as dai
-import cv2
-import numpy as np
+
+from host_nodes.host_display import Display
+from host_nodes.host_add_detections import AddDetections
 
 model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
-# MobilenetSSD label texts
-labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
-            "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
-
-class DisplayDetections(dai.node.HostNode):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def build(self, rgb: dai.Node.Output, crop: dai.Node.Output, nn: dai.Node.Output) -> "DisplayDetections":
-        self.link_args(rgb, crop, nn)
-        self.sendProcessingToPipeline(True)
-        return self
-
-    def process(self, rgb: dai.ImgFrame, crop: dai.ImgFrame, detections: dai.ImgDetections) -> None:
-        cv2.imshow("Detections", self.displayDetections(crop.getCvFrame(), detections.detections))
-        cv2.imshow("RGB", self.displayDetections(rgb.getCvFrame(), detections.detections))
-
-        if cv2.waitKey(1) == ord('q'):
-            print("Pipeline exited.")
-            self.stopPipeline()
-
-    def displayDetections(self, frame, detections):
-        color = (255, 0, 0)
-        for detection in detections:
-            bbox = (np.array((detection.xmin, detection.ymin, detection.xmax, detection.ymax)) * frame.shape[0]).astype(int)
-            cv2.putText(frame, labelMap[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
-
-        return frame
-
 
 with dai.Pipeline() as pipeline:
 
-    print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-    cam.setInterleaved(False)
-    cam.setIspScale(1, 3)  # 4k -> 720P
-    # Crop video to match aspect ratio of preview (1:1)
-    cam.setVideoSize(720, 720)
+    cam = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    preview = cam.requestOutput(size=(720, 720), type=dai.ImgFrame.Type.BGR888p)
 
     crop = pipeline.create(dai.node.ImageManip)
     crop.initialConfig.setResize(300, 300)
-    cam.preview.link(crop.inputImage)
+    preview.link(crop.inputImage)
 
     nn = pipeline.create(dai.node.DetectionNetwork)
     nn.setConfidenceThreshold(0.5)
     nn.setNNArchive(nn_archive)
+    label_map = nn.getClasses()
 
     crop.out.link(nn.input)
+    
+    rgb_dets = pipeline.create(AddDetections).build(frame=preview, nn=nn.out, label_map=label_map)
+    rgb_dets.set_color((0, 0, 255))
+    rgb_dets.set_thickness(4)
+    rgb = pipeline.create(Display).build(frame=rgb_dets.output)
+    rgb.setName("RGB")
 
-    display = pipeline.create(DisplayDetections).build(
-        rgb=cam.video,
-        crop=crop.out,
-        nn=nn.out
-    )
-
+    crop_dets = pipeline.create(AddDetections).build(frame=crop.out, nn=nn.out, label_map=label_map)
+    crop = pipeline.create(Display).build(frame=crop_dets.output)
+    crop.setName("Crop")
+    
     print("Pipeline created.")
     pipeline.run()
