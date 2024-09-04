@@ -1,8 +1,8 @@
 import math
 import numpy as np
 import depthai as dai
-import cv2
 from utility import TextHelper
+from keyboard_reader import KeyboardPress
 
 
 class HostSpatialsCalc(dai.node.HostNode):
@@ -24,10 +24,9 @@ class HostSpatialsCalc(dai.node.HostNode):
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
 
 
-
-    def build(self, disparity_frames: dai.Node.Output, depth_frames: dai.Node.Output, calibData : dai.CalibrationHandler) -> "HostSpatialsCalc":
+    def build(self, disparity_frames: dai.Node.Output, depth_frames: dai.Node.Output, calibData : dai.CalibrationHandler, keyboard_input: dai.Node.Output) -> "HostSpatialsCalc":
         self.calibData = calibData
-
+        self.keyboard_input_q = keyboard_input.createOutputQueue()
         self.link_args(disparity_frames, depth_frames)
         self.sendProcessingToPipeline(True)
         print("Use WASD keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
@@ -35,10 +34,11 @@ class HostSpatialsCalc(dai.node.HostNode):
 
 
     def process(self, disparity : dai.ImgFrame, depth : dai.ImgFrame) -> None:
+        self._process_keyboard_input()
+        
         # Calculate spatial coordiantes from depth frame
         #TODO: make spatials calculation separate node
         spatials, centroid = self.calc_spatials(depth, (self.x, self.y)) # centroid == x/y in our case
-
         disp = disparity.getCvFrame()
         self.text.rectangle(disp, (self.x-self.delta, self.y-self.delta), (self.x+self.delta, self.y+self.delta))
         self.text.putText(disp, "X: " + ("{:.1f}m".format(spatials['x']/1000) if not math.isnan(spatials['x']) else "--"), (self.x + 10, self.y + 20))
@@ -48,26 +48,29 @@ class HostSpatialsCalc(dai.node.HostNode):
         disparity.setCvFrame(disp, dai.ImgFrame.Type.BGR888i)
         self.output.send(disparity)
 
-        #TODO: Add keyboard reader node
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            self.stopPipeline()
-        elif key == ord('w'):
-            self.y -= self.step
-        elif key == ord('a'):
-            self.x -= self.step
-        elif key == ord('s'):
-            self.y += self.step
-        elif key == ord('d'):
-            self.x += self.step
-        elif key == ord('r'): # Increase Delta
-            if self.delta < 50:
-                self.delta += 1
-                self.setDeltaRoi(self.delta)
-        elif key == ord('f'): # Decrease Delta
-            if 3 < self.delta:
-                self.delta -= 1
-                self.setDeltaRoi(self.delta)
+
+    def _process_keyboard_input(self) -> None:
+        key_presses: list[KeyboardPress] = self.keyboard_input_q.tryGetAll()
+        if key_presses:
+            for key_press in key_presses:
+                if key_press.key == ord('q'):
+                    self.stopPipeline()
+                elif key_press.key == ord('w'):
+                    self.y -= self.step
+                elif key_press.key == ord('a'):
+                    self.x -= self.step
+                elif key_press.key == ord('s'):
+                    self.y += self.step
+                elif key_press.key == ord('d'):
+                    self.x += self.step
+                elif key_press.key == ord('r'): # Increase Delta
+                    if self.delta < 50:
+                        self.delta += 1
+                        self.setDeltaRoi(self.delta)
+                elif key_press.key == ord('f'): # Decrease Delta
+                    if 3 < self.delta:
+                        self.delta -= 1
+                        self.setDeltaRoi(self.delta)
 
 
     def setLowerThreshold(self, threshold_low):

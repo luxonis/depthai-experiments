@@ -5,6 +5,7 @@ import depthai as dai
 from calc import HostSpatialsCalc
 from host_depth_color_transform import DepthColorTransform
 from host_display import Display
+from keyboard_reader import KeyboardReader
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
@@ -24,15 +25,18 @@ with dai.Pipeline(device) as pipeline:
 
     depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity, stereo.initialConfig.getMaxDisparity())
     depth_color_transform.setColormap(cv2.COLORMAP_JET)
+
+    keyboard_reader = pipeline.create(KeyboardReader).build(depth_color_transform.output)
     
     calibdata = device.readCalibration()
     spatials = pipeline.create(HostSpatialsCalc).build(
         depth_color_transform.output,
         stereo.depth,
-        calibdata
+        calibdata,
+        keyboard_reader.output
     )
 
-    display = pipeline.create(Display).build(spatials.output)
+    display = pipeline.create(Display).build(spatials.output, keyboard_reader.output)
     display.setName("Depth")
 
     print("pipeline created")
