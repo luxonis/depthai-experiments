@@ -14,13 +14,23 @@ class Display(dai.node.HostNode):
             self.process_wait_key = True
             Display._wait_key_instance = self
 
-    def build(self, frame):
+
+    def build(self, frame) -> "Display":
         self.sendProcessingToPipeline(True)
         self.link_args(frame)
         return self
 
+
+    def process(self, frame : dai.ImgFrame) -> None:
+        cv2.imshow(self.name, frame.getCvFrame())
+
+        if self.process_wait_key and cv2.waitKey(1) == ord('q'):
+            self.stopPipeline()
+    
+    
     def setName(self, name: str) -> None:
         self.name = name
+
 
     def setWaitForExit(self, wait: bool) -> None:
         if Display._wait_key_instance is None and wait:
@@ -29,10 +39,3 @@ class Display(dai.node.HostNode):
         elif Display._wait_key_instance is self and not wait:
             self.process_wait_key = False
             Display._wait_key_instance = None
-
-
-    def process(self, frame) -> None:
-        cv2.imshow(self.name, frame.getCvFrame())
-
-        if self.process_wait_key and cv2.waitKey(1) == ord('q'):
-            self.stopPipeline()
