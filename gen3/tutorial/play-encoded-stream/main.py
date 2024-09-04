@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 import depthai as dai
-import subprocess as sp
-from os import name as osName
 import argparse
-import sys
+from os import name as osName
+import subprocess as sp
+
+from hostnodes.host_play_encoded_video import PlayEncodedVideo, WIDTH, HEIGHT
+from hostnodes.host_display import Display
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-res', '--resolution', default='4k',
-                    choices={'1080', '4k', '12mp', '13mp'},
-                    help="Select color camera resolution. Default: %(default)s")
-parser.add_argument('-enc', '--encode', default='h264',
+parser.add_argument('-enc', '--encode', default='jpeg',
                     choices={'h264', 'h265', 'jpeg'},
                     help="Select encoding format. Default: %(default)s")
 parser.add_argument('-fps', '--fps', type=float, default=30.0,
@@ -19,12 +18,6 @@ parser.add_argument('-v', '--verbose', default=False, action="store_true",
                     help="Prints latency for the encoded frame data to reach the app")
 args = parser.parse_args()
 
-res_opts = {
-    '1080': dai.ColorCameraProperties.SensorResolution.THE_1080_P,
-    '4k':   dai.ColorCameraProperties.SensorResolution.THE_4_K,
-    '12mp': dai.ColorCameraProperties.SensorResolution.THE_12_MP,
-    '13mp': dai.ColorCameraProperties.SensorResolution.THE_13_MP,
-}
 
 enc_opts = {
     'h264': dai.VideoEncoderProperties.Profile.H264_MAIN,
@@ -32,39 +25,11 @@ enc_opts = {
     'jpeg': dai.VideoEncoderProperties.Profile.MJPEG,
 }
 
-
-class PlayEncodedVideo(dai.node.HostNode):
-    def __init__(self) -> None:
-        super().__init__()
-
-    
-    def build(self, enc_out : dai.Node.Output) -> "PlayEncodedVideo":
-        self.link_args(enc_out)
-        self.sendProcessingToPipeline(True)
-        self.inputs['encoded_vid'].setBlocking(True)
-        self.inputs['encoded_vid'].setMaxSize(30)
-        return self
-    
-
-    def process(self, encoded_vid) -> None:
-        try:
-            data = encoded_vid.getData()
-            if args.verbose:
-                latms = (dai.Clock.now() - encoded_vid.getTimestamp()).total_seconds() * 1000
-                # Writing to a different channel (stderr)
-                # Also `ffplay` is printing things, adding a separator
-                print(f'Latency: {latms:.3f} ms === ', file=sys.stderr)
-            proc.stdin.write(data)
-        except:
-            self.stopPipeline()
-
-
-width, height = 720, 500
 command = [
     "ffplay",
     "-i", "-",
-    "-x", str(width),
-    "-y", str(height),
+    "-x", str(WIDTH),
+    "-y", str(HEIGHT),
     "-framerate", "60",
     "-fflags", "nobuffer",
     "-flags", "low_delay",
@@ -83,21 +48,22 @@ except:
 
 with dai.Pipeline() as pipeline:
     # Define sources and output
-    camRgb = pipeline.create(dai.node.ColorCamera)
+    camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    video = camRgb.requestOutput(size=(WIDTH, HEIGHT), type=dai.ImgFrame.Type.NV12, fps=args.fps)
+        
     videoEnc = pipeline.create(dai.node.VideoEncoder)
-
-    # Properties
-    camRgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    camRgb.setResolution(res_opts[args.resolution])
-    camRgb.setFps(args.fps)
-    videoEnc.setDefaultProfilePreset(camRgb.getFps(), enc_opts[args.encode])
+    videoEnc.setDefaultProfilePreset(args.fps, enc_opts[args.encode])
 
     # Linking
-    camRgb.video.link(videoEnc.input)
+    video.link(videoEnc.input)
 
-    pipeline.create(PlayEncodedVideo).build(
-        enc_out=videoEnc.bitstream
+    decoded = pipeline.create(PlayEncodedVideo).build(
+        enc_out=videoEnc.bitstream,
+        proc=proc
     )
+    
+    color = pipeline.create(Display).build(frame=decoded.output)
+    color.setName("Color")
 
     print("pipeline created")
     pipeline.run()
