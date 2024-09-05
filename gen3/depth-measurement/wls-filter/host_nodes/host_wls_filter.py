@@ -20,7 +20,7 @@ class FilterWindow:
     def on_trackbar_change_sigma(self, value: int) -> None:
         self._sigma = value / float(10)
 
-    def filter(self, disparity, right, depthScaleFactor) -> (np.ndarray, np.ndarray):
+    def filter(self, disparity, right, depthScaleFactor) -> tuple[np.ndarray, np.ndarray]:
         # https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp#L92
         self.wlsFilter.setLambda(self._lambda)
         # https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp#L99
@@ -41,6 +41,13 @@ class WLSFilter(dai.node.HostNode):
         self._baseline = 75  # mm
         self._disp_levels = 96
         self._fov = 71.86
+        
+        self.right_frame = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self.disparity_frame = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self.depth_frame = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self.filtered_disp = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self.colored_disp = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+
 
     def build(self, disparity: dai.Node.Output, rectified_right: dai.Node.Output,
               max_disparity: int) -> "WLSFilter":
@@ -49,22 +56,30 @@ class WLSFilter(dai.node.HostNode):
         self._disp_multiplier = 255 / max_disparity
         return self
 
+
     def process(self, disparity_frame: dai.ImgFrame, right_frame: dai.ImgFrame) -> None:
         disparity_frame = disparity_frame.getFrame()
         right_frame = right_frame.getFrame()
-
         focal = disparity_frame.shape[1] / (2. * math.tan(math.radians(self._fov / 2)))
         depthScaleFactor = self._baseline * focal
         filteredDisp, depthFrame = self._filter_window.filter(disparity_frame, right_frame, depthScaleFactor)
         filteredDisp = (filteredDisp * self._disp_multiplier).astype(np.uint8)
         coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_HOT)
-
-        cv2.imshow("rectified right", right_frame)
-        cv2.imshow("disparity", disparity_frame)
-        cv2.imshow("wls raw depth", depthFrame)
-        cv2.imshow("wlsFilter", filteredDisp)
-        cv2.imshow("wls colored disp", coloredDisp)
+        
+        self.right_frame.send(self.create_img_frame(right_frame, dai.ImgFrame.Type.GRAY8))
+        self.disparity_frame.send(self.create_img_frame(disparity_frame, dai.ImgFrame.Type.RAW10))
+        self.depth_frame.send(self.create_img_frame(depthFrame, dai.ImgFrame.Type.RAW10))
+        self.filtered_disp.send(self.create_img_frame(filteredDisp, dai.ImgFrame.Type.RAW8))
+        self.colored_disp.send(self.create_img_frame(coloredDisp, dai.ImgFrame.Type.BGR888p))
 
         if cv2.waitKey(1) == ord('q'):
             print("Pipeline exited.")
             self.stopPipeline()
+
+
+    def create_img_frame(self, frame: np.ndarray, type : dai.ImgFrame.Type) -> dai.ImgFrame:
+        img_frame = dai.ImgFrame()
+        img_frame.setCvFrame(frame, type)
+
+        return img_frame
+    
