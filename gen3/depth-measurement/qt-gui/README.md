@@ -14,6 +14,8 @@ Additionally, layout is built using [QML](https://doc.qt.io/qt-5/qtqml-index.htm
 python3 -m pip install -r requirements.txt
 ```
 
+If error `Could not load the Qt platform plugin "xcb"` occurs, try to install opencv-python with `opencv-python-headless` package.
+
 ## Usage
 
 Run the application

@@ -11,6 +11,8 @@ from PyQt5.QtGui import QImage
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 from PyQt5.QtWidgets import QApplication
 
+from host_depth_color_transform import DepthColorTransform
+
 instance = None
 
 def resizeLetterbox(frame: np.ndarray, size: tuple[int]):
@@ -86,28 +88,20 @@ class Worker(QRunnable):
         with dai.Pipeline() as pipeline:
 
             print("Creating pipeline...")
-            cam = pipeline.create(dai.node.ColorCamera)
-            cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-            cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-            cam.setPreviewSize(848, 480)
-            cam.setInterleaved(False)
-            cam.initialControl.setManualFocus(130)
+            cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+            preview = cam.requestOutput(size=(848, 480), type=dai.ImgFrame.Type.BGR888p)
 
-            left = pipeline.create(dai.node.MonoCamera)
-            left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
-            left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+            left_out = left.requestOutput(size=(848, 480), type=dai.ImgFrame.Type.BGR888p)
+            
+            right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+            right_out = right.requestOutput(size=(848, 480), type=dai.ImgFrame.Type.BGR888p)
 
-            right = pipeline.create(dai.node.MonoCamera)
-            left.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-            right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-
-            stereo = pipeline.create(dai.node.StereoDepth)
+            stereo = pipeline.create(dai.node.StereoDepth).build(left=left_out, right=right_out)
             stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
             stereo.initialConfig.setLeftRightCheck(False)
             stereo.initialConfig.setConfidenceThreshold(255)
             stereo.initialConfig.setSubpixelFractionalBits(3)
-            left.out.link(stereo.left)
-            right.out.link(stereo.right)
             stereo.setRuntimeModeSwitch(True)
 
             self.stereo_config.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
@@ -115,10 +109,16 @@ class Worker(QRunnable):
             self.stereo_config.setConfidenceThreshold(255)
             self.stereo_config.setSubpixelFractionalBits(3)
             self.config_queue = stereo.inputConfig.createInputQueue()
+            
+            disparity = pipeline.create(DepthColorTransform).build(
+                disparity_frames=stereo.disparity,
+                max_disparity=self.stereo_config.getMaxDisparity()
+            )
+            disparity.setColormap(cv2.COLORMAP_JET)
 
             self.output = pipeline.create(QTOutput).build(
-                preview=cam.preview,
-                stereo=stereo,
+                preview=preview,
+                disparity=disparity.output,
                 show_callback=self.onShowFrame
             )
 
