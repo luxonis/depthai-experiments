@@ -6,12 +6,6 @@ from host_nodes.host_stereo_sgbm import StereoSGBM
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
-    # monoLeft = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-    # monoRight = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-   
-    # left_out = monoLeft.requestOutput(size=(640, 480), type=dai.ImgFrame.Type.GRAY8)
-    # right_out = monoRight.requestOutput(size=(640, 480), type=dai.ImgFrame.Type.GRAY8)
-    
     mono_left = pipeline.create(dai.node.MonoCamera)
     mono_right = pipeline.create(dai.node.MonoCamera)
     
