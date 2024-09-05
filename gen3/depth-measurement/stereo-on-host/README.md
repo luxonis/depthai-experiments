@@ -1,6 +1,6 @@
 [中文文档](README.zh-CN.md)
 
-# Gen2 Stereo on host
+# Gen3 Stereo on host
 
 The `main.py` demonstrates how [stereo pipeline works](https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/#internal-block-diagram-of-stereodepth-node) on the OAK device (using depthai). It rectifies mono frames (receives from the OAK camera) and then
 uses `cv2.StereoSGBM` to calculate the disparity on the host. It also colorizes the disparity and shows it to the user.
@@ -21,6 +21,3 @@ python3 -m pip install -r requirements.txt
 ## Calibrate camera (if needed)
 
 Your device needs to have calibration stored to work with this example
-
-
-
