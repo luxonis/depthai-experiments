@@ -18,9 +18,7 @@ class Display(dai.node.HostNode):
             Display._wait_key_instance = self
 
 
-    def build(self, frames: dai.Node.Output, keyboard_input: dai.Node.Output | None = None) -> "Display":
-        if keyboard_input:
-            self._setKeyboardInput(keyboard_input)
+    def build(self, frames: dai.Node.Output) -> "Display":
         self.sendProcessingToPipeline(True)
         self.link_args(frames)
         return self
@@ -39,7 +37,7 @@ class Display(dai.node.HostNode):
             Display._wait_key_instance = None
 
 
-    def _setKeyboardInput(self, keyboard_input: dai.Node.Output) -> None:
+    def setKeyboardInput(self, keyboard_input: dai.Node.Output) -> None:
         if not self.process_wait_key:
             raise RuntimeError("Keyboard input can only be set if Display is set to wait for exit")
         self.keyboard_input_q = keyboard_input.createOutputQueue()
