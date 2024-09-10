@@ -4,7 +4,7 @@ Because there are often application-specific host-side filtering to be done on t
 neural inference results, and because these calculations are lightweight
 (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
 
-Demo uses 2-stage inferencing; 1st NN model is [face-detection-retail-0004](https://docs.openvino.ai/2021.4/omz_models_model_face_detection_retail_0004.html) and 2nd NN model is [landmarks-regression-retail-0009](https://docs.openvino.ai/2021.4/omz_models_model_landmarks_regression_retail_0009.html).
+Demo uses [yunet](https://hub.luxonis.com/ai/models/5d635f3c-45c0-41d2-8800-7ca3681b1915) for detecting face and it's landmarks.
 
 ## Demo
 
