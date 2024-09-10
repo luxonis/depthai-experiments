@@ -11,7 +11,7 @@ archive_path = dai.getModelFromZoo(model_description)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-vid', '--video', type=str
-                    , help="Path to video file to be used for inference (otherwise uses the DepthAI 4K color camera)")
+                    , help="Path to video file to be used for inference (otherwise uses the DepthAI color camera)")
 args = parser.parse_args()
 
 with dai.Pipeline() as pipeline:

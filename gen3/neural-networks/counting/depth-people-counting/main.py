@@ -1,16 +1,10 @@
 import depthai as dai
-import argparse
-from pathlib import Path
 
+from pathlib import Path
 from displayPeopleCounter import DisplayPeopleCounter
 from hostNodes import FrameEditor, InputsConnector
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--path', default='depth-people-counting-01', type=str, help="Path to depthai-recording")
-args = parser.parse_args()
-
-PATH = Path(args.path).resolve().absolute()
+PATH = Path("./resources").resolve().absolute()
 SIZE = (1280, 800)
 
 
@@ -62,6 +56,6 @@ with dai.Pipeline() as pipeline:
         disparity_multiplier=disparity_multiplier
     )
 
-    print("pipeline created")
+    print("Pipeline created.")
     pipeline.run()
-    print("pipeline finished")
+    print("Pipeline finished.")

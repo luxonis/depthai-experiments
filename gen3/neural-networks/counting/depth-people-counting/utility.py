@@ -4,6 +4,7 @@ import cv2
 DETECTION_ROI = (200,300,1000,700) # Specific to `depth-person-counting-01` recording
 THRESH_DIST_DELTA = 0.5
 
+
 class TextHelper:
     def __init__(self) -> None:
         self.bg_color = (0, 0, 0)
@@ -11,12 +12,10 @@ class TextHelper:
         self.text_type = cv2.FONT_HERSHEY_SIMPLEX
         self.line_type = cv2.LINE_AA
 
-
     def putText(self, frame, text, coords):
         cv2.putText(frame, text, coords, self.text_type, 1.3, self.bg_color, 5, self.line_type)
         cv2.putText(frame, text, coords, self.text_type, 1.3, self.color, 2, self.line_type)
         return frame
-    
 
     def rectangle(self, frame, topLeft,bottomRight, size=1.):
         cv2.rectangle(frame, topLeft, bottomRight, self.bg_color, int(size*4))
@@ -28,29 +27,25 @@ class PeopleCounter:
     def __init__(self):
         self.tracking = {}
         self.lost_cnt = {}
-        self.people_counter = [0,0,0,0] # Up, Down, Left, Right
-
+        self.people_counter = [0, 0, 0, 0] # Up, Down, Left, Right
 
     def __str__(self) -> str:
         return f"Left: {self.people_counter[2]}, Right: {self.people_counter[3]}"
 
-
     def tracklet_removed(self, coords1, coords2):
-        deltaX = coords2[0] - coords1[0]
+        dx = coords2[0] - coords1[0]
 
-        if THRESH_DIST_DELTA < abs(deltaX):
-            self.people_counter[2 if 0 > deltaX else 3] += 1
-            direction = "left" if 0 > deltaX else "right"
+        if THRESH_DIST_DELTA < abs(dx):
+            self.people_counter[2 if 0 > dx else 3] += 1
+            direction = "left" if 0 > dx else "right"
             print(f"Person moved {direction}")
-
 
     def get_centroid(self, roi):
         x1 = roi.topLeft().x
         y1 = roi.topLeft().y
         x2 = roi.bottomRight().x
         y2 = roi.bottomRight().y
-        return ((x2+x1)/2, (y2+y1)/2)
-
+        return (x2 + x1) / 2, (y2 + y1) / 2
 
     def new_tracklets(self, tracklets):
         for t in tracklets:

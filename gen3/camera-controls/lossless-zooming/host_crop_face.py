@@ -25,7 +25,6 @@ class CropFace(dai.node.HostNode):
         return self
 
     def process(self, detections):
-
         dets = detections.detections
         if len(dets) == 0:
             return
@@ -43,7 +42,6 @@ class CropFace(dai.node.HostNode):
 
         cfg = dai.ImageManipConfig()
         cfg.setCropRotatedRect(rect, False)
-        cfg.setFrameType(dai.ImgFrame.Type.YUV420p)
         cfg.setTimestamp(detections.getTimestamp())
         self.output.send(cfg)
 

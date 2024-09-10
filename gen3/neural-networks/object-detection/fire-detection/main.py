@@ -5,7 +5,7 @@ import argparse
 import depthai as dai
 from fire_detection import FireDetection
 from display import Display
-from fps_counter import FPSCounter
+from host_fps_drawer import FPSDrawer
 
 
 parser = argparse.ArgumentParser()
@@ -49,13 +49,10 @@ with dai.Pipeline() as pipeline:
     neural_network.input.setBlocking(False)
     img_output.link(neural_network.input)
 
-    nn_fps_counter = pipeline.create(FPSCounter).build(neural_network.out)
-    nn_fps_counter.set_name("NN")
+    fps_drawer = pipeline.create(FPSDrawer).build(img_output)
+    fps_drawer.setRemoveOldFrames(False)
 
-    camera_fps_counter = pipeline.create(FPSCounter).build(img_output)
-    camera_fps_counter.set_name("Camera")
-
-    fire_detection = pipeline.create(FireDetection).build(img_output, neural_network.out)
+    fire_detection = pipeline.create(FireDetection).build(fps_drawer.output, neural_network.out)
 
     if debug:
         display = pipeline.create(Display).build(fire_detection.output)
