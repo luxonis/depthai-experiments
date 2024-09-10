@@ -123,7 +123,7 @@ class OpencvManager:
                 print("did not recieve still image - retrying")
                 return self._capture_still(timeout_ms)
 
-        still_rgb = cv2.imdecode(in_still.getData(), cv2.IMREAD_UNCHANGED)
+        still_rgb = cv2.imdecode(in_still.getFrame(), cv2.IMREAD_UNCHANGED)
 
         return still_rgb
 
@@ -233,7 +233,7 @@ def get_pipelines(device : dai.Device, callback_frame : callable, callback_param
     pipeline = dai.Pipeline(device)
 
     cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    rgb_preview = cam_rgb.requestOutput(size=(640, 360))
+    rgb_preview = cam_rgb.requestOutput(size=(640, 360), type=dai.ImgFrame.Type.NV12)
 
     still_encoder = pipeline.create(dai.node.VideoEncoder)
     still_encoder.setDefaultProfilePreset(1, dai.VideoEncoderProperties.Profile.MJPEG)

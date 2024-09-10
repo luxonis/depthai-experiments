@@ -1,51 +1,34 @@
 #!/usr/bin/env python3
 
-import depthai as dai
-import av
+### trick to solve problem with ffmpeg on linux
 import cv2
+import numpy as np
 
+cv2.imshow("bugfix", np.zeros((10, 10, 3), dtype=np.uint8))
+cv2.destroyWindow("bugfix")
+###
 
-class PlayEncodedVideo(dai.node.HostNode):
-    def __init__(self) -> None:
-        super().__init__()
+import depthai as dai
 
+from hostnodes.host_decode_video import DecodeVideoAv
+from hostnodes.host_display import Display
 
-    def build(self, enc_out) -> "PlayEncodedVideo":
-        self.codec = av.CodecContext.create("h264", "r")
-        self.link_args(enc_out)
-        self.sendProcessingToPipeline(True)
-        self.inputs['enc_vid'].setMaxSize(30)
-        self.inputs['enc_vid'].setBlocking(True)
-        return self
-    
-
-    def process(self, enc_vid) -> None:
-        data = enc_vid.getData()
-        packets = self.codec.parse(data)
-
-        for packet in packets:
-            frames = self.codec.decode(packet)
-            if frames:
-                frame = frames[0].to_ndarray(format='bgr24')
-                cv2.imshow('frame', frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            self.stopPipeline()
-
+FPS = 30.0
 
 with dai.Pipeline() as pipeline:
 
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    video = camRgb.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=FPS)
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
-    videoEnc.setDefaultProfilePreset(camRgb.getFps(), dai.VideoEncoderProperties.Profile.H264_MAIN)
-    camRgb.video.link(videoEnc.input)
+    videoEnc.setDefaultProfilePreset(FPS, dai.VideoEncoderProperties.Profile.H264_MAIN)
     
-    pipeline.create(PlayEncodedVideo).build(
-        enc_out=videoEnc.bitstream
-    )
+    video.link(videoEnc.input)
+    
+    decoded = pipeline.create(DecodeVideoAv).build(enc_out=videoEnc.bitstream, codec="h264")
+    
+    color = pipeline.create(Display).build(frame=decoded.output)
+    color.setName("Color")
 
     print("pipeline created")
     pipeline.run()

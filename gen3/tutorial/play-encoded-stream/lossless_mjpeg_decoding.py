@@ -1,54 +1,38 @@
 #!/usr/bin/env python3
 
-import depthai as dai
-import av
+### trick to solve problem with ffmpeg on linux
 import cv2
-import time
+import numpy as np
 
-class DecodeFrames(dai.node.HostNode):
-    def __init__(self) -> None:
-        super().__init__()
+cv2.imshow("bugfix", np.zeros((10, 10, 3), dtype=np.uint8))
+cv2.destroyWindow("bugfix")
+###
 
+import depthai as dai
 
-    def build(self, enc_out : dai.Node.Output) -> "DecodeFrames":
-        self.codec = av.CodecContext.create("mjpeg", "r")
-        self.link_args(enc_out)
-        self.sendProcessingToPipeline(True)
-        self.inputs['enc_vid'].setMaxSize(1)
-        self.inputs['enc_vid'].setBlocking(False)
-        return self
-    
+from hostnodes.host_display import Display
+from hostnodes.host_decode_video import DecodeVideoAv
 
-    def process(self, enc_vid) -> None:
-        data = enc_vid.getData()
-        start = time.perf_counter()
-        packets = self.codec.parse(data)
-        for packet in packets:
-            frames = self.codec.decode(packet)
-            if frames:
-                frame = frames[0].to_ndarray(format='bgr24')
-                print(f"AV decode frame in {(time.perf_counter() - start) * 1000} milliseconds")
-                cv2.imshow("Preview", frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            self.stopPipeline()
-
+FPS = 20.0
 
 with dai.Pipeline() as pipeline:
 
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    camRgb.setFps(8)
+    cam_rgb = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
+    video = cam_rgb.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=FPS)
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
-    videoEnc.setDefaultProfilePreset(camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+    videoEnc.setDefaultProfilePreset(FPS, dai.VideoEncoderProperties.Profile.MJPEG)
     videoEnc.setLossless(True)
-    camRgb.video.link(videoEnc.input)
+    video.link(videoEnc.input)
 
-    pipeline.create(DecodeFrames).build(
-        enc_out=videoEnc.bitstream
+    decoded = pipeline.create(DecodeVideoAv).build(
+        enc_out=videoEnc.bitstream,
+        codec="mjpeg"
     )
+    decoded.set_verbose(True)
+    
+    color = pipeline.create(Display).build(frame=decoded.output)
+    color.setName("Color")
 
     print("pipeline created")
     pipeline.run()

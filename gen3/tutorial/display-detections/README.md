@@ -4,7 +4,7 @@ If you are running object detection model eg. MobileNet or Yolo, they usually re
 
 ### 1. Passthrough
 
-Just using the small inferencing frame. Here we used `passthrough` frame of [MobileNetDetectionNetwork's output](https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/#inputs-and-outputs) so bounding boxes are in sync with the frame. Other option would be to stream `preview` frames from `ColorCamera` and sync on the host (or don't sync at all). `300x300` frame, for reference:
+Just using the small inferencing frame. Here we used `passthrough` frame of [DetectionNetwork's output](https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/#inputs-and-outputs) so bounding boxes are in sync with the frame. Other option would be to stream `preview` frames from `ColorCamera` and sync on the host (or don't sync at all). `300x300` frame, for reference:
 
 ![passthrough](https://user-images.githubusercontent.com/18037362/141348065-3b531aa0-eed9-4364-b5b8-b55424cf306d.png)
 

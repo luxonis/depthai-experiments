@@ -57,7 +57,7 @@ def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(dev)
 
     camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    rgb_video = camRgb.requestOutput(size=(1920, 1080), fps=30) 
+    rgb_video = camRgb.requestOutput(size=(1920, 1080), fps=30, type=dai.ImgFrame.Type.NV12)
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
     videoEnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)

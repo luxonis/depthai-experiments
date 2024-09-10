@@ -6,13 +6,13 @@ PyTorch/Kornia, convert them and run them on the DepthAI.
 
 [Tutorial documentation here](https://docs.luxonis.com/en/latest/pages/tutorials/creating-custom-nn-models/).
 
-`blur.py`, `concat.py` and `edge.py` are scripts that run created custom models. `generate_model/` folder contains scripts that create these custom models (frame blurring, frame concatenation and edge detection).
+`blur.py`, `concat.py`, `diff.py` and `edge.py` are scripts that run created custom models. `generate_model/` folder contains scripts that create these custom models (frame blurring, frame concatenation, frame difference and edge detection).
 
 ## Demos
 
-### main.py
+### Starts all tutorials at once
 
-Starts all tutorials at once
+main.py
 
 ### Concatenate frames
 

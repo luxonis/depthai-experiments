@@ -1,43 +1,26 @@
 #!/usr/bin/env python3
 
 import depthai as dai
-import cv2
 
+from hostnodes.host_mjpeg import DecodeFrameCV2
+from hostnodes.host_display import Display
 
-class PlayEncodedVideo(dai.node.HostNode):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-    def build(self, enc_out) -> "PlayEncodedVideo":
-        self.link_args(enc_out)
-        self.sendProcessingToPipeline(True)
-        return self
-    
-
-    def process(self, enc_vid) -> None:
-        # Receive encoded frame
-        imgFrame: dai.ImgFrame = enc_vid
-        # Decode the MJPEG frame
-        frame = cv2.imdecode(imgFrame.getData(), cv2.IMREAD_COLOR)
-        cv2.imshow('Frame', frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            self.stopPipeline()
+FPS = 30.0
 
 
 with dai.Pipeline() as pipeline:
 
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    video = cam_rgb.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=FPS)
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
-    videoEnc.setDefaultProfilePreset(camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-    camRgb.video.link(videoEnc.input)
+    videoEnc.setDefaultProfilePreset(FPS, dai.VideoEncoderProperties.Profile.MJPEG)
+    video.link(videoEnc.input)
 
-    pipeline.create(PlayEncodedVideo).build(
-        enc_out=videoEnc.bitstream
-    )
+    decoded = pipeline.create(DecodeFrameCV2).build(enc_out=videoEnc.bitstream)
+    
+    color = pipeline.create(Display).build(frame=decoded.output)
+    color.setName("Color")
 
     print("pipeline created")
     pipeline.run()

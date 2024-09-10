@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 
+import cv2
 import depthai as dai
 from calc import HostSpatialsCalc
-from utility import *
+from host_depth_color_transform import DepthColorTransform
+from host_display import Display
+from keyboard_reader import KeyboardReader
+from measure_distance import MeasureDistance
+
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
@@ -16,16 +21,28 @@ with dai.Pipeline(device) as pipeline:
     monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C)  
     
     stereo = pipeline.create(dai.node.StereoDepth).build(monoLeft.out, monoRight.out)
-
     stereo.initialConfig.setConfidenceThreshold(255)
     stereo.setLeftRightCheck(True)
     stereo.setSubpixel(False)
     
+    depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity, stereo.initialConfig.getMaxDisparity())
+    depth_color_transform.setColormap(cv2.COLORMAP_JET)
+
+    keyboard_reader = pipeline.create(KeyboardReader).build(depth_color_transform.output)
+
+    measure_distance = pipeline.create(MeasureDistance).build(stereo.depth, device.readCalibration(), HostSpatialsCalc.INITIAL_ROI)
+
     calibdata = device.readCalibration()
-    host = pipeline.create(HostSpatialsCalc).build(
-        stereo,
-        calibdata
+    spatials = pipeline.create(HostSpatialsCalc).build(
+        depth_color_transform.output,
+        measure_distance.output,
+        keyboard_reader.output
     )
+    spatials.output_roi.link(measure_distance.roi_input)
+
+    display = pipeline.create(Display).build(spatials.output)
+    display.setName("Depth")
+    display.setKeyboardInput(keyboard_reader.output)
 
     print("pipeline created")
     pipeline.run()

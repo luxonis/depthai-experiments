@@ -195,28 +195,22 @@ def run_pipeline(pipeline : dai.Pipeline) -> None:
 
 def get_pipelines(device : dai.Device, callback_frame : callable, friendly_id : int) -> dai.Pipeline:
     pipeline = dai.Pipeline(device)
-
-    # RGB cam -> 'rgb'
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
-    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-    cam_rgb.setPreviewSize(300, 300)
-    cam_rgb.setInterleaved(False)
-    cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    cam_rgb.setPreviewKeepAspectRatio(False)
+   
+    cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    preview = cam_rgb.requestOutput(size=(300, 300), type=dai.ImgFrame.Type.BGR888p)
 
     # Depth cam -> 'depth'
-    mono_left = pipeline.create(dai.node.MonoCamera)
-    mono_right = pipeline.create(dai.node.MonoCamera)
-    mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    mono_left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
-    mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    mono_right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-    cam_stereo = pipeline.create(dai.node.StereoDepth)
+    mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    mono_right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+
+    cam_stereo = pipeline.create(dai.node.StereoDepth).build(
+        left=mono_left.requestOutput(size=(640, 640)),
+        right=mono_right.requestOutput(size=(640, 640))
+    )
+    
     cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     cam_stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A) # Align depth map to the perspective of RGB camera, on which inference is done
-    cam_stereo.setOutputSize(mono_left.getResolutionWidth(), mono_left.getResolutionHeight())
-    mono_left.out.link(cam_stereo.left)
-    mono_right.out.link(cam_stereo.right)
+    cam_stereo.setOutputSize(640, 640)
 
     # Spatial detection network -> 'nn'
     spatial_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
@@ -227,7 +221,7 @@ def get_pipelines(device : dai.Device, callback_frame : callable, friendly_id : 
     spatial_nn.setDepthLowerThreshold(100)
     spatial_nn.setDepthUpperThreshold(5000)
 
-    cam_rgb.preview.link(spatial_nn.input)
+    preview.link(spatial_nn.input)
     cam_stereo.depth.link(spatial_nn.inputDepth)
 
     window_name = f"[{friendly_id + 1}] Camera - mxid: {device.getMxId()}"
@@ -235,7 +229,7 @@ def get_pipelines(device : dai.Device, callback_frame : callable, friendly_id : 
     manager.set_params(window_name, device.getMxId(), friendly_id)
 
     pipeline.create(Display, callback_frame, window_name).build(
-        cam_rgb=cam_rgb.preview,
+        cam_rgb=preview,
         nn_out=spatial_nn.out,
         depth_out=spatial_nn.passthroughDepth
     )
@@ -279,5 +273,3 @@ for thread in threads:
     thread.join()
 
 print("Devices closed")
-
-# _birds_eye_view = BirdsEyeView(cameras, config.size[0], config.size[1], config.scale)
