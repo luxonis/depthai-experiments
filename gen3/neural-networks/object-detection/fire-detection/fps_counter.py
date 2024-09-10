@@ -15,7 +15,7 @@ class FPSCounter(dai.node.HostNode):
         return self
     
 
-    def set_name(self, name: str) -> None:
+    def setName(self, name: str) -> None:
         self._name = name
 
 

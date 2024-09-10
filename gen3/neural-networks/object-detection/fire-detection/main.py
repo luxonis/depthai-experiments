@@ -50,10 +50,10 @@ with dai.Pipeline() as pipeline:
     img_output.link(neural_network.input)
 
     nn_fps_counter = pipeline.create(FPSCounter).build(neural_network.out)
-    nn_fps_counter.set_name("NN")
+    nn_fps_counter.setName("NN")
 
     camera_fps_counter = pipeline.create(FPSCounter).build(img_output)
-    camera_fps_counter.set_name("Camera")
+    camera_fps_counter.setName("Camera")
 
     fire_detection = pipeline.create(FireDetection).build(img_output, neural_network.out)
 
