@@ -140,7 +140,6 @@ class MeasureDistance(dai.node.HostNode):
     
 
     def process(self, depth_frame: dai.ImgFrame) -> None:
-        #print("Measure distance process start")
         self._update_roi()
         depth = depth_frame.getFrame()
 
@@ -171,14 +170,12 @@ class MeasureDistance(dai.node.HostNode):
         spatial_distance.setTimestampDevice(depth_frame.getTimestampDevice())
         spatial_distance.setSequenceNum(depth_frame.getSequenceNum())
         self.output.send(spatial_distance)
-        #print("Measure distance process end")
     
      
     def _update_roi(self) -> None:
         rois = self.roi_input.tryGetAll()
         if rois:
             self._roi = rois[-1]
-        print("ROI updated")
 
 
     def _calc_angle(self, frame: np.ndarray, offset: int, HFOV: float) -> float:

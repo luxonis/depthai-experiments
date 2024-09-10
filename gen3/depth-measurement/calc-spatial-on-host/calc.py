@@ -24,19 +24,15 @@ class HostSpatialsCalc(dai.node.HostNode):
     def build(self, disparity_frames: dai.Node.Output, measured_depth: dai.Node.Output, keyboard_input: dai.Node.Output) -> "HostSpatialsCalc":
         self.keyboard_input_q = keyboard_input.createOutputQueue()
         self.link_args(disparity_frames, measured_depth)
-        self.sendProcessingToPipeline(True)#TODO: make False
         print("Use WASD keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
         return self
 
 
     def process(self, disparity : dai.ImgFrame, depth : dai.Buffer) -> None:
-        print("Calc process start")
         self._update_roi()
-        print("Calc process roi updated")
         assert(isinstance(depth, SpatialDistance))
         
         disp = disparity.getCvFrame()
-        print("Calc process CV frame got")
         self.text.rectangle(disp, (self._roi.xmin, self._roi.ymin), (self._roi.xmax, self._roi.ymax))
 
         x = (self._roi.xmin + self._roi.xmax) // 2
@@ -44,11 +40,9 @@ class HostSpatialsCalc(dai.node.HostNode):
         self.text.putText(disp, "X: " + ("{:.1f}m".format(depth.spatials.x/1000) if not math.isnan(depth.spatials.x) else "--"), (x + 10, y + 20))
         self.text.putText(disp, "Y: " + ("{:.1f}m".format(depth.spatials.y/1000) if not math.isnan(depth.spatials.y) else "--"), (x + 10, y + 35))
         self.text.putText(disp, "Z: " + ("{:.1f}m".format(depth.spatials.z/1000) if not math.isnan(depth.spatials.z) else "--"), (x + 10, y + 50))
-        print("Calc process text put")
 
         disparity.setCvFrame(disp, dai.ImgFrame.Type.BGR888i)
         self.output.send(disparity)
-        print("Calc process end")
 
 
     def _update_roi(self) -> None:
