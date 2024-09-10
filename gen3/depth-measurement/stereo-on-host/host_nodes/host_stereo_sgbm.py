@@ -24,13 +24,13 @@ class StereoSGBM(dai.node.HostNode):
         self.rectified_right = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
         
 
-    def build(self, monoLeftOut : dai.Node.Output, monoRightOut : dai.Node.Output, calibObj : dai.CalibrationHandler, monoCamera : dai.node.MonoCamera) -> "StereoSGBM":
+    def build(self, monoLeftOut : dai.Node.Output, monoRightOut : dai.Node.Output, calibObj : dai.CalibrationHandler, resolution : tuple[int, int]) -> "StereoSGBM":
         self.link_args(monoLeftOut, monoRightOut)
         self.sendProcessingToPipeline(True)
 
         self.baseline = calibObj.getBaselineDistance() * 10 # mm
-        self.focal_length = self.count_focal_length(calibObj, monoCamera)
-        self.H1, self.H2 = self.countH(calibObj, monoCamera)  # for left, right camera
+        self.focal_length = self.count_focal_length(calibObj, resolution)
+        self.H1, self.H2 = self.count_h(calibObj, resolution)  # for left, right camera
 
         return self
 
@@ -45,8 +45,8 @@ class StereoSGBM(dai.node.HostNode):
         self.create_disparity_map(monoLeftFrame, monoRightFrame)
 
 
-    def countH(self, calibObj : dai.CalibrationHandler, monoCamera : dai.node.MonoCamera):
-        width, height = self.get_width_height(monoCamera)
+    def count_h(self, calibObj : dai.CalibrationHandler, resolution : tuple[int, int]):
+        width, height = resolution
 
         M_left = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoLeftCameraId(), width, height))
         M_right = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoRightCameraId(), width, height))
@@ -60,20 +60,13 @@ class StereoSGBM(dai.node.HostNode):
         return H_left, H_right
     
     
-    def count_focal_length(self, calibObj : dai.CalibrationHandler, monoCamera : dai.node.MonoCamera):
-        width, height = self.get_width_height(monoCamera)
+    def count_focal_length(self, calibObj : dai.CalibrationHandler, resolution : tuple[int, int]):
+        width, height = resolution
 
         M_right = np.array(calibObj.getCameraIntrinsics(calibObj.getStereoRightCameraId(), width, height))
         focalLength = M_right[0][0]
         return focalLength
     
-    
-    def get_width_height(self, monoCamera : dai.node.MonoCamera):
-        width = monoCamera.getResolutionWidth()
-        height = monoCamera.getResolutionHeight()
-        print(width, height)
-        return width, height
-
 
     def rectification(self, left_img, right_img):
         # warp right image
@@ -98,9 +91,9 @@ class StereoSGBM(dai.node.HostNode):
             right_img_rect = right_img
 
         #opencv skips disparity calculation for the first max_disparity pixels
-        padImg = np.zeros(shape=[left_img.shape[0], self.max_disparity], dtype=np.uint8)
-        left_img_rect_pad = cv2.hconcat([padImg, left_img_rect])
-        right_img_rect_pad = cv2.hconcat([padImg, right_img_rect])
+        pad_img = np.zeros(shape=[left_img.shape[0], self.max_disparity], dtype=np.uint8)
+        left_img_rect_pad = cv2.hconcat([pad_img, left_img_rect])
+        right_img_rect_pad = cv2.hconcat([pad_img, right_img_rect])
         self.disparity = self.stereoProcessor.compute(left_img_rect_pad, right_img_rect_pad)
         self.disparity = self.disparity[0:self.disparity.shape[0], self.max_disparity:self.disparity.shape[1]]
 

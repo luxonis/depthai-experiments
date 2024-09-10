@@ -3,17 +3,15 @@ import depthai as dai
 from host_nodes.host_display import Display
 from host_nodes.host_stereo_sgbm import StereoSGBM
 
+RESOLUTION_SIZE = (1280, 720) 
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
-    mono_left = pipeline.create(dai.node.MonoCamera)
-    mono_right = pipeline.create(dai.node.MonoCamera)
+    mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    mono_right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
     
-    mono_left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
-    mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-    
-    mono_right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-    mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+    left = mono_left.requestOutput(size=RESOLUTION_SIZE, type=dai.ImgFrame.Type.GRAY8)
+    right = mono_right.requestOutput(size=RESOLUTION_SIZE, type=dai.ImgFrame.Type.GRAY8)
     
     cams = device.getConnectedCameras()
     depth_enabled = dai.CameraBoardSocket.CAM_B in cams and dai.CameraBoardSocket.CAM_C in cams
@@ -23,10 +21,10 @@ with dai.Pipeline(device) as pipeline:
     calibObj = device.readCalibration() 
 
     host = pipeline.create(StereoSGBM).build(
-        monoLeftOut=mono_left.out,
-        monoRightOut=mono_right.out,
+        monoLeftOut=left,
+        monoRightOut=right,
         calibObj=calibObj,
-        monoCamera=mono_left
+        resolution=RESOLUTION_SIZE
     )
     
     mono_left = pipeline.create(Display).build(frame=host.mono_left)
