@@ -123,10 +123,10 @@ class HumanMachineSafety(dai.node.HostNode):
             self._distance = math.sqrt((det.spatialCoordinates.x-x)**2 + (det.spatialCoordinates.y-y)**2 + (det.spatialCoordinates.z-z)**2)
 
             height = frame.shape[0]
-            x1 = int(det.xmin * height)
-            x2 = int(det.xmax * height)
-            y1 = int(det.ymin * height)
-            y2 = int(det.ymax * height)
+            x1 = max(0, int(det.xmin * height))
+            x2 = max(0, int(det.xmax * height))
+            y1 = max(0, int(det.ymin * height))
+            y2 = max(0, int(det.ymax * height))
             objectCenterX = int((x1+x2)/2)
             objectCenterY = int((y1+y2)/2)
             cv2.line(frame, (centroidX, centroidY), (objectCenterX, objectCenterY), (50,220,100), 4)

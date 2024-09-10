@@ -1,5 +1,6 @@
 # coding=utf-8
 import depthai as dai
+import blobconverter
 
 from human_machine_safety import HumanMachineSafety
 
@@ -66,7 +67,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
     sdn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    sdn.setNNArchive(nn_archive)
+    sdn.setBlob(blobconverter.from_zoo("mobilenet-ssd"))
     sdn.setNumShavesPerInferenceThread(5)
     sdn.setConfidenceThreshold(0.5)
     sdn.input.setBlocking(False)
