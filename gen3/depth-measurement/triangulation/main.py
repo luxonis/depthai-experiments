@@ -1,7 +1,9 @@
+from pathlib import Path
 import blobconverter
 import depthai as dai
 import re
 from host_triangulation import Triangulation
+
 
 faceDet_modelDescription = dai.NNModelDescription(modelSlug="yunet", platform="RVC2")
 faceDet_archivePath = dai.getModelFromZoo(faceDet_modelDescription)
@@ -16,10 +18,10 @@ def populate_pipeline(p: dai.Pipeline, left: bool, resolution: dai.MonoCameraPro
     cam.setResolution(resolution)
 
     face_manip = p.create(dai.node.ImageManip)
-    face_manip.initialConfig.setResize(640, 640)
+    face_manip.initialConfig.setResize(300, 300)
     # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
     face_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    face_manip.setMaxOutputFrameSize(640*640*3)
+    face_manip.setMaxOutputFrameSize(300*300*3)
     cam.out.link(face_manip.inputImage)
 
     face_nn = p.create(dai.node.MobileNetDetectionNetwork)
@@ -34,30 +36,7 @@ def populate_pipeline(p: dai.Pipeline, left: bool, resolution: dai.MonoCameraPro
     image_manip_script.inputs['nn_in'].setBlocking(False)
     image_manip_script.inputs['nn_in'].setMaxSize(1)
     face_nn.out.link(image_manip_script.inputs['nn_in'])
-    image_manip_script.setScript("""
-def limit_roi(det):
-    if det.xmin <= 0: det.xmin = 0.001
-    if det.ymin <= 0: det.ymin = 0.001
-    if det.xmax >= 1: det.xmax = 0.999
-    if det.ymax >= 1: det.ymax = 0.999
-
-while True:
-    face_dets = node.io['nn_in'].get().detections
-    if len(face_dets) == 0: continue
-    coords = face_dets[0] # take first
-    
-    coords.xmin -= 0.05
-    coords.ymin -= 0.05
-    coords.xmax += 0.05
-    coords.ymax += 0.05
-    
-    limit_roi(coords)
-    cfg = ImageManipConfig()
-    cfg.setKeepAspectRatio(False)
-    cfg.setCropRect(coords.xmin, coords.ymin, coords.xmax, coords.ymax)
-    cfg.setResize(48, 48)
-    node.io['to_manip'].send(cfg)
-""")
+    image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
 
     manip_crop = p.create(dai.node.ImageManip)
     face_nn.passthrough.link(manip_crop.inputImage)
@@ -70,6 +49,7 @@ while True:
     manip_crop.out.link(landmarks_nn.input)
 
     return (face_manip.out, face_nn.out, landmarks_nn.out)
+
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
