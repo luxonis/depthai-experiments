@@ -12,7 +12,7 @@ _For a more accurate version of multi-cam box measurement check out the [demo he
 python3 -m pip install -r requirements.txt
 ```
 Running the command above also tries to install open3D which is required for this example.
-open3D is not supported by all platforms, but is required for pointcloud visualization.
+open3D is not supported by all platforms, but is required for pointcloud visualization. Installing open3D on [Python 3.12 is not yet supported](https://stackoverflow.com/questions/62352767/cant-install-open3d-libraries-errorcould-not-find-a-version-that-satisfies-th).
 
 ## Usage
 
