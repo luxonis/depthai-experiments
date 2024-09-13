@@ -3,24 +3,30 @@ import depthai as dai
 from host_display import Display
 from host_depth_color_transform import DepthColorTransform
 
-resolution = (1280, 720)
+color_resolution = (1280, 720)
 
-with dai.Pipeline() as pipeline:
+device = dai.Device()
+with dai.Pipeline(device) as pipeline:
+
+    # The biggest mono sensor on Oak-D Lite is 640x480
+    camera_sensors = device.getCameraSensorNames()
+    mono_resolution = (640, 480) if "OV7251" in camera_sensors.values() else (1280, 720)
 
     print("Creating pipeline...")
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-    left_output = left.requestOutput(resolution)
-    right_output = right.requestOutput(resolution)
+    color_output = color.requestOutput(color_resolution, dai.ImgFrame.Type.BGR888p)
+    left_output = left.requestOutput(mono_resolution)
+    right_output = right.requestOutput(mono_resolution)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
         left=left_output,
         right=right_output
     )
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setOutputSize(*resolution)
+    stereo.setOutputSize(*color_resolution)
     stereo.initialConfig.setConfidenceThreshold(200)
     stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7)
     stereo.setLeftRightCheck(True)
@@ -32,7 +38,7 @@ with dai.Pipeline() as pipeline:
         stereo.initialConfig.getMaxDisparity()
     )
 
-    color_display = pipeline.create(Display).build(color.requestOutput(resolution))
+    color_display = pipeline.create(Display).build(color_output)
     color_display.setName("Color camera")
     left_display = pipeline.create(Display).build(left_output)
     left_display.setName("Left camera")
