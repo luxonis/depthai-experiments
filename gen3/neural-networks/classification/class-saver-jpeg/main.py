@@ -4,15 +4,20 @@ import depthai as dai
 from pathlib import Path
 from class_saver import ClassSaver
 
-model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300") # only for RVC2
+
+device = dai.Device()
+platform = device.getPlatform().name
+
+#model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300") # faster for RVC2
+model_description = dai.NNModelDescription(modelSlug="yolov10-nano", platform=platform, modelVersionSlug="coco-512x288") 
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
 # Start defining a pipeline
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
 
     cam_rgb = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
-    rgb_preview = cam_rgb.requestOutput(size=(300, 300), type=dai.ImgFrame.Type.BGR888p)
+    rgb_preview = cam_rgb.requestOutput(size=(512, 288), type=dai.ImgFrame.Type.BGR888p)
     
     detection_nn = pipeline.create(dai.node.DetectionNetwork).build(input=rgb_preview, nnArchive=nn_archive, confidenceThreshold=0.5)
 
