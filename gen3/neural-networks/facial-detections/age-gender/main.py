@@ -3,6 +3,8 @@ import blobconverter
 import depthai as dai
 from host_age_gender import AgeGender
 from detections_recognitions_sync import DetectionsRecognitionsSync
+from host_display import Display
+
 
 device = dai.Device()
 #detection_model_description = dai.NNModelDescription(modelSlug="yunet", platform=device.getPlatform().name, modelVersionSlug="640x640")
@@ -73,6 +75,9 @@ with dai.Pipeline(device) as pipeline:
         preview=cam.preview,
         detections_recognitions=sync.output
     )
+
+    display = pipeline.create(Display).build(age_gender.output)
+    display.setName("Preview")
 
     print("Pipeline created.")
     pipeline.run()
