@@ -1,11 +1,7 @@
 import depthai as dai
-<<<<<<< HEAD
-import cv2
-import numpy as np
-=======
 from host_nodes.host_add_detections import NormaliezeBbox, DrawDetections
 from host_nodes.host_display import Display
->>>>>>> 48d54bf (full fov tutorial refactored)
+
 
 model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2") 
 archive_path = dai.getModelFromZoo(model_description)
