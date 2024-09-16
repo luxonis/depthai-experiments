@@ -42,10 +42,11 @@ with dai.Pipeline() as pipeline:
     spatialDetectionNetwork = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
     spatialDetectionNetwork.setNNArchive(nn_archive)
     spatialDetectionNetwork.setConfidenceThreshold(0.5)
-    spatialDetectionNetwork.input.setBlocking(False)
     spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
     spatialDetectionNetwork.setDepthLowerThreshold(300)
     spatialDetectionNetwork.setDepthUpperThreshold(35000)
+    spatialDetectionNetwork.input.setMaxSize(1)
+    spatialDetectionNetwork.input.setBlocking(False)
     manip.out.link(spatialDetectionNetwork.input)
     stereo.depth.link(spatialDetectionNetwork.inputDepth)
 
