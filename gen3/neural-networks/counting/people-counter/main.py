@@ -1,7 +1,6 @@
 import depthai as dai
 from host_people_counter import PeopleCounter
 
-# model_description = dai.NNModelDescription(modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640") # no parser yet
 model_description = dai.NNModelDescription(modelSlug="person-detection-retail", platform="RVC2")
 archivePath = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archivePath)

@@ -10,7 +10,7 @@ Just using the small inferencing frame. Here we used `passthrough` frame of [Det
 
 ### 2. Crop high resolution frame
 
-A simple solution to low resolution frame is to stream high resolution frames (eg. `video` output from `ColorCamera`) to the host, and draw bounding boxes to it. For bounding boxes to match the frame, `preview` and `video` sizes should have the same aspect ratio, so `1:1`. In the example, we downscale 4k resolution to `720P`, so maximum resolution is `720x720`, which is exactly the resolution we used (`camRgb.setVideoSize(720,720)`). We could also use `1080P` resolution and stream `1080x1080` frames back to the host.
+A simple solution to low resolution frame is to stream high resolution frames (eg. `video` output from `ColorCamera`) to the host, and draw bounding boxes to it. For bounding boxes to match the frame, `preview` and `video` sizes should have the same aspect ratio, so `1:1`. In the example, we downscale 4k resolution to `720P`, so maximum resolution is `720x720`. We could also use `1080P` resolution and stream `1080x1080` frames back to the host.
 
 ![crop_highres](https://user-images.githubusercontent.com/18037362/141347876-25b60d3c-9942-4193-99b8-79dfacc2bdd1.png)
 

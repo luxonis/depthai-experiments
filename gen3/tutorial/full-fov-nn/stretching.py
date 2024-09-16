@@ -1,5 +1,4 @@
 import depthai as dai
-import blobconverter
 import cv2
 import numpy as np
 

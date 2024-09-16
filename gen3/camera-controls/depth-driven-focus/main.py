@@ -1,5 +1,5 @@
-import blobconverter
 import depthai as dai
+
 from host_depth_driven_focus import DepthDrivenFocus
 
 modelDescription = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
@@ -30,7 +30,6 @@ with dai.Pipeline() as pipeline:
 
     face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.4)
-    #face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5, version='2021.4'))
     face_det_nn.setNNArchive(nn_archive)
     face_det_nn.setBoundingBoxScaleFactor(0.5)
     face_det_nn.setDepthLowerThreshold(200)

@@ -2,20 +2,18 @@ import cv2
 import depthai as dai
 import numpy as np
 
+
 class PeopleCounter(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-
 
     def build(self, preview: dai.Node.Output, nn: dai.Node.Output) -> "PeopleCounter":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)
         return self
 
-
     def process(self, preview: dai.ImgFrame, nn: dai.NNData) -> None:
         frame = preview.getCvFrame()
-        cv2.imshow("Preview", frame)
 
         detections = nn.getTensor("detection_out").astype(np.float16).reshape(-1, 7)
         people = 0
