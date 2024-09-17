@@ -10,7 +10,7 @@ nn_archive = dai.NNArchive(archivePath=archive_path)
 with dai.Pipeline() as pipeline:
 
     cam_rgb = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
-    preview = cam_rgb.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.BGR888p)
+    preview = cam_rgb.requestOutput(size=(812, 608), type=dai.ImgFrame.Type.BGR888p, resizeMode=dai.ImgResizeMode.CROP)
     
     # Crop video to match aspect ratio of the detection network (1:1)
     crop_square = pipeline.create(dai.node.ImageManip)

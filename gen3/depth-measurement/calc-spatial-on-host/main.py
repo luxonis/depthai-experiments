@@ -34,9 +34,9 @@ with dai.Pipeline(device) as pipeline:
 
     calibdata = device.readCalibration()
     spatials = pipeline.create(HostSpatialsCalc).build(
-        depth_color_transform.output,
-        measure_distance.output,
-        keyboard_reader.output
+        disparity_frames=depth_color_transform.output,
+        measured_depth=measure_distance.output,
+        keyboard_input=keyboard_reader.output
     )
     spatials.output_roi.link(measure_distance.roi_input)
 

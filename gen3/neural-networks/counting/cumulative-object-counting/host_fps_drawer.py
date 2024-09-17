@@ -12,6 +12,7 @@ class FPSDrawer(dai.node.HostNode):
         TOP_RIGHT, \
         BOTTOM_RIGHT = range(4)
 
+
     def __init__(self) -> None:
         super().__init__()
         self._frames = []
@@ -21,9 +22,11 @@ class FPSDrawer(dai.node.HostNode):
 
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
 
+
     def build(self, preview: dai.Node.Output) -> "FPSDrawer":
         self.link_args(preview)
         return self
+
 
     def process(self, preview: dai.Buffer) -> None:
         assert(isinstance(preview, dai.ImgFrame))
