@@ -25,7 +25,7 @@ with dai.Pipeline() as pipeline:
     video_size = (300, 300)
     if camera:
         print("Creating Color Camera...")
-        cam = pipeline.create(dai.node.ColorCamera).build()
+        cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(video_size)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
