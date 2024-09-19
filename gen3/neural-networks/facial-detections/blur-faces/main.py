@@ -21,8 +21,8 @@ with dai.Pipeline() as pipeline:
     print("Creating Face Detection Neural Network...")
     face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     face_det_nn.setConfidenceThreshold(0.5)
-    # face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
-    face_det_nn.setNNArchive(face_det_nn_archive)
+    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
+    #face_det_nn.setNNArchive(face_det_nn_archive) #TODO: swap in, when the HostNode->ObjectTracker is ready
     # Link Face ImageManip -> Face detection NN node
     cam.preview.link(face_det_nn.input)
 
