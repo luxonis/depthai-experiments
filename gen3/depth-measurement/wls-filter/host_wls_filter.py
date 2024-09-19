@@ -52,7 +52,7 @@ class WLSFilter(dai.node.HostNode):
     def build(self, disparity: dai.Node.Output, rectified_right: dai.Node.Output,
               max_disparity: int) -> "WLSFilter":
         self.link_args(disparity, rectified_right)
-        self.sendProcessingToPipeline(True)
+        self.sendProcessingToPipeline(False)
         self._disp_multiplier = 255 / max_disparity
         return self
 
@@ -67,14 +67,10 @@ class WLSFilter(dai.node.HostNode):
         coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_HOT)
         
         self.right_frame.send(self.create_img_frame(right_frame, dai.ImgFrame.Type.GRAY8))
-        self.disparity_frame.send(self.create_img_frame(disparity_frame, dai.ImgFrame.Type.RAW10))
+        self.disparity_frame.send(self.create_img_frame(disparity_frame, dai.ImgFrame.Type.RAW8))
         self.depth_frame.send(self.create_img_frame(depthFrame, dai.ImgFrame.Type.RAW10))
         self.filtered_disp.send(self.create_img_frame(filteredDisp, dai.ImgFrame.Type.RAW8))
         self.colored_disp.send(self.create_img_frame(coloredDisp, dai.ImgFrame.Type.BGR888p))
-
-        if cv2.waitKey(1) == ord('q'):
-            print("Pipeline exited.")
-            self.stopPipeline()
 
 
     def create_img_frame(self, frame: np.ndarray, type : dai.ImgFrame.Type) -> dai.ImgFrame:
