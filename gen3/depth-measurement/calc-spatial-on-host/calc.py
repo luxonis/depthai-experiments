@@ -24,7 +24,7 @@ class HostSpatialsCalc(dai.node.HostNode):
     def build(self, disparity_frames: dai.Node.Output, measured_depth: dai.Node.Output, keyboard_input: dai.Node.Output) -> "HostSpatialsCalc":
         self.keyboard_input_q = keyboard_input.createOutputQueue()
         self.link_args(disparity_frames, measured_depth)
-        print("Use WASD keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
+        print("\nUse 'w', 'a', 's', 'd' keys to move ROI.\nUse 'r' and 'f' to change ROI size.")
         return self
 
 
