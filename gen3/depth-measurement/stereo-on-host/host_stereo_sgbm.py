@@ -26,7 +26,7 @@ class StereoSGBM(dai.node.HostNode):
 
     def build(self, monoLeftOut : dai.Node.Output, monoRightOut : dai.Node.Output, calibObj : dai.CalibrationHandler, resolution : tuple[int, int]) -> "StereoSGBM":
         self.link_args(monoLeftOut, monoRightOut)
-        self.sendProcessingToPipeline(True)
+        self.sendProcessingToPipeline(False)
 
         self.baseline = calibObj.getBaselineDistance() * 10 # mm
         self.focal_length = self.count_focal_length(calibObj, resolution)
