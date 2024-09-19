@@ -1,4 +1,4 @@
-opencv-python==4.5.1.48
-depthai~=3.0a1
+opencv-python==4.10.0.84
+depthai~=3.0.0a3
 scikit-image
 numpy~=2.0

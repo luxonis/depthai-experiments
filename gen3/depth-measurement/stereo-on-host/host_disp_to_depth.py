@@ -7,13 +7,16 @@ class DispToDepthControl(dai.node.HostNode):
     def __init__(self):
         super().__init__()
 
+
     def setDispScaleFactor(self, dispScaleFactor):
         self.dispScaleFactor = dispScaleFactor
 
+
     def build(self, disp : dai.Node.Output, depth : dai.Node.Output) -> "DispToDepthControl": 
         self.link_args(disp, depth)
-        self.sendProcessingToPipeline(True)
+        self.sendProcessingToPipeline(False)
         return self
+
 
     def process(self, disp : dai.ImgFrame, depth : dai.ImgFrame):
         dispFrame = np.array(disp.getFrame())

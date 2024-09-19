@@ -3,7 +3,7 @@ This example will calculate depth from disparity, and compare it to the depth ca
 """
 
 import depthai as dai
-from host_nodes.host_disp_to_depth import DispToDepthControl
+from host_disp_to_depth import DispToDepthControl
 
 RESOLUTION_SIZE = (640, 480)
 

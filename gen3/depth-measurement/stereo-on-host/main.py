@@ -1,7 +1,7 @@
 import depthai as dai
 
-from host_nodes.host_display import Display
-from host_nodes.host_stereo_sgbm import StereoSGBM
+from host_node.host_display import Display
+from host_stereo_sgbm import StereoSGBM
 
 RESOLUTION_SIZE = (1280, 720) 
 
@@ -27,19 +27,19 @@ with dai.Pipeline(device) as pipeline:
         resolution=RESOLUTION_SIZE
     )
     
-    mono_left = pipeline.create(Display).build(frame=host.mono_left)
+    mono_left = pipeline.create(Display).build(frames=host.mono_left)
     mono_left.setName("left")
     
-    mono_right = pipeline.create(Display).build(frame=host.mono_right)
+    mono_right = pipeline.create(Display).build(frames=host.mono_right)
     mono_right.setName("right")
     
-    disparity = pipeline.create(Display).build(frame=host.disparity_out)
+    disparity = pipeline.create(Display).build(frames=host.disparity_out)
     disparity.setName("disparity")
     
-    rectified_left = pipeline.create(Display).build(frame=host.rectified_left)
+    rectified_left = pipeline.create(Display).build(frames=host.rectified_left)
     rectified_left.setName("rectified left")
     
-    rectified_right = pipeline.create(Display).build(frame=host.rectified_right)
+    rectified_right = pipeline.create(Display).build(frames=host.rectified_right)
     rectified_right.setName("rectified right")
 
     print("pipeline created")
