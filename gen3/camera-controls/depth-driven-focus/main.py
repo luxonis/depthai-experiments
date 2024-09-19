@@ -1,4 +1,5 @@
 import depthai as dai
+import blobconverter
 
 from host_depth_driven_focus import DepthDrivenFocus
 
@@ -29,8 +30,9 @@ with dai.Pipeline() as pipeline:
     stereo.setExtendedDisparity(True)
 
     face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
+    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
     face_det_nn.setConfidenceThreshold(0.4)
-    face_det_nn.setNNArchive(nn_archive)
+    #face_det_nn.setNNArchive(nn_archive) # TODO: swap in, when parsers can work with depth
     face_det_nn.setBoundingBoxScaleFactor(0.5)
     face_det_nn.setDepthLowerThreshold(200)
     face_det_nn.setDepthUpperThreshold(3000)
