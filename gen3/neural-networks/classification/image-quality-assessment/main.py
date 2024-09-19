@@ -2,7 +2,7 @@ import depthai as dai
 from host_image_quality_assessment import ImageQualityAssessment
 
 device = dai.Device()
-model_description = dai.NNModelDescription(modelSlug="image-quality-assessment", platform=device.getPlatform().name)
+model_description = dai.NNModelDescription(modelSlug="image-quality-assessment", platform=device.getPlatform().name, modelVersionSlug="256x256")
 nn_path = dai.getModelFromZoo(modelDescription=model_description)
 
 nn_archive = dai.NNArchive(nn_path)
