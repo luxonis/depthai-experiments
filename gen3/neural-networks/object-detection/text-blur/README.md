@@ -1,8 +1,6 @@
 ## [Gen2] Text blurring on DepthAI
 
-This example shows an implementation of [Text Detection](https://github.com/MhLiao/DB) on DepthAI in the Gen2 API system with additional text blurring. ONNX is taken from [PINTO's Model ZOO](https://github.com/PINTO0309/PINTO_model_zoo/tree/main/145_text_detection_db), and reexported with preprocessing flags.
-
-Supported input shape is 480 x 640 (H x W), with expected ~3 FPS.
+This example shows an implementation of [Text Detection](https://hub.luxonis.com/ai/models/131d855c-60b1-4634-a14d-1269bb35dcd2?view=page) on DepthAI in the Gen3 API system with additional text blurring.
 
 ![Image example](imgs/example.gif)
 
@@ -23,7 +21,6 @@ python3 main.py [options]
 
 Options:
 
-* `-nn, --nn_model`: Select model path for inference. Default: *models/text_detection_db_256x320_openvino_2021.4_6shave.blob*.
 * `-bt, --box_thresh`: Set the box confidence threshold. Default: *0.2*.
 * `-t, --thresh`: Set the bitmap threshold. Default: *0.1*.
 * `-ms, --min_size`: Set the minimum size of box (area). Default: *1*.
