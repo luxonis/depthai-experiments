@@ -1,76 +1,85 @@
 import depthai as dai
-import blobconverter
+import depthai_nodes as nodes
 from host_facemesh import Facemesh
+from depthai_nodes import KeypointParser
+from crop_detections import CropDetections
+from host_display import Display
 
-with dai.Pipeline() as pipeline:
+
+#TODO: fix for RVC4
+device = dai.Device()
+platform = device.getPlatform()
+rvc2 = platform == dai.Platform.RVC2
+
+yunet_input_size = (320,320) if rvc2 else (640,640)
+yunet_model = dai.getModelFromZoo(dai.NNModelDescription(
+    modelSlug="yunet",
+    modelVersionSlug=f"{yunet_input_size[0]}x{yunet_input_size[1]}",
+    platform=platform.name)
+)
+yunet_archive = dai.NNArchive(yunet_model)
+
+face_landmark_model = dai.getModelFromZoo(dai.NNModelDescription(
+    modelSlug="mediapipe-face-landmarker",
+    modelVersionSlug="192x192",
+    platform=platform.name)
+)
+face_landmark_archive = dai.NNArchive(face_landmark_model)
+
+with dai.Pipeline(device) as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-    cam.setPreviewKeepAspectRatio(True)
-    cam.setPreviewSize(540, 360)
-    cam.setIspScale(1, 3)
-    cam.setVideoSize(1080, 720)
-    cam.setInterleaved(False)
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    output = cam.requestOutput(yunet_input_size, dai.ImgFrame.Type.BGR888p if rvc2 else dai.ImgFrame.Type.BGR888i, fps=15)
 
-    manip_to_nn = pipeline.create(dai.node.ImageManip)
-    manip_to_nn.initialConfig.setResize(300, 300)
-    manip_to_nn.initialConfig.setKeepAspectRatio(True)
-    cam.preview.link(manip_to_nn.inputImage)
+    face_nn = pipeline.create(dai.node.NeuralNetwork).build(output, yunet_archive)
+    face_nn.input.setBlocking(False)
+    face_nn.input.setMaxSize(2)
 
-    face_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
-    face_nn.setConfidenceThreshold(0.5)
-    face_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
-    manip_to_nn.out.link(face_nn.input)
+    yunet_parser = pipeline.create(nodes.YuNetParser)
+    yunet_parser.setConfidenceThreshold(0.5)
+    face_nn.out.link(yunet_parser.input)
 
-    script = pipeline.create(dai.node.Script)
-    face_nn.out.link(script.inputs['dets'])
-    script.setScript(f"""
-def limit_roi(det):
-    if det.xmin <= 0: det.xmin = 0.001
-    if det.ymin <= 0: det.ymin = 0.001
-    if det.xmax >= 1: det.xmax = 0.999
-    if det.ymax >= 1: det.ymax = 0.999
+    crop_detections = pipeline.create(CropDetections).build(face_nn=yunet_parser.out, manipv2=not rvc2)
 
-FACE_BBOX_PADDING = 0.06
-while True:
-    face_dets = node.io['dets'].get().detections
-    if len(face_dets) == 0: continue
-    coords = face_dets[0] # take first
-    
-    coords.xmin -= FACE_BBOX_PADDING
-    coords.ymin -= FACE_BBOX_PADDING
-    coords.xmax += FACE_BBOX_PADDING
-    coords.ymax += FACE_BBOX_PADDING
-    
-    limit_roi(coords)
-    cfg = ImageManipConfig()
-    cfg.setKeepAspectRatio(False)
-    cfg.setCropRect(coords.xmin, coords.ymin, coords.xmax, coords.ymax)
-    cfg.setResize(192, 192)
-    node.io['cfg'].send(cfg)
-""")
+    if rvc2:
+        crop_face = pipeline.create(dai.node.ImageManip)
+        crop_face.setMaxOutputFrameSize(3110400)
+        crop_face.inputConfig.setWaitForMessage(False)
+        crop_face.initialConfig.setResize(192, 192)
+        crop_detections.out.link(crop_face.inputConfig)
+        output.link(crop_face.inputImage)
+    else:
+        crop_face = pipeline.create(dai.node.ImageManipV2)
+        crop_face.initialConfig.setOutputSize(192, 192)
+        crop_face.initialConfig.setReusePreviousImage(False)
+        crop_detections.out.link(crop_face.inputConfig)
+        output.link(crop_face.inputImage)
 
-    crop_face = pipeline.create(dai.node.ImageManip)
-    crop_face.setMaxOutputFrameSize(3110400)
-    crop_face.inputConfig.setWaitForMessage(False)
-    crop_face.initialConfig.setResize(192, 192)
-    script.outputs['cfg'].link(crop_face.inputConfig)
-    manip_to_nn.out.link(crop_face.inputImage)
-
-    landmarks_nn = pipeline.create(dai.node.NeuralNetwork)
-    landmarks_nn.setBlobPath("face_landmark_openvino_2021.4_6shave.blob")
+    landmarks_nn = pipeline.create(dai.node.NeuralNetwork).build(crop_face.out, face_landmark_archive)
     landmarks_nn.setNumPoolFrames(4)
     landmarks_nn.input.setBlocking(False)
+    landmarks_nn.input.setMaxSize(2)
     landmarks_nn.setNumInferenceThreads(2)
-    crop_face.out.link(landmarks_nn.input)
+
+    landmarks_parser = pipeline.create(KeypointParser)
+    landmarks_parser.setNumKeypoints(468)
+    landmarks_parser.setScaleFactor(192)
+    landmarks_nn.out.link(landmarks_parser.input)
+    landmarks_parser.input.setBlocking(False)
+    landmarks_parser.input.setMaxSize(2)
 
     facemesh = pipeline.create(Facemesh).build(
-        full=cam.preview,
-        preview=manip_to_nn.out,
-        face_nn=face_nn.out,
-        landmarks_nn=landmarks_nn.out
+        preview=output,
+        face_nn=yunet_parser.out,
+        landmarks_nn=landmarks_parser.out
     )
+
+    mesh_display = pipeline.create(Display).build(facemesh.output_mask)
+    mesh_display.setName("Mesh")
+
+    landmarks_display = pipeline.create(Display).build(facemesh.output_landmarks)
+    landmarks_display.setName("Landmarks")
 
     print("Pipeline created.")
     pipeline.run()
