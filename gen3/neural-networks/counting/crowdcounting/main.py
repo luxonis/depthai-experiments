@@ -6,13 +6,13 @@ from host_crowdcounting import Crowdcounting
 from download import download_vids
 from os.path import isfile
 
-modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="r2-coco-512x288")
+modelDescription = dai.NNModelDescription(modelSlug="dm-count", platform="RVC2", modelVersionSlug="sha-240x426")
 archivePath = dai.getModelFromZoo(modelDescription)
 nn_archive = dai.NNArchive(archivePath)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--video-path', type=str, help="Path to the video input for inference. Default: vids/virat.mp4"
-                    , default="vids/virat.mp4")
+                    , default="vids/vid4.mp4")
 args = parser.parse_args()
 
 video_source = Path(args.video_path).resolve().absolute()
@@ -43,7 +43,8 @@ with dai.Pipeline() as pipeline:
     replay.out.link(manip.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(Path("model/vgg_openvino_2021.4_6shave.blob").resolve().absolute())
+    # nn.setBlobPath(Path(__file__).parent / "model/vgg_openvino_2021.4_6shave.blob")
+    nn.setNNArchive(nn_archive)
     nn.setNumPoolFrames(4)
     nn.input.setBlocking(False)
     nn.setNumInferenceThreads(2)
