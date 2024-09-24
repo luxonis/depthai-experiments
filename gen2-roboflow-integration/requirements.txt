@@ -5,6 +5,6 @@ idna==3.3
 numpy>=1.21
 opencv-python==4.5.5.62
 Pillow==10.3.0
-requests==2.31.0
+requests==2.32.2
 urllib3==1.26.19
 blobconverter==1.2.8
