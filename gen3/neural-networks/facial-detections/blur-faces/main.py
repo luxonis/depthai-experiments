@@ -1,6 +1,8 @@
 import blobconverter
 import depthai as dai
-from blur_faces import BlurFaces
+from host_node.blur_bboxes import BlurBboxes
+from host_node.host_display import Display
+from host_node.normalize_bbox import NormalizeBbox
 
 face_det_model_description = dai.NNModelDescription(
     modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640"
@@ -15,7 +17,7 @@ with dai.Pipeline() as pipeline:
     cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(300, 300)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setVideoSize(1280, 800)
+    cam.setVideoSize(1080, 1080)
     cam.setInterleaved(False)
 
     # NeuralNetwork
@@ -29,22 +31,13 @@ with dai.Pipeline() as pipeline:
     # Link Face ImageManip -> Face detection NN node
     cam.preview.link(face_det_nn.input)
 
-    objectTracker = pipeline.create(dai.node.ObjectTracker)
-    objectTracker.setDetectionLabelsToTrack([1])  # track only person
-    # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
-    objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
-    # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
-    objectTracker.setTrackerIdAssignmentPolicy(
-        dai.TrackerIdAssignmentPolicy.SMALLEST_ID
+    bbox_norm = pipeline.create(NormalizeBbox).build(
+        frame=cam.video, nn=face_det_nn.out, manip_mode=dai.ImgResizeMode.CROP
     )
-
-    # Linking
-    face_det_nn.passthrough.link(objectTracker.inputDetectionFrame)
-    face_det_nn.passthrough.link(objectTracker.inputTrackerFrame)
-    face_det_nn.out.link(objectTracker.inputDetections)
-    # Send face detections to the host (for bounding boxes)
-
-    pipeline.create(BlurFaces).build(video=cam.video, tracklets=objectTracker.out)
+    blur_faces = pipeline.create(BlurBboxes).build(
+        frame=cam.video, nn=bbox_norm.output, rounded_blur=True
+    )
+    display = pipeline.create(Display).build(frames=blur_faces.output)
 
     print("Pipeline created.")
     pipeline.run()
