@@ -41,7 +41,7 @@ def points_to_spatial_img_detection(
 
 
 def points_to_spatial_img_detections(
-    points: dict[str, dai.Point3f], confidences: list[float], labels: list[int]
+    points: list[dict[str, dai.Point3f]], confidences: list[float], labels: list[int]
 ) -> dai.SpatialImgDetections:
     detections = dai.SpatialImgDetections()
     detections.detections = [
