@@ -2,8 +2,8 @@ import depthai as dai
 from depthai_nodes.ml.messages.img_detections import ImgDetectionsExtended
 
 
-class YuNetBridge(dai.node.HostNode):
-    """Transforms messages received from YuNetParser to dai.ImgDetections"""
+class ParserBridge(dai.node.HostNode):
+    """Transforms ImgDetectionsExtended received from parsers to dai.ImgDetections"""
 
     def __init__(self) -> None:
         super().__init__()
@@ -14,7 +14,7 @@ class YuNetBridge(dai.node.HostNode):
             ]
         )
 
-    def build(self, nn: dai.Node.Output) -> "YuNetBridge":
+    def build(self, nn: dai.Node.Output) -> "ParserBridge":
         self.link_args(nn)
         return self
 
