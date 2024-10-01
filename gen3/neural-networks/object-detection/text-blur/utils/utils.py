@@ -1,9 +1,10 @@
 # Code taken and edited from https://github.com/MhLiao/DB
 
-import numpy as np
 import cv2
-from shapely.geometry import Polygon
+import numpy as np
 import pyclipper
+from shapely.geometry import Polygon
+
 
 def get_mini_boxes(contour):
     bounding_box = cv2.minAreaRect(contour)
@@ -23,11 +24,11 @@ def get_mini_boxes(contour):
         index_2 = 3
         index_3 = 2
 
-    box = [points[index_1], points[index_2],
-            points[index_3], points[index_4]]
+    box = [points[index_1], points[index_2], points[index_3], points[index_4]]
     return box, min(bounding_box[1])
 
-def box_score_fast(bitmap : cv2.typing.MatLike, _box):
+
+def box_score_fast(bitmap: cv2.typing.MatLike, _box):
     h, w = bitmap.shape[:2]
     box = _box.copy()
     xmin = np.clip(np.floor(box[:, 0].min()).astype(int), 0, w - 1)
@@ -40,7 +41,7 @@ def box_score_fast(bitmap : cv2.typing.MatLike, _box):
     box[:, 1] = box[:, 1] - ymin
     cv2.fillPoly(mask, box.reshape(1, -1, 2).astype(np.int32), 1)
 
-    roi = bitmap[ymin:ymax + 1, xmin:xmax + 1]
+    roi = bitmap[ymin : ymax + 1, xmin : xmax + 1]
     roi = (roi * 255).astype(np.uint8)
 
     return cv2.mean(roi, mask)[0]
@@ -54,12 +55,15 @@ def unclip(box, unclip_ratio=1.5):
     expanded = np.array(offset.Execute(distance))
     return expanded
 
+
 def get_boxes(pred, THRESH, BOX_THRESH, MIN_SIZE, MAX_CANDIDATES):
     bitmap = pred > THRESH
 
     height, width = pred.shape
 
-    contours, _ = cv2.findContours((bitmap * 255).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(
+        (bitmap * 255).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE
+    )
 
     num_contours = min(len(contours), MAX_CANDIDATES)
     boxes = np.zeros((num_contours, 4, 2), dtype=np.int16)
