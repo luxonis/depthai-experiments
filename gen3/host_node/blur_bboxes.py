@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import cv2
 import depthai as dai
 import numpy as np
@@ -19,15 +21,17 @@ class BlurBboxes(dai.node.HostNode):
     ) -> "BlurBboxes":
         self.rounded_blur = rounded_blur
         self.link_args(frame, nn)
-        self.sendProcessingToPipeline(True)
         return self
 
     def process(self, in_frame: dai.ImgFrame, in_detections: dai.Buffer) -> None:
         frame = in_frame.getCvFrame()
         assert isinstance(in_detections, dai.ImgDetections)
         out_frame = self.blur_detections(frame, in_detections.detections)
+        in_frame.getTimestamp()
 
-        img = self._create_img_frame(out_frame, dai.ImgFrame.Type.BGR888p)
+        img = self._create_img_frame(
+            out_frame, dai.ImgFrame.Type.BGR888p, in_frame.getTimestamp()
+        )
 
         self.output.send(img)
 
@@ -76,8 +80,9 @@ class BlurBboxes(dai.node.HostNode):
         self.rounded_blur = use_ellipses
 
     def _create_img_frame(
-        self, frame: np.ndarray, type: dai.ImgFrame.Type
+        self, frame: np.ndarray, type: dai.ImgFrame.Type, timestamp: timedelta
     ) -> dai.ImgFrame:
         img_frame = dai.ImgFrame()
         img_frame.setCvFrame(frame, type)
+        img_frame.setTimestamp(timestamp)
         return img_frame
