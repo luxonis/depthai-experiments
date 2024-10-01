@@ -3,7 +3,7 @@ from depthai_nodes.ml.parsers import YuNetParser
 from host_node.blur_bboxes import BlurBboxes
 from host_node.host_display import Display
 from host_node.normalize_bbox import NormalizeBbox
-from host_node.yunet_bridge import YuNetBridge
+from host_node.parser_bridge import ParserBridge
 
 device = dai.Device()
 face_det_model_description = dai.NNModelDescription(
@@ -32,7 +32,7 @@ with dai.Pipeline(device) as pipeline:
     face_det_nn.out.link(parser.input)
     parser.setConfidenceThreshold(0.5)
 
-    bridge = pipeline.create(YuNetBridge).build(nn=parser.out)
+    bridge = pipeline.create(ParserBridge).build(nn=parser.out)
     bbox_norm = pipeline.create(NormalizeBbox).build(
         frame=cam_square, nn=bridge.output, manip_mode=dai.ImgResizeMode.CROP
     )
