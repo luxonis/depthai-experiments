@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-import depthai as dai
 import argparse
-from display_blur_text import DisplayBlurText
-from host_display import Display
-from host_fps_drawer import FPSDrawer
+
+import depthai as dai
+from host_node.blur_bboxes import BlurBboxes
+from host_node.host_display import Display
+from host_node.host_fps_drawer import FPSDrawer
+from host_node.normalize_bbox import NormalizeBbox
+from mask_to_bbox import MaskToBbox
+from text_detection_parser import TextDetectionParser
 
 device = dai.Device()
 platform = device.getPlatform()
@@ -34,24 +38,21 @@ with dai.Pipeline(device) as pipeline:
     detection_nn.setNumPoolFrames(4)
     detection_nn.input.setBlocking(False)
     detection_nn.setNumInferenceThreads(2)
+    parser = pipeline.create(TextDetectionParser).build(nn=detection_nn.out, nn_size=(NN_HEIGHT, NN_WIDTH))
+    parser.setConfidenceThreshold(args.thresh)
 
-    blur_text = pipeline.create(DisplayBlurText).build(
-        camOut=output,
-        nnOut=detection_nn.out,
-        nn_size=(NN_HEIGHT, NN_WIDTH)
-    )
-    blur_text.setBboxThreshold(args.box_thresh)
-    blur_text.setBitmapThreshold(args.thresh)
-    blur_text.setMinSize(args.min_size)
-    blur_text.setMaxCandidates(args.max_candidates)
+    mask_to_bbox = pipeline.create(MaskToBbox).build(nn=parser.output)
+    mask_to_bbox.setBboxThreshold(args.box_thresh)
+    mask_to_bbox.setBitmapThreshold(args.thresh)
+    mask_to_bbox.setMinSize(args.min_size)
+    mask_to_bbox.setMaxCandidates(args.max_candidates)
+    mask_to_bbox.setPadding(5)
+    normalize_bbox = pipeline.create(NormalizeBbox).build(nn=mask_to_bbox.output, frame=output, manip_mode=dai.ImgResizeMode.CROP)
+    blur_bboxes = pipeline.create(BlurBboxes).build(nn=normalize_bbox.output, frame=output)
 
-    display_preds = pipeline.create(Display).build(blur_text.output_preds)
-    display_preds.setName("Text Predictions")
-
-    output_fps = pipeline.create(FPSDrawer).build(blur_text.output)
-
-    display = pipeline.create(Display).build(output_fps.output)
-    display.setName("Text Blur")
+    output_fps = pipeline.create(FPSDrawer).build(blur_bboxes.output)
+    display_preds = pipeline.create(Display).build(output_fps.output)
+    display_preds.setName("Text Blur")
 
     print("Pipeline created")
     pipeline.run()
