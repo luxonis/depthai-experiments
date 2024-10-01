@@ -80,6 +80,8 @@ def get_boxes(pred, THRESH, BOX_THRESH, MIN_SIZE, MAX_CANDIDATES):
             continue
 
         box = unclip(points).reshape(-1, 1, 2)
+        if not box.any():
+            continue
         box, sside = get_mini_boxes(box)
         if sside < MIN_SIZE + 2:
             continue
