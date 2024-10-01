@@ -1,8 +1,9 @@
 import argparse
 from pathlib import Path
 
-import blobconverter
 import depthai as dai
+from depthai_nodes.ml.parsers import SCRFDParser
+from host_node.parser_bridge import ParserBridge
 from host_people_tracker import PeopleTracker
 
 parser = argparse.ArgumentParser()
@@ -21,41 +22,47 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+device = dai.Device()
 model_description = dai.NNModelDescription(
-    modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640"
+    modelSlug="scrfd-person-detection",
+    platform=device.getPlatform().name,
+    modelVersionSlug="2-5g-640x640",
 )
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     if args.video:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.video).resolve().absolute())
-        replay.setSize(544, 320)
+        replay.setSize(640, 640)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
 
         preview = replay.out
 
     else:
         cam = pipeline.create(dai.node.ColorCamera)
-        cam.setPreviewSize(544, 320)
+        cam.setPreviewSize(640, 640)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam.setInterleaved(False)
         cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
         preview = cam.preview
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    # nn.setBlobPath(blobconverter.from_zoo(name="person-detection-retail-0013", shaves=7))
+    nn = pipeline.create(dai.node.NeuralNetwork)
     nn.setNNArchive(nn_archive)
-    nn.setConfidenceThreshold(0.5)
     nn.input.setBlocking(False)
     preview.link(nn.input)
+    nn_parser = pipeline.create(SCRFDParser)
+    nn_parser.setFeatStrideFPN((8, 16, 32, 64, 128))
+    nn_parser.setNumAnchors(1)
+    nn.out.link(nn_parser.input)
+    bridge = pipeline.create(ParserBridge).build(nn=nn_parser.out)
 
     tracker = pipeline.create(dai.node.ObjectTracker)
     # Track people
-    tracker.setDetectionLabelsToTrack([1])
+    tracker.setDetectionLabelsToTrack([0])
     # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
     tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
     # Take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
@@ -63,7 +70,7 @@ with dai.Pipeline() as pipeline:
     tracker.setTrackerThreshold(0.4)
     nn.passthrough.link(tracker.inputTrackerFrame)
     nn.passthrough.link(tracker.inputDetectionFrame)
-    nn.out.link(tracker.inputDetections)
+    bridge.output.link(tracker.inputDetections)
 
     people_tracker = pipeline.create(PeopleTracker).build(
         preview=tracker.passthroughTrackerFrame,
