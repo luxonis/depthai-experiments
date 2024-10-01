@@ -1,23 +1,33 @@
+import argparse
+from pathlib import Path
+
 import blobconverter
 import depthai as dai
-import argparse
-
-from pathlib import Path
 from host_people_tracker import PeopleTracker
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-vid', '--video', type=str
-                    , help="Path to video to use for inference. Otherwise uses the DepthAI color camera")
-parser.add_argument('-t', '--threshold', default=0.25, type=float
-                    , help="Minimum distance the person has to move (across the x/y axis) to be considered a real movement. Default: 0.25")
+parser.add_argument(
+    "-vid",
+    "--video",
+    type=str,
+    help="Path to video to use for inference. Otherwise uses the DepthAI color camera",
+)
+parser.add_argument(
+    "-t",
+    "--threshold",
+    default=0.25,
+    type=float,
+    help="Minimum distance the person has to move (across the x/y axis) to be considered a real movement. Default: 0.25",
+)
 args = parser.parse_args()
 
-model_description = dai.NNModelDescription(modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640")
+model_description = dai.NNModelDescription(
+    modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
 with dai.Pipeline() as pipeline:
-
     print("Creating pipeline...")
     if args.video:
         replay = pipeline.create(dai.node.ReplayVideo)
@@ -58,7 +68,7 @@ with dai.Pipeline() as pipeline:
     people_tracker = pipeline.create(PeopleTracker).build(
         preview=tracker.passthroughTrackerFrame,
         tracklets=tracker.out,
-        threshold=args.threshold
+        threshold=args.threshold,
     )
 
     print("Pipeline created.")
