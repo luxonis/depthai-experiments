@@ -14,6 +14,7 @@ class Triangulation(dai.node.HostNode):
         self._rightColor = (0, 255, 0)
         self._textHelper = TextHelper()
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self._display_detections = True
 
 
     def build(self, face_left: dai.Node.Output, face_right: dai.Node.Output,
@@ -25,6 +26,9 @@ class Triangulation(dai.node.HostNode):
 
         return self
 
+    def set_display_detections(self, display_detections: bool) -> None:
+        self._display_detections = display_detections
+
 
     def process(self, face_left: dai.ImgFrame, face_right: dai.ImgFrame,
                 nn_face_left: dai.Buffer, nn_face_right: dai.Buffer) -> None:
@@ -34,8 +38,9 @@ class Triangulation(dai.node.HostNode):
         left_frame = face_left.getCvFrame()
         right_frame = face_right.getCvFrame()
 
-        self._displayDetections(left_frame, nn_face_left.detections, self._leftColor)
-        self._displayDetections(right_frame, nn_face_right.detections, self._rightColor)
+        if self._display_detections:
+            self._displayDetections(left_frame, nn_face_left.detections, self._leftColor)
+            self._displayDetections(right_frame, nn_face_right.detections, self._rightColor)
         
         combined = cv2.addWeighted(left_frame, 0.5, right_frame, 0.5, 0)
 
