@@ -3,8 +3,11 @@ from pathlib import Path
 
 import depthai as dai
 from depthai_nodes.ml.parsers import SCRFDParser
+from host_node.draw_tracklet import DrawTracklet
+from host_node.host_display import Display
+from host_node.normalize_tracklet import NormalizeTracklet
 from host_node.parser_bridge import ParserBridge
-from host_people_tracker import PeopleTracker
+from people_counter import PeopleCounter
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -38,8 +41,12 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.video).resolve().absolute())
         replay.setSize(640, 640)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
+        frame_type = pipeline.create(dai.node.ImageManip)
+        frame_type.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+        frame_type.setMaxOutputFrameSize(640 * 640 * 3)
+        replay.out.link(frame_type.inputImage)
 
-        preview = replay.out
+        preview = frame_type.out
 
     else:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -67,11 +74,18 @@ with dai.Pipeline(device) as pipeline:
     nn.passthrough.link(tracker.inputDetectionFrame)
     bridge.output.link(tracker.inputDetections)
 
-    people_tracker = pipeline.create(PeopleTracker).build(
-        preview=tracker.passthroughTrackerFrame,
-        tracklets=tracker.out,
-        threshold=args.threshold,
+    normalize_tracklet = pipeline.create(NormalizeTracklet).build(
+        frame=preview, tracklets=tracker.out
     )
+    draw_tracklet = pipeline.create(DrawTracklet).build(
+        frame=preview, tracklets=normalize_tracklet.output
+    )
+    draw_tracklet.set_color((0, 0, 255))
+
+    people_counter = pipeline.create(PeopleCounter).build(
+        preview=draw_tracklet.output, tracklets=tracker.out, threshold=args.threshold
+    )
+    display = pipeline.create(Display).build(frames=people_counter.output)
 
     print("Pipeline created.")
     pipeline.run()
