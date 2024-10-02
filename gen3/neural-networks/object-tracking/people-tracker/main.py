@@ -42,13 +42,8 @@ with dai.Pipeline(device) as pipeline:
         preview = replay.out
 
     else:
-        cam = pipeline.create(dai.node.ColorCamera)
-        cam.setPreviewSize(640, 640)
-        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        cam.setInterleaved(False)
-        cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-
-        preview = cam.preview
+        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        preview = cam.requestOutput(size=(640, 640), type=dai.ImgFrame.Type.BGR888p)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
     nn.setNNArchive(nn_archive)
