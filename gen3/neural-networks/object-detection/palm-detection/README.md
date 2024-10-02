@@ -2,7 +2,7 @@ Palm detection
 ================
 
 This example demonstrates the Gen3 Pipeline Builder running 
-[palm detection network](https://github.com/google-ai-edge/mediapipe/blob/master/docs/solutions/hands.md)  
+[Mediapipe Palm Detection Network](https://zoo-rvc4.luxonis.com/luxonis/mediapipe-palm-detection/9531aba9-ef45-4ad3-ae03-808387d61bf3). In this demo DepthAI visualizer is integrated.
 
 ## Demo:
 
@@ -22,3 +22,5 @@ Run the application
 ```
 python3 main.py
 ```
+
+Open browser at http://localhost:8000. Click on Palm Detection tab and you will see the Palm Detection stream. By clicking on *ANNOTATIONS* tooltip you can turn turn the *Palm Bounding Boxes* on and off.
