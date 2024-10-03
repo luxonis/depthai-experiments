@@ -58,7 +58,7 @@ with dai.Pipeline() as pipeline:
         tile_manager=tile_manager,
         nn=nn.out,
         conf_thresh=0.3,
-        iou_thresh=0.5
+        iou_thresh=0.2
     )
 
     scanner = pipeline.create(QRScanner).build(
