@@ -1,10 +1,10 @@
-certifi==2023.7.22
+certifi==2024.7.4
 charset-normalizer==2.0.9
 depthai==2.16.0.0
-idna==3.3
+idna==3.7
 numpy>=1.21
 opencv-python==4.5.5.62
-Pillow==9.3.0
-requests==2.31.0
-urllib3==1.26.7
+Pillow==10.3.0
+requests==2.32.2
+urllib3==1.26.19
 blobconverter==1.2.8
