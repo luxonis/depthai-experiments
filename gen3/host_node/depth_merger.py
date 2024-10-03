@@ -39,7 +39,7 @@ class DepthMerger(dai.node.HostNode):
         y_len = stereo_depth_frame.shape[0]
         if not isinstance(points, list):
             points = [points]
-        object_points_3d = []
+        object_points_3d: list[dict[str, dai.Point3f]] = []
         for property_points in points:
             points_3d: dict[str, dai.Point3d] = {}
             for point_key in property_points.keys(): #TODO: try to leverage numpy, ideally avoid loop so its faster
@@ -47,8 +47,8 @@ class DepthMerger(dai.node.HostNode):
                 point_3d = dai.Point3f()
                 point_3d.x = point_2d.x
                 point_3d.y = point_2d.y
-                absolute_x = int(point_2d.x * x_len)
-                absolute_y = int(point_2d.y * y_len)
+                absolute_x = self._get_index(point_2d.x, x_len)
+                absolute_y = self._get_index(point_2d.y, y_len)
                 point_3d.z = stereo_depth_frame[absolute_y, absolute_x]
                 points_3d[point_key] = point_3d
                 object_points_3d.append(points_3d)
@@ -56,14 +56,18 @@ class DepthMerger(dai.node.HostNode):
             return object_points_3d[0]
         return object_points_3d
     
+    def _get_index(self, relative_coord: float, dimension_len: int) -> int:
+        bounded_coord = min(1, relative_coord)
+        return max(0, int(bounded_coord * dimension_len) - 1)
+    
     def _detransform(self, message_2d: dai.Buffer, points: dict[str, dai.Point3f] | list[dict[str, dai.Point3f]]) -> dai.Buffer:
         if isinstance(message_2d, dai.ImgDetection):
-            return points_to_spatial_img_detection(points, 0, 0)
+            return points_to_spatial_img_detection(points, message_2d.confidence, message_2d.label)
         elif isinstance(message_2d, dai.ImgDetections):
-            return points_to_spatial_img_detections(points, [], [])
+            return points_to_spatial_img_detections(points, [det.confidence for det in message_2d.detections], [det.label for det in message_2d.detections])
         elif isinstance(message_2d, ImgDetectionExtended):
-            return points_to_spatial_img_detection(points, 0, 0)
+            return points_to_spatial_img_detection(points, message_2d.confidence, message_2d.label)
         elif isinstance(message_2d, ImgDetectionsExtended):
-            return points_to_spatial_img_detections(points, [], [])
+            return points_to_spatial_img_detections(points, [det.confidence for det in message_2d.detections], [det.label for det in message_2d.detections])
         else:
             raise ValueError(f"Unknown message type: {type(message_2d)}")
