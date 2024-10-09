@@ -1,174 +1,115 @@
-import math
+import itertools
 
 import cv2
 import depthai as dai
 import numpy as np
-from alerting import AlertingGate
-from distance import parse_distance
 
-FONT = cv2.FONT_HERSHEY_SIMPLEX
-COLOR = (0, 0, 255)
-
-MAX_Z = 4
-MIN_Z = 1
-MAX_X = 0.9
-MIN_X = -0.7
-
-BIRD_FRAME_X = 100
-BIRD_FRAME_Z = 320
+ALERT_THRESHOLD = 0.5
+STATE_QUEUE_LENGTH = 30
+ALERT_DISTANCE = 2000  # mm
 
 
 class SocialDistancing(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self.alerting = AlertingGate()
-        self.distance_bird_frame = self.make_bird_frame()
 
-    def build(
-        self, preview: dai.Node.Output, nn: dai.Node.Output
-    ) -> "SocialDistancing":
-        self.link_args(preview, nn)
-        self.sendProcessingToPipeline(True)
-        return self
-
-    def process(
-        self, preview: dai.ImgFrame, detections: dai.SpatialImgDetections
-    ) -> None:
-        frame = preview.getCvFrame()
-        bird_frame = self.distance_bird_frame.copy()
-        height = frame.shape[0]
-        width = frame.shape[1]
-
-        bboxes = []
-        for detection in detections.detections:
-            label = detection.label
-            confidence = detection.confidence
-            x_min = int(detection.xmin * width)
-            x_max = int(detection.xmax * width)
-            y_min = int(detection.ymin * height)
-            y_max = int(detection.ymax * height)
-            depth_x = detection.spatialCoordinates.x / 1000
-            depth_y = detection.spatialCoordinates.y / 1000
-            depth_z = detection.spatialCoordinates.z / 1000
-
-            bboxes.append(
-                {
-                    "label": label,
-                    "confidence": confidence,
-                    "x_min": x_min,
-                    "x_max": x_max,
-                    "y_min": y_min,
-                    "y_max": y_max,
-                    "depth_x": depth_x,
-                    "depth_y": depth_y,
-                    "depth_z": depth_z,
-                }
-            )
-
-            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-            cv2.putText(
-                frame,
-                "x: {}".format(round(depth_x, 1)),
-                (x_min, y_min + 30),
-                FONT,
-                0.5,
-                COLOR,
-            )
-            cv2.putText(
-                frame,
-                "y: {}".format(round(depth_y, 1)),
-                (x_min, y_min + 50),
-                FONT,
-                0.5,
-                COLOR,
-            )
-            cv2.putText(
-                frame,
-                "z: {}".format(round(depth_z, 1)),
-                (x_min, y_min + 70),
-                FONT,
-                0.5,
-                COLOR,
-            )
-            cv2.putText(
-                frame,
-                "conf: {}".format(round(confidence, 1)),
-                (x_min, y_min + 90),
-                FONT,
-                0.5,
-                COLOR,
-            )
-            cv2.putText(
-                frame,
-                "label: {}".format(label, 1),
-                (x_min, y_min + 110),
-                FONT,
-                0.5,
-                COLOR,
-            )
-
-            left, right = self.calc_x(depth_x)
-            top, bottom = self.calc_z(depth_z)
-            cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 255, 0), 2)
-
-        distance_results = parse_distance(frame, bboxes)
-        should_alert = self.alerting.parse_danger(distance_results)
-
-        if should_alert:
-            cv2.putText(
-                frame, "Too close", (int(width / 3), int(height / 2)), FONT, 2, COLOR, 2
-            )
-
-        for result in distance_results:
-            if result["dangerous"]:
-                left, right = self.calc_x(result["detection1"]["depth_x"])
-                top, bottom = self.calc_z(result["detection1"]["depth_z"])
-                cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
-                left, right = self.calc_x(result["detection2"]["depth_x"])
-                top, bottom = self.calc_z(result["detection2"]["depth_z"])
-                cv2.rectangle(bird_frame, (left, top), (right, bottom), (0, 0, 255), 2)
-
-        combined = np.hstack((frame, bird_frame))
-        cv2.imshow("Frame", combined)
-
-        if cv2.waitKey(1) == ord("q"):
-            self.stopPipeline()
-
-    def calc_x(self, val):
-        norm = min(MAX_X, max(val, MIN_X))
-        center = (norm - MIN_X) / (MAX_X - MIN_X) * BIRD_FRAME_X
-        bottom_x = max(center - 2, 0)
-        top_x = min(center + 2, BIRD_FRAME_X)
-        return int(bottom_x), int(top_x)
-
-    def calc_z(self, val):
-        norm = min(MAX_Z, max(val, MIN_Z))
-        center = (1 - (norm - MIN_Z) / (MAX_Z - MIN_Z)) * BIRD_FRAME_Z
-        bottom_z = max(center - 2, 0)
-        top_z = min(center + 2, BIRD_FRAME_Z)
-        return int(bottom_z), int(top_z)
-
-    def make_bird_frame(self):
-        fov = 68.7938
-        min_distance = 0.827
-        frame = np.zeros((BIRD_FRAME_Z, BIRD_FRAME_X, 3), np.uint8)
-        min_y = int((1 - (min_distance - MIN_Z) / (MAX_Z - MIN_Z)) * frame.shape[0])
-        cv2.rectangle(
-            frame, (0, min_y), (frame.shape[1], frame.shape[0]), (70, 70, 70), -1
-        )
-
-        alpha = (180 - fov) / 2
-        center = int(frame.shape[1] / 2)
-        max_p = frame.shape[0] - int(math.tan(math.radians(alpha)) * center)
-        fov_cnt = np.array(
-            [
-                (0, frame.shape[0]),
-                (frame.shape[1], frame.shape[0]),
-                (frame.shape[1], max_p),
-                (center, frame.shape[0]),
-                (0, max_p),
-                (0, frame.shape[0]),
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-        cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
-        return frame
+
+        self._state_queue = []
+
+    def build(self, frame: dai.ImgFrame, nn: dai.Node.Output) -> "SocialDistancing":
+        self.link_args(frame, nn)
+        return self
+
+    def process(self, frame: dai.ImgFrame, nn: dai.SpatialImgDetections):
+        img = frame.getCvFrame()
+        close_detections = set()
+        for det1, det2 in itertools.combinations(nn.detections, 2):
+            dist = self._calc_distance(det1.spatialCoordinates, det2.spatialCoordinates)
+            if dist < ALERT_DISTANCE:
+                close_detections.add(det1)
+                close_detections.add(det2)
+
+        self._add_state(len(close_detections) > 0)
+        if self._should_alert:
+            img = self._draw_alert(img)
+
+        img = self._draw_close_detections(img, close_detections)
+
+        img_frame = dai.ImgFrame()
+        img_frame.setCvFrame(img, dai.ImgFrame.Type.BGR888p)
+        img_frame.setTimestamp(frame.getTimestamp())
+        img_frame.setSequenceNum(frame.getSequenceNum())
+        self.output.send(img_frame)
+
+    @property
+    def _should_alert(self) -> bool:
+        return (
+            len(self._state_queue) >= STATE_QUEUE_LENGTH
+            and (sum(self._state_queue) / len(self._state_queue)) > ALERT_THRESHOLD
+        )
+
+    def _add_state(self, is_too_close: bool):
+        self._state_queue.append(is_too_close)
+        if len(self._state_queue) > STATE_QUEUE_LENGTH:
+            self._state_queue.pop(0)
+
+    def _draw_alert(self, img: np.ndarray):
+        text = "Too close"
+        text_size = 2
+        text_thickness = 3
+        size, _ = cv2.getTextSize(
+            text, cv2.FONT_HERSHEY_SIMPLEX, text_size, text_thickness
+        )
+
+        x = img.shape[1] // 2 - size[0] // 2
+        y = img.shape[0] // 2 - size[1] // 2
+        img = cv2.putText(
+            img,
+            text,
+            (x, y),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            text_size,
+            (0, 0, 255),
+            text_thickness,
+        )
+        img = cv2.rectangle(img, (0, 0), (img.shape[1], img.shape[0]), (0, 0, 255), 10)
+        return img
+
+    def _draw_close_detections(
+        self, img: np.ndarray, detections: list[dai.SpatialImgDetection]
+    ):
+        ellipses = np.zeros_like(img)
+        for detection in detections:
+            bottom_left = (
+                int(np.clip(detection.xmin, 0, 1) * img.shape[1]),
+                int(np.clip(detection.ymax, 0, 1) * img.shape[0]),
+            )
+            bottom_right = (
+                int(np.clip(detection.xmax, 0, 1) * img.shape[1]),
+                int(np.clip(detection.ymax, 0, 1) * img.shape[0]),
+            )
+            center = (
+                (bottom_left[0] + bottom_right[0]) // 2,
+                (bottom_left[1] + bottom_right[1]) // 2,
+            )
+
+            length = int(np.linalg.norm(np.array(bottom_left) - np.array(bottom_right)))
+            axes = (length // 2, length // 8)
+
+            angle = 0
+            ellipses = cv2.ellipse(
+                ellipses, center, axes, angle, 0, 360, (0, 0, 255), -1
+            )
+
+        alpha = 0.5
+        mask = ellipses.astype(bool)
+        img[mask] = cv2.addWeighted(img, alpha, ellipses, 1 - alpha, 0)[mask]
+        return img
+
+    def _calc_distance(self, p1: dai.Point3f, p2: dai.Point3f) -> float:
+        return ((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2) ** 0.5
