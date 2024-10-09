@@ -1,8 +1,7 @@
-import itertools
-
 import cv2
 import depthai as dai
 import numpy as np
+from host_node.measure_object_distance import DetectionDistance, ObjectDistances
 
 ALERT_THRESHOLD = 0.5
 STATE_QUEUE_LENGTH = 30
@@ -21,30 +20,68 @@ class SocialDistancing(dai.node.HostNode):
 
         self._state_queue = []
 
-    def build(self, frame: dai.ImgFrame, nn: dai.Node.Output) -> "SocialDistancing":
-        self.link_args(frame, nn)
+    def build(
+        self, frame: dai.ImgFrame, distances: dai.Node.Output
+    ) -> "SocialDistancing":
+        self.link_args(frame, distances)
         return self
 
-    def process(self, frame: dai.ImgFrame, nn: dai.SpatialImgDetections):
+    def process(self, frame: dai.ImgFrame, distances: dai.Buffer):
+        assert isinstance(distances, ObjectDistances)
         img = frame.getCvFrame()
-        close_detections = set()
-        for det1, det2 in itertools.combinations(nn.detections, 2):
-            dist = self._calc_distance(det1.spatialCoordinates, det2.spatialCoordinates)
-            if dist < ALERT_DISTANCE:
-                close_detections.add(det1)
-                close_detections.add(det2)
 
+        close_detections = self._get_all_close_detections(distances)
         self._add_state(len(close_detections) > 0)
-        if self._should_alert:
-            img = self._draw_alert(img)
 
-        img = self._draw_close_detections(img, close_detections)
+        img = self._draw_overlay(img, distances, close_detections)
 
         img_frame = dai.ImgFrame()
         img_frame.setCvFrame(img, dai.ImgFrame.Type.BGR888p)
         img_frame.setTimestamp(frame.getTimestamp())
         img_frame.setSequenceNum(frame.getSequenceNum())
         self.output.send(img_frame)
+
+    def _draw_overlay(
+        self,
+        img: np.ndarray,
+        distances: ObjectDistances,
+        close_detections: list[dai.SpatialImgDetection],
+    ):
+        if self._should_alert:
+            img = self._draw_alert(img)
+
+        img = self._draw_close_detections(img, close_detections)
+        for distance in distances.distances:
+            img = self._draw_distance_line(img, distance)
+        return img
+
+    def _get_all_close_detections(
+        self, distances: ObjectDistances
+    ) -> list[dai.SpatialImgDetection]:
+        close_detections: list[dai.SpatialImgDetection] = []
+        close_bboxes: list[tuple[float, float, float, float]] = []
+        for distance in distances.distances:
+            if distance.distance < ALERT_DISTANCE:
+                det1_bbox = (
+                    distance.detection1.xmin,
+                    distance.detection1.ymin,
+                    distance.detection1.xmax,
+                    distance.detection1.ymax,
+                )
+                det2_bbox = (
+                    distance.detection2.xmin,
+                    distance.detection2.ymin,
+                    distance.detection2.xmax,
+                    distance.detection2.ymax,
+                )
+                if det1_bbox not in close_bboxes:
+                    close_detections.append(distance.detection1)
+                    close_bboxes.append(det1_bbox)
+                if det2_bbox not in close_bboxes:
+                    close_detections.append(distance.detection2)
+                    close_bboxes.append(det2_bbox)
+
+        return close_detections
 
     @property
     def _should_alert(self) -> bool:
@@ -85,13 +122,11 @@ class SocialDistancing(dai.node.HostNode):
     ):
         ellipses = np.zeros_like(img)
         for detection in detections:
-            bottom_left = (
-                int(np.clip(detection.xmin, 0, 1) * img.shape[1]),
-                int(np.clip(detection.ymax, 0, 1) * img.shape[0]),
+            bottom_left = self._get_abs_coordinates(
+                (detection.xmin, detection.ymax), img.shape
             )
-            bottom_right = (
-                int(np.clip(detection.xmax, 0, 1) * img.shape[1]),
-                int(np.clip(detection.ymax, 0, 1) * img.shape[0]),
+            bottom_right = self._get_abs_coordinates(
+                (detection.xmax, detection.ymax), img.shape
             )
             center = (
                 (bottom_left[0] + bottom_right[0]) // 2,
@@ -111,5 +146,31 @@ class SocialDistancing(dai.node.HostNode):
         img[mask] = cv2.addWeighted(img, alpha, ellipses, 1 - alpha, 0)[mask]
         return img
 
-    def _calc_distance(self, p1: dai.Point3f, p2: dai.Point3f) -> float:
-        return ((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2) ** 0.5
+    def _draw_distance_line(self, img: np.ndarray, distance: DetectionDistance):
+        det1 = distance.detection1
+        det2 = distance.detection2
+        text = str(round(distance.distance / 1000, 1))
+        color = (255, 0, 0)
+        x_start = (det1.xmin + det1.xmax) / 2
+        y_start = det1.ymax
+        x_end = (det2.xmin + det2.xmax) / 2
+        y_end = det2.ymax
+        start = self._get_abs_coordinates((x_start, y_start), img.shape)
+        end = self._get_abs_coordinates((x_end, y_end), img.shape)
+        img = cv2.line(img, start, end, color, 2)
+
+        label_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        label_x = (start[0] + end[0] - label_size[0]) // 2
+        label_y = (start[1] + end[1] - label_size[1] - 10) // 2
+        cv2.putText(
+            img, text, (label_x, label_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2
+        )
+        return img
+
+    def _get_abs_coordinates(
+        self, point: tuple[float, float], img_size: tuple[int, int]
+    ) -> tuple[int, int]:
+        return (
+            int(np.clip(point[0], 0, 1) * img_size[1]),
+            int(np.clip(point[1], 0, 1) * img_size[0]),
+        )
