@@ -1,13 +1,18 @@
-#!/usr/bin/env python3
 import depthai as dai
 from device_decoding import DeviceDecoding
 
-modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2")
+device = dai.Device()
+
+modelDescription = dai.NNModelDescription(
+    modelSlug="yolov6-nano",
+    platform=device.getPlatform().name,
+    modelVersionSlug="r2-coco-512x288",
+)
 archivePath = dai.getModelFromZoo(modelDescription)
 nn_archive = dai.NNArchive(archivePath)
 
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     camRgb = pipeline.create(dai.node.ColorCamera)
     camRgb.setPreviewSize(512, 288)
     camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
