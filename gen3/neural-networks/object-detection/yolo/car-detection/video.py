@@ -27,7 +27,7 @@ class Video:
     def get_or_download_video(self):
         path = self._video_path()
         if not path:
-            recordings = self._getAvailableRecordings()
+            recordings = self._get_available_recordings()
             self._download_video(recordings)
             path = self._video_path()
         return path
@@ -39,7 +39,7 @@ class Video:
             if item.is_file():
                 return item
 
-    def _getAvailableRecordings(
+    def _get_available_recordings(
         self,
     ) -> dict[str, tuple[list[str], int]]:
         """
@@ -69,22 +69,22 @@ class Video:
                     self.video, arr[1] / 1e6
                 )
             )
-            self._downloadRecording(arr[0])
+            self._download_recording(arr[0])
         else:
             raise ValueError(
                 f"DepthAI recording '{self.video}' was not found on the server!"
             )
 
-    def _downloadRecording(self, keys: list[str]) -> None:
+    def _download_recording(self, keys: list[str]) -> None:
         self.videos_folder.mkdir(parents=True, exist_ok=True)
         for key in keys:
             if key.endswith("/"):  # Folder
                 continue
             url = self.DEPTHAI_RECORDINGS_URL + key
-            self._downloadFile(str(self.videos_folder / key), url)
+            self._download_file(str(self.videos_folder / key), url)
             print("Downloaded", key)
 
-    def _downloadFile(self, path: str, url: str):
+    def _download_file(self, path: str, url: str):
         r = requests.get(url)
         if r.status_code != 200:
             raise ValueError(f"Could not download file from {url}!")
