@@ -1,5 +1,7 @@
 import depthai as dai
-from device_decoding import DeviceDecoding
+from host_node.draw_detections import DrawDetections
+from host_node.host_display import Display
+from host_node.normalize_bbox import NormalizeBbox
 
 device = dai.Device()
 
@@ -20,13 +22,15 @@ with dai.Pipeline(device) as pipeline:
         size=(512, 288), type=dai.ImgFrame.Type.BGR888p, fps=40
     )
 
-    detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(
+    nn = pipeline.create(dai.node.DetectionNetwork).build(
         input=color_out, nnArchive=nn_archive
     )
 
-    pipeline.create(DeviceDecoding).build(
-        images=color_out, detections=detectionNetwork.out
+    norm_bbox = pipeline.create(NormalizeBbox).build(frame=color_out, nn=nn.out)
+    draw_detections = pipeline.create(DrawDetections).build(
+        frame=color_out, nn=norm_bbox.output, label_map=nn.getClasses()
     )
+    display = pipeline.create(Display).build(frames=draw_detections.output)
 
     print("Pipeline created.")
     pipeline.run()
