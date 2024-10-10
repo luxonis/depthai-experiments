@@ -38,29 +38,26 @@ with dai.Pipeline(device) as pipeline:
     nn_input_shape = (512, 288)
 
     if cam:
-        cam = pipeline.create(dai.node.ColorCamera)
-        cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-        cam.setPreviewSize(nn_input_shape)
-        cam.setInterleaved(False)
+        cam = pipeline.create(dai.node.Camera).build(
+            boardSocket=dai.CameraBoardSocket.CAM_A
+        )
+        color_out = cam.requestOutput(
+            size=nn_input_shape, type=dai.ImgFrame.Type.BGR888p
+        )
     else:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(video_path)
         replay.setLoop(False)
         replay.setSize(nn_input_shape)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
+        color_out = replay.out
 
     nn = pipeline.create(dai.node.DetectionNetwork)
     nn.setNNArchive(nn_archive)
-
-    if cam:
-        output = cam.preview
-        cam.preview.link(nn.input)
-    else:
-        output = replay.out
-        replay.out.link(nn.input)
+    color_out.link(nn.input)
 
     pipeline.create(CarDetection).build(
-        img_frame=output,
+        img_frame=color_out,
         detections=nn.out,
     )
 
