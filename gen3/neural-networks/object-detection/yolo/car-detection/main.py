@@ -4,7 +4,13 @@ import depthai as dai
 from car_detection import CarDetection
 from video import Video
 
-modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2")
+device = dai.Device()
+
+modelDescription = dai.NNModelDescription(
+    modelSlug="yolov6-nano",
+    platform=device.getPlatform().name,
+    modelVersionSlug="r2-coco-512x288",
+)
 archivePath = dai.getModelFromZoo(modelDescription)
 nn_archive = dai.NNArchive(archivePath)
 
@@ -28,7 +34,7 @@ if not cam:
     video = args.vid
     video_path = Video(video).get_path()
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     nn_input_shape = (512, 288)
 
     if cam:
