@@ -13,19 +13,19 @@ nn_archive = dai.NNArchive(archivePath)
 
 
 with dai.Pipeline(device) as pipeline:
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setPreviewSize(512, 288)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    camRgb.setInterleaved(False)
-    camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    camRgb.setFps(40)
+    cam = pipeline.create(dai.node.Camera).build(
+        boardSocket=dai.CameraBoardSocket.CAM_A
+    )
+    color_out = cam.requestOutput(
+        size=(512, 288), type=dai.ImgFrame.Type.BGR888p, fps=40
+    )
 
     detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(
-        input=camRgb.preview, nnArchive=nn_archive
+        input=color_out, nnArchive=nn_archive
     )
 
     pipeline.create(DeviceDecoding).build(
-        images=camRgb.preview, detections=detectionNetwork.out
+        images=color_out, detections=detectionNetwork.out
     )
 
     print("Pipeline created.")
