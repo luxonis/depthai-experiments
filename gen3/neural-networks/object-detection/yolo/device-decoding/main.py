@@ -15,12 +15,13 @@ with dai.Pipeline() as pipeline:
     camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
     camRgb.setFps(40)
 
-    detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(input=camRgb.preview, nnArchive=nn_archive)
+    detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(
+        input=camRgb.preview, nnArchive=nn_archive
+    )
 
     pipeline.create(DeviceDecoding).build(
-        images=camRgb.preview, 
-        detections=detectionNetwork.out
-        )
+        images=camRgb.preview, detections=detectionNetwork.out
+    )
 
     print("Pipeline created.")
     pipeline.run()
