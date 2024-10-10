@@ -1,23 +1,39 @@
-import time
 import argparse
+import time
+
 import depthai as dai
 from face_detection import FaceDetection
 
-model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+model_description = dai.NNModelDescription(
+    modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-conf", "--confidence_thresh", help="set the confidence threshold", default=0.6, type=float)
-parser.add_argument("-iou", "--iou_thresh", help="set the NMS IoU threshold", default=0.3, type=float)
-parser.add_argument("-topk", "--keep_top_k", default=750, type=int, help='set keep_top_k for results outputing.')
+parser.add_argument(
+    "-conf",
+    "--confidence_thresh",
+    help="set the confidence threshold",
+    default=0.6,
+    type=float,
+)
+parser.add_argument(
+    "-iou", "--iou_thresh", help="set the NMS IoU threshold", default=0.3, type=float
+)
+parser.add_argument(
+    "-topk",
+    "--keep_top_k",
+    default=750,
+    type=int,
+    help="set keep_top_k for results outputing.",
+)
 args = parser.parse_args()
 
 NN_WIDTH, NN_HEIGHT = 640, 640
 VIDEO_WIDTH, VIDEO_HEIGHT = 640, 480
 
 with dai.Pipeline() as pipeline:
-
     print("Creating pipeline...")
     detection_nn = pipeline.create(dai.node.NeuralNetwork)
     detection_nn.setNNArchive(nn_archive)
@@ -39,12 +55,13 @@ with dai.Pipeline() as pipeline:
     manip.out.link(detection_nn.input)
 
     face_detection = pipeline.create(FaceDetection).build(
-        preview=cam.preview, 
+        preview=cam.preview,
         detection_network=detection_nn.out,
         nn_width=NN_WIDTH,
         nn_height=NN_HEIGHT,
         video_width=VIDEO_WIDTH,
-        video_height=VIDEO_HEIGHT)
+        video_height=VIDEO_HEIGHT,
+    )
     face_detection.set_start_time(time.time())
     face_detection.set_confidence_thresh(args.confidence_thresh)
     face_detection.set_iou_thresh(args.iou_thresh)
