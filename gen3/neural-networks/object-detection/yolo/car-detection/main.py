@@ -1,4 +1,5 @@
 import argparse
+
 import depthai as dai
 from car_detection import CarDetection
 from video import Video
@@ -9,10 +10,16 @@ nn_archive = dai.NNArchive(archivePath)
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-vid", "--vid", help="Provide Luxonis video name or path to video that should be used instead of camera",
-                    default="cars-tracking-above-01", type=str)
-parser.add_argument("-cam", "--cam", help="Use camera instead of video.", 
-                    action="store_true")
+parser.add_argument(
+    "-vid",
+    "--vid",
+    help="Provide Luxonis video name or path to video that should be used instead of camera",
+    default="cars-tracking-above-01",
+    type=str,
+)
+parser.add_argument(
+    "-cam", "--cam", help="Use camera instead of video.", action="store_true"
+)
 args = parser.parse_args()
 
 
@@ -35,7 +42,7 @@ with dai.Pipeline() as pipeline:
         replay.setLoop(False)
         replay.setSize(nn_input_shape)
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-    
+
     nn = pipeline.create(dai.node.DetectionNetwork)
     nn.setNNArchive(nn_archive)
 
@@ -47,10 +54,10 @@ with dai.Pipeline() as pipeline:
         replay.out.link(nn.input)
 
     pipeline.create(CarDetection).build(
-        img_frame=output, 
+        img_frame=output,
         detections=nn.out,
-        )
-    
+    )
+
     print("Pipeline created")
     pipeline.run()
     print("Pipeline finished")
