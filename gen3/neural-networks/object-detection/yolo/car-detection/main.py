@@ -1,6 +1,7 @@
 import argparse
 
 import depthai as dai
+from host_node.detection_label_filter import DetectionLabelFilter
 from host_node.draw_detections import DrawDetections
 from host_node.host_display import Display
 from host_node.host_fps_drawer import FPSDrawer
@@ -62,8 +63,15 @@ with dai.Pipeline(device) as pipeline:
     nn.setNNArchive(nn_archive)
     color_out.link(nn.input)
 
+    # Filter out all detections except for cars
+    detection_filter = pipeline.create(DetectionLabelFilter).build(
+        nn=nn.out, accepted_labels=[2]
+    )
+
     fps = pipeline.create(FPSDrawer).build(preview=color_out)
-    normalize_bbox = pipeline.create(NormalizeBbox).build(frame=color_out, nn=nn.out)
+    normalize_bbox = pipeline.create(NormalizeBbox).build(
+        frame=color_out, nn=detection_filter.output
+    )
     draw_detections = pipeline.create(DrawDetections).build(
         frame=fps.output, nn=normalize_bbox.output, label_map=nn.getClasses()
     )
