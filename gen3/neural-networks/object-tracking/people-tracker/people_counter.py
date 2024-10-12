@@ -1,34 +1,48 @@
 import cv2
 import depthai as dai
+import numpy as np
 
-class PeopleTracker(dai.node.HostNode):
+
+class PeopleCounter(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
         self.tracking_data = {}
         # Y axis (up/down), X axis (left/right)
         self.counter = {"up": 0, "down": 0, "left": 0, "right": 0}
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
 
-    def build(self, preview: dai.Node.Output, tracklets: dai.Node.Output, threshold: float) -> "PeopleTracker":
+    def build(
+        self, preview: dai.Node.Output, tracklets: dai.Node.Output, threshold: float
+    ) -> "PeopleCounter":
         self.link_args(preview, tracklets)
-        self.sendProcessingToPipeline(True)
 
         self._threshold = threshold
         return self
 
     def process(self, preview: dai.ImgFrame, tracklets: dai.Tracklets) -> None:
-        frame = preview.getCvFrame()
+        img = preview.getCvFrame().copy()
+        self.update(tracklets)
+        img = self.draw_counter_text(img)
 
+        img_frame = dai.ImgFrame()
+        img_frame.setCvFrame(img, dai.ImgFrame.Type.BGR888p)
+        img_frame.setTimestamp(preview.getTimestamp())
+        img_frame.setSequenceNum(preview.getSequenceNum())
+
+        self.output.send(img_frame)
+
+    def update(self, tracklets: dai.Tracklets) -> None:
         for t in tracklets.tracklets:
             id = str(t.id)
-            display = True
             centroid = get_centroid(t.roi)
-            text_centroid = int(centroid[0] * frame.shape[1]) - 20, int(centroid[1] * frame.shape[0])
-            top_left = int(t.roi.topLeft().x * frame.shape[1]), int(t.roi.topLeft().y * frame.shape[0])
-            bottom_right = int(t.roi.bottomRight().x * frame.shape[1]), int(t.roi.bottomRight().y * frame.shape[0])
 
             # New tracklet, save its centroid
             if t.status == dai.Tracklet.TrackingStatus.NEW:
-                self.tracking_data[id] = {} # Reset
+                self.tracking_data[id] = {}  # Reset
                 self.tracking_data[id]["coords"] = centroid
 
             elif t.status == dai.Tracklet.TrackingStatus.TRACKED:
@@ -38,26 +52,24 @@ class PeopleTracker(dai.node.HostNode):
                 self.tracking_data[id]["lost_count"] += 1
 
                 # Removes tracklet that has been lost for more than 10 frames
-                if self.tracking_data[id]["lost_count"] > 10 and "lost" not in self.tracking_data[id]:
+                if (
+                    self.tracking_data[id]["lost_count"] > 10
+                    and "lost" not in self.tracking_data[id]
+                ):
                     self.terminate_tracklet(id, centroid)
                     self.tracking_data[id]["lost"] = True
-                    display = False
 
-            elif (t.status == dai.Tracklet.TrackingStatus.REMOVED) and "lost" not in self.tracking_data[id]:
+            elif (
+                t.status == dai.Tracklet.TrackingStatus.REMOVED
+            ) and "lost" not in self.tracking_data[id]:
                 self.terminate_tracklet(id, centroid)
-                display = False
 
-            if display:
-                cv2.putText(frame, f"ID: {id}", text_centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)
-
+    def draw_counter_text(self, frame: np.ndarray):
         counter_text = f"Up: {self.counter['up']}, Down: {self.counter['down']}, Left: {self.counter['left']}, Right: {self.counter['right']}"
-        cv2.putText(frame, counter_text, (30, 30), cv2.FONT_HERSHEY_TRIPLEX, 0.7,(0, 0, 255))
-        cv2.imshow("Preview", frame)
-
-        if cv2.waitKey(1) == ord('q'):
-            print("Pipeline exited.")
-            self.stopPipeline()
+        cv2.putText(
+            frame, counter_text, (30, 30), cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 0, 255)
+        )
+        return frame
 
     def terminate_tracklet(self, id, coords_end):
         coords_start = self.tracking_data[id]["coords"]
@@ -81,4 +93,4 @@ def get_centroid(roi):
     y1 = roi.topLeft().y
     x2 = roi.bottomRight().x
     y2 = roi.bottomRight().y
-    return (x2 - x1)/2 + x1, (y2 - y1)/2 + y1
+    return (x2 - x1) / 2 + x1, (y2 - y1) / 2 + y1

@@ -2,7 +2,7 @@ import depthai as dai
 import cv2
 
 try:
-    from keyboard_reader import KeyboardPress
+    from .keyboard_reader import KeyboardPress
 except:
     print("coudn't import keyboard_reader")
 

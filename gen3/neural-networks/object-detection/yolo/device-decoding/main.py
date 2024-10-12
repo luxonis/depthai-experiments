@@ -1,26 +1,36 @@
-#!/usr/bin/env python3
 import depthai as dai
-from device_decoding import DeviceDecoding
+from host_node.draw_detections import DrawDetections
+from host_node.host_display import Display
+from host_node.normalize_bbox import NormalizeBbox
 
-modelDescription = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2")
+device = dai.Device()
+
+modelDescription = dai.NNModelDescription(
+    modelSlug="yolov6-nano",
+    platform=device.getPlatform().name,
+    modelVersionSlug="r2-coco-512x288",
+)
 archivePath = dai.getModelFromZoo(modelDescription)
 nn_archive = dai.NNArchive(archivePath)
 
 
-with dai.Pipeline() as pipeline:
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setPreviewSize(512, 288)
-    camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    camRgb.setInterleaved(False)
-    camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-    camRgb.setFps(40)
+with dai.Pipeline(device) as pipeline:
+    cam = pipeline.create(dai.node.Camera).build(
+        boardSocket=dai.CameraBoardSocket.CAM_A
+    )
+    color_out = cam.requestOutput(
+        size=(512, 288), type=dai.ImgFrame.Type.BGR888p, fps=40
+    )
 
-    detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(input=camRgb.preview, nnArchive=nn_archive)
+    nn = pipeline.create(dai.node.DetectionNetwork).build(
+        input=color_out, nnArchive=nn_archive
+    )
 
-    pipeline.create(DeviceDecoding).build(
-        images=camRgb.preview, 
-        detections=detectionNetwork.out
-        )
+    norm_bbox = pipeline.create(NormalizeBbox).build(frame=color_out, nn=nn.out)
+    draw_detections = pipeline.create(DrawDetections).build(
+        frame=color_out, nn=norm_bbox.output, label_map=nn.getClasses()
+    )
+    display = pipeline.create(Display).build(frames=draw_detections.output)
 
     print("Pipeline created.")
     pipeline.run()
