@@ -3,7 +3,6 @@ from depthai_nodes.ml.parsers import YuNetParser
 from host_node.draw_detections import DrawDetections
 from host_node.host_display import Display
 from host_node.normalize_detections import NormalizeDetections
-from host_node.parser_bridge import ParserBridge
 
 device = dai.Device()
 
@@ -28,7 +27,6 @@ with dai.Pipeline(device) as pipeline:
     preview.link(detection_nn.input)
     yunet_parser = pipeline.create(YuNetParser)
     detection_nn.out.link(yunet_parser.input)
-    bridge = pipeline.create(ParserBridge).build(nn=yunet_parser.out)
 
     norm_det = pipeline.create(NormalizeDetections).build(
         frame=preview, nn=yunet_parser.out
