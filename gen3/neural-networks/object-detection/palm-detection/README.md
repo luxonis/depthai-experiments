@@ -35,10 +35,23 @@ To see the output in visualizer open browser at http://localhost:8000.
 All the requirements are installed in virtual environment automatically using `oakctl` tool. Environment is setup according to the `oakapp.toml` file.
 
 #### Connecting to the camera
-First connect to the camera on your network. For example if your camera has IP `192.168.0.10` connect as
+Connect to the device with command
+```
+oakctl connect
+```
+If you have more cameras on your network you can list the available devices using `oakctl list` to obtain the IP adress of the desired camera.
+
+With the obtained IP you can connect to the camera. For example desired camera has IP `192.168.0.10`, connect as
 ```
 oakctl connect 192.168.0.10
 ```
+OR
+
+You can connect to the camera with it's index in the `oakctl list` table. For example if the camera is 3rd in the table, connect as
+```
+oakctl connect 3
+```
+
 #### Running
 Run the `oakctl` app from the `palm-detection` directory as
 ```
