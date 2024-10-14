@@ -1,6 +1,7 @@
 import cv2
 import depthai as dai
 import numpy as np
+from depthai_nodes.ml.messages import ImgDetectionExtended, ImgDetectionsExtended
 
 
 class DrawDetections(dai.node.HostNode):
@@ -9,8 +10,11 @@ class DrawDetections(dai.node.HostNode):
 
         self.thickness = 2
         self.color = (255, 0, 0)
+        self.kpt_color = (0, 255, 0)
         self.draw_labels = True
         self.draw_confidence = True
+        self.draw_kpts = True
+        self.kpt_size = 4
         self.output = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
@@ -28,14 +32,42 @@ class DrawDetections(dai.node.HostNode):
 
     def process(self, in_frame: dai.ImgFrame, in_detections: dai.Buffer) -> None:
         frame = in_frame.getCvFrame()
-        assert isinstance(in_detections, dai.ImgDetections)
-        out_frame = self.draw_detections(frame, in_detections.detections)
+        assert isinstance(in_detections, (dai.ImgDetections, ImgDetectionsExtended))
 
+        out_frame = self.draw_detections(frame, in_detections.detections)
         img = self._create_img_frame(out_frame, dai.ImgFrame.Type.BGR888p)
 
         self.output.send(img)
 
     def draw_detections(
+        self,
+        frame: np.ndarray,
+        detections: list[dai.ImgDetection] | list[ImgDetectionExtended],
+    ) -> np.ndarray:
+        frame = self._draw_bboxes(frame, detections)
+        if self.draw_kpts:
+            frame = self._draw_kpts(frame, detections)
+        return frame
+
+    def _draw_kpts(
+        self,
+        frame: np.ndarray,
+        detections: list[ImgDetectionExtended] | list[dai.ImgDetection],
+    ):
+        for detection in detections:
+            if isinstance(detection, ImgDetectionExtended):
+                for kpt in detection.keypoints:
+                    frame = cv2.circle(
+                        frame,
+                        (int(kpt[0]), int(kpt[1])),
+                        self.kpt_size,
+                        self.kpt_color,
+                        cv2.FILLED,
+                    )
+
+        return frame
+
+    def _draw_bboxes(
         self, frame: np.ndarray, detections: list[dai.ImgDetection]
     ) -> np.ndarray:
         for detection in detections:
@@ -72,14 +104,23 @@ class DrawDetections(dai.node.HostNode):
     def set_color(self, color: tuple[int, int, int]) -> None:
         self.color = color
 
+    def set_kpt_color(self, kpt_color: tuple[int, int, int]) -> None:
+        self.kpt_color = kpt_color
+
     def set_thickness(self, thickness: int) -> None:
         self.thickness = thickness
+
+    def set_kpt_size(self, kpt_size: int) -> None:
+        self.kpt_size = kpt_size
 
     def set_draw_labels(self, draw_labels: bool) -> None:
         self.draw_labels = draw_labels
 
     def set_draw_confidence(self, draw_confidence: bool) -> None:
         self.draw_confidence = draw_confidence
+
+    def set_draw_kpts(self, draw_kpts: bool) -> None:
+        self.draw_kpts = draw_kpts
 
     def _create_img_frame(
         self, frame: np.ndarray, type: dai.ImgFrame.Type
