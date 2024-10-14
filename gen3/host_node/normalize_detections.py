@@ -3,7 +3,7 @@ import numpy as np
 from depthai_nodes.ml.messages import ImgDetectionExtended, ImgDetectionsExtended
 
 
-class NormalizeDetection(dai.node.HostNode):
+class NormalizeDetections(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
@@ -18,7 +18,7 @@ class NormalizeDetection(dai.node.HostNode):
         frame: dai.Node.Output,
         nn: dai.Node.Output,
         manip_mode: dai.ImgResizeMode = dai.ImgResizeMode.STRETCH,
-    ) -> "NormalizeDetection":
+    ) -> "NormalizeDetections":
         self.manip_mode = manip_mode
 
         self.link_args(frame, nn)
