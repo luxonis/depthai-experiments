@@ -12,7 +12,7 @@ modelDescription = dai.NNModelDescription(
 )
 archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 
-visualizer = dai.RemoteConnector()
+visualizer = dai.RemoteConnection()
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
