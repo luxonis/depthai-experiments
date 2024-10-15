@@ -1,10 +1,12 @@
 import cv2
 import depthai as dai
-from functions import draw_box
 import numpy as np
+from functions import draw_box
 from utility.fps_handler import FPSHandler
 
-model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+model_description = dai.NNModelDescription(
+    modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
@@ -17,10 +19,14 @@ class DisplayChairDetections(dai.node.HostNode):
         self._fps = FPSHandler()
         super().__init__()
 
-
-    def build(self, cam_out : dai.Node.Output, det_out : dai.Node.Output, pose_out : dai.Node.Output,
-              pose_frame_out : dai.Node.Output, cfg_out : dai.Node.Output) -> "DisplayChairDetections":
-        
+    def build(
+        self,
+        cam_out: dai.Node.Output,
+        det_out: dai.Node.Output,
+        pose_out: dai.Node.Output,
+        pose_frame_out: dai.Node.Output,
+        cfg_out: dai.Node.Output,
+    ) -> "DisplayChairDetections":
         self.frame_seq_map = {}
         self.pose_map = {}
 
@@ -31,15 +37,20 @@ class DisplayChairDetections(dai.node.HostNode):
         self.link_args(cam_out, det_out)
         self.sendProcessingToPipeline(True)
         return self
-    
 
-    def process(self, in_frame : dai.ImgFrame, in_det : dai.ImgDetections) -> None:
-
+    def process(self, in_frame: dai.ImgFrame, in_det: dai.ImgDetections) -> None:
         if in_frame is not None:
             self._fps.next_iter()
 
             frame = in_frame.getCvFrame()
-            cv2.putText(frame, "NN fps: {:.2f}".format(self._fps.fps()), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (255, 0, 0))
+            cv2.putText(
+                frame,
+                "NN fps: {:.2f}".format(self._fps.fps()),
+                (2, frame.shape[0] - 4),
+                cv2.FONT_HERSHEY_TRIPLEX,
+                0.4,
+                (255, 0, 0),
+            )
 
             self.frame_seq_map[in_frame.getSequenceNum()] = frame.copy()
 
@@ -53,18 +64,19 @@ class DisplayChairDetections(dai.node.HostNode):
                     # try and get pose_frame
                     # if pose_frame exists, so does the config
 
-                    pose_frame_in : dai.ImgFrame = self.q_pose_frame.tryGet()
+                    pose_frame_in: dai.ImgFrame = self.q_pose_frame.tryGet()
                     if pose_frame_in is not None:
-
                         # POSE INFERENCE
-                        in_pose : dai.NNData = self.q_pose.get()
-                        in_cfg : dai.ImageManipConfig = self.q_cfg.get()
+                        in_pose: dai.NNData = self.q_pose.get()
+                        in_cfg: dai.ImageManipConfig = self.q_cfg.get()
 
-                        out = np.array(in_pose.getTensor("StatefulPartitionedCall:1")).reshape(9, 2)
+                        out = np.array(
+                            in_pose.getTensor("StatefulPartitionedCall:1")
+                        ).reshape(9, 2)
 
                         cfg_crop = in_cfg
 
-                        #if out is not None and cfg_crop is not None:
+                        # if out is not None and cfg_crop is not None:
                         xmin, ymin = cfg_crop.getCropXMin(), cfg_crop.getCropYMin()
                         xmax, ymax = cfg_crop.getCropXMax(), cfg_crop.getCropYMax()
 
@@ -87,7 +99,7 @@ class DisplayChairDetections(dai.node.HostNode):
 
             # show delayed input with synced output if exists
 
-            frame_synced = np.zeros((INPUT_H, INPUT_W,3), dtype=np.uint8)
+            frame_synced = np.zeros((INPUT_H, INPUT_W, 3), dtype=np.uint8)
 
             if len(self.frame_seq_map) > 30:
                 seq_id = list(self.frame_seq_map.keys())[0]
@@ -98,22 +110,25 @@ class DisplayChairDetections(dai.node.HostNode):
                     for box in boxes:
                         draw_box(frame_synced, box)
 
-                for map_key in list(filter(lambda item: item <= seq_id, self.frame_seq_map.keys())):
+                for map_key in list(
+                    filter(lambda item: item <= seq_id, self.frame_seq_map.keys())
+                ):
                     del self.frame_seq_map[map_key]
-                for map_key in list(filter(lambda item: item <= seq_id, self.pose_map.keys())):
+                for map_key in list(
+                    filter(lambda item: item <= seq_id, self.pose_map.keys())
+                ):
                     del self.pose_map[map_key]
 
             frame = cv2.hconcat([frame, frame_synced])
 
             cv2.imshow("Objectron", frame)
 
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             self.stopPipeline()
 
 
 with dai.Pipeline() as pipeline:
-
-    pipeline.setOpenVINOVersion(version = dai.OpenVINO.VERSION_2021_4)
+    pipeline.setOpenVINOVersion(version=dai.OpenVINO.VERSION_2021_4)
 
     # Create a camera
     cam = pipeline.create(dai.node.ColorCamera)
@@ -145,7 +160,7 @@ with dai.Pipeline() as pipeline:
     # the input to the pose NN
     script_pp = pipeline.create(dai.node.Script)
     nn_det.out.link(script_pp.inputs["det_in"])
-    nn_det.passthrough.link(script_pp.inputs['det_passthrough'])
+    nn_det.passthrough.link(script_pp.inputs["det_passthrough"])
 
     f = open("script.py", "r")
     script_txt = f.read()
@@ -154,7 +169,7 @@ with dai.Pipeline() as pipeline:
     script_pp.setProcessor(dai.ProcessorType.LEON_CSS)
 
     # Connect camera preview to scripts input to use full image size
-    cam.preview.link(script_pp.inputs['preview'])
+    cam.preview.link(script_pp.inputs["preview"])
 
     # Create Manip for frame resizing before pose NN
     # manip_pose = pipeline.createImageManip()
@@ -165,8 +180,8 @@ with dai.Pipeline() as pipeline:
     manip_pose.inputImage.setMaxSize(10)
 
     # Link scripts output to pose Manip
-    script_pp.outputs['manip_cfg'].link(manip_pose.inputConfig)
-    script_pp.outputs['manip_img'].link(manip_pose.inputImage)
+    script_pp.outputs["manip_cfg"].link(manip_pose.inputConfig)
+    script_pp.outputs["manip_img"].link(manip_pose.inputImage)
 
     # 2nd stage pose NN
     nn_pose = pipeline.create(dai.node.NeuralNetwork)
@@ -179,7 +194,7 @@ with dai.Pipeline() as pipeline:
         det_out=nn_det.out,
         pose_out=nn_pose.out,
         pose_frame_out=nn_pose.passthrough,
-        cfg_out=script_pp.outputs['manip_cfg']        
+        cfg_out=script_pp.outputs["manip_cfg"],
     )
 
     print("pipeline created")
