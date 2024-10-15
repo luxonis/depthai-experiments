@@ -19,9 +19,10 @@ class DepthMerger(dai.node.HostNode):
         output_2d: dai.Node.Output,
         output_depth: dai.Node.Output,
         calib_data: dai.CalibrationHandler,
+        depth_alignment_socket: dai.CameraBoardSocket = dai.CameraBoardSocket.CAM_A,
     ) -> "DepthMerger":
         self.link_args(output_2d, output_depth)
-        self.host_spatials_calc = HostSpatialsCalc(calib_data)
+        self.host_spatials_calc = HostSpatialsCalc(calib_data, depth_alignment_socket)
         return self
 
     def process(self, message_2d: dai.Buffer, depth: dai.ImgFrame) -> None:

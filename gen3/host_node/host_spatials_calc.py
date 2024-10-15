@@ -1,16 +1,19 @@
 # HostSpatialsCalc implementation taken from here:
 # https://github.com/luxonis/depthai-experiments/blob/d10736715bef1663d984196f8528610a614e4b75/gen2-calc-spatials-on-host/calc.py
 
-import math
-
 import depthai as dai
 import numpy as np
 
 
 class HostSpatialsCalc:
     # We need device object to get calibration data
-    def __init__(self, calib_data: dai.CalibrationHandler):
+    def __init__(
+        self,
+        calib_data: dai.CalibrationHandler,
+        depth_alignment_socket: dai.CameraBoardSocket = dai.CameraBoardSocket.CAM_A,
+    ):
         self.calibData = calib_data
+        self.depth_alignment_socket = depth_alignment_socket
 
         # Values
         self.DELTA = 5
@@ -41,9 +44,6 @@ class HostSpatialsCalc:
         y = min(max(roi[1], self.DELTA), frame.shape[0] - self.DELTA)
         return (x - self.DELTA, y - self.DELTA, x + self.DELTA, y + self.DELTA)
 
-    def _calc_angle(self, frame, offset, HFOV):
-        return math.atan(math.tan(HFOV / 2.0) * offset / (frame.shape[1] / 2.0))
-
     # roi has to be list of ints
     def calc_spatials(self, depthData, roi, averaging_method=np.mean):
         depthFrame = depthData.getFrame()
@@ -57,31 +57,28 @@ class HostSpatialsCalc:
         depthROI = depthFrame[ymin:ymax, xmin:xmax]
         inRange = (self.THRESH_LOW <= depthROI) & (depthROI <= self.THRESH_HIGH)
 
-        # Required information for calculating spatial coordinates on the host
-        HFOV = np.deg2rad(
-            self.calibData.getFov(
-                dai.CameraBoardSocket(depthData.getInstanceNum()), useSpec=False
-            )
-        )
-
         averageDepth = averaging_method(depthROI[inRange])
 
-        centroid = {  # Get centroid of the ROI
-            "x": int((xmax + xmin) / 2),
-            "y": int((ymax + ymin) / 2),
-        }
+        centroid = np.array(  # Get centroid of the ROI
+            [
+                int((xmax + xmin) / 2),
+                int((ymax + ymin) / 2),
+            ]
+        )
 
-        midW = int(depthFrame.shape[1] / 2)  # middle of the depth img width
-        midH = int(depthFrame.shape[0] / 2)  # middle of the depth img height
-        bb_x_pos = centroid["x"] - midW
-        bb_y_pos = centroid["y"] - midH
-
-        angle_x = self._calc_angle(depthFrame, bb_x_pos, HFOV)
-        angle_y = self._calc_angle(depthFrame, bb_y_pos, HFOV)
+        K = self.calibData.getCameraIntrinsics(
+            cameraId=self.depth_alignment_socket,
+            resizeWidth=depthFrame.shape[1],
+            resizeHeight=depthFrame.shape[0],
+        )
+        K = np.array(K)
+        K_inv = np.linalg.inv(K)
+        homogenous_coords = np.array([centroid[0], centroid[1], 1])
+        spatial_coords = averageDepth * K_inv.dot(homogenous_coords)
 
         spatials = {
-            "z": averageDepth,
-            "x": averageDepth * math.tan(angle_x),
-            "y": -averageDepth * math.tan(angle_y),
+            "x": spatial_coords[0],
+            "y": spatial_coords[1],
+            "z": spatial_coords[2],
         }
         return spatials

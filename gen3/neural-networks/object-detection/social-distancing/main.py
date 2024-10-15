@@ -67,6 +67,7 @@ with dai.Pipeline(device) as pipeline:
         output_2d=nn_parser.out,
         output_depth=stereo.depth,
         calib_data=device.readCalibration2(),
+        depth_alignment_socket=dai.CameraBoardSocket.CAM_A,
     )
 
     rgb.link(nn.input)
