@@ -6,6 +6,21 @@ from fps import FPS
 # Labels: 0 for vehicle and 1 for person
 labels = ["vehicle", "person"]
 
+
+class YUV2BGR(dai.node.ThreadedHostNode):
+    def __init__(self):
+        super().__init__()
+        self.input = self.createInput()
+        self.out = self.createOutput()
+
+    def run(self):
+        while self.isRunning:
+            frame = self.input.get().getCvFrame()
+            new_frame = dai.ImgFrame()
+            new_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888p)
+            self.out.send(new_frame)
+
+
 class BaseDetection(dai.node.HostNode):
     FONT = cv2.FONT_HERSHEY_SIMPLEX
     FONT_SCALE = 1
@@ -19,7 +34,9 @@ class BaseDetection(dai.node.HostNode):
         self.detected_labels = detected_labels if detected_labels is not None else []
         super().__init__()
 
-    def build(self, img_frame: dai.Node.Output, detections: dai.Node.Output) -> "BaseDetection":
+    def build(
+        self, img_frame: dai.Node.Output, detections: dai.Node.Output
+    ) -> "BaseDetection":
         self.link_args(img_frame, detections)
         self.sendProcessingToPipeline(True)
         return self
@@ -27,15 +44,28 @@ class BaseDetection(dai.node.HostNode):
     def process(self, img_frame, detections: dai.ImgDetections) -> None:
         assert isinstance(img_frame, dai.ImgFrame)
         frame: np.ndarray = img_frame.getCvFrame()
+        frame = cv2.resize(
+            frame, (frame.shape[1] * 4, frame.shape[0] * 4)
+        )  # explicit upscale before visualization
 
         if detections is not None:
             for detection in detections.detections:
                 label = labels[detection.label]
-                if label in self.detected_labels:  # Only process labels specified in `detected_labels`
-                    tl, br = self.denormalize(detection.xmin, detection.ymin, detection.xmax, detection.ymax, frame.shape)
-                    self.draw_bbox(frame, tl, br, (0, 255, 0), 1, label)
+                if (
+                    label in self.detected_labels
+                ):  # Only process labels specified in `detected_labels`
+                    tl, br = self.denormalize(
+                        detection.xmin,
+                        detection.ymin,
+                        detection.xmax,
+                        detection.ymax,
+                        frame.shape,
+                    )
+                    conf = round(detection.confidence * 100, 2)
+                    lable_text = f"{label}({conf}%)"
+                    self.draw_bbox(frame, tl, br, (0, 255, 0), 1, lable_text)
 
-        text = f'FPS: {self.fps_counter.fps():.1f}'
+        text = f"FPS: {self.fps_counter.fps():.1f}"
         self.fps_counter.next_iter()
 
         x, y = self.get_text_relative_position(text, frame.shape)
@@ -45,21 +75,24 @@ class BaseDetection(dai.node.HostNode):
         if cv2.waitKey(1) == ord("q"):
             self.stopPipeline()
 
-    def denormalize(self, xmin, ymin, xmax, ymax, frame_shape) -> tuple[tuple[int, int], tuple[int, int]]:
+    def denormalize(
+        self, xmin, ymin, xmax, ymax, frame_shape
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
         return (
             (int(frame_shape[1] * xmin), int(frame_shape[0] * ymin)),
-            (int(frame_shape[1] * xmax), int(frame_shape[0] * ymax))
+            (int(frame_shape[1] * xmax), int(frame_shape[0] * ymax)),
         )
 
-    def draw_bbox(self,
-                  img: np.ndarray,
-                  pt1: tuple[int, int],
-                  pt2: tuple[int, int],
-                  color: tuple[int, int, int],
-                  thickness: int,
-                  label: str = '',
-                  alpha: float = 0.15
-                  ) -> None:
+    def draw_bbox(
+        self,
+        img: np.ndarray,
+        pt1: tuple[int, int],
+        pt2: tuple[int, int],
+        color: tuple[int, int, int],
+        thickness: int,
+        label: str = "",
+        alpha: float = 0.15,
+    ) -> None:
         x1, y1 = pt1
         x2, y2 = pt2
 
@@ -89,24 +122,44 @@ class BaseDetection(dai.node.HostNode):
 
         # Draw the label above the bounding box
         if label:
-            label_size, _ = cv2.getTextSize(label, self.FONT, self.FONT_SCALE, self.FONT_THICKNESS)
-            label_pt1 = (pt1[0], pt1[1] - label_size[1] - 5)  # Position above the top-left corner
+            label_size, _ = cv2.getTextSize(
+                label, self.FONT, self.FONT_SCALE, self.FONT_THICKNESS
+            )
+            label_pt1 = (
+                pt1[0],
+                pt1[1] - label_size[1] - 5,
+            )  # Position above the top-left corner
             label_pt2 = (pt1[0] + label_size[0], pt1[1])
 
             # Background for the label text
             cv2.rectangle(img, label_pt1, label_pt2, color, cv2.FILLED)
 
             # Put the label text on the image
-            cv2.putText(img, label, (pt1[0], pt1[1] - 5), self.FONT, self.FONT_SCALE, (255, 255, 255), self.FONT_THICKNESS)
+            cv2.putText(
+                img,
+                label,
+                (pt1[0], pt1[1] - 5),
+                self.FONT,
+                self.FONT_SCALE,
+                (255, 255, 255),
+                self.FONT_THICKNESS,
+            )
 
-    def get_text_relative_position(self, text: str, frame_shape, padding: int = 10) -> tuple[int, int]:
+    def get_text_relative_position(
+        self, text: str, frame_shape, padding: int = 10
+    ) -> tuple[int, int]:
         bbox = (0.0, 0.0, 1.0, 1.0)
         tl, br = self.denormalize(*bbox, frame_shape)
 
         bbox_arr = (*tl, *br)
         text_width, text_height = 0, 0
         for text_line in text.splitlines():
-            text_size = cv2.getTextSize(text=text_line, fontFace=self.FONT, fontScale=self.FONT_SCALE, thickness=self.FONT_THICKNESS)[0]
+            text_size = cv2.getTextSize(
+                text=text_line,
+                fontFace=self.FONT,
+                fontScale=self.FONT_SCALE,
+                thickness=self.FONT_THICKNESS,
+            )[0]
             text_width = max(text_width, text_size[0])
             text_height += text_size[1]
 
@@ -121,8 +174,26 @@ class BaseDetection(dai.node.HostNode):
 
         for line in text.splitlines():
             y = coords[1]
-            cv2.putText(img=frame, text=line, org=coords, fontFace=self.FONT, fontScale=font_scale, color=(0, 0, 0), thickness=font_thickness + 1, lineType=cv2.LINE_AA)
-            cv2.putText(img=frame, text=line, org=coords, fontFace=self.FONT, fontScale=font_scale, color=(255, 255, 255), thickness=font_thickness, lineType=cv2.LINE_AA)
+            cv2.putText(
+                img=frame,
+                text=line,
+                org=coords,
+                fontFace=self.FONT,
+                fontScale=font_scale,
+                color=(0, 0, 0),
+                thickness=font_thickness + 1,
+                lineType=cv2.LINE_AA,
+            )
+            cv2.putText(
+                img=frame,
+                text=line,
+                org=coords,
+                fontFace=self.FONT,
+                fontScale=font_scale,
+                color=(255, 255, 255),
+                thickness=font_thickness,
+                lineType=cv2.LINE_AA,
+            )
             coords = (coords[0], y + dy)
 
     def get_text_scale(self, frame_shape) -> float:
@@ -133,6 +204,7 @@ class BaseDetection(dai.node.HostNode):
 class VehiclePersonDetection(BaseDetection):
     def __init__(self) -> None:
         super().__init__(detected_labels=["vehicle", "person"])
+
 
 # Class to detect only persons
 class PersonDetection(BaseDetection):
