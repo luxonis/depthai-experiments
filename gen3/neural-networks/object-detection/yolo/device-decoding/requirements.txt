@@ -1,3 +1,3 @@
 numpy~=2.0
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==3.0.0a4.dev0+0b7e0b59082ff5bea896286a8062339401256160
+depthai==3.0.0a4.dev0+417cd68f720d9c039387d7e2bdb3f1746960f8b4
