@@ -1,6 +1,10 @@
 import depthai as dai
 import numpy as np
-from depthai_nodes.ml.messages import ImgDetectionExtended, ImgDetectionsExtended
+from depthai_nodes.ml.messages import (
+    ImgDetectionExtended,
+    ImgDetectionsExtended,
+    Keypoints,
+)
 
 
 class NormalizeDetections(dai.node.HostNode):
@@ -28,19 +32,35 @@ class NormalizeDetections(dai.node.HostNode):
     def process(self, frame: dai.ImgFrame, detections: dai.Buffer) -> None:
         frame = frame.getCvFrame()
 
+        normalized_dets = self._normalize_detections(frame, detections)
+
+        self.output.send(normalized_dets)
+
+    def _normalize_detections(
+        self,
+        frame: np.ndarray,
+        detections: dai.ImgDetections | ImgDetectionsExtended | Keypoints,
+    ) -> dai.ImgDetections | ImgDetectionsExtended | Keypoints:
         if isinstance(detections, ImgDetectionsExtended):
             normalized_dets = ImgDetectionsExtended()
+            normalized_dets.detections = [
+                self._normalize_detection(frame, d) for d in detections.detections
+            ]
         elif isinstance(detections, dai.ImgDetections):
             normalized_dets = dai.ImgDetections()
+            normalized_dets.detections = [
+                self._normalize_detection(frame, d) for d in detections.detections
+            ]
+        elif isinstance(detections, Keypoints):
+            normalized_dets = Keypoints()
+            kpts = [(i.x, i.y) for i in detections.keypoints]
+            norm_kpts = self._normalize_kpts(frame, kpts)
+            normalized_dets.keypoints = [dai.Point3f(i[0], i[1], 0) for i in norm_kpts]
         else:
             raise ValueError("Unknown detection type")
-
-        normalized_dets.setTimestamp(detections.getTimestamp())
         normalized_dets.setSequenceNum(detections.getSequenceNum())
-        dets = [self._normalize_detection(frame, det) for det in detections.detections]
-
-        normalized_dets.detections = dets
-        self.output.send(normalized_dets)
+        normalized_dets.setTimestamp(detections.getTimestamp())
+        return normalized_dets
 
     def _normalize_detection(
         self, frame: np.ndarray, detection: dai.ImgDetection | ImgDetectionExtended
