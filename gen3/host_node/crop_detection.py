@@ -1,13 +1,17 @@
 import depthai as dai
 import numpy as np
+from depthai_nodes.ml.messages import ImgDetectionsExtended
 
 
-class CropDetections(dai.node.HostNode):
+class CropDetection(dai.node.HostNode):
+    """Crops the image based on the detection with the highest confidence. Creates dai.ImageManipConfig for cropping and resizing.
+    `detection_passthrough` output sends out detection, that is used for cropping."""
+
     def __init__(self) -> None:
         super().__init__()
         self._resize = None
         self._bbox_padding = 0.1
-        self.output_cfg = self.createOutput(
+        self.output_config = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)
             ]
@@ -18,8 +22,8 @@ class CropDetections(dai.node.HostNode):
             ]
         )
 
-    def build(self, frame: dai.ImgFrame, nn: dai.Node.Output) -> "CropDetections":
-        self.link_args(frame, nn)
+    def build(self, nn: dai.Node.Output) -> "CropDetection":
+        self.link_args(nn)
         self.sendProcessingToPipeline(True)
         return self
 
@@ -30,10 +34,12 @@ class CropDetections(dai.node.HostNode):
     def set_bbox_padding(self, padding: float) -> None:
         self._bbox_padding = padding
 
-    def process(self, frame: dai.ImgFrame, nn: dai.Buffer) -> None:
-        assert isinstance(nn, dai.ImgDetections)
+    def process(self, nn: dai.Buffer) -> None:
+        assert isinstance(nn, (dai.ImgDetections, ImgDetectionsExtended))
         dets = nn.detections
         if len(dets) == 0:
+            # No detections, there is nothing to crop
+            self.detection_passthrough.send(nn)
             return
         # take detection with highest confidence
         best_detection = sorted(dets, key=lambda d: d.confidence, reverse=True)[0]
@@ -52,7 +58,7 @@ class CropDetections(dai.node.HostNode):
         if self._resize is not None:
             cfg.setResize(*self._resize)
 
-        self.output_cfg.send(cfg)
+        self.output_config.send(cfg)
 
         img_dets = dai.ImgDetections()
         img_dets.detections = [best_detection]
