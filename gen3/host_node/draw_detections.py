@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import cv2
 import depthai as dai
 import numpy as np
@@ -46,7 +48,12 @@ class DrawDetections(dai.node.HostNode):
         )
 
         out_frame = self.draw_detections(frame, in_detections)
-        img = self._create_img_frame(out_frame, dai.ImgFrame.Type.BGR888p)
+        img = self._create_img_frame(
+            out_frame,
+            dai.ImgFrame.Type.BGR888p,
+            in_frame.getTimestamp(),
+            in_frame.getSequenceNum(),
+        )
 
         self.output.send(img)
 
@@ -156,8 +163,14 @@ class DrawDetections(dai.node.HostNode):
         self.draw_kpts = draw_kpts
 
     def _create_img_frame(
-        self, frame: np.ndarray, type: dai.ImgFrame.Type
+        self,
+        frame: np.ndarray,
+        type: dai.ImgFrame.Type,
+        timestamp: timedelta,
+        sequence_num: int,
     ) -> dai.ImgFrame:
         img_frame = dai.ImgFrame()
         img_frame.setCvFrame(frame, type)
+        img_frame.setTimestamp(timestamp)
+        img_frame.setSequenceNum(sequence_num)
         return img_frame
