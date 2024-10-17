@@ -1,4 +1,4 @@
-identifier = "com.luxonis.palm_detection"
+identifier = "com.luxonis.yolo.device-decoding"
 
 entrypoint = ["bash", "-c", "python3 /app/main.py"]
 
