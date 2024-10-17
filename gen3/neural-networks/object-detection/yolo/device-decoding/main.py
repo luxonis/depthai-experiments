@@ -1,5 +1,4 @@
 import depthai as dai
-import cv2
 
 device = dai.Device()
 visualizer = dai.RemoteConnection()
