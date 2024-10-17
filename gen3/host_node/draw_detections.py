@@ -1,7 +1,11 @@
 import cv2
 import depthai as dai
 import numpy as np
-from depthai_nodes.ml.messages import ImgDetectionExtended, ImgDetectionsExtended
+from depthai_nodes.ml.messages import (
+    ImgDetectionExtended,
+    ImgDetectionsExtended,
+    Keypoints,
+)
 
 
 class DrawDetections(dai.node.HostNode):
@@ -22,9 +26,14 @@ class DrawDetections(dai.node.HostNode):
         )
 
     def build(
-        self, frame: dai.Node.Output, nn: dai.Node.Output, label_map: list[str]
+        self,
+        frame: dai.Node.Output,
+        nn: dai.Node.Output,
+        label_map: list[str],
+        lines: list[tuple[int, int]] = [],
     ) -> "DrawDetections":
         self.label_map = label_map
+        self.lines = lines
 
         self.link_args(frame, nn)
         self.sendProcessingToPipeline(True)
@@ -32,9 +41,11 @@ class DrawDetections(dai.node.HostNode):
 
     def process(self, in_frame: dai.ImgFrame, in_detections: dai.Buffer) -> None:
         frame = in_frame.getCvFrame()
-        assert isinstance(in_detections, (dai.ImgDetections, ImgDetectionsExtended))
+        assert isinstance(
+            in_detections, (dai.ImgDetections, ImgDetectionsExtended, Keypoints)
+        )
 
-        out_frame = self.draw_detections(frame, in_detections.detections)
+        out_frame = self.draw_detections(frame, in_detections)
         img = self._create_img_frame(out_frame, dai.ImgFrame.Type.BGR888p)
 
         self.output.send(img)
@@ -42,33 +53,55 @@ class DrawDetections(dai.node.HostNode):
     def draw_detections(
         self,
         frame: np.ndarray,
-        detections: list[dai.ImgDetection] | list[ImgDetectionExtended],
+        detections: ImgDetectionsExtended | dai.ImgDetections | Keypoints,
     ) -> np.ndarray:
-        frame = self._draw_bboxes(frame, detections)
-        if self.draw_kpts:
-            frame = self._draw_kpts(frame, detections)
+        if isinstance(detections, (ImgDetectionsExtended, dai.ImgDetections)):
+            frame = self._draw_bboxes(frame, detections.detections)
+        if isinstance(detections, ImgDetectionsExtended) and self.draw_kpts:
+            kpts = [i.keypoints for i in detections.detections]
+            frame = self._draw_kpts(frame, kpts)
+            frame = self._draw_lines(frame, kpts, self.lines)
+        if isinstance(detections, Keypoints) and self.draw_kpts:
+            if len(detections.keypoints) > 0:
+                kpts = [(i.x, i.y) for i in detections.keypoints]
+                frame = self._draw_kpts(frame, [kpts])
+                frame = self._draw_lines(frame, [kpts], self.lines)
+        return frame
+
+    def _draw_lines(
+        self,
+        frame: np.ndarray,
+        kpts: list[list[tuple[float, float]]],
+        lines: list[tuple[int, int]],
+    ) -> np.ndarray:
+        for kpts_det in kpts:
+            for line in lines:
+                pt1 = (int(kpts_det[line[0]][0]), int(kpts_det[line[0]][1]))
+                pt2 = (int(kpts_det[line[1]][0]), int(kpts_det[line[1]][1]))
+                frame = cv2.line(frame, pt1, pt2, self.kpt_color, 1)
         return frame
 
     def _draw_kpts(
         self,
         frame: np.ndarray,
-        detections: list[ImgDetectionExtended] | list[dai.ImgDetection],
+        kpts: list[list[tuple[float, float]]],
     ):
-        for detection in detections:
-            if isinstance(detection, ImgDetectionExtended):
-                for kpt in detection.keypoints:
-                    frame = cv2.circle(
-                        frame,
-                        (int(kpt[0]), int(kpt[1])),
-                        self.kpt_size,
-                        self.kpt_color,
-                        cv2.FILLED,
-                    )
+        for kpts_det in kpts:
+            for kpt in kpts_det:
+                frame = cv2.circle(
+                    frame,
+                    (int(kpt[0]), int(kpt[1])),
+                    self.kpt_size,
+                    self.kpt_color,
+                    cv2.FILLED,
+                )
 
         return frame
 
     def _draw_bboxes(
-        self, frame: np.ndarray, detections: list[dai.ImgDetection]
+        self,
+        frame: np.ndarray,
+        detections: list[dai.ImgDetection] | list[ImgDetectionExtended],
     ) -> np.ndarray:
         for detection in detections:
             bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)

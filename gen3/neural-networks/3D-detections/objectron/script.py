@@ -1,8 +1,8 @@
 import sys
 
+
 # enlarge crop area for a given factor
 def enlarge_crop_area(xmin, ymin, xmax, ymax, factor=1.2):
-
     # current size of the image and the crop
     img_w, img_h = 1.0, 1.0
     crop_w, crop_h = xmax - xmin, ymax - ymin
@@ -37,7 +37,10 @@ def enlarge_crop_area(xmin, ymin, xmax, ymax, factor=1.2):
 
     return xmin, ymin, xmax, ymax
 
-l = [] # List of images
+
+l = []  # List of images
+
+
 # The correct frame will be the first in the list
 def remove_prev_frame(seq):
     for rm, frame in enumerate(l):
@@ -46,23 +49,24 @@ def remove_prev_frame(seq):
     for i in range(rm):
         l.pop(0)
 
+
 while True:
-    preview = node.io['preview'].tryGet()
+    preview = node.io["preview"].tryGet()
     if preview is not None:
         l.append(preview)
 
-    det_in = node.io['det_in'].tryGet()
+    det_in = node.io["det_in"].tryGet()
     if det_in is not None:
-        passthrough = node.io['det_passthrough'].get()
+        passthrough = node.io["det_passthrough"].get()
         seq = passthrough.getSequenceNum()
 
         if len(l) == 0:
             continue
 
         remove_prev_frame(seq)
-        img = l[0] # Matching frame is the first in the list
+        img = l[0]  # Matching frame is the first in the list
 
-        l.pop(0) # Remove matching frame from the list
+        l.pop(0)  # Remove matching frame from the list
 
         detections = det_in.detections
         if detections:
@@ -74,10 +78,10 @@ while True:
                 idx = confs.index(max(confs))
                 detection = detections[idx]
 
-                x1 = detection.xmax # top left
-                y1 = detection.ymin # top left
-                x2 = detection.xmin # bottom right
-                y2 = detection.ymax # bottom right
+                x1 = detection.xmax  # top left
+                y1 = detection.ymin  # top left
+                x2 = detection.xmin  # bottom right
+                y2 = detection.ymax  # bottom right
 
                 cfg = ImageManipConfig()
 
@@ -86,5 +90,5 @@ while True:
                 cfg.setCropRect(xmin, ymin, xmax, ymax)
                 cfg.setResize(224, 224)
                 cfg.setKeepAspectRatio(True)
-                node.io['manip_img'].send(img)
-                node.io['manip_cfg'].send(cfg)
+                node.io["manip_img"].send(img)
+                node.io["manip_cfg"].send(cfg)
