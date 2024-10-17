@@ -11,6 +11,7 @@ class CropDetection(dai.node.HostNode):
         super().__init__()
         self._resize = None
         self._bbox_padding = 0.1
+        self._last_config = dai.ImageManipConfig()
         self.output_config = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)
@@ -30,6 +31,7 @@ class CropDetection(dai.node.HostNode):
     def set_resize(self, size: tuple[int, int] | None) -> None:
         """Sets the resize size. If None, the original bbox size is used."""
         self._resize = size
+        self._last_config.setResize(*size)
 
     def set_bbox_padding(self, padding: float) -> None:
         self._bbox_padding = padding
@@ -40,6 +42,7 @@ class CropDetection(dai.node.HostNode):
         if len(dets) == 0:
             # No detections, there is nothing to crop
             self.detection_passthrough.send(nn)
+            self.output_config.send(self._last_config)
             return
         # take detection with highest confidence
         best_detection = sorted(dets, key=lambda d: d.confidence, reverse=True)[0]
@@ -58,6 +61,7 @@ class CropDetection(dai.node.HostNode):
         if self._resize is not None:
             cfg.setResize(*self._resize)
 
+        self._last_config = cfg
         self.output_config.send(cfg)
 
         img_dets = dai.ImgDetections()

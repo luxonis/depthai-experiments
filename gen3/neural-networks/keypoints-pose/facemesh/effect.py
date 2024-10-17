@@ -1,32 +1,41 @@
-import numpy as np
 import cv2
+import numpy as np
+
 
 class EffectRenderer2D:
-
-    def __init__(self, effect_image_path, src_points_path = "./res/source_landmarks.npy",
-                 filter_points_path = "./res/filter_points.npy"):
-
+    def __init__(
+        self,
+        effect_image_path,
+        src_points_path="./res/source_landmarks.npy",
+        filter_points_path="./res/filter_points.npy",
+    ):
         self.effect_image = cv2.imread(effect_image_path, cv2.IMREAD_UNCHANGED)
         self.src_points = np.load(src_points_path)
 
         self.filter_points = np.load(filter_points_path)
         self.src_points = self.src_points[self.filter_points]
 
-        self.subdiv = cv2.Subdiv2D((0, 0, self.effect_image.shape[1], self.effect_image.shape[0]))
+        self.subdiv = cv2.Subdiv2D(
+            (0, 0, self.effect_image.shape[1], self.effect_image.shape[0])
+        )
         self.subdiv.insert(self.src_points.tolist())
 
-        self.triangles = np.array([(self.src_points == value).all(axis=1).nonzero()
-                              for element in self.subdiv.getTriangleList()
-                              for value in element.reshape((3, 2))])
+        self.triangles = np.array(
+            [
+                (self.src_points == value).all(axis=1).nonzero()
+                for element in self.subdiv.getTriangleList()
+                for value in element.reshape((3, 2))
+            ]
+        )
         self.triangles = self.triangles.reshape(len(self.triangles) // 3, 3)
 
         self.target_shape = None
 
-    def render_effect(self, target_image, target_landmarks, xmin, ymin):
+    def render_effect(self, target_image, target_landmarks):
         self.target_shape = target_image.shape
         ldms = target_landmarks[self.filter_points]
         effect = self.create_effect(target_image, ldms)
-        return self.overlay_image(target_image, effect, xmin, ymin)
+        return self.overlay_image(target_image, effect)
 
     def create_effect(self, target_image, dst_points):
         """
@@ -47,12 +56,24 @@ class EffectRenderer2D:
             src_tri_crop, src_crop = self.crop_triangle_bb(self.effect_image, src_tri)
             dst_tri_crop, overlay_crop = self.crop_triangle_bb(overlay, dst_tri)
 
-            warp_mat = cv2.getAffineTransform(np.float32(src_tri_crop), np.float32(dst_tri_crop))
-            warp = cv2.warpAffine(src_crop, warp_mat, (overlay_crop.shape[1], overlay_crop.shape[0]),
-                                  None, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT_101)
+            warp_mat = cv2.getAffineTransform(
+                np.float32(src_tri_crop), np.float32(dst_tri_crop)
+            )
+            warp = cv2.warpAffine(
+                src_crop,
+                warp_mat,
+                (overlay_crop.shape[1], overlay_crop.shape[0]),
+                None,
+                flags=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_REFLECT_101,
+            )
 
-            mask = np.zeros((overlay_crop.shape[0], overlay_crop.shape[1], 4), dtype=np.uint8)
-            cv2.fillConvexPoly(mask, np.int32(dst_tri_crop), (1.0, 1.0, 1.0, 1.0), 16, 0)
+            mask = np.zeros(
+                (overlay_crop.shape[0], overlay_crop.shape[1], 4), dtype=np.uint8
+            )
+            cv2.fillConvexPoly(
+                mask, np.int32(dst_tri_crop), (1.0, 1.0, 1.0, 1.0), 16, 0
+            )
             mask[np.where(overlay_crop > 0)] = 0
 
             cropped_triangle = warp * mask
@@ -60,8 +81,7 @@ class EffectRenderer2D:
 
         return overlay
 
-
-    def overlay_image(self, background_image, foreground_image, xmin, ymin, blur = 0):
+    def overlay_image(self, background_image, foreground_image, blur=0):
         """
         Take the two images, and produce an image where foreground image overlays the background image
         :param background_image: background BRG or BGRA image with 0-255 values, transparency will be ignored in the result
@@ -74,7 +94,6 @@ class EffectRenderer2D:
         if blur > 0:
             mask = cv2.medianBlur(mask, blur)
 
-        mask_inv = 255 - mask
         shifted_foreground = np.zeros_like(foreground_image[:, :, :3])
         shifted_mask = np.zeros_like(mask)
 
@@ -83,24 +102,28 @@ class EffectRenderer2D:
         bg_h, bg_w = background_image.shape[:2]
 
         # Determine valid range for slicing
-        y1 = max(0, ymin)
-        y2 = min(bg_h, fg_h + ymin)
-        x1 = max(0, xmin)
-        x2 = min(bg_w, fg_w + xmin)
+        y1 = 0
+        y2 = min(bg_h, fg_h)
+        x1 = 0
+        x2 = min(bg_w, fg_w)
 
-        y1_fg = max(0, -ymin)
-        y2_fg = min(fg_h, bg_h -ymin)
-        x1_fg = max(0, -xmin)
-        x2_fg = min(fg_w, bg_w - xmin)
+        y1_fg = 0
+        y2_fg = min(fg_h, bg_h)
+        x1_fg = 0
+        x2_fg = min(fg_w, bg_w)
 
         # Apply the shift
-        shifted_foreground[y1:y2, x1:x2] = foreground_image[y1_fg:y2_fg, x1_fg:x2_fg, :3]
+        shifted_foreground[y1:y2, x1:x2] = foreground_image[
+            y1_fg:y2_fg, x1_fg:x2_fg, :3
+        ]
         shifted_mask[y1:y2, x1:x2] = mask[y1_fg:y2_fg, x1_fg:x2_fg]
 
         # Create the inverse shifted mask
         shifted_mask_inv = 255 - shifted_mask
 
-        overlayed = shifted_foreground * np.dstack([shifted_mask / 255.0] * 3) + background_image[:, :, :3] * np.dstack([shifted_mask_inv / 255.0] * 3)
+        overlayed = shifted_foreground * np.dstack(
+            [shifted_mask / 255.0] * 3
+        ) + background_image[:, :, :3] * np.dstack([shifted_mask_inv / 255.0] * 3)
         overlayed = overlayed.astype(np.uint8)
 
         return overlayed
@@ -112,7 +135,11 @@ class EffectRenderer2D:
         :param triangle: Triangle coordinates (3x2 array)
         :return: Tupple (Triangle crop coordinates relative to the cropped image, cropped image)
         """
-        x,y,w,h = cv2.boundingRect(triangle)
-        crop = image[y:y+h, x:x+w]
-        triangle_crop = triangle - np.array([x,y])
+        x, y, w, h = cv2.boundingRect(triangle)
+        w = max(w, 1)
+        h = max(h, 1)
+        x = np.clip(x, 0, image.shape[1] - 1)
+        y = np.clip(y, 0, image.shape[0] - 1)
+        crop = image[y : y + h, x : x + w]
+        triangle_crop = triangle - np.array([x, y])
         return triangle_crop, crop
