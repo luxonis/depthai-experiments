@@ -62,9 +62,10 @@ class DrawDetections(dai.node.HostNode):
             frame = self._draw_kpts(frame, kpts)
             frame = self._draw_lines(frame, kpts, self.lines)
         if isinstance(detections, Keypoints) and self.draw_kpts:
-            kpts = [(i.x, i.y) for i in detections.keypoints]
-            frame = self._draw_kpts(frame, [kpts])
-            frame = self._draw_lines(frame, [kpts], self.lines)
+            if len(detections.keypoints) > 0:
+                kpts = [(i.x, i.y) for i in detections.keypoints]
+                frame = self._draw_kpts(frame, [kpts])
+                frame = self._draw_lines(frame, [kpts], self.lines)
         return frame
 
     def _draw_lines(
