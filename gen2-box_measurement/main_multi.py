@@ -1,0 +1,165 @@
+from depthai_sdk import OakCamera
+from depthai_sdk.classes.packets import DetectionPacket, PointcloudPacket
+from box_estimator_multi import BoxEstimator
+from ground_plane_estimator import GroundPlaneEstimator
+import depthai_viewer as viewer
+import numpy as np
+import cv2
+import subprocess
+import select
+import sys
+import time
+import open3d as o3d
+
+"Idea1: dynamic ground plane estimation from the input point cloud. Everything else stays the same. + frame skipping"
+
+FPS = 10.0
+box = BoxEstimator(median_window=5)
+ground = GroundPlaneEstimator()
+
+with OakCamera() as oak:
+    try:
+        subprocess.Popen([sys.executable, "-m", "depthai_viewer", "--viewer-mode"], stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+    except subprocess.TimeoutExpired:
+        pass
+    viewer.init("Depthai Viewer")
+    viewer.connect()
+
+    color = oak.create_camera('cam_c', resolution='800p', fps=20)
+
+    model_config = {
+        'source': 'roboflow', # Specify that we are downloading the model from Roboflow
+        'model':'cardboard-box-u35qd/1',
+        'key':'pPZRmrmqoNcQNt6oluzh' # Fake API key, replace with your own!
+    }
+
+    nn = oak.create_nn(model_config, color)
+    nn.config_nn(conf_threshold=0.85)
+
+    tof = oak.create_tof(fps=20)
+    tof.set_align_to(color, output_size=(640, 400))
+    tof.configure_tof(phaseShuffleTemporalFilter=True,
+                      phaseUnwrappingLevel=2,
+                      phaseUnwrapErrorThreshold=100)
+
+    pointcloud = oak.create_pointcloud(tof)
+
+    imu = oak.create_imu()
+    imu.config_imu(report_rate=400, batch_report_threshold=5)
+
+    q = oak.queue([
+        pointcloud.out.main.set_name('pcl'),
+        tof.out.main.set_name('tof'),
+        nn.out.main.set_name('nn'),
+        imu.out.main.set_name('imu')
+    ]).configure_syncing(enable_sync=True, threshold_ms=500//FPS).get_queue()
+    # oak.show_graph()
+    oak.start()
+
+    viewer.log_rigid3(f"Right", child_from_parent=([0, 0, 0], [0, 0, 0, 0]), xyz="RDF", timeless=True)
+    viewer.log_rigid3(f"Cropped", child_from_parent=([0, 0, 0], [1, 0, 0, 0]), xyz="RDF", timeless=True)
+
+    def draw_mesh():
+        pos,ind,norm = ground.get_plane_mesh(size=500)
+        viewer.log_mesh("Right/Plane", pos, indices=ind, normals=norm, albedo_factor=[0.5,1,0], timeless=False)
+
+    # For frame skipping 
+    frame_counter = 0
+    frame_skip = 2      # Process every 2nd frame
+
+    while oak.running():
+        packets = q.get()
+
+        nn: DetectionPacket = packets["nn"]
+        cvFrame = nn.frame[..., ::-1] # BGR to RGB
+        depth = packets["tof"].frame
+        pcl_packet: PointcloudPacket = packets["pcl"]
+        points = pcl_packet.points
+
+        imu_packet = packets["imu"]
+        accel_data = imu_packet.acceleroMeter  # Acceleration data
+
+        gravity_vect = np.array([accel_data.x, accel_data.y, accel_data.z])
+
+        colors_640 = cv2.pyrDown(cvFrame).reshape(-1, 3)
+        viewer.log_points("Right/PointCloud", points.reshape(-1, 3), colors=colors_640)
+        viewer.log_depth_image("depth/frame", depth, meter=1e3)
+        viewer.log_image("video/color", cvFrame)
+
+        if frame_counter % frame_skip == 0:
+
+            ground_plane_eq, ground_plane_pc, objects_pc, success = ground.estimate_ground_plane(points, gravity_vect)
+            if success == False:
+                print('No ground detected')
+                continue
+            
+            # Draw the ground plane mesh
+            draw_mesh()
+
+            num_detections = len(nn.detections)
+
+            if num_detections == 0:
+                continue  # No boxes found
+            
+            # To store the values for multiple box detection
+            all_box_pcl = []
+            all_plane_pcl = []
+            all_box_bb = []
+            all_padded_box_bb = []
+            all_dimensions = []
+            all_corners = []
+            all_labels = []
+            all_lines = []
+            
+            for index, det in enumerate(nn.detections):
+                # Get the bounding box of the detection (relative to full frame size)
+                box_bb = nn.bbox.get_relative_bbox(det.bbox)
+                box_bb_show = box_bb.to_tuple(cvFrame.shape)
+
+                padded_box_bb = box_bb.add_padding(0.1)
+                padded_box_bb_show = padded_box_bb.to_tuple(depth.shape)
+
+                points_roi = pcl_packet.crop_points(padded_box_bb).reshape(-1, 3)
+                # Process the points to get dimensions and corners
+                dimensions, corners = box.process_points(ground_plane_eq, points_roi, index, num_detections)
+
+                if corners is None:
+                    continue  # Skip to the next detection 
+                
+                all_corners.append(corners)
+                corners = box.inverse_corner_points()  
+                lines = box.get_3d_lines(corners)
+                all_lines.append(lines)
+    
+                all_box_bb.append(box_bb_show)
+                all_padded_box_bb.append(padded_box_bb_show)
+
+                all_box_pcl.append(box.box_pcl)
+                all_plane_pcl.append(box.plane_pcl)
+
+                l, w, h = dimensions
+                label = f"{det.label_str} ({det.confidence:.2f})\n{l/10:.1f} x {w/10:.1f}\nH: {h/10:.1f} cm" 
+                all_labels.append(label)
+            
+            all_box_bb = np.array(all_box_bb)
+            all_padded_box_bb = np.array(all_padded_box_bb)
+
+            # For logging multiple point clouds 
+            if len(all_box_pcl) >= 1:
+                viewer.log_points("Cropped/Box_PCL", np.vstack(all_box_pcl))
+                viewer.log_points("Cropped/Plane_PCL", np.vstack(all_plane_pcl), colors=(0.2,1.0,0.6))
+                viewer.log_line_segments(f"Right/Box_Edges", np.vstack(all_lines), stroke_width=4, color=(1.0,0,0.0))
+                viewer.log_points(f"Cropped/Box_Corners", np.vstack(all_corners), radii=8, colors=(1.0,0,0.0))
+
+            viewer.log_rects('video/bbs',
+                    all_box_bb,
+                    labels=all_labels,
+                    rect_format=viewer.RectFormat.XYXY)
+            
+            viewer.log_rects('depth/bbs',
+                    all_padded_box_bb,
+                    labels=["Padded BoundingBox"] * len(all_padded_box_bb),
+                    rect_format=viewer.RectFormat.XYXY)
+            
+        frame_counter += 1

@@ -1,14 +1,25 @@
 from depthai_sdk import OakCamera
 from depthai_sdk.classes.packets import DetectionPacket, PointcloudPacket
-from depthai_sdk.classes.box_estimator import BoxEstimator
+from box_estimator_single import BoxEstimator
+from ground_plane_estimator import GroundPlaneEstimator
 import depthai_viewer as viewer
+import numpy as np
 import cv2
 import subprocess
 import select
 import sys
+import time
+import open3d as o3d
+from depthai_sdk.visualize.bbox import BoundingBox
+
+"Idea1: dynamic ground plane estimation from the input point cloud. Everything else stays the same. + frame skipping"
+
 
 FPS = 10.0
 box = BoxEstimator(median_window=10)
+
+ground = GroundPlaneEstimator()
+bb = BoundingBox()
 
 with OakCamera() as oak:
     try:
@@ -24,7 +35,7 @@ with OakCamera() as oak:
     model_config = {
         'source': 'roboflow', # Specify that we are downloading the model from Roboflow
         'model':'cardboard-box-u35qd/1',
-        'key':'dDOP8nChA9rZUWUTG8ia' # Fake API key, replace with your own!
+        'key':'pPZRmrmqoNcQNt6oluzh' # Fake API key, replace with your own!
     }
     nn = oak.create_nn(model_config, color)
     nn.config_nn(conf_threshold=0.85)
@@ -37,10 +48,14 @@ with OakCamera() as oak:
 
     pointcloud = oak.create_pointcloud(tof)
 
+    imu = oak.create_imu()
+    imu.config_imu(report_rate=400, batch_report_threshold=5)
+
     q = oak.queue([
         pointcloud.out.main.set_name('pcl'),
         tof.out.main.set_name('tof'),
         nn.out.main.set_name('nn'),
+        imu.out.main.set_name('imu')
     ]).configure_syncing(enable_sync=True, threshold_ms=500//FPS).get_queue()
     # oak.show_graph()
     oak.start()
@@ -49,13 +64,12 @@ with OakCamera() as oak:
     viewer.log_rigid3(f"Cropped", child_from_parent=([0, 0, 0], [1, 0, 0, 0]), xyz="RDF", timeless=True)
 
     def draw_mesh():
-        pos,ind,norm = box.get_plane_mesh(size=500)
-        viewer.log_mesh("Right/Plane", pos, indices=ind, normals=norm, albedo_factor=[0.5,1,0], timeless=True)
+        pos,ind,norm = ground.get_plane_mesh(size=500)
+        viewer.log_mesh("Right/Plane", pos, indices=ind, normals=norm, albedo_factor=[0.5,1,0], timeless=False)
 
-    if box.is_calibrated():
-        draw_mesh()
-    else:
-        print("Calibrate first, write 'c' in terminal when most of the view is flat floor!!")
+    # For frame skipping 
+    frame_counter = 0
+    frame_skip = 2      # Process every 2nd frame
 
     while oak.running():
         packets = q.get()
@@ -66,31 +80,43 @@ with OakCamera() as oak:
         pcl_packet: PointcloudPacket = packets["pcl"]
         points = pcl_packet.points
 
-        # Convert 800P into 400P into 256000x3
+        imu_packet = packets["imu"]
+        accel_data = imu_packet.acceleroMeter  # Acceleration data
+
+        gravity_vect = np.array([accel_data.x, accel_data.y, accel_data.z])
+
         colors_640 = cv2.pyrDown(cvFrame).reshape(-1, 3)
         viewer.log_points("Right/PointCloud", points.reshape(-1, 3), colors=colors_640)
-        # Depth map visualize
         viewer.log_depth_image("depth/frame", depth, meter=1e3)
         viewer.log_image("video/color", cvFrame)
 
-        if box.is_calibrated():
+        if frame_counter % frame_skip == 0:
+
+            ground_plane_eq, ground_plane_pc, objects_pc, success = ground.estimate_ground_plane(points, gravity_vect)
+            if success == False:
+                print('No ground detected')
+                continue
+
+            draw_mesh()
+
             if 0 == len(nn.detections):
                 continue # No boxes found
-            # Currently supports only 1 detection (box) at a time
+
+            # Only 1 detection (box) at a time
             det = nn.detections[0]
             # Get the bounding box of the detection (relative to full frame size)
             # Add 10% padding on all sides
             box_bb = nn.bbox.get_relative_bbox(det.bbox)
             padded_box_bb = box_bb.add_padding(0.1)
             points_roi = pcl_packet.crop_points(padded_box_bb).reshape(-1, 3)
+            
+            dimensions, corners = box.process_points(ground_plane_eq, points_roi)
 
-            dimensions, corners = box.process_points(points_roi)
             if corners is None:
-                continue
+                    continue
 
             viewer.log_points("Cropped/Box_PCL", box.box_pcl)
             viewer.log_points("Cropped/Plane_PCL", box.plane_pcl, colors=(0.2,1.0,0.6))
-            # viewer.log_points("Cropped/TopSide_PCL", box.top_side_pcl, colors=(1,0.3,0.6))
             viewer.log_points(f"Cropped/Box_Corners", corners, radii=8, colors=(1.0,0,0.0))
 
             corners = box.inverse_corner_points()
@@ -99,6 +125,7 @@ with OakCamera() as oak:
 
             l,w,h = dimensions
             label = f"{det.label_str} ({det.confidence:.2f})\n{l/10:.1f} x {w/10:.1f}\nH: {h/10:.1f} cm"
+            
             viewer.log_rect('video/bbs',
                     box_bb.to_tuple(cvFrame.shape),
                     label=label,
@@ -107,12 +134,5 @@ with OakCamera() as oak:
                     padded_box_bb.to_tuple(depth.shape),
                     label="Padded BoundingBox",
                     rect_format=viewer.RectFormat.XYXY)
-
-        key = oak.poll()
-        ready, _, _ = select.select([sys.stdin], [], [], 0.001) # Terminal input
-        if ready:
-            key = sys.stdin.readline().strip()
-        if key == 'c':
-            if box.calibrate(points):
-                print(f"Calibrated Plane: {box.ground_plane_eq}")
-                draw_mesh()
+                
+        frame_counter += 1
