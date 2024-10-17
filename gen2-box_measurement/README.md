@@ -21,17 +21,17 @@ This experiment was designed for OAK-D-SR-POE (with ToF sensor).
     The app automatically estimates the ground plane where the box is placed. Ensure that the majority of the camera's view captures the flat surface. The ground plane is visualized as a green square in the point cloud window, and this process runs dynamically, so there's no need for manual calibration. 
 
     For multi box segmentation run 
-        ```bash
+    ```bash
     python3 main_multi.py
     ```
 
     For single box segmentation run 
-        ```bash
+    ```bash
     python3 main_single.py
     ```
 
     For ground plane estimator only run 
-        ```bash
+    ```bash
     python3 main_ground.py
     ```
 
