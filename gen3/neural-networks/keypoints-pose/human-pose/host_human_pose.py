@@ -1,6 +1,6 @@
 import depthai as dai
-import cv2
-from parsing.messages import Keypoints
+import numpy as np
+from parsing.messages import Keypoints, Keypoint
 
 KEYPOINTS = {
     "nose": 0,
@@ -57,45 +57,83 @@ PAIRS = [
 class HumanPose(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self.output_keypts = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageAnnotations, True)])
+        self.output_pose = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageAnnotations, True)])
         self._confidence_threshold = 0.5
 
-    def build(self, preview: dai.Node.Output, keypoints: dai.Node.Output) -> "HumanPose":
-        self.link_args(preview, keypoints)
+    def build(self, keypoints: dai.Node.Output) -> "HumanPose":
+        self.link_args(keypoints)
         return self
     
     def setConfidenceThreshold(self, threshold: float) -> None:
         self._confidence_threshold = threshold
 
-    # Preview is actually type dai.ImgFrame here
-    def process(self, preview: dai.Buffer, keypoints: dai.Buffer) -> None:
-        assert(isinstance(preview, dai.ImgFrame))
+    def process(self, keypoints: dai.Buffer) -> None:
         assert(isinstance(keypoints, Keypoints))
-        frame = preview.getCvFrame()
 
         keypts = keypoints.keypoints
-        if keypts:
-            def scale(point: tuple[int, int]) -> tuple[int, int]:
-                return int(point[0] * frame.shape[1]), int(point[1] * frame.shape[0])
+        if not keypts:
+            return
+
+        keypt_annotations: list[dai.CircleAnnotation] = []
+        connected_keypts: list[dai.PointsAnnotation] = []
+        drawn_keypts: list[int] = []
+        for pair in PAIRS:
+            start_keypt_index = KEYPOINTS[pair[0]]
+            start_keypt = keypts[start_keypt_index]
+            end_keypt_index = KEYPOINTS[pair[1]]
+            end_keypt = keypts[end_keypt_index]
+            if start_keypt.confidence < self._confidence_threshold or end_keypt.confidence < self._confidence_threshold:
+                continue
+
+            body_part = pair[2]
+            body_part_color = self._get_color(body_part)
             
-            drawn_keypts: list[int] = []
-            for pair in PAIRS:
-                start_keypt_index = KEYPOINTS[pair[0]]
-                start_keypt = keypts[start_keypt_index]
-                end_keypt_index = KEYPOINTS[pair[1]]
-                end_keypt = keypts[end_keypt_index]
-                if start_keypt.confidence < self._confidence_threshold or end_keypt.confidence < self._confidence_threshold:
-                    continue
-
-                body_part = pair[2]
-                cv2.line(frame, scale((start_keypt.x, start_keypt.y)), scale((end_keypt.x, end_keypt.y)), COLORS[body_part], 2, cv2.LINE_AA)
-                if start_keypt_index not in drawn_keypts:
-                    cv2.circle(frame, scale((start_keypt.x, start_keypt.y)), 5, COLORS[body_part], -1, cv2.LINE_AA)
-                    drawn_keypts.append(start_keypt_index)
-                if end_keypt_index not in drawn_keypts:
-                    cv2.circle(frame, scale((end_keypt.x, end_keypt.y)), 5, COLORS[body_part], -1, cv2.LINE_AA)
-                    drawn_keypts.append(end_keypt_index)
+            body_part_line = self._get_body_part_annotation(start_keypt, end_keypt, body_part_color)
+            connected_keypts.append(body_part_line)
+            if start_keypt_index not in drawn_keypts:
+                keypt_annotations.append(self._get_keypt_annotation(start_keypt.x, start_keypt.y, body_part_color))
+                drawn_keypts.append(start_keypt_index)
+            if end_keypt_index not in drawn_keypts:
+                keypt_annotations.append(self._get_keypt_annotation(end_keypt.x, end_keypt.y, body_part_color))
+                drawn_keypts.append(end_keypt_index)
                 
+        self._send_output_keypts(keypt_annotations, keypoints)
+        self._send_output_pose(connected_keypts, keypoints)
 
-        preview.setCvFrame(frame, dai.ImgFrame.Type.BGR888i)
-        self.output.send(preview)
+    def _get_color(self, body_part, alpha=0.80) -> dai.Color:
+        color_array = np.array(COLORS[body_part]) / 255
+        return dai.Color(color_array[2], color_array[1], color_array[0], alpha)
+
+    def _get_body_part_annotation(self, start_keypt: Keypoint, end_keypt: Keypoint, color: dai.Color) -> dai.PointsAnnotation:
+        connected_keypt = dai.PointsAnnotation()
+        connected_keypt.points = [dai.Point2f(start_keypt.x, start_keypt.y), dai.Point2f(end_keypt.x, end_keypt.y)]
+        connected_keypt.fillColor = color
+        connected_keypt.outlineColor = color
+        connected_keypt.outlineColors = [color, color]
+        connected_keypt.thickness = 5
+        connected_keypt.type = dai.PointsAnnotationType.LINE_LOOP
+        return connected_keypt
+
+    def _get_keypt_annotation(self, x: float, y: float, color: dai.Color) -> dai.CircleAnnotation:
+        keypt = dai.CircleAnnotation()
+        keypt.position = dai.Point2f(x, y)
+        keypt.diameter = 0.02
+        keypt.fillColor = color
+        return keypt
+
+    def _send_output_keypts(self, keypt_annotations: list[dai.CircleAnnotation], keypoints: Keypoints):
+        keypts_annotation = dai.ImageAnnotation()
+        keypts_annotation.circles = keypt_annotations
+        self.output_keypts.send(self._get_annotations(keypts_annotation, keypoints))
+
+    def _send_output_pose(self, connected_keypts: list[dai.PointsAnnotation], keypoints: Keypoints):
+        pose_annotation = dai.ImageAnnotation()
+        pose_annotation.points = connected_keypts
+        self.output_pose.send(self._get_annotations(pose_annotation, keypoints))
+
+    def _get_annotations(self, annotation: dai.ImageAnnotation, keypoints: Keypoints) -> dai.ImageAnnotations:
+        annotations = dai.ImageAnnotations([annotation])
+        annotations.setSequenceNum(keypoints.getSequenceNum())
+        annotations.setTimestamp(keypoints.getTimestamp())
+        return annotations
