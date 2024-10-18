@@ -1,56 +1,70 @@
-import numpy as np
-import cv2
 import depthai as dai
-
-from detected_recognitions import DetectedRecognitions
 
 
 class MaskDetection(dai.node.HostNode):
+    LABELS = ["No mask", "Mask"]
+
     def __init__(self) -> None:
         super().__init__()
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgDetections, True)
+            ]
+        )
 
-    
-    def build(self, img_frames: dai.Node.Output, detected_recognitions: dai.Node.Output) -> "MaskDetection":
-        self.link_args(img_frames, detected_recognitions)
+    def build(self, ppe_nn: dai.Node.Output) -> "MaskDetection":
+        self.link_args(ppe_nn)
         return self
-    
 
-    def process(self, img_frame: dai.ImgFrame, detected_recognitions: dai.Buffer) -> None:
-        frame = img_frame.getCvFrame()
-        assert(isinstance(detected_recognitions, DetectedRecognitions))
-        detections = detected_recognitions.img_detections.detections
+    def process(self, img_detections: dai.ImgDetections) -> None:
+        detections = img_detections.detections
+        people_dets = [d for d in detections if d.label == 5]
+        mask_dets = [d for d in detections if d.label == 1]
+        no_mask_dets = [d for d in detections if d.label == 3]
 
-        for i, detection in enumerate(detections):
-            bbox = self._frame_norm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+        has_mask = [False for _ in range(len(people_dets))]
+        for mask in mask_dets:
+            for i, person in enumerate(people_dets):
+                if self._is_inside_bbox(
+                    self._det_to_bbox(person), self._det_to_bbox(mask)
+                ):
+                    has_mask[i] = True
+        for no_mask in no_mask_dets:
+            for i, person in enumerate(people_dets):
+                if self._is_inside_bbox(
+                    self._det_to_bbox(person), self._det_to_bbox(no_mask)
+                ):
+                    has_mask[i] = False
 
-            rec = detected_recognitions.nn_data[i].getFirstTensor()
-            index = np.argmax(self._log_softmax(rec))
-            text = "No Mask"
-            color = (0,0,255) # Red
-            if index == 1:
-                text = "Mask"
-                color = (0,255,0)
+        img_dets = dai.ImgDetections()
+        dets = []
+        for has_mask, det in zip(has_mask, people_dets):
+            new_det = dai.ImgDetection()
+            new_det.label = int(has_mask)
+            new_det.confidence = det.confidence
+            new_det.xmin = det.xmin
+            new_det.ymin = det.ymin
+            new_det.xmax = det.xmax
+            new_det.ymax = det.ymax
+            dets.append(new_det)
+        img_dets.detections = dets
+        img_dets.setTimestamp(img_detections.getTimestamp())
+        img_dets.setSequenceNum(img_detections.getSequenceNum())
+        self.output.send(img_dets)
 
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 3)
-            y = (bbox[1] + bbox[3]) // 2
-            cv2.putText(frame, text, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (0, 0, 0), 8)
-            cv2.putText(frame, text, (bbox[0], y), cv2.FONT_HERSHEY_TRIPLEX, 1.5, (255, 255, 255), 2)
-            if isinstance(detection, dai.SpatialImgDetection):
-                coords = "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000)
-                cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (0, 0, 0), 8)
-                cv2.putText(frame, coords, (bbox[0], y + 60), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255), 2)
+    def _is_inside_bbox(
+        self,
+        outter_bbox: tuple[float, float, float, float],
+        inner_bbox: tuple[float, float, float, float],
+    ) -> bool:
+        return (
+            outter_bbox[0] <= inner_bbox[0]
+            and outter_bbox[1] <= inner_bbox[1]
+            and outter_bbox[2] >= inner_bbox[2]
+            and outter_bbox[3] >= inner_bbox[3]
+        )
 
-        cv2.imshow("Camera", frame)
-        if cv2.waitKey(1) == ord('q'):
-            self.stopPipeline()
-
-    
-    def _log_softmax(self, x):
-        e_x = np.exp(x - np.max(x))
-        return np.log(e_x / e_x.sum())
-
-
-    def _frame_norm(self, frame: np.ndarray, bbox: tuple) -> np.ndarray:
-        normVals = np.full(len(bbox), frame.shape[0])
-        normVals[::2] = frame.shape[1]
-        return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
+    def _det_to_bbox(
+        self, detection: dai.ImgDetection
+    ) -> tuple[float, float, float, float]:
+        return (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
