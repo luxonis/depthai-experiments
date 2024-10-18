@@ -1,15 +1,19 @@
 from pathlib import Path
+
 import blobconverter
 import depthai as dai
-
-from mask_detection import MaskDetection
 from detections_recognitions_sync import DetectionsRecognitionsSync
+from mask_detection import MaskDetection
 
-face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+face_det_model_description = dai.NNModelDescription(
+    modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640"
+)
 face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
 face_det_nn_archive = dai.NNArchive(face_det_archive_path)
 
-recognition_model_description = dai.NNModelDescription(modelSlug="sdb-mask-classification", platform="RVC2", modelVersionSlug="224x224")
+recognition_model_description = dai.NNModelDescription(
+    modelSlug="sdb-mask-classification", platform="RVC2", modelVersionSlug="224x224"
+)
 recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
 recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 
@@ -65,14 +69,14 @@ with dai.Pipeline(device) as pipeline:
 
     image_manip_script = pipeline.create(dai.node.Script)
     image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
-    cam.preview.link(image_manip_script.inputs['preview'])
-    face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
+    cam.preview.link(image_manip_script.inputs["preview"])
+    face_det_nn.out.link(image_manip_script.inputs["face_det_in"])
 
     recognition_manip = pipeline.create(dai.node.ImageManip)
     recognition_manip.initialConfig.setResize(224, 224)
     recognition_manip.inputConfig.setWaitForMessage(True)
-    image_manip_script.outputs['manip_cfg'].link(recognition_manip.inputConfig)
-    image_manip_script.outputs['manip_img'].link(recognition_manip.inputImage)
+    image_manip_script.outputs["manip_cfg"].link(recognition_manip.inputConfig)
+    image_manip_script.outputs["manip_img"].link(recognition_manip.inputImage)
 
     print("Creating recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
@@ -85,6 +89,8 @@ with dai.Pipeline(device) as pipeline:
     recognition_nn.out.link(recognition_sync.input_recognitions)
     recognition_sync.set_camera_fps(cam.getFps())
 
-    mask_detection = pipeline.create(MaskDetection).build(cam.preview, recognition_sync.output)
-    
+    mask_detection = pipeline.create(MaskDetection).build(
+        cam.preview, recognition_sync.output
+    )
+
     pipeline.run()
