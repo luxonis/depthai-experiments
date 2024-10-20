@@ -53,6 +53,7 @@ class CropDetections(dai.node.HostNode):
                 cfg.addResize(*self._resize)
 
             self._last_config = cfg
+            cfg.setTimestamp(dets_msg.getTimestamp())
             self.output_config.send(cfg)
 
         self.detection_passthrough.send(dets_msg)
