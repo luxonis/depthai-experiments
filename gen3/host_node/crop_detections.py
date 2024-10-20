@@ -2,7 +2,7 @@ import depthai as dai
 from depthai_nodes.ml.messages import ImgDetectionsExtended
 
 
-class CropDetection(dai.node.HostNode):
+class CropDetections(dai.node.HostNode):
     """Crops the image based on the detection with the highest confidence. Creates dai.ImageManipConfig for cropping and resizing.
     `detection_passthrough` output sends out detection, that is used for cropping."""
 
