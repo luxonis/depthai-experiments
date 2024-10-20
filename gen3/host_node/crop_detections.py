@@ -22,8 +22,8 @@ class CropDetections(dai.node.HostNode):
             ]
         )
 
-    def build(self, nn: dai.Node.Output) -> "CropDetection":
-        self.link_args(nn)
+    def build(self, detections: dai.Node.Output) -> "CropDetections":
+        self.link_args(detections)
         self.sendProcessingToPipeline(True)
         return self
 
