@@ -1,9 +1,6 @@
 # YOLO segmentation with decoding on host
 
-<video width="640" height="360" controls>
-  <source src="docs/oak_segmentation_example.mp4" type="video/mp4">
-  Your browser doesn't support HTML5 videos.
-</video>
+![On-host decoding YOLO segmentation in OAK](docs/oak_segmentation_example.gif)
 
 ## Pre-requisites
 
