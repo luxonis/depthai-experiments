@@ -7,11 +7,12 @@ This repository contains code for various Yolo experiments:
 | Directory       | Decoding | Version                     | Description                                                  |
 | :-------------: | :------: | :--------------------------: | ------------------------------------------------------------ |
 | `main.py` | device   | From https://tools.luxonis.com | Run your custom trained YOLO model that was converted using the tools.luxonis.com. Uses [DepthAI-SDK](https://docs.luxonis.com/projects/sdk/en/latest/) |
-| `device-decoding` | device   | V3, V3-tiny, V4, V4-tiny, V5 | General object detection using any of the versions for which we support on-device decoding. Uses [DepthAI-API]https://docs.luxonis.com/projects/api/en/latest/) |
+| `device-decoding` | device   | V3, V3-tiny, V4, V4-tiny, V5 | General object detection using any of the versions for which we support on-device decoding. Uses [DepthAI-API](https://docs.luxonis.com/projects/api/en/latest/) |
 | `car-detection`   | device   | V3-tiny, V4-tiny             | Car detection using YoloV3-tiny and YoloV4-tiny with on-device decoding ([DepthAI-SDK](https://docs.luxonis.com/projects/sdk/en/latest/)). |
 | `host-decoding`   | host     | V5                           | Object detection using YoloV5 and on-host decoding.          |
 | `yolox` | host | X | Object detection without anchors using YOLOX-tiny with on-host decoding. |
 | `yolop` | host | P | Vehicle detection, road segmentation, and lane segmentation using YOLOP on OAK with on-host decoding. |
+| `yolo-segmentation` | host | V5, V8, V9, V11 | Object segmentation using YOLOv5, YOLOv8, YOLOv9, YOLO11 on OAK with on-host decoding. |
 
 ## On-Device decoding
 
