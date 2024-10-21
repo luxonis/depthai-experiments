@@ -11,7 +11,7 @@ with dai.Pipeline(device) as pipeline:
         dai.NNModelDescription("yolov6-nano")
     )
 
-    color_out = cam.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.BGR888i, fps=30) # Would be better to use NV12, but visualizer doesn't support strided NV12 yet
+    color_out = cam.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=30)
     visualizer.addTopic("Camera", color_out)
     visualizer.addTopic("Detections", nn.out)
     print("Pipeline created.")
