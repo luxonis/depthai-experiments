@@ -5,21 +5,15 @@ from host_depth_color_transform import DepthColorTransform
 
 color_resolution = (1280, 720)
 
-device = dai.Device()
-with dai.Pipeline(device) as pipeline:
-
-    # The biggest mono sensor on Oak-D Lite is 640x480
-    camera_sensors = device.getCameraSensorNames()
-    mono_resolution = (640, 480) if "OV7251" in camera_sensors.values() else (1280, 720)
-
+with dai.Pipeline() as pipeline:
     print("Creating pipeline...")
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-    color_output = color.requestOutput(color_resolution, dai.ImgFrame.Type.BGR888p)
-    left_output = left.requestOutput(mono_resolution)
-    right_output = right.requestOutput(mono_resolution)
+    color_output = color.requestOutput(color_resolution, dai.ImgFrame.Type.BGR888i)
+    left_output = left.requestFullResolutionOutput()
+    right_output = right.requestFullResolutionOutput()
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
         left=left_output,
@@ -28,7 +22,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     stereo.setOutputSize(*color_resolution)
     stereo.initialConfig.setConfidenceThreshold(200)
-    stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7)
+    stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_5x5)
     stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(False)
