@@ -75,8 +75,8 @@ class HumanPose(dai.node.HostNode):
         if not keypts:
             return
 
-        keypt_annotations: list[dai.CircleAnnotation] = []
-        connected_keypts: list[dai.PointsAnnotation] = []
+        keypt_annotations = dai.VectorCircleAnnotation()
+        connected_keypts = dai.VectorPointsAnnotation()
         drawn_keypts: list[int] = []
         for pair in PAIRS:
             start_keypt_index = KEYPOINTS[pair[0]]
@@ -107,10 +107,10 @@ class HumanPose(dai.node.HostNode):
 
     def _get_body_part_annotation(self, start_keypt: Keypoint, end_keypt: Keypoint, color: dai.Color) -> dai.PointsAnnotation:
         connected_keypt = dai.PointsAnnotation()
-        connected_keypt.points = [dai.Point2f(start_keypt.x, start_keypt.y), dai.Point2f(end_keypt.x, end_keypt.y)]
+        connected_keypt.points = dai.VectorPoint2f([dai.Point2f(start_keypt.x, start_keypt.y), dai.Point2f(end_keypt.x, end_keypt.y)])
         connected_keypt.fillColor = color
         connected_keypt.outlineColor = color
-        connected_keypt.outlineColors = [color, color]
+        connected_keypt.outlineColors = dai.VectorColor([color, color])
         connected_keypt.thickness = 5
         connected_keypt.type = dai.PointsAnnotationType.LINE_LOOP
         return connected_keypt
@@ -122,18 +122,19 @@ class HumanPose(dai.node.HostNode):
         keypt.fillColor = color
         return keypt
 
-    def _send_output_keypts(self, keypt_annotations: list[dai.CircleAnnotation], keypoints: Keypoints):
+    def _send_output_keypts(self, keypt_annotations: dai.VectorCircleAnnotation, keypoints: Keypoints):
         keypts_annotation = dai.ImageAnnotation()
         keypts_annotation.circles = keypt_annotations
         self.output_keypts.send(self._get_annotations(keypts_annotation, keypoints))
 
-    def _send_output_pose(self, connected_keypts: list[dai.PointsAnnotation], keypoints: Keypoints):
+    def _send_output_pose(self, connected_keypts: dai.PointsAnnotation, keypoints: Keypoints):
         pose_annotation = dai.ImageAnnotation()
         pose_annotation.points = connected_keypts
         self.output_pose.send(self._get_annotations(pose_annotation, keypoints))
 
     def _get_annotations(self, annotation: dai.ImageAnnotation, keypoints: Keypoints) -> dai.ImageAnnotations:
-        annotations = dai.ImageAnnotations([annotation])
+        vector_image_annotation = dai.VectorImageAnnotation([annotation])
+        annotations = dai.ImageAnnotations(vector_image_annotation)
         annotations.setSequenceNum(keypoints.getSequenceNum())
         annotations.setTimestamp(keypoints.getTimestamp())
         return annotations
