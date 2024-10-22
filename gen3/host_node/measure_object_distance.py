@@ -67,7 +67,8 @@ class MeasureObjectDistance(dai.node.HostNode):
         self.link_args(nn)
         return self
 
-    def process(self, detections: dai.SpatialImgDetections):
+    def process(self, detections: dai.Buffer):
+        assert isinstance(detections, dai.SpatialImgDetections)
         distances = []
         for det1, det2 in itertools.combinations(detections.detections, 2):
             dist = DetectionDistance(

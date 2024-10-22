@@ -1,4 +1,5 @@
 import depthai as dai
+from depthai_nodes.ml.messages import ImgDetectionsExtended
 
 
 class DetectionLabelFilter(dai.node.HostNode):
@@ -7,7 +8,7 @@ class DetectionLabelFilter(dai.node.HostNode):
         self._accepted_labels = []
         self.output = self.createOutput(
             possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)
             ]
         )
 
@@ -18,11 +19,16 @@ class DetectionLabelFilter(dai.node.HostNode):
         self.link_args(nn)
         return self
 
-    def process(self, detections: dai.ImgDetections) -> None:
-        filtered_detections: list[dai.ImgDetection] = [
+    def process(self, detections: dai.Buffer) -> None:
+        assert isinstance(
+            detections,
+            (dai.ImgDetections, dai.SpatialImgDetections, ImgDetectionsExtended),
+        )
+
+        filtered_detections = [
             i for i in detections.detections if i.label in self._accepted_labels
         ]
-        img_detections = dai.ImgDetections()
+        img_detections = type(detections)()
         img_detections.detections = filtered_detections
         img_detections.setTimestamp(detections.getTimestamp())
         img_detections.setSequenceNum(detections.getSequenceNum())
