@@ -39,7 +39,10 @@ class NormalizeDetections(dai.node.HostNode):
     def _normalize_detections(
         self,
         frame: np.ndarray,
-        detections: dai.ImgDetections | ImgDetectionsExtended | Keypoints,
+        detections: dai.ImgDetections
+        | ImgDetectionsExtended
+        | Keypoints
+        | dai.SpatialImgDetections,
     ) -> dai.ImgDetections | ImgDetectionsExtended | Keypoints:
         if isinstance(detections, ImgDetectionsExtended):
             normalized_dets = ImgDetectionsExtended()
@@ -56,11 +59,35 @@ class NormalizeDetections(dai.node.HostNode):
             kpts = [(i.x, i.y) for i in detections.keypoints]
             norm_kpts = self._normalize_kpts(frame, kpts)
             normalized_dets.keypoints = [dai.Point3f(i[0], i[1], 0) for i in norm_kpts]
+        elif isinstance(detections, dai.SpatialImgDetections):
+            normalized_dets = dai.SpatialImgDetections()
+            normalized_dets.detections = [
+                self._normalize_spatial_detection(frame, d)
+                for d in detections.detections
+            ]
         else:
             raise ValueError("Unknown detection type")
         normalized_dets.setSequenceNum(detections.getSequenceNum())
         normalized_dets.setTimestamp(detections.getTimestamp())
         return normalized_dets
+
+    def _normalize_spatial_detection(
+        self, frame: np.ndarray, detection: dai.SpatialImgDetection
+    ) -> dai.SpatialImgDetection:
+        spatial_det = dai.SpatialImgDetection()
+        spatial_det.spatialCoordinates = detection.spatialCoordinates
+        spatial_det.confidence = detection.confidence
+        spatial_det.label = detection.label
+        spatial_det.boundingBoxMapping = detection.boundingBoxMapping
+        spatial_det.spatialCoordinates = detection.spatialCoordinates
+        norm_bbox = self._normalize_bbox(
+            frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+        )
+        spatial_det.xmin = norm_bbox[0]
+        spatial_det.ymin = norm_bbox[1]
+        spatial_det.xmax = norm_bbox[2]
+        spatial_det.ymax = norm_bbox[3]
+        return spatial_det
 
     def _normalize_detection(
         self, frame: np.ndarray, detection: dai.ImgDetection | ImgDetectionExtended
