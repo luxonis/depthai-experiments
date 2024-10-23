@@ -3,11 +3,9 @@ from depthai_nodes import MPPalmDetectionParser
 from host_node.depth_merger import DepthMerger
 from host_node.detection_label_filter import DetectionLabelFilter
 from host_node.detection_merger import DetectionMerger
-from host_node.draw_detections import DrawDetections
-from host_node.draw_object_distances import DrawObjectDistances
-from host_node.host_display import Display
 from host_node.measure_object_distance import MeasureObjectDistance
-from host_node.normalize_detections import NormalizeDetections
+from host_node.visualize_detections import VisualizeDetections
+from host_node.visualize_object_distances import VisualizeObjectDistances
 from show_alert import ShowAlert
 
 device = dai.Device()
@@ -38,6 +36,8 @@ VIDEO_SIZE = (1280, 720)
 YOLO_SIZE = (512, 288)
 PALM_DETECTION_SIZE = (128, 128)
 
+
+visualizer = dai.RemoteConnection()
 
 with dai.Pipeline(device) as pipeline:
     color_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -100,24 +100,28 @@ with dai.Pipeline(device) as pipeline:
         nn=detection_filter.output
     )
 
-    draw_object_distances = pipeline.create(DrawObjectDistances).build(
-        frame=color_out, distances=measure_object_distance.output
+    visualize_detections = pipeline.create(VisualizeDetections).build(
+        detection_filter.output, merged_labels
     )
-    draw_object_distances.set_color((0, 255, 0))
-    normalize_det = pipeline.create(NormalizeDetections).build(
-        frame=color_out, nn=detection_filter.output
+    visualize_distances = pipeline.create(VisualizeObjectDistances).build(
+        measure_object_distance.output
     )
-    draw_det = pipeline.create(DrawDetections).build(
-        draw_object_distances.output, normalize_det.output, merged_labels
-    )
+
     show_alert = pipeline.create(ShowAlert).build(
-        frame=draw_det.output,
         distances=measure_object_distance.output,
         palm_label=merged_labels.index("palm"),
         dangerous_objects=[merged_labels.index(i) for i in DANGEROUS_OBJECTS],
     )
-    display = pipeline.create(Display).build(frames=show_alert.output)
-    display.setName("Color")
 
     print("Pipeline created.")
-    pipeline.run()
+    visualizer.addTopic("Detections", visualize_detections.output)
+    visualizer.addTopic("Distances", visualize_distances.output)
+    visualizer.addTopic("Alert", show_alert.output)
+    visualizer.addTopic("Color", color_out)
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            break

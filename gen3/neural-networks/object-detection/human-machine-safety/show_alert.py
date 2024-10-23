@@ -1,6 +1,5 @@
-import cv2
 import depthai as dai
-import numpy as np
+from host_node.annotation_builder import AnnotationBuilder
 from host_node.measure_object_distance import ObjectDistances
 
 DISTANCE_THRESHOLD = 500  # mm
@@ -13,7 +12,7 @@ class ShowAlert(dai.node.HostNode):
         super().__init__()
         self.output = self.createOutput(
             possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageAnnotations, True)
             ]
         )
 
@@ -21,19 +20,17 @@ class ShowAlert(dai.node.HostNode):
 
     def build(
         self,
-        frame: dai.ImgFrame,
         distances: dai.Node.Output,
         palm_label: int,
         dangerous_objects: list[int],
     ) -> "ShowAlert":
-        self.link_args(frame, distances)
+        self.link_args(distances)
         self.palm_label = palm_label
         self.dangerous_objects = dangerous_objects
         return self
 
-    def process(self, frame: dai.ImgFrame, distances: dai.Buffer):
+    def process(self, distances: dai.Buffer):
         assert isinstance(distances, ObjectDistances)
-        img = frame.getCvFrame()
         found_close_dets = False
         for distance in distances.distances:
             if (
@@ -49,39 +46,27 @@ class ShowAlert(dai.node.HostNode):
                 found_close_dets = True
                 break
         self._state_queue.append(found_close_dets)
+
+        annotation_builder = AnnotationBuilder()
         if len(self._state_queue) > STATE_QUEUE_LENGTH:
             self._state_queue.pop(0)
         if self._should_alert:
-            img = self._draw_alert(img)
+            self._draw_alert(annotation_builder)
 
-        new_frame = dai.ImgFrame()
-        new_frame.setCvFrame(img, dai.ImgFrame.Type.BGR888p)
-        new_frame.setTimestamp(frame.getTimestamp())
-        new_frame.setSequenceNum(frame.getSequenceNum())
-        self.output.send(new_frame)
+        annot = annotation_builder.build(
+            distances.getTimestamp(), distances.getSequenceNum()
+        )
+        self.output.send(annot)
 
     @property
     def _should_alert(self) -> bool:
         return sum(self._state_queue) / len(self._state_queue) > ALERT_THRESHOLD
 
-    def _draw_alert(self, img: np.ndarray) -> np.ndarray:
+    def _draw_alert(self, annotation_builder: AnnotationBuilder) -> AnnotationBuilder:
         text = "Too close"
-        text_size = 2
-        text_thickness = 3
-        size, _ = cv2.getTextSize(
-            text, cv2.FONT_HERSHEY_SIMPLEX, text_size, text_thickness
+        annotation_builder.draw_text(
+            text, (0.4, 0.5), (255, 255, 255, 1), (255, 0, 0, 1), 64
         )
+        annotation_builder.draw_rectangle((0, 0), (1, 1), (255, 0, 0, 1), None, 10)
 
-        x = img.shape[1] // 2 - size[0] // 2
-        y = img.shape[0] // 2 - size[1] // 2
-        img = cv2.putText(
-            img,
-            text,
-            (x, y),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            text_size,
-            (0, 0, 255),
-            text_thickness,
-        )
-        img = cv2.rectangle(img, (0, 0), (img.shape[1], img.shape[0]), (0, 0, 255), 10)
-        return img
+        return annotation_builder
