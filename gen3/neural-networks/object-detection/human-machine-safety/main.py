@@ -42,11 +42,13 @@ visualizer = dai.RemoteConnection()
 with dai.Pipeline(device) as pipeline:
     color_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_out = color_cam.requestOutput(VIDEO_SIZE, dai.ImgFrame.Type.BGR888p, fps=10)
+    left_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    right_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        autoCreateCameras=True, presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY
+        left=left_cam.requestFullResolutionOutput(fps=10),
+        right=right_cam.requestFullResolutionOutput(fps=10),
+        presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY,
     )
-    stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
-    stereo.setSubpixel(False)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     stereo.setOutputSize(*VIDEO_SIZE)
 
