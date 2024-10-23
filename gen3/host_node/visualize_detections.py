@@ -21,7 +21,7 @@ class VisualizeDetections(dai.node.HostNode):
         self.draw_labels = True
         self.draw_confidence = True
         self.draw_kpts = True
-        self.kpt_size = 4
+        self.kpt_size = 0.01
         self.output = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageAnnotations, True)
@@ -105,7 +105,7 @@ class VisualizeDetections(dai.node.HostNode):
         for kpts_det in kpts:
             for kpt in kpts_det:
                 annotation_builder.draw_circle(
-                    kpt, self.kpt_size, self.kpt_color + (1,)
+                    kpt, self.kpt_size, self.kpt_color + (1,), self.kpt_color + (1,), 1
                 )
         return annotation_builder
 
@@ -147,10 +147,10 @@ class VisualizeDetections(dai.node.HostNode):
     def set_text_color(self, text_color: tuple[int, int, int]) -> None:
         self.text_color = text_color
 
-    def set_thickness(self, thickness: int) -> None:
+    def set_thickness(self, thickness: float) -> None:
         self.thickness = thickness
 
-    def set_kpt_size(self, kpt_size: int) -> None:
+    def set_kpt_size(self, kpt_size: float) -> None:
         self.kpt_size = kpt_size
 
     def set_draw_labels(self, draw_labels: bool) -> None:
