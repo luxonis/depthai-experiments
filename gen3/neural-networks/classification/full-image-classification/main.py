@@ -1,15 +1,24 @@
 import argparse
-import depthai as dai
-
 from pathlib import Path
+
+import depthai as dai
 from host_image_classification import ImageClassification
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-nn", "--neural-network", choices=["efficientnet", "flowers"]
-                    , default="efficientnet", type=str
-                    , help="Choose the neural network model used for classification (efficientnet is default)")
-parser.add_argument('-vid', '--video', type=str
-                    , help="Path to video file to be used for inference (otherwises uses the DepthAI RGB Cam Input Feed)")
+parser.add_argument(
+    "-nn",
+    "--neural-network",
+    choices=["efficientnet", "flowers"],
+    default="efficientnet",
+    type=str,
+    help="Choose the neural network model used for classification (efficientnet is default)",
+)
+parser.add_argument(
+    "-vid",
+    "--video",
+    type=str,
+    help="Path to video file to be used for inference (otherwises uses the DepthAI RGB Cam Input Feed)",
+)
 args = parser.parse_args()
 
 nn_shape = None
@@ -20,10 +29,18 @@ device = dai.Device()
 if args.neural_network == "efficientnet":
     device_platform = device.getPlatform()
     if device_platform == dai.Platform.RVC2:
-        model_description = dai.NNModelDescription(modelSlug="efficientnet-lite", platform=device_platform.name, modelVersionSlug="lite0-224x224") 
+        model_description = dai.NNModelDescription(
+            modelSlug="efficientnet-lite",
+            platform=device_platform.name,
+            modelVersionSlug="lite0-224x224",
+        )
         nn_shape = (224, 224)
     else:
-        model_description = dai.NNModelDescription(modelSlug="efficientnet", platform=device_platform.name, modelVersionSlug="300x300")
+        model_description = dai.NNModelDescription(
+            modelSlug="efficientnet",
+            platform=device_platform.name,
+            modelVersionSlug="300x300",
+        )
         nn_shape = (300, 300)
     archive_path = dai.getModelFromZoo(model_description)
     blob = dai.NNArchive(archive_path).getSuperBlob().getBlobWithNumShaves(6)
@@ -57,9 +74,7 @@ with dai.Pipeline(device) as pipeline:
     manip.out.link(nn.input)
 
     classification = pipeline.create(ImageClassification).build(
-        preview=preview,
-        nn=nn.out,
-        efficientnet=(args.neural_network == "efficientnet")
+        preview=preview, nn=nn.out, efficientnet=(args.neural_network == "efficientnet")
     )
     classification.inputs["preview"].setBlocking(False)
     classification.inputs["preview"].setMaxSize(4)
