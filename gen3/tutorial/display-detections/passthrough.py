@@ -1,26 +1,27 @@
 import depthai as dai
 
-from host_nodes.host_display import Display
-from host_nodes.host_add_detections import AddDetections
+from host_node.host_display import Display
+from host_node.normalize_bbox import NormalizeBbox
+from host_node.draw_detections import DrawDetections
 
-model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
+device = dai.Device()
+platform = device.getPlatform()
+
+model_description = dai.NNModelDescription(modelSlug="yolov6-nano", platform=platform.name, modelVersionSlug="r2-coco-512x288")
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
-
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     
     cam = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
-    preview = cam.requestOutput(size=(300, 300), type=dai.ImgFrame.Type.BGR888p)
+    preview = cam.requestOutput(size=(512, 288), type=dai.ImgFrame.Type.BGR888i if platform == dai.Platform.RVC4 else dai.ImgFrame.Type.BGR888p)
 
-    nn = pipeline.create(dai.node.DetectionNetwork)
-    nn.setConfidenceThreshold(0.5)
-    nn.setNNArchive(nn_archive)
+    nn = pipeline.create(dai.node.DetectionNetwork).build(preview, nn_archive, confidenceThreshold=0.5)
     label_map = nn.getClasses()
-    preview.link(nn.input)
 
-    rgb_dets = pipeline.create(AddDetections).build(frame=preview, nn=nn.out, label_map=label_map)
-    rgb = pipeline.create(Display).build(frame=rgb_dets.output)
+    normalized_detections = pipeline.create(NormalizeBbox).build(frame=preview, nn=nn.out)
+    draw_detections = pipeline.create(DrawDetections).build(frame=preview, nn=normalized_detections.output, label_map=label_map)
+    rgb = pipeline.create(Display).build(frames=draw_detections.output)
     rgb.setName("RGB")
     
     print("Pipeline created.")
