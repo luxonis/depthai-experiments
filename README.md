@@ -244,7 +244,7 @@ https://user-images.githubusercontent.com/26127866/147658296-23be4621-d37a-4fd6-
 
 [![Gen2 WebRTC](https://user-images.githubusercontent.com/5244214/121884542-58a1bf00-cd13-11eb-851d-dc45d541e385.gif)](https://youtu.be/8aeqGgO8LjY)
 
-## YOLO V3 V4 V5 X and P On-Camera ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-yolo))
+## YOLO V3 V4 V5 X P V8 V9 and 11 On-Camera ([here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-yolo))
 
 ![yolo-logo](https://user-images.githubusercontent.com/56075061/144863247-fa819d1d-28d6-498a-89a8-c3f94d9e9357.gif)
 
