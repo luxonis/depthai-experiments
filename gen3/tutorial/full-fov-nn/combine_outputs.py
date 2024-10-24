@@ -1,5 +1,5 @@
 from enum import Enum
-from .keyboard_reader import KeyboardPress
+from host_node.keyboard_reader import KeyboardPress
 import cv2
 import numpy as np
 import depthai as dai
