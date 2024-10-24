@@ -80,3 +80,5 @@ Options:
 * --conf: Set the confidence threshold. Default: 0.3. ``float``
 * --iou: Set the NMS IoU threshold. Default: 0.5. ``float``
 * --version: Set the YOLO version to consider. ``int``
+* --input-shape: Set the input shape of YOLO model. Default: [640, 640]. ``int [int ...]``
+* --fps: Set the FPS. Default: 30. ``int``

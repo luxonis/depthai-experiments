@@ -41,17 +41,20 @@ if __name__ == '__main__':
   parser.add_argument("--blob", help="Path to YOLO blob file for inference.", required=True, type=str)
   parser.add_argument("--conf", help="Set the confidence threshold.", default=0.3, type=float)
   parser.add_argument("--iou", help="Set the NMS IoU threshold.", default=0.5, type=float)
-  parser.add_argument("--version", help=f"Set the YOLO version to consider. Available: {available_yolo_versions}.", required=True, type=int)
+  parser.add_argument("--version", help=f"Set the YOLO version to consider.", required=True, type=int, choices=available_yolo_versions)
+  parser.add_argument("--input-shape", help="Set the input shape of YOLO model.", nargs="+", default=[640,640], type=int)
+  parser.add_argument("--fps", help="Set the FPS.", default=30, type=int)
   args = parser.parse_args()
 
   nn_blob_path = args.blob
   confidence_threshold = args.conf
   iou_threshold = args.iou
   yolo_version = args.version
+  yolo_input_shape = args.input_shape
+  fps = args.fps
 
-  if yolo_version not in available_yolo_versions:
-    print(f"Error: You must select a valid YOLO version: {available_yolo_versions}")
-    sys.exit(-1)
+  # Expand input shape if needed
+  yolo_input_shape *= 2 if len(yolo_input_shape) == 1 else 1
 
   # Start defining a pipeline
   pipeline = dai.Pipeline()
@@ -67,9 +70,9 @@ if __name__ == '__main__':
   # Define camera source
   rgb_cam_node = pipeline.create(dai.node.ColorCamera)
   rgb_cam_node.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-  rgb_cam_node.setFps(30)
+  rgb_cam_node.setFps(fps)
   rgb_cam_node.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-  rgb_cam_node.setPreviewSize(640, 640)
+  rgb_cam_node.setPreviewSize(yolo_input_shape)
   rgb_cam_node.setInterleaved(False)
   rgb_cam_node.preview.link(nn_node.input)
 
