@@ -12,7 +12,7 @@ This repository contains code for various Yolo experiments:
 | `host-decoding`   | host     | V5                           | Object detection using YoloV5 and on-host decoding.          |
 | `yolox` | host | X | Object detection without anchors using YOLOX-tiny with on-host decoding. |
 | `yolop` | host | P | Vehicle detection, road segmentation, and lane segmentation using YOLOP on OAK with on-host decoding. |
-| `yolo-segmentation` | host | V5, V8, V9, V11 | Object segmentation using YOLOv5, YOLOv8, YOLOv9, YOLO11 on OAK with on-host decoding. |
+| `yolo-segmentation` | host | V5, V8, V9, 11 | Object segmentation using YOLOv5, YOLOv8, YOLOv9, YOLO11 on OAK with on-host decoding. |
 
 ## On-Device decoding
 
