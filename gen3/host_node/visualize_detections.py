@@ -3,6 +3,7 @@ from datetime import timedelta
 import depthai as dai
 import numpy as np
 from depthai_nodes.ml.messages import (
+    Classifications,
     ImgDetectionExtended,
     ImgDetectionsExtended,
     Keypoints,
@@ -31,7 +32,7 @@ class VisualizeDetections(dai.node.HostNode):
     def build(
         self,
         nn: dai.Node.Output,
-        label_map: list[str],
+        label_map: list[str] | None = None,
         lines: list[tuple[int, int]] = [],
     ) -> "VisualizeDetections":
         self.label_map = label_map
@@ -48,6 +49,7 @@ class VisualizeDetections(dai.node.HostNode):
                 ImgDetectionsExtended,
                 Keypoints,
                 dai.SpatialImgDetections,
+                Classifications,
             ),
         )
 
@@ -62,7 +64,8 @@ class VisualizeDetections(dai.node.HostNode):
         detections: ImgDetectionsExtended
         | dai.ImgDetections
         | Keypoints
-        | dai.SpatialImgDetections,
+        | dai.SpatialImgDetections
+        | Classifications,
         timestamp: timedelta,
         sequence_num: int,
     ) -> dai.ImageAnnotations:
@@ -81,7 +84,25 @@ class VisualizeDetections(dai.node.HostNode):
                 kpts = [(i.x, i.y) for i in detections.keypoints]
                 self._draw_kpts([kpts], annotation_builder)
                 self._draw_lines([kpts], self.lines, annotation_builder)
+        if isinstance(detections, Classifications):
+            label, score = max(
+                zip(detections.classes, detections.scores), key=lambda x: x[1]
+            )
+            self._draw_classification(label, f"{score:.2f}", annotation_builder)
+
         return annotation_builder.build(timestamp, sequence_num)
+
+    def _draw_classification(
+        self, label: str, score: str, annotation_builder: AnnotationBuilder
+    ) -> None:
+        annotation_builder.draw_text(
+            f"{label} {score}",
+            (0.1, 0.1),
+            self.text_color + (1,),
+            self.color + (1,),
+            24,
+        )
+        return annotation_builder
 
     def _draw_lines(
         self,
@@ -120,7 +141,10 @@ class VisualizeDetections(dai.node.HostNode):
             bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
             text = ""
             if self.draw_labels:
-                text += self.label_map[detection.label]
+                if self.label_map:
+                    text += self.label_map[detection.label]
+                else:
+                    text += str(detection.label)
                 if self.draw_labels:
                     text += " "
             if self.draw_confidence:
