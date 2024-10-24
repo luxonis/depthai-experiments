@@ -76,7 +76,7 @@ python3 main.py --blob <path_to_blob_file> --conf <confidence_threshold> --iou <
 ```
 
 Options:
-* --blob: Path to YOLO blob file for inference. (str)
-* --conf: Set the confidence threshold. Default: 0.3. (float)
-* --iou: Set the NMS IoU threshold. Default: 0.5. (float)
-* --version: Set the YOLO version to consider. (int)
+* --blob: Path to YOLO blob file for inference. ``str``
+* --conf: Set the confidence threshold. Default: 0.3. ``float``
+* --iou: Set the NMS IoU threshold. Default: 0.5. ``float``
+* --version: Set the YOLO version to consider. ``int``
