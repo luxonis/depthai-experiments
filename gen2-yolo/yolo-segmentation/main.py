@@ -1,3 +1,4 @@
+import sys
 import cv2
 import depthai as dai
 import numpy as np
@@ -31,19 +32,26 @@ coco_classes = ['person', 'bicycle', 'car', 'motorcycle', 'airplane',
 class_colors = {cls: generate_random_color() for cls in coco_classes}
 
 pixel_conf_threshold = 0.3
+available_yolo_versions = [5, 8, 9, 11]
 
 
 if __name__ == '__main__':
 
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--blob", help="Select model's blob path for inference.", required=True, type=str)
-  parser.add_argument("--conf", help="Confidence threshold.", default=0.3, type=float)
-  parser.add_argument("--iou", help="IoU threshold.", default=0.5, type=float)
+  parser = argparse.ArgumentParser(description="Object segmentation on OAK devices using YOLO models.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("--blob", help="Path to YOLO blob file for inference.", required=True, type=str)
+  parser.add_argument("--conf", help="Set the confidence threshold.", default=0.3, type=float)
+  parser.add_argument("--iou", help="Set the NMS IoU threshold.", default=0.5, type=float)
+  parser.add_argument("--version", help=f"Set the YOLO version to consider. Available: {available_yolo_versions}.", required=True, type=int)
   args = parser.parse_args()
 
   nn_blob_path = args.blob
   confidence_threshold = args.conf
   iou_threshold = args.iou
+  yolo_version = args.version
+
+  if yolo_version not in available_yolo_versions:
+    print(f"Error: You must select a valid YOLO version: {available_yolo_versions}")
+    sys.exit(-1)
 
   # Start defining a pipeline
   pipeline = dai.Pipeline()
@@ -115,10 +123,11 @@ if __name__ == '__main__':
         # Get output0 data to parse detected bounding boxes and get mask weights
         output0 = nn_out.getLayerFp16(layers[0].name)
         output0 = np.array(output0)
-        dims0 = layers[0].dims            # (1, 25200, 117)
+        dims0 = layers[0].dims            # (1, 116, 8400) for YOLOv8,v9,11 | (1, 25200, 117) for YOLOv5
         output0 = output0.reshape(dims0)
-        output0 = output0.squeeze(0)      # (25200, 117)
-        output0 = output0.transpose()     # (117, 25200)
+        output0 = output0.squeeze(0)      # (116, 8400) for YOLOv8,v9,11 | (25200, 117) for YOLOv5
+        if yolo_version == 5:
+          output0 = output0.transpose()   # (117, 25200) for YOLOv5
 
         # Get output1 data to parse segmentation mask prototypes
         output1 = nn_out.getLayerFp16(layers[1].name)
@@ -129,19 +138,28 @@ if __name__ == '__main__':
         mask_protos = output1.reshape(output1.shape[0], output1.shape[1]*output1.shape[2]) # (32, 25600)
 
         # Get main info from output0
-        num_classes = output0.shape[0] - 5 - 32            # number of classes = Total number of 2nd dimension - 5 bbox. info. - 32 mask weights
-        bounding_boxes = output0[:4, :]                    # bounding boxes coordinates format: (xc, yc, w, h)
-        box_confidences = output0[4, :]                    # bounding box confidence format: (conf)
-        class_confidences = output0[5:(num_classes+5), :]  # class confidences format: (class_0, class_1, ...)
-        mask_weights = output0[(num_classes+5):, :]        # mask weights format: (mask_weight_0, mask_weight_1, ... , mask_weight_31)
+        if yolo_version == 5:
+          num_classes = output0.shape[0] - 5 - 32            # number of classes = Total number of 2nd dimension - 5 bbox. info. - 32 mask weights
+          bounding_boxes = output0[:4, :]                    # bounding boxes coordinates format: (xc, yc, w, h)
+          box_confidences = output0[4, :]                    # bounding box confidence format: (conf)
+          class_confidences = output0[5:(num_classes+5), :]  # class confidences format: (class_0, class_1, ...)
+          mask_weights = output0[(num_classes+5):, :]        # mask weights format: (mask_weight_0, mask_weight_1, ... , mask_weight_31)
+        else:
+          num_classes = output0.shape[0] - 4 - 32            # number of classes = Total number of 2nd dimension - 4 bbox. coord. - 32 mask weights
+          bounding_boxes = output0[:4, :]                    # bounding boxes coordinates format: (xc, yc, w, h)
+          class_confidences = output0[4:(num_classes+4), :]  # class confidences format: (class_0, class_1, ...)
+          mask_weights = output0[(num_classes+4):, :]        # mask weights format: (mask_weight_0, mask_weight_1, ... , mask_weight_31)
 
         class_scores = np.max(class_confidences, axis=0)
         class_ids = np.argmax(class_confidences, axis=0)
 
-        # Initial filtering based on box confidences
-        filtered_indices = box_confidences > 0.0
+        # Initial filtering based on class scores
+        if yolo_version == 5:
+          filtered_indices = box_confidences > 0.0
+          filtered_box_scores = box_confidences[filtered_indices]
+        else:
+          filtered_indices = class_scores > 0.0
         filtered_boxes = bounding_boxes[:, filtered_indices]
-        filtered_box_scores = box_confidences[filtered_indices]
         filtered_class_scores = class_scores[filtered_indices]
         filtered_class_ids = class_ids[filtered_indices]
         filtered_mask_weights = mask_weights[:, filtered_indices]
@@ -159,7 +177,10 @@ if __name__ == '__main__':
 
         # Apply NMS
         bboxes = np.stack([x1, y1, x2, y2], axis=1)
-        indices = cv2.dnn.NMSBoxes(bboxes.tolist(), filtered_box_scores.tolist(), confidence_threshold, iou_threshold)
+        if yolo_version == 5:
+          indices = cv2.dnn.NMSBoxes(bboxes.tolist(), filtered_box_scores.tolist(), confidence_threshold, iou_threshold)
+        else:
+          indices = cv2.dnn.NMSBoxes(bboxes.tolist(), filtered_class_scores.tolist(), confidence_threshold, iou_threshold)
 
         final_boxes = [[int(v) for v in bboxes[i]] for i in indices]
         final_scores = [filtered_class_scores[i] for i in indices]
@@ -213,7 +234,7 @@ if __name__ == '__main__':
             cv2.addWeighted(frame, 1.0, overlay, 0.5, 0, frame)
 
             # Draw polygon
-            cv2.polylines(frame, [polygon], isClosed=False, color=(0, 0, 0), thickness=2)
+            cv2.polylines(frame, [polygon], isClosed=True, color=(0, 0, 0), thickness=2)
             #cv2.drawContours(frame, [polygon], -1, (0,0,0), 2)
 
           # Draw detection label (class + confidence)

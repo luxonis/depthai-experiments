@@ -1,5 +1,7 @@
 # YOLO segmentation with decoding on host
 
+This example shows how to perform instance segmentation on OAK devices using YOLO models ([YOLOv5](https://github.com/ultralytics/yolov5), [YOLOv8](https://docs.ultralytics.com/models/yolov8), [YOLOv9](https://github.com/WongKinYiu/yolov9) and [YOLO11](https://docs.ultralytics.com/models/yolo11)). The decoding of the models' output is done on the host side. The ONNX models were exported from pretrained weights on COCO and then were converted to blob to be compatible with OAK devices.
+
 ![On-host decoding YOLO segmentation in OAK](docs/oak_segmentation_example.gif)
 
 ## Pre-requisites
@@ -38,7 +40,7 @@ pip install ultralytics
 **2. Export:**
 ```bash=
 yolo export model=yolov8{n,s}-seg.pt format=onnx imgsz=640 half=True dynamic=False simplify=True batch=1
-yolo export model=yolov11{n,s}-seg.pt format=onnx imgsz=640 half=True dynamic=False simplify=True batch=1
+yolo export model=yolo11{n,s}-seg.pt format=onnx imgsz=640 half=True dynamic=False simplify=True batch=1
 ```
 
 #### **YOLOv9**
@@ -50,26 +52,31 @@ cd yolov9/
 pip install -r requirements.txt
 ```
 
-**2. Export:**
+**2. Download weights:**
+```bash=
+wget https://github.com/WongKinYiu/yolov9/releases/download/v0.1/gelan-c-seg.pt
+```
+
+**3. Export:**
 ```bash=
 python3 export.py --weights gelan-c-seg.pt --include onnx --imgsz 640 --batch-size 1 --simplify
 ```
 
 ### 3. Convert ONNX models to blob
 
-The conversion from ONNX to blob is made by means of Luxonis [Blob Converter Tool](http://blobconverter.luxonis.com).
+The conversion from ONNX to blob is made by means of Luxonis [Blob Converter Tool](http://blobconverter.luxonis.com). Note that the mean values of the ``Model optimizer parameters`` in the ``Advanced options`` must be changed from the default ``[127.5, 127.5, 127.5]`` to ``[0, 0, 0]``.
 
 
 ## Usage
 
-#### Inference with YOLO8, YOLOv9 or YOLO11
+#### Inference with YOLOv5, YOLO8, YOLOv9 or YOLO11
 
 ```bash=
-python3 main_yoloV8V9V11.py --blob <path_to_blob_file> --conf <confidence_threshold> --iou <iou_threshold>
+python3 main.py --blob <path_to_blob_file> --conf <confidence_threshold> --iou <iou_threshold> --version <yolo_version>
 ```
 
-#### Inference with YOLOv5
-
-```bash=
-python3 main_yoloV5.py --blob <path_to_blob_file> --conf <confidence_threshold> --iou <iou_threshold>
-```
+Options:
+* --blob: Path to YOLO blob file for inference.
+* --conf: Set the confidence threshold. Default: 0.3.
+* --iou: Set the NMS IoU threshold. Default: 0.5.
+* --version: Set the YOLO version to consider.
