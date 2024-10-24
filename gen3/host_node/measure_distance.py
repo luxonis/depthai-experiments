@@ -178,7 +178,7 @@ class MeasureDistance(dai.node.HostNode):
         rois = self.roi_input.tryGetAll()
         if rois:
             self._roi = rois[-1]
-        print("ROI updated")
+        #print("ROI updated")
 
 
     def _calc_angle(self, frame: np.ndarray, offset: int, HFOV: float) -> float:

@@ -11,7 +11,7 @@ from PyQt5.QtGui import QImage
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 from PyQt5.QtWidgets import QApplication
 
-from host_depth_color_transform import DepthColorTransform
+from host_node.host_depth_color_transform import DepthColorTransform
 
 instance = None
 
@@ -111,8 +111,7 @@ class Worker(QRunnable):
             self.config_queue = stereo.inputConfig.createInputQueue()
             
             disparity = pipeline.create(DepthColorTransform).build(
-                disparity_frames=stereo.disparity,
-                max_disparity=self.stereo_config.getMaxDisparity()
+                disparity_frames=stereo.disparity
             )
             disparity.setColormap(cv2.COLORMAP_JET)
 

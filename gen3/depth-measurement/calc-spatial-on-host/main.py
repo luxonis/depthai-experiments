@@ -3,29 +3,20 @@
 import cv2
 import depthai as dai
 from calc import HostSpatialsCalc
-from host_depth_color_transform import DepthColorTransform
-from host_display import Display
-from keyboard_reader import KeyboardReader
-from measure_distance import MeasureDistance
+from host_node.measure_distance import MeasureDistance
+from host_node.host_depth_color_transform import DepthColorTransform
+from host_node.host_display import Display
+from host_node.keyboard_reader import KeyboardReader
 
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
-
-    monoLeft = pipeline.create(dai.node.MonoCamera)
-    monoRight = pipeline.create(dai.node.MonoCamera)
-
-    monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    monoLeft.setBoardSocket(dai.CameraBoardSocket.CAM_B)
-    monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C)  
+    monoLeft = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B).requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
+    monoRight = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C).requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
     
-    stereo = pipeline.create(dai.node.StereoDepth).build(monoLeft.out, monoRight.out)
-    stereo.initialConfig.setConfidenceThreshold(255)
-    stereo.setLeftRightCheck(True)
-    stereo.setSubpixel(False)
+    stereo = pipeline.create(dai.node.StereoDepth).build(monoLeft, monoRight, presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
     
-    depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity, stereo.initialConfig.getMaxDisparity())
+    depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity)
     depth_color_transform.setColormap(cv2.COLORMAP_JET)
 
     keyboard_reader = pipeline.create(KeyboardReader).build(depth_color_transform.output)

@@ -7,22 +7,22 @@ class DepthColorTransform(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
-        self.colormap = cv2.COLORMAP_HOT
+        self._max_disparity = 0
+        self.setColormap(cv2.COLORMAP_HOT)
 
-
-    def build(self, disparity_frames: dai.Node.Output, max_disparity: int) -> "DepthColorTransform":
-        self.disp_multiplier = 255 / max_disparity
+    def setColormap(self, colormap_value: int) -> None:
+        color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), colormap_value)
+        color_map[0] = [0, 0, 0]
+        self._colormap = color_map
+    
+    def build(self, disparity_frames: dai.Node.Output) -> "DepthColorTransform":
         self.link_args(disparity_frames)
         return self
 
-
-    def setColormap(self, colormap: int) -> None:
-        self.colormap = colormap
-
-
     def process(self, disparity_frame: dai.ImgFrame) -> None:
-        frame = (disparity_frame.getFrame() * self.disp_multiplier).astype(np.uint8)
-        frame = cv2.applyColorMap(frame, self.colormap)
+        frame = disparity_frame.getFrame()
+        maxDisparity = max(self._max_disparity, frame.max())
+        colorizedDisparity = cv2.applyColorMap(((frame / maxDisparity) * 255).astype(np.uint8), self._colormap)
 
-        disparity_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888p)
+        disparity_frame.setCvFrame(colorizedDisparity, dai.ImgFrame.Type.BGR888i)
         self.output.send(disparity_frame)

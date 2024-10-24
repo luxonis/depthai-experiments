@@ -1,9 +1,9 @@
 import math
 import depthai as dai
 from utility import TextHelper
-from keyboard_reader import KeyboardPress
-from measure_distance import SpatialDistance
-from measure_distance import RegionOfInterest
+from host_node.keyboard_reader import KeyboardPress
+from host_node.measure_distance import SpatialDistance
+from host_node.measure_distance import RegionOfInterest
 
 
 class HostSpatialsCalc(dai.node.HostNode):
