@@ -70,7 +70,8 @@ with dai.Pipeline(device) as pipeline:
     parser.setBackgroundClass(True)
     nn.out.link(parser.input)
 
-    color_transform = pipeline.create(DepthColorTransform).build(parser.out, classes)
+    color_transform = pipeline.create(DepthColorTransform).build(parser.out)
+    color_transform.setMaxDisparity(classes)
     color_transform.setColormap(cv2.COLORMAP_JET)
 
     segmentation_map_resize = pipeline.create(dai.node.ImageManipV2)

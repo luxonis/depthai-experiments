@@ -23,7 +23,12 @@ class DepthColorTransform(dai.node.HostNode):
         self.link_args(disparity_frames)
         return self
 
-    def process(self, disparity_frame: dai.ImgFrame) -> None:
+    def setMaxDisparity(self, max_disparity: int) -> None:
+        self._max_disparity = max_disparity
+
+    def process(self, disparity_frame: dai.Buffer) -> None:
+        assert isinstance(disparity_frame, dai.ImgFrame)
+
         frame = disparity_frame.getFrame()
         maxDisparity = max(self._max_disparity, frame.max())
         colorizedDisparity = cv2.applyColorMap(
