@@ -3,8 +3,10 @@ from os.path import isfile
 from pathlib import Path
 
 import depthai as dai
+import lane_detection_config
+from depthai_nodes import LaneDetectionParser
 from download import download_vids
-from host_lanenet import LaneNet
+from host_node.visualize_detections import VisualizeDetections
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -17,10 +19,40 @@ parser.add_argument(
 parser.add_argument(
     "-cam", "--cam", help="Use camera instead of video.", action="store_true"
 )
+parser.add_argument(
+    "-nn",
+    "--neural-network",
+    choices=["culane", "tusimple"],
+    default="tusimple",
+    type=str,
+    help="Choose the neural network model (tusimple is default)",
+)
+
 args = parser.parse_args()
 
-NN_SIZE = (512, 256)
-VIDEO_SIZE = (1280, 720)
+nn_version_slugs = {
+    "culane": "culane-800x288",
+    "tusimple": "tusimple-800x288",
+}
+nn_configs = {
+    "culane": lane_detection_config.culane,
+    "tusimple": lane_detection_config.tusimple,
+}
+
+NN_SIZE = (800, 288)
+VIDEO_SIZE = (800, 288)
+
+device = dai.Device()
+
+nn_model_description = dai.NNModelDescription(
+    modelSlug="ultra-fast-lane-detection",
+    platform=device.getPlatform().name,
+    modelVersionSlug=nn_version_slugs[args.neural_network],
+)
+nn_archive_path = dai.getModelFromZoo(nn_model_description, useCached=True)
+nn_archive = dai.NNArchive(nn_archive_path)
+
+nn_config = nn_configs[args.neural_network]
 
 # Download test videos
 if (
@@ -30,15 +62,17 @@ if (
 ):
     download_vids()
 
-with dai.Pipeline() as pipeline:
+visualizer = dai.RemoteConnection()
+
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     if args.cam:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        color_out = cam.requestOutput(VIDEO_SIZE, dai.ImgFrame.Type.BGR888p, fps=10)
+        color_out = cam.requestOutput(VIDEO_SIZE, dai.ImgFrame.Type.BGR888p, fps=5)
     else:
         replay = pipeline.create(dai.node.ReplayVideo)
-        replay.setSize(*NN_SIZE)
-        replay.setFps(10)
+        replay.setSize(*VIDEO_SIZE)
+        replay.setFps(5)
         replay.setReplayVideoFile(Path(args.video).resolve().absolute())
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
         color_out = replay.out
@@ -48,19 +82,27 @@ with dai.Pipeline() as pipeline:
     color_out.link(nn_resize.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(
-        Path("model/lanenet_openvino_2021.4_6shave.blob").resolve().absolute()
-    )
-    nn.setNumPoolFrames(4)
-    nn.input.setBlocking(False)
+    nn.setNNArchive(nn_archive)
     nn.setNumInferenceThreads(2)
     nn_resize.out.link(nn.input)
 
-    lane_detection = pipeline.create(LaneNet).build(
-        preview=nn_resize.out, nn=nn.out, nn_shape=NN_SIZE
-    )
-    lane_detection.inputs["preview"].setBlocking(False)
-    lane_detection.inputs["preview"].setMaxSize(4)
+    parser = pipeline.create(LaneDetectionParser)
+    parser.setRowAnchors(nn_config["row_anchors"])
+    parser.setGridingNum(nn_config["griding_num"])
+    parser.setClsNumPerLane(nn_config["cls_num_per_lane"])
+    parser.setInputShape(nn_config["input_shape"])
+    parser.set
+    nn.out.link(parser.input)
+
+    visualize_detections = pipeline.create(VisualizeDetections).build(parser.out)
 
     print("Pipeline created.")
-    pipeline.run()
+    visualizer.addTopic("Lines", visualize_detections.output)
+    visualizer.addTopic("Color", nn_resize.out)
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            break
