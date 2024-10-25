@@ -4,6 +4,7 @@ import depthai as dai
 import numpy as np
 from depthai_nodes.ml.messages import (
     Classifications,
+    Clusters,
     ImgDetectionExtended,
     ImgDetectionsExtended,
     Keypoints,
@@ -50,6 +51,7 @@ class VisualizeDetections(dai.node.HostNode):
                 Keypoints,
                 dai.SpatialImgDetections,
                 Classifications,
+                Clusters,
             ),
         )
 
@@ -89,6 +91,12 @@ class VisualizeDetections(dai.node.HostNode):
                 zip(detections.classes, detections.scores), key=lambda x: x[1]
             )
             self._draw_classification(label, f"{score:.2f}", annotation_builder)
+        if isinstance(detections, Clusters):
+            for cluster in detections.clusters:
+                kpts = [(i.x, i.y) for i in cluster.points]
+                print(kpts)
+                self._draw_kpts([kpts], annotation_builder)
+                self._draw_lines([kpts], self.lines, annotation_builder)
 
         return annotation_builder.build(timestamp, sequence_num)
 
