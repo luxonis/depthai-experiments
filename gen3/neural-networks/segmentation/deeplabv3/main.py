@@ -1,16 +1,26 @@
-import depthai as dai
 import argparse
-
 from pathlib import Path
+
+import depthai as dai
 from host_deeplab_segmentation import DeeplabSegmentation
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument("-nn", "--neural-network", choices=["multiclass", "person_small", "person_large"]
-                    , default="person_large", type=str
-                    , help="Choose the neural network model used for segmentation (multiclass is default)")
-parser.add_argument("-cam", "--cam_input", choices=["left", "rgb", "right"], default="rgb", type=str
-                    , help="Choose camera for inference source (rgb is default)")
+parser.add_argument(
+    "-nn",
+    "--neural-network",
+    choices=["multiclass", "person_small", "person_large"],
+    default="person_large",
+    type=str,
+    help="Choose the neural network model used for segmentation (multiclass is default)",
+)
+parser.add_argument(
+    "-cam",
+    "--cam_input",
+    choices=["left", "rgb", "right"],
+    default="rgb",
+    type=str,
+    help="Choose camera for inference source (rgb is default)",
+)
 args = parser.parse_args()
 
 cam_source = args.cam_input
@@ -20,20 +30,27 @@ nn_path = None
 if args.neural_network == "multiclass":
     raise NotImplementedError("Multiclass model is not supported yet")
     nn_shape = (256, 256)
-    nn_path = Path("model/deeplab_v3_plus_mnv2_decoder_256_openvino_2021.4.blob").resolve().absolute()
+    nn_path = (
+        Path("model/deeplab_v3_plus_mnv2_decoder_256_openvino_2021.4.blob")
+        .resolve()
+        .absolute()
+    )
 elif args.neural_network == "person_small":
     nn_shape = (256, 256)
-    model_description = dai.NNModelDescription(modelSlug="deeplabv3", platform="RVC2", modelVersionSlug="256x256") 
+    model_description = dai.NNModelDescription(
+        modelSlug="deeplabv3", platform="RVC2", modelVersionSlug="256x256"
+    )
     archive_path = dai.getModelFromZoo(model_description)
 elif args.neural_network == "person_large":
     nn_shape = (513, 513)
-    model_description = dai.NNModelDescription(modelSlug="deeplabv3", platform="RVC2", modelVersionSlug="513x513") 
+    model_description = dai.NNModelDescription(
+        modelSlug="deeplabv3", platform="RVC2", modelVersionSlug="513x513"
+    )
     archive_path = dai.getModelFromZoo(model_description)
-    
+
 nn_archive = dai.NNArchive(archive_path)
 
 with dai.Pipeline() as pipeline:
-
     print("Creating pipeline...")
     nn = pipeline.create(dai.node.NeuralNetwork)
     # nn.setBlobPath(nn_path)
@@ -67,7 +84,7 @@ with dai.Pipeline() as pipeline:
         preview=nn.passthrough,
         nn=nn.out,
         nn_shape=nn_shape,
-        multiclass=(args.neural_network == "multiclass")
+        multiclass=(args.neural_network == "multiclass"),
     )
     multiclass_segmentation.inputs["preview"].setBlocking(False)
     multiclass_segmentation.inputs["preview"].setMaxSize(4)

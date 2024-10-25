@@ -4,12 +4,18 @@ import numpy as np
 
 NUM_OF_CLASSES = 21
 
+
 class DeeplabSegmentation(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, preview: dai.Node.Output, nn: dai.Node.Output
-              , nn_shape: tuple[int, int], multiclass: bool) -> "DeeplabSegmentation":
+    def build(
+        self,
+        preview: dai.Node.Output,
+        nn: dai.Node.Output,
+        nn_shape: tuple[int, int],
+        multiclass: bool,
+    ) -> "DeeplabSegmentation":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)
 
@@ -19,7 +25,7 @@ class DeeplabSegmentation(dai.node.HostNode):
 
     # Preview is actually type dai.ImgFrame here
     def process(self, preview: dai.Buffer, nn: dai.NNData) -> None:
-        assert (isinstance(preview, dai.ImgFrame))
+        assert isinstance(preview, dai.ImgFrame)
 
         frame = preview.getCvFrame()
         data = nn.getFirstTensor().astype(np.int32).flatten().reshape(self.nn_shape)
@@ -27,13 +33,19 @@ class DeeplabSegmentation(dai.node.HostNode):
 
         if self.multiclass:
             found_classes = np.unique(data)
-            cv2.putText(frame, "Found classes {}".format(found_classes)
-                        , (10, 20), cv2.FONT_HERSHEY_TRIPLEX, 0.4,(255, 0, 0))
+            cv2.putText(
+                frame,
+                "Found classes {}".format(found_classes),
+                (10, 20),
+                cv2.FONT_HERSHEY_TRIPLEX,
+                0.4,
+                (255, 0, 0),
+            )
 
-        frame = cv2.addWeighted(frame,1, output_colors,0.3,0)
+        frame = cv2.addWeighted(frame, 1, output_colors, 0.3, 0)
         cv2.imshow("Preview", frame)
 
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             print("Pipeline exited.")
             self.stopPipeline()
 
@@ -52,4 +64,3 @@ class DeeplabSegmentation(dai.node.HostNode):
             output_colors = np.take(class_colors, output_tensor, axis=0)
 
         return output_colors
-
