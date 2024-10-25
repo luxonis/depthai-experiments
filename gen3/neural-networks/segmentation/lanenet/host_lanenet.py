@@ -1,17 +1,19 @@
-import numpy as np
 import cv2
 import depthai as dai
-
+import numpy as np
 from sklearn.cluster import DBSCAN
 
 # Set max clusters for color output (number of lines + a few more due to errors in fast postprocessing)
 MAX_CLUSTERS = 6
 
+
 class LaneNet(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, preview: dai.Node.Output, nn: dai.Node.Output, nn_shape: tuple[int, int]) -> "LaneNet":
+    def build(
+        self, preview: dai.Node.Output, nn: dai.Node.Output, nn_shape: tuple[int, int]
+    ) -> "LaneNet":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)
 
@@ -20,13 +22,19 @@ class LaneNet(dai.node.HostNode):
 
     # preview is actually type dai.ImgFrame here
     def process(self, preview: dai.Buffer, nn: dai.NNData) -> None:
-        assert(isinstance(preview, dai.ImgFrame))
+        assert isinstance(preview, dai.ImgFrame)
         frame = preview.getCvFrame()
 
         # First layer is a binary segmentation mask of lanes
-        segmentation = nn.getTensor("LaneNet/bisenetv2_backend/binary_seg/ArgMax/Squeeze").flatten().astype(np.uint8)
+        segmentation = (
+            nn.getTensor("LaneNet/bisenetv2_backend/binary_seg/ArgMax/Squeeze")
+            .flatten()
+            .astype(np.uint8)
+        )
         # Second layer is an array of embeddings of dimension 4 for each pixel in the input
-        embeddings = nn.getTensor("LaneNet/bisenetv2_backend/instance_seg/pix_embedding_conv/Conv2D")
+        embeddings = nn.getTensor(
+            "LaneNet/bisenetv2_backend/instance_seg/pix_embedding_conv/Conv2D"
+        )
         embeddings = embeddings.reshape((4, self.nn_shape[0] * self.nn_shape[1]))
 
         # Cluster outputs
@@ -37,10 +45,9 @@ class LaneNet(dai.node.HostNode):
 
         cv2.imshow("Preview", frame)
 
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             print("Pipeline exited.")
             self.stopPipeline()
-
 
     # Perform postprocessing - clustering of line embeddings using DBSCAN
     #  note that this is not whole postprocessing, just a quick implementation to show what is possible
@@ -52,7 +59,7 @@ class LaneNet(dai.node.HostNode):
 
         # Mask out embeddings
         embeddings = instance_seg_ret.copy()
-        embeddings = np.transpose(embeddings, (1,0))
+        embeddings = np.transpose(embeddings, (1, 0))
         embeddings_masked = embeddings[mask]
 
         # Sort so same classes are sorted first each time and generate inverse sort
@@ -63,7 +70,9 @@ class LaneNet(dai.node.HostNode):
         embeddings_masked = embeddings_masked[idx]
 
         # Cluster embeddings with DBSCAN
-        clustering = DBSCAN(eps=0.4, min_samples=500, algorithm="kd_tree").fit(embeddings_masked)
+        clustering = DBSCAN(eps=0.4, min_samples=500, algorithm="kd_tree").fit(
+            embeddings_masked
+        )
 
         # Unsort so pixels match their positions again
         clustering_labels = clustering.labels_[idx_inverse]
