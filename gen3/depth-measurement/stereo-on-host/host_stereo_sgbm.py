@@ -26,7 +26,6 @@ class StereoSGBM(dai.node.HostNode):
 
     def build(self, monoLeftOut : dai.Node.Output, monoRightOut : dai.Node.Output, calibObj : dai.CalibrationHandler, resolution : tuple[int, int]) -> "StereoSGBM":
         self.link_args(monoLeftOut, monoRightOut)
-        self.sendProcessingToPipeline(False)
 
         self.baseline = calibObj.getBaselineDistance() * 10 # mm
         self.focal_length = self.count_focal_length(calibObj, resolution)
@@ -37,10 +36,10 @@ class StereoSGBM(dai.node.HostNode):
 
     def process(self, monoLeft : dai.ImgFrame, monoRight : dai.ImgFrame) -> None:
         monoLeftFrame = monoLeft.getCvFrame()
-        self.mono_left.send(self._create_img_frame(monoLeftFrame, dai.ImgFrame.Type.GRAY8))
+        self.mono_left.send(self._create_img_frame(monoLeftFrame, dai.ImgFrame.Type.BGR888i))
 
         monoRightFrame = monoRight.getCvFrame()
-        self.mono_right.send(self._create_img_frame(monoRightFrame, dai.ImgFrame.Type.GRAY8))
+        self.mono_right.send(self._create_img_frame(monoRightFrame, dai.ImgFrame.Type.BGR888i))
         
         self.create_disparity_map(monoLeftFrame, monoRightFrame)
 
@@ -70,12 +69,12 @@ class StereoSGBM(dai.node.HostNode):
 
     def rectification(self, left_img, right_img):
         # warp right image
-        img_l = cv2.warpPerspective(left_img, self.H1, left_img.shape[::-1],
+        img_l = cv2.warpPerspective(left_img, self.H1, left_img.shape[:2][::-1],
                                     cv2.INTER_CUBIC +
                                     cv2.WARP_FILL_OUTLIERS +
                                     cv2.WARP_INVERSE_MAP)
 
-        img_r = cv2.warpPerspective(right_img, self.H2, right_img.shape[::-1],
+        img_r = cv2.warpPerspective(right_img, self.H2, right_img.shape[:2][::-1],
                                     cv2.INTER_CUBIC +
                                     cv2.WARP_FILL_OUTLIERS +
                                     cv2.WARP_INVERSE_MAP)
@@ -91,7 +90,9 @@ class StereoSGBM(dai.node.HostNode):
             right_img_rect = right_img
 
         #opencv skips disparity calculation for the first max_disparity pixels
-        pad_img = np.zeros(shape=[left_img.shape[0], self.max_disparity], dtype=np.uint8)
+        pad_img_shape = [*left_img.shape]
+        pad_img_shape[1] = self.max_disparity
+        pad_img = np.zeros(shape=pad_img_shape, dtype=np.uint8)
         left_img_rect_pad = cv2.hconcat([pad_img, left_img_rect])
         right_img_rect_pad = cv2.hconcat([pad_img, right_img_rect])
         self.disparity = self.stereoProcessor.compute(left_img_rect_pad, right_img_rect_pad)
@@ -104,9 +105,9 @@ class StereoSGBM(dai.node.HostNode):
             (disparity_scaled * (256. / self.max_disparity)).astype(np.uint8),
             cv2.COLORMAP_HOT)
         
-        self.disparity_out.send(self._create_img_frame(disparity_colour_mapped, dai.ImgFrame.Type.BGR888p))
-        self.rectified_left.send(self._create_img_frame(left_img_rect, dai.ImgFrame.Type.GRAY8)) 
-        self.rectified_right.send(self._create_img_frame(right_img_rect, dai.ImgFrame.Type.GRAY8))
+        self.disparity_out.send(self._create_img_frame(disparity_colour_mapped, dai.ImgFrame.Type.BGR888i))
+        self.rectified_left.send(self._create_img_frame(left_img_rect, dai.ImgFrame.Type.NV12)) 
+        self.rectified_right.send(self._create_img_frame(right_img_rect, dai.ImgFrame.Type.NV12))
         
         
     def _create_img_frame(self, frame: np.ndarray, type : dai.ImgFrame.Type) -> dai.ImgFrame:
