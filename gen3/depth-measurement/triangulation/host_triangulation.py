@@ -15,14 +15,15 @@ class Triangulation(dai.node.HostNode):
         self._textHelper = TextHelper()
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
         self._display_detections = True
+        self.sendProcessingToPipeline(True)
 
 
     def build(self, face_left: dai.Node.Output, face_right: dai.Node.Output,
               face_nn_left: dai.Node.Output, face_nn_right : dai.Node.Output,
-              device: dai.Device, resolution_number: int) -> "Triangulation":
+              device: dai.Device, resolution_number: tuple[int, int]) -> "Triangulation":
 
         self.link_args(face_left, face_right, face_nn_left, face_nn_right)
-        self._stereoInference = StereoInference(device, resolution_number, width=300, heigth=300)
+        self._stereoInference = StereoInference(device, resolution_number)
 
         return self
 
@@ -47,10 +48,10 @@ class Triangulation(dai.node.HostNode):
         if nn_face_left.detections and nn_face_right.detections:
             spatials = []
             keypoints = zip(nn_face_left.detections[0].keypoints, nn_face_right.detections[0].keypoints)
-            x_dimension, y_dimension  = left_frame.shape[:2]
-            for i, (relative_coords_left, relative_coords_right) in enumerate(keypoints):
-                coords_left = (int(relative_coords_left[0] * x_dimension), int(relative_coords_left[1] * y_dimension))
-                coords_right = (int(relative_coords_right[0] * x_dimension), int(relative_coords_right[1] * y_dimension))
+            y_dimension, x_dimension  = left_frame.shape[:2]
+            for i, (keypoint_left, keypoint_right) in enumerate(keypoints):
+                coords_left = (int(keypoint_left.x * x_dimension), int(keypoint_left.y * y_dimension))
+                coords_right = (int(keypoint_right.x * x_dimension), int(keypoint_right.y * y_dimension))
 
                 self._draw_keypoint(left_frame, coords_left, self._leftColor)
                 self._draw_keypoint(right_frame, coords_right, self._rightColor)
@@ -100,5 +101,8 @@ class Triangulation(dai.node.HostNode):
 
     def _displayDetections(self, frame: np.ndarray, detections: list[ImgDetectionExtended], color) -> None:
         for detection in detections:
-            bbox = (np.array((detection.xmin, detection.ymin, detection.xmax, detection.ymax)) * frame.shape[0]).astype(int)
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+            x = int(detection.x_center * frame.shape[1])
+            y = int(detection.y_center * frame.shape[0])
+            w = int(detection.width * frame.shape[1])
+            h = int(detection.height * frame.shape[0])
+            cv2.rectangle(frame, (x-(w//2), y-(h//2)), ((x+(w//2), y+(h//2))), color, 2)
