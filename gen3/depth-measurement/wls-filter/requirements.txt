@@ -1,3 +1,3 @@
-opencv-contrib-python==4.6.0.66
-depthai~=3.0.0a3
+opencv-contrib-python==4.10.0.84
+depthai~=3.0.0a5
 numpy~=2.0

@@ -10,15 +10,15 @@ with dai.Pipeline() as pipeline:
     print("Creating pipeline...")
     
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-    left_out = left.requestOutput(size=(640, 400), type=dai.ImgFrame.Type.GRAY8)
+    left_out = left.requestOutput(size=(640, 400), type=dai.ImgFrame.Type.NV12)
     
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-    right_out = right.requestOutput(size=(640, 400), type=dai.ImgFrame.Type.GRAY8)
+    right_out = right.requestOutput(size=(640, 400), type=dai.ImgFrame.Type.NV12)
     
 
     stereo = pipeline.create(dai.node.StereoDepth).build(left=left_out, right=right_out) 
     stereo.initialConfig.setConfidenceThreshold(255)
-    stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_7x7)
+    stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_5x5)
     stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout from rectification (black stripe on the edges)
     stereo.setLeftRightCheck(LR_CHECK)
     stereo.setSubpixel(False)
