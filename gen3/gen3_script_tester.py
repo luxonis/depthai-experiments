@@ -102,7 +102,7 @@ def test_directory(dir, f=None):
                 return False
 
             start_time = time.time()
-            script = executable + " " + main
+            script = "DISPLAY=:99 " + executable + " " + main
             if args.environment_variables:
                 script = args.environment_variables + " " + script
             subprocess.run(script, shell=True, timeout=args.timeout, check=True, text=True,
@@ -142,6 +142,15 @@ def test_directory(dir, f=None):
         success = False
     return success
 
+print("Ensuring virtual display is set up...")
+result = subprocess.run(['pgrep', '-f', f'Xvfb :99'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+if result.returncode != 0:
+    print("Starting virtual display...")
+    result = subprocess.run(['which', 'Xvfb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        print("Xvfb is not installed on this machine. Please install it and try again.")
+        sys.exit(1)
+    subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1920x1080x24'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 print("Starting test...")
 
 success = True
