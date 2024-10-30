@@ -39,11 +39,11 @@ class ObjectLocalizer(dai.node.HostNode):
             self._draw_boxes(frame, detection, color, detection.confidence)
             self._draw_boxes(frame_manip, detection, color, detection.confidence)
 
-            cv2.imshow("Localizer", frame)
-            cv2.imshow("Manip + NN", frame_manip)
+        cv2.imshow("Localizer", frame)
+        cv2.imshow("Manip + NN", frame_manip)
 
-            self._show_fps(frame)
-            self._update_fps_counter()
+        self._show_fps(frame)
+        self._update_fps_counter()
 
         if cv2.waitKey(1) == ord('q'):
             self.stopPipeline()
