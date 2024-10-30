@@ -8,14 +8,14 @@ import time
 import argparse
 
 """
-USAGE: gen3_script_tester.py [-p PATH] [-t TIMEOUT] [-s]
+USAGE: gen3_script_tester.py [-p PATH] [-t TIMEOUT] [-s] [-dv DEPTHAI_VERSION] [-e ENVIRONMENT_VARIABLES]
 
 optional arguments:
-  -p PATH, --path PATH      The path to a single directory to be tested (otherwise searches for all valid experiments in gen3)
-  -t, --timeout             The time it takes to evaluate a running program as working (in seconds)
-  -s, --save                Saves the output log to a file (otherwise just prints it)
-  -dv, --depthai-version    Installs specified depthai version for each experiment
-  -e VARS, --env VARS       Environment variables to be passed to the script
+  -p PATH, --path PATH         The path to a single directory to be tested (otherwise searches for all valid experiments in gen3)
+  -t, --timeout                The time it takes to evaluate a running program as working (in seconds)
+  -s, --save                   Saves the output log to a file (otherwise just prints it)
+  -dv DV, --depthai-version DV Installs specified depthai version for each experiment
+  -e VARS, --env VARS          Environment variables to be passed to the script
 """
 
 parser = argparse.ArgumentParser()
@@ -72,7 +72,7 @@ def setup_venv_exe(dir, requirements_path, f=None):
             "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/ " +\
             "".join(requirements)
         script = script.replace("\n", " ")
-        subprocess.run(script, shell=True, cwd=dir, check=True, text=True, 
+        subprocess.run(script, shell=True, check=True, text=True,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         output("Requirements could not be downloaded", f)
@@ -100,7 +100,7 @@ def test_directory(dir, f=None):
             script = executable + " " + main
             if args.environment_variables:
                 script = args.environment_variables + " " + script
-            subprocess.run(script, shell=True, cwd=dir , timeout=args.timeout, check=True, text=True,
+            subprocess.run(script, shell=True, timeout=args.timeout, check=True, text=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         except subprocess.TimeoutExpired:
             output("Main ran successfully for " + str(args.timeout) + " seconds", f)
@@ -108,7 +108,6 @@ def test_directory(dir, f=None):
         except subprocess.CalledProcessError as e:
             duration = time.time() - start_time
             output("Main terminated after " + str(duration) + " seconds", f)
-            # TODO: non zero exit code
             for line in e.stdout.split("\n"):
                 if "error" in line.lower():
                     output("Error = " + line, f)
