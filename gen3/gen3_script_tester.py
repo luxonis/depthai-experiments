@@ -76,9 +76,13 @@ def setup_venv_exe(dir, requirements_path, f=None):
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         output("Requirements could not be downloaded", f)
-        for line in e.stdout.split("\n"):
-            if "error" in line.lower():
-                output("Error = " + line, f)
+        lines = e.stdout.split("\n")
+        if lines:
+            for line in lines:
+                if "error" in line.lower():
+                    output("Error = " + line, f)
+        else:
+            output("Error message:\n" + str(e), f)
         return None
     else:
         output("Requirements installed", f)
@@ -107,10 +111,14 @@ def test_directory(dir, f=None):
             success = True
         except subprocess.CalledProcessError as e:
             duration = time.time() - start_time
+            lines = e.stdout.split("\n")
             output("Main terminated after " + str(duration) + " seconds", f)
-            for line in e.stdout.split("\n"):
-                if "error" in line.lower():
-                    output("Error = " + line, f)
+            if lines:
+                for line in lines:
+                    if "error" in line.lower():
+                        output("Error = " + line, f)
+            else:
+                output("Error message:\n" + str(e), f)
             success = False
         # success block
         else:
