@@ -18,7 +18,7 @@ with dai.Pipeline(device) as pipeline:
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     output_type = dai.ImgFrame.Type.BGR888i if platform == dai.Platform.RVC4 else dai.ImgFrame.Type.BGR888p
     cam_nn = cam.requestOutput((model_dimension, model_dimension), output_type)
-    cam_output = cam.requestOutput((model_dimension * 5, model_dimension * 5), dai.ImgFrame.Type.BGR888i)
+    cam_output = cam.requestOutput((model_dimension * 5, model_dimension * 5), dai.ImgFrame.Type.NV12)
     
     nn_archive = dai.NNArchive(archivePath)
     model_nn = pipeline.create(dai.node.NeuralNetwork).build(cam_nn, nn_archive)
