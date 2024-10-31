@@ -181,6 +181,6 @@ else:
     else:
         success &= test_directory(args.path)
 
-    print("Test finished " + "successfully" if success else "with errors")
+    print("Test finished " + ("successfully" if success else "with errors"))
 
 sys.exit(0 if success else 1)
