@@ -16,6 +16,7 @@ optional arguments:
   -s, --save                   Saves the output log to a file (otherwise just prints it)
   -dv DV, --depthai-version DV Installs specified depthai version for each experiment
   -e VARS, --env VARS          Environment variables to be passed to the script
+  -vd, --virtual-display       Starts a virtual display for the script to run in
 """
 
 parser = argparse.ArgumentParser()
@@ -45,6 +46,11 @@ parser.add_argument(
     "-e", "--environment-variables",
     type=str,
     help="Environment variables to be passed to the script"
+)
+parser.add_argument(
+    "-vd", "--virtual-display",
+    action="store_true",
+    help="Starts a virtual display for the script to run in"
 )
 args = parser.parse_args()
 
@@ -102,7 +108,9 @@ def test_directory(dir, f=None):
                 return False
 
             start_time = time.time()
-            script = "DISPLAY=:99 " + executable + " " + main
+            script = executable + " " + main
+            if args.virtual_display:
+                script = "DISPLAY=:99 " + script
             if args.environment_variables:
                 script = args.environment_variables + " " + script
             subprocess.run(script, shell=True, timeout=args.timeout, check=True, text=True,
@@ -140,17 +148,20 @@ def test_directory(dir, f=None):
         output("Folder has requirements but not main", f)
         output("----------------------------", f)
         success = False
+    else: # Folder without requirements or main -> continue
+        success = True
     return success
 
-print("Ensuring virtual display is set up...")
-result = subprocess.run(['pgrep', '-f', f'Xvfb :99'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-if result.returncode != 0:
-    print("Starting virtual display...")
-    result = subprocess.run(['which', 'Xvfb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+if args.virtual_display:
+    print("Ensuring virtual display is set up...")
+    result = subprocess.run(['pgrep', '-f', f'Xvfb :99'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
-        print("Xvfb is not installed on this machine. Please install it and try again.")
-        sys.exit(1)
-    subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1920x1080x24'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("Starting virtual display...")
+        result = subprocess.run(['which', 'Xvfb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            print("Xvfb is not installed on this machine. Please install it and try again.")
+            sys.exit(1)
+        subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1920x1080x24'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 print("Starting test...")
 
 success = True
