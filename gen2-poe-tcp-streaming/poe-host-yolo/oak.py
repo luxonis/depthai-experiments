@@ -2,6 +2,8 @@ import depthai as dai
 import time
 import blobconverter
 
+FLASH_APP = False
+
 pipeline = dai.Pipeline()
 
 # Define sources and outputs
@@ -12,12 +14,9 @@ detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
 camRgb.setPreviewSize(640, 352)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 camRgb.setInterleaved(False)
-# camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-# camRgb.initialControl.setManualWhiteBalance(1)
 camRgb.setFps(40)
 
 # Network specific settings
-
 detectionNetwork.setConfidenceThreshold(0.5)
 detectionNetwork.setNumClasses(80)
 detectionNetwork.setCoordinateSize(4)
@@ -47,8 +46,10 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(("0.0.0.0", 5000))
 server.listen()
 
-def send_frame_thread(conn):
-    node.warn('Sending frames..')
+while True:
+    conn, client = server.accept()
+    node.warn(f"Connected to client IP: {client}")
+
     try:
         while True:
             detections = node.io["detection_in"].get().detections
@@ -65,18 +66,20 @@ def send_frame_thread(conn):
             header = f"IMG {ts.total_seconds()} {len(img_data)} {len(det_str)}".ljust(32)
             node.warn(f'>{header}<')
             conn.send(bytes(header, encoding='ascii'))
-            conn.send(bytes(det_str, encoding='ascii'))
+            if 0 < len(det_arr):
+                conn.send(bytes(det_str, encoding='ascii'))
             conn.send(img_data)
     except Exception as e:
         node.warn("Client disconnected")
-
-while True:
-    conn, client = server.accept()
-    node.warn(f"Connected to client IP: {client}")
-    threading.Thread(target=send_frame_thread, args=(conn,)).start()
 """)
 
-with dai.Device(pipeline) as device:
-    print("Connected")
-    while True:
-        time.sleep(1)
+if FLASH_APP: # flash the app for Standalone mode
+    (f, bl) = dai.DeviceBootloader.getFirstAvailableDevice()
+    bootloader = dai.DeviceBootloader(bl)
+    progress = lambda p : print(f'Flashing progress: {p*100:.1f}%')
+    bootloader.flash(progress, pipeline)
+else: # Run the app in peripheral mode
+    with dai.Device(pipeline) as device:
+        print("Connected")
+        while True:
+            time.sleep(1)
