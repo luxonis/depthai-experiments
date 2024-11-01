@@ -51,23 +51,22 @@ def send_frame_thread(conn):
     node.warn('Sending frames..')
     try:
         while True:
+            detections = node.io["detection_in"].get().detections
             img = node.io["frame_in"].get()
-            node.warn('Received frame')
+            node.warn('Received frame + dets')
             img_data = img.getData()
             ts = img.getTimestamp()
 
-            # If there is any detection, serialize it and send it
-            detections = node.io["detection_in"].get().detections
+            det_arr = []
+            for det in detections:
+                det_arr.append(f"{det.label};{(det.confidence*100):.1f};{det.xmin:.4f};{det.ymin:.4f};{det.xmax:.4f};{det.ymax:.4f}")
+            det_str = "|".join(det_arr)
 
-            header = "IMG " + str(ts.total_seconds()).ljust(16) + (f"{len(img_data)} {len(detections)}).ljust(16)
+            header = f"IMG {ts.total_seconds()} {len(img_data)} {len(det_str)}".ljust(32)
             node.warn(f'>{header}<')
             conn.send(bytes(header, encoding='ascii'))
+            conn.send(bytes(det_str, encoding='ascii'))
             conn.send(img_data)
-
-            for det in detections:
-                txt = f"DETECTION {det.label} {(det.confidence*100):.1f} {det.xmin:.4f} {det.ymin:.4f} {det.xmax:.4f} {det.ymax:.4f}".ljust(64)
-                node.warn(f'>{txt}<')
-                conn.send(bytes(txt, encoding='ascii'))
     except Exception as e:
         node.warn("Client disconnected")
 
