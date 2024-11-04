@@ -4,47 +4,35 @@ import depthai as dai
 
 from object_localizer import ObjectLocalizer
 
-model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
-archive_path = dai.getModelFromZoo(model_description)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--threshold', type=float, help="Confidence threshold", default=0.2)
 args = parser.parse_args()
 
 THRESHOLD = args.threshold
-NN_WIDTH = 300
-NN_HEIGHT = 300
+NN_WIDTH = 512
+NN_HEIGHT = 288
 PREVIEW_WIDTH = 640
 PREVIEW_HEIGHT = 360
 
-with dai.Pipeline() as pipeline:
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(PREVIEW_WIDTH, PREVIEW_HEIGHT)
-    cam.setInterleaved(False)
-    cam.setFps(40)
+device = dai.Device()
+platform = device.getPlatform()
+model_description = dai.NNModelDescription(modelSlug="yolov6-nano", platform=platform.name, modelVersionSlug="r2-coco-512x288")
+archive_path = dai.getModelFromZoo(model_description)
 
-    manip = pipeline.create(dai.node.ImageManip)
-    manip.initialConfig.setResize(NN_WIDTH, NN_HEIGHT)
-    manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
-    manip.initialConfig.setKeepAspectRatio(True)
+with dai.Pipeline(device) as pipeline:
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    preview = cam.requestOutput((PREVIEW_WIDTH, PREVIEW_HEIGHT), dai.ImgFrame.Type.RGB888i)
+    nn_input = cam.requestOutput((NN_WIDTH, NN_HEIGHT), dai.ImgFrame.Type.BGR888i if platform == dai.Platform.RVC4 else dai.ImgFrame.Type.BGR888p)
 
     nnarchive = dai.NNArchive(archive_path)
 
-    detection_nn = pipeline.create(dai.node.DetectionNetwork)
-    detection_nn.setNNArchive(nnarchive)
-    
-    detection_nn.setConfidenceThreshold(THRESHOLD)
-    detection_nn.setNumPoolFrames(4)
-    detection_nn.input.setBlocking(False)
-    detection_nn.setNumInferenceThreads(2)
-
-    cam.preview.link(manip.inputImage)
-    manip.out.link(detection_nn.input)
+    detection_nn = pipeline.create(dai.node.DetectionNetwork).build(nn_input, nnarchive)
 
     object_localizer = pipeline.create(ObjectLocalizer).build(
-        cam=cam.preview, 
+        cam=preview,
         nn=detection_nn.out, 
-        manip=manip.out
+        manip=nn_input
     )
     object_localizer.set_threshold(THRESHOLD)
 
