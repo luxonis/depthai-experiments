@@ -3,10 +3,9 @@ from os.path import isfile
 from pathlib import Path
 
 import depthai as dai
-import lane_detection_config
-from depthai_nodes import LaneDetectionParser
+from depthai_nodes import ParsingNeuralNetwork
 from download import download_vids
-from host_node.visualize_detections import VisualizeDetections
+from host_node.visualize_detections_v2 import VisualizeDetectionsV2
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -34,13 +33,10 @@ nn_version_slugs = {
     "culane": "culane-800x288",
     "tusimple": "tusimple-800x288",
 }
-nn_configs = {
-    "culane": lane_detection_config.culane,
-    "tusimple": lane_detection_config.tusimple,
-}
 
 NN_SIZE = (800, 288)
 VIDEO_SIZE = (800, 288)
+FPS = 10
 
 device = dai.Device()
 
@@ -52,7 +48,6 @@ nn_model_description = dai.NNModelDescription(
 nn_archive_path = dai.getModelFromZoo(nn_model_description, useCached=True)
 nn_archive = dai.NNArchive(nn_archive_path)
 
-nn_config = nn_configs[args.neural_network]
 
 # Download test videos
 if (
@@ -68,11 +63,11 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     if args.cam:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        color_out = cam.requestOutput(VIDEO_SIZE, dai.ImgFrame.Type.BGR888p, fps=5)
+        color_out = cam.requestOutput(VIDEO_SIZE, dai.ImgFrame.Type.BGR888p, fps=FPS)
     else:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setSize(*VIDEO_SIZE)
-        replay.setFps(5)
+        replay.setFps(FPS)
         replay.setReplayVideoFile(Path(args.video).resolve().absolute())
         replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
         color_out = replay.out
@@ -81,20 +76,11 @@ with dai.Pipeline(device) as pipeline:
     nn_resize.initialConfig.addResize(*NN_SIZE)
     color_out.link(nn_resize.inputImage)
 
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setNNArchive(nn_archive)
-    nn.setNumInferenceThreads(2)
-    nn_resize.out.link(nn.input)
+    nn = pipeline.create(ParsingNeuralNetwork).build(
+        input=nn_resize.out, nn_source=nn_archive
+    )
 
-    parser = pipeline.create(LaneDetectionParser)
-    parser.setRowAnchors(nn_config["row_anchors"])
-    parser.setGridingNum(nn_config["griding_num"])
-    parser.setClsNumPerLane(nn_config["cls_num_per_lane"])
-    parser.setInputShape(nn_config["input_shape"])
-    parser.set
-    nn.out.link(parser.input)
-
-    visualize_detections = pipeline.create(VisualizeDetections).build(parser.out)
+    visualize_detections = pipeline.create(VisualizeDetectionsV2).build(nn=nn.out)
 
     print("Pipeline created.")
     visualizer.addTopic("Lines", visualize_detections.output)
