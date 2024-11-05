@@ -102,20 +102,21 @@ def test_directory(dir, f=None):
         output("Testing " + dir, f)
         start_time = time.time()
 
-        try:
-            executable = setup_venv_exe(dir, requirements, f)
-            if executable is None:
-                return False
+        executable = setup_venv_exe(dir, requirements, f)
+        if executable is None:
+            return False
 
-            start_time = time.time()
-            script = executable + " " + main
-            if args.virtual_display:
-                script = "DISPLAY=:99 " + script
-            if args.environment_variables:
-                script = args.environment_variables + " " + script
+        start_time = time.time()
+        script = executable + " " + main
+        if args.virtual_display:
+            script = "DISPLAY=:99 " + script
+        if args.environment_variables:
+            script = args.environment_variables + " " + script
+        
+        try:
             subprocess.run(script, shell=True, timeout=args.timeout, check=True, text=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as te:
             output("Main ran successfully for " + str(args.timeout) + " seconds", f)
             success = True
         except subprocess.CalledProcessError as e:
