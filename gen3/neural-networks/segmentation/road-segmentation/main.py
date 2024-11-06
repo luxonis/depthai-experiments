@@ -37,13 +37,13 @@ if (
 
 device = dai.Device()
 
-modelDescription = dai.NNModelDescription(
+model_description = dai.NNModelDescription(
     modelSlug="pp-liteseg",
     platform=device.getPlatform().name,
     modelVersionSlug="512x1024",
 )
-archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
-nn_archive = dai.NNArchive(archivePath)
+archive_path = dai.getModelFromZoo(model_description, useCached=True)
+nn_archive = dai.NNArchive(archive_path)
 
 NN_SIZE = (1024, 512)
 FPS = 5 if device.getPlatform() == dai.Platform.RVC2 else 30
