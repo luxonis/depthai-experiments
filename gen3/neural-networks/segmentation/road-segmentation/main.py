@@ -1,36 +1,91 @@
+import argparse
+from os.path import isfile
+from pathlib import Path
+
+import cv2
 import depthai as dai
+from depthai_nodes import ParsingNeuralNetwork
+from download import download_vids
+from host_node.host_depth_color_transform import DepthColorTransform
+from host_node.overlay_frames import OverlayFrames
 
-from host_road_segmentation import RoadSegmentation
-from host_fps_drawer import FPSDrawer
-from host_display import Display
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-vid",
+    "--video",
+    default="vids/vid3.mp4",
+    type=str,
+    help="Path to video to use for inference. Default: vids/vid3.mp4",
+)
+parser.add_argument(
+    "-cam",
+    "--camera",
+    default=False,
+    action="store_true",
+    help="Use camera for inference. Default: False",
+)
+args = parser.parse_args()
 
-modelDescription = dai.NNModelDescription(modelSlug="road-segmentation-adas", platform="RVC2", modelVersionSlug="0001-896x512")
+
+# Download test videos
+if (
+    not isfile(Path("vids/vid1.mp4").resolve().absolute())
+    or not isfile(Path("vids/vid2.mp4").resolve().absolute())
+    or not isfile(Path("vids/vid3.mp4").resolve().absolute())
+):
+    download_vids()
+
+device = dai.Device()
+
+modelDescription = dai.NNModelDescription(
+    modelSlug="pp-liteseg",
+    platform=device.getPlatform().name,
+    modelVersionSlug="512x1024",
+)
 archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 nn_archive = dai.NNArchive(archivePath)
 
-nn_shape = (896, 512)
+NN_SIZE = (1024, 512)
+FPS = 5 if device.getPlatform() == dai.Platform.RVC2 else 30
 
-with dai.Pipeline() as pipeline:
+visualizer = dai.RemoteConnection()
 
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    cam_preview = cam.requestOutput(nn_shape, dai.ImgFrame.Type.BGR888p)
+    if args.camera:
+        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        color_out = cam.requestOutput(NN_SIZE, dai.ImgFrame.Type.BGR888p, fps=FPS)
+    else:
+        cam = pipeline.create(dai.node.ReplayVideo)
+        cam.setReplayVideoFile(Path(args.video).resolve().absolute())
+        color_out = cam.out
 
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setNNArchive(nn_archive)
-    cam_preview.link(nn.input)
+    nn_resize = pipeline.create(dai.node.ImageManipV2)
+    nn_resize.initialConfig.addResize(*NN_SIZE)
+    nn_resize.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    nn_resize.setMaxOutputFrameSize(NN_SIZE[0] * NN_SIZE[1] * 3)
+    color_out.link(nn_resize.inputImage)
 
-    road_segmentation = pipeline.create(RoadSegmentation).build(
-        preview=cam_preview,
-        nn=nn.out
+    nn = pipeline.create(ParsingNeuralNetwork).build(
+        input=nn_resize.out, nn_source=nn_archive
     )
-    road_segmentation.inputs["preview"].setBlocking(False)
-    road_segmentation.inputs["preview"].setMaxSize(4)
 
-    fps_drawer = pipeline.create(FPSDrawer).build(road_segmentation.output)
+    color_transform = pipeline.create(DepthColorTransform).build(nn.out)
+    color_transform.setMaxDisparity(19)
+    color_transform.setColormap(cv2.COLORMAP_JET)
 
-    display = pipeline.create(Display).build(fps_drawer.output)
-    display.setName("Road Segmentation")
+    overlay_frames = pipeline.create(OverlayFrames).build(
+        nn_resize.out, color_transform.output
+    )
 
+    visualizer.addTopic("Camera", nn_resize.out)
+    visualizer.addTopic("Segmentation", overlay_frames.output)
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            break
+    print("Pipeline finished.")
