@@ -38,25 +38,38 @@ with dai.Pipeline(device) as pipeline:
     h264Encoder.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.H264_MAIN)
     outputToEncode.link(h264Encoder.input)
 
-    left_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-    right_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-    stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
-        right=right_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
-        presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY
-    )
-    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    if platform == dai.Platform.RVC2:
-        stereo.setOutputSize(*STEREO_RESOLUTION)
-    
-    coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
-    coloredDepth.setColormap(cv2.COLORMAP_JET)
-
     # Add the remote connector topics
     remoteConnector.addTopic("Raw video", outputToEncode)
     remoteConnector.addTopic("Video H264", h264Encoder.out)
     remoteConnector.addTopic("Detections", detectionNetwork.out)
-    remoteConnector.addTopic("Depth", coloredDepth.output)
+
+    # Stereo depth - only for stereo devices
+    cameraFeatures = device.getConnectedCameraFeatures()
+
+    cam_mono_1: dai.CameraBoardSocket | None = None
+    cam_mono_2: dai.CameraBoardSocket | None = None
+    for feature in cameraFeatures:
+        if dai.CameraSensorType.MONO in feature.supportedTypes:
+            if cam_mono_1 is None:
+                cam_mono_1 = feature.socket
+            else:
+                cam_mono_2 = feature.socket
+                break
+    if cam_mono_1 and cam_mono_2:
+        left_cam = pipeline.create(dai.node.Camera).build(cam_mono_1)
+        right_cam = pipeline.create(dai.node.Camera).build(cam_mono_2)
+        stereo = pipeline.create(dai.node.StereoDepth).build(
+            left=left_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
+            right=right_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
+            presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY
+        )
+        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+        if platform == dai.Platform.RVC2:
+            stereo.setOutputSize(*STEREO_RESOLUTION)
+        
+        coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
+        coloredDepth.setColormap(cv2.COLORMAP_JET)
+        remoteConnector.addTopic("Depth", coloredDepth.output)
 
     remoteConnector.registerPipeline(pipeline)
     pipeline.run()
