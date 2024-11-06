@@ -1,6 +1,7 @@
 import math
 from datetime import timedelta
 
+import cv2
 import depthai as dai
 import numpy as np
 from depthai_nodes.ml.messages import (
@@ -9,6 +10,7 @@ from depthai_nodes.ml.messages import (
     ImgDetectionExtended,
     ImgDetectionsExtended,
     Keypoints,
+    SegmentationMasksSAM,
 )
 from host_node.annotation_builder import AnnotationBuilder
 
@@ -58,6 +60,7 @@ class VisualizeDetectionsV2(dai.node.HostNode):
                 dai.SpatialImgDetections,
                 Classifications,
                 Clusters,
+                SegmentationMasksSAM,
             ),
         )
 
@@ -65,17 +68,37 @@ class VisualizeDetectionsV2(dai.node.HostNode):
             in_detections, in_detections.getTimestamp(), in_detections.getSequenceNum()
         )
 
-        if isinstance(in_detections, ImgDetectionsExtended):
-            if len(in_detections.masks.shape) == 2:
-                mask = in_detections.masks + 1
-                mask_frame = self._create_img_frame(
-                    mask.astype(np.uint16),
-                    dai.ImgFrame.Type.RAW16,
-                    in_detections.getTimestamp(),
-                    in_detections.getSequenceNum(),
-                )
-                self.output_mask.send(mask_frame)
+        mask_frame = self.draw_mask(in_detections)
+        if mask_frame is not None:
+            self.output_mask.send(mask_frame)
+
         self.output.send(annotations)
+
+    def draw_mask(
+        self, detections: SegmentationMasksSAM | ImgDetectionExtended
+    ) -> np.ndarray | None:
+        if (
+            isinstance(detections, ImgDetectionExtended)
+            and len(detections.masks.shape) == 2
+        ):
+            mask = detections.masks + 1
+        elif (
+            isinstance(detections, SegmentationMasksSAM)
+            and len(detections.masks.shape) == 3
+        ):
+            mask = np.zeros(detections.masks.shape[1:])
+            for i, m in enumerate(detections.masks):
+                ones = m == 1
+                mask[ones] = i + 1
+        else:
+            return None
+
+        return self._create_img_frame(
+            mask.astype(np.uint8),
+            dai.ImgFrame.Type.RAW8,
+            detections.getTimestamp(),
+            detections.getSequenceNum(),
+        )
 
     def draw_detections(
         self,
@@ -110,8 +133,28 @@ class VisualizeDetectionsV2(dai.node.HostNode):
             self._draw_classification(label, f"{score:.2f}", annotation_builder)
         if isinstance(detections, Clusters):
             self._draw_clusters(detections, annotation_builder)
+        if isinstance(detections, SegmentationMasksSAM):
+            self._draw_mask_contours(detections, annotation_builder)
 
         return annotation_builder.build(timestamp, sequence_num)
+
+    def _draw_mask_contours(
+        self, detections: SegmentationMasksSAM, annotation_builder: AnnotationBuilder
+    ):
+        if len(detections.masks.shape) == 3:
+            for m in detections.masks:
+                binary_img = m.astype(np.uint8) * 255
+
+                contours, _ = cv2.findContours(
+                    binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+                )
+                norm_points = contours[0].reshape(-1, 2) / np.array(
+                    [m.shape[1], m.shape[0]]
+                )
+                annotation_builder.draw_polyline(
+                    norm_points, self.color + (1,), None, 2, True
+                )
+        return annotation_builder
 
     def _draw_clusters(self, clusters: Clusters, annotation_builder: AnnotationBuilder):
         for cluster in clusters.clusters:
