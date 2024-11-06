@@ -107,35 +107,40 @@ def test_directory(dir, f=None):
             return False
 
         start_time = time.time()
-        script = executable + " " + main
+        script = [executable, main]
+        env = os.environ.copy()
         if args.virtual_display:
-            script = "DISPLAY=:99 " + script
+            env["DISPLAY"] = ":99"
         if args.environment_variables:
-            script = args.environment_variables + " " + script
-        
+            env_vars = dict(var.split('=') for var in args.environment_variables.split())
+            env.update(env_vars)
+
+        process = subprocess.Popen(script, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
         try:
-            subprocess.run(script, shell=True, timeout=args.timeout, check=True, text=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        except subprocess.TimeoutExpired as te:
+            process.wait(timeout=args.timeout)
+        except subprocess.TimeoutExpired:
             output("Main ran successfully for " + str(args.timeout) + " seconds", f)
             success = True
-        except subprocess.CalledProcessError as e:
-            duration = time.time() - start_time
-            lines = e.stdout.split("\n")
-            output("Main terminated after " + str(duration) + " seconds", f)
-            error_printed = False
-            for line in lines:
-                if "error" in line.lower():
-                    output("Error = " + line, f)
-                    error_printed = True
-            if not error_printed:
-                output("Error message:\n" + str(e.stdout), f)
-            success = False
-        # success block
         else:
-            output("Main finished successfully under " + str(args.timeout) + " seconds", f)
-            success = True
+            if process.returncode != 0:
+                duration = time.time() - start_time
+                process_output = process.stdout.read()
+                lines = process_output.split("\n")
+                output("Main terminated after " + str(duration) + " seconds", f)
+                error_printed = False
+                for line in lines:
+                    if "error" in line.lower():
+                        output("Error = " + line, f)
+                        error_printed = True
+                if not error_printed:
+                    output("Error message:\n" + process_output, f)
+                success = False
+            else:
+                output("Main finished successfully under " + str(args.timeout) + " seconds", f)
+                success = True
         finally:
+            process.kill()  # Ensure the process is killed in the finally block
+            process.wait()  # Ensure the process is fully terminated
             shutil.rmtree(os.path.join(dir, ".test-venv"))
             output("----------------------------", f)
 
