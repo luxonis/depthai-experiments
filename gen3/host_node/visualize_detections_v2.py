@@ -10,6 +10,7 @@ from depthai_nodes.ml.messages import (
     ImgDetectionExtended,
     ImgDetectionsExtended,
     Keypoints,
+    Map2D,
     SegmentationMasksSAM,
 )
 from host_node.annotation_builder import AnnotationBuilder
@@ -61,6 +62,7 @@ class VisualizeDetectionsV2(dai.node.HostNode):
                 Classifications,
                 Clusters,
                 SegmentationMasksSAM,
+                Map2D,
             ),
         )
 
@@ -82,6 +84,12 @@ class VisualizeDetectionsV2(dai.node.HostNode):
             and len(detections.masks.shape) == 2
         ):
             mask = detections.masks + 1
+            return self._create_img_frame(
+                mask.astype(np.uint8),
+                dai.ImgFrame.Type.RAW8,
+                detections.getTimestamp(),
+                detections.getSequenceNum(),
+            )
         elif (
             isinstance(detections, SegmentationMasksSAM)
             and len(detections.masks.shape) == 3
@@ -90,15 +98,22 @@ class VisualizeDetectionsV2(dai.node.HostNode):
             for i, m in enumerate(detections.masks):
                 ones = m == 1
                 mask[ones] = i + 1
-        else:
-            return None
+            return self._create_img_frame(
+                mask.astype(np.uint8),
+                dai.ImgFrame.Type.RAW8,
+                detections.getTimestamp(),
+                detections.getSequenceNum(),
+            )
+        elif isinstance(detections, Map2D):
+            mask = detections.map * 65535
+            return self._create_img_frame(
+                mask.astype(np.uint16),
+                dai.ImgFrame.Type.RAW16,
+                detections.getTimestamp(),
+                detections.getSequenceNum(),
+            )
 
-        return self._create_img_frame(
-            mask.astype(np.uint8),
-            dai.ImgFrame.Type.RAW8,
-            detections.getTimestamp(),
-            detections.getSequenceNum(),
-        )
+        return None
 
     def draw_detections(
         self,
@@ -314,7 +329,8 @@ class VisualizeDetectionsV2(dai.node.HostNode):
         sequence_num: int,
     ) -> dai.ImgFrame:
         img_frame = dai.ImgFrame()
-        img_frame.setCvFrame(frame, type)
+        img_frame.setData(frame.tobytes())
+        img_frame.setType(type)
         img_frame.setTimestamp(timestamp)
         img_frame.setSequenceNum(sequence_num)
         img_frame.setWidth(frame.shape[1])
