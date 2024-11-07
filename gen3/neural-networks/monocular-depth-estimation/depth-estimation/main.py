@@ -1,61 +1,121 @@
-import depthai as dai
 import argparse
 
-from pathlib import Path
-from host_depth_estimation import DepthEstimation
+import cv2
+import depthai as dai
+from depthai_nodes import ParsingNeuralNetwork
+from host_node.host_depth_color_transform import DepthColorTransform
+from host_node.overlay_frames import OverlayFrames
+from host_node.visualize_detections_v2 import VisualizeDetectionsV2
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-nn', '--neural-network', type=str
-                    , choices=['fast_small', 'fast_large', 'mbnv_small', 'mbnv_large', 'mega'], default='fast_small'
-                    , help="Choose the neural network model used for depth estimation (fast_small is default)")
+parser.add_argument(
+    "-nn",
+    "--neural-network",
+    type=str,
+    choices=[
+        "midas_small",
+        "midas_medium",
+        "midas_large",
+        "midas_xlarge",
+        "midas_xxlarge",
+    ],
+    default="midas_small",
+    help="Choose the neural network model used for depth estimation (midas_small is default)",
+)
+parser.add_argument(
+    "-fps",
+    "--frames-per-second",
+    type=int,
+    default=10,
+    help="Choose the number of frames per second (10 is default)",
+)
 args = parser.parse_args()
 
-nn_path = None
-nn_shape = None
+nn_configs = {
+    "midas_small": {
+        "model_slug": "midas-v2-1",
+        "model_version_slug": "small-192x256",
+        "size": (256, 192),
+    },
+    "midas_medium": {
+        "model_slug": "midas-v2-1",
+        "model_version_slug": "small-256x384",
+        "size": (384, 256),
+    },
+    "midas_large": {
+        "model_slug": "midas-v2-1",
+        "model_version_slug": "small-288x512",
+        "size": (512, 288),
+    },
+    "midas_xlarge": {
+        "model_slug": "midas-v2-1",
+        "model_version_slug": "small-384x512",
+        "size": (512, 384),
+    },
+    "midas_xxlarge": {
+        "model_slug": "midas-v2-1",
+        "model_version_slug": "small-768x1024",
+        "size": (1024, 768),
+    },
+}
 
-if args.neural_network == "fast_small":
-    model_description = dai.NNModelDescription(modelSlug="fast-depth", platform="RVC2", modelVersionSlug="320x256")
-    nn_shape = (320, 256)
-elif args.neural_network == "fast_large":
-    model_description = dai.NNModelDescription(modelSlug="fast-depth", platform="RVC2", modelVersionSlug="640x480")
-    nn_shape = (640, 480)
-elif args.neural_network == "mbnv_small":
-    model_description = dai.NNModelDescription(modelSlug="depth-estimation", platform="RVC2", modelVersionSlug="320x240")
-    nn_shape = (320, 240)
-elif args.neural_network == "mbnv_large":
-    model_description = dai.NNModelDescription(modelSlug="depth-estimation", platform="RVC2", modelVersionSlug="640x480")
-    nn_shape = (640, 480)
-elif args.neural_network == "mega":
-    raise NotImplementedError("Mega model is not supported yet")
-    nn_path = Path("../depth-estimation/model/megadepth_192x256_openvino_2021.4_6shave.blob").absolute().resolve()
-    nn_shape = (256, 192)
+selected_nn_config = nn_configs[args.neural_network]
 
+device = dai.Device()
+
+model_description = dai.NNModelDescription(
+    modelSlug=selected_nn_config["model_slug"],
+    platform=device.getPlatform().name,
+    modelVersionSlug=selected_nn_config["model_version_slug"],
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
-with dai.Pipeline() as pipeline:
+VIDEO_SIZE = (1280, 720)
+NN_SIZE = selected_nn_config["size"]
+FPS = args.frames_per_second
 
+visualizer = dai.RemoteConnection()
+
+
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
-    rgb_preview = cam.requestOutput(size=nn_shape, type=dai.ImgFrame.Type.BGR888p)
-    
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setNNArchive(nn_archive)
-    nn.setNumPoolFrames(4)
-    nn.input.setBlocking(False)
-    nn.setNumInferenceThreads(2)
-    rgb_preview.link(nn.input)
-
-    depth = pipeline.create(DepthEstimation).build(
-        preview=rgb_preview,
-        nn=nn.out,
-        nn_shape=nn_shape,
-        mbnv2=(args.neural_network == "mbnv_small" or args.neural_network == "mbnv_large")
+    cam = pipeline.create(dai.node.Camera).build(
+        boardSocket=dai.CameraBoardSocket.CAM_A
     )
-    depth.inputs["preview"].setBlocking(False)
-    depth.inputs["preview"].setMaxSize(4)
-    depth.inputs["nn"].setBlocking(False)
-    depth.inputs["nn"].setMaxSize(4)
+    color_out = cam.requestOutput(
+        size=VIDEO_SIZE, type=dai.ImgFrame.Type.BGR888p, fps=FPS
+    )
 
+    nn_resize = pipeline.create(dai.node.ImageManipV2)
+    nn_resize.initialConfig.addResize(*NN_SIZE)
+    color_out.link(nn_resize.inputImage)
+
+    nn = pipeline.create(ParsingNeuralNetwork).build(
+        input=nn_resize.out, nn_source=nn_archive
+    )
+
+    visualize_detections = pipeline.create(VisualizeDetectionsV2).build(nn.out)
+    color_transform = pipeline.create(DepthColorTransform).build(
+        visualize_detections.output_mask
+    )
+    color_transform.setColormap(cv2.COLORMAP_INFERNO)
+
+    overlay_resize = pipeline.create(dai.node.ImageManipV2)
+    overlay_resize.initialConfig.addResize(*VIDEO_SIZE)
+    overlay_resize.setMaxOutputFrameSize(VIDEO_SIZE[0] * VIDEO_SIZE[1] * 3)
+    color_transform.output.link(overlay_resize.inputImage)
+
+    overlay_frames = pipeline.create(OverlayFrames).build(color_out, overlay_resize.out)
+
+    visualizer.addTopic("Color", color_out)
+    visualizer.addTopic("Depth", overlay_resize.out)
+    visualizer.addTopic("Depth overlay", overlay_frames.output)
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            break

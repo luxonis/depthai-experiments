@@ -1,4 +1,5 @@
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 opencv-python==4.10.0.84
-blobconverter==1.4.3
-depthai~=3.0a1
+depthai==3.0.0a5.dev0+56ddb2a505ed37704ebf790ea9b09dde6fa30a6e
+depthai-nodes==0.1.0
 numpy~=2.0
