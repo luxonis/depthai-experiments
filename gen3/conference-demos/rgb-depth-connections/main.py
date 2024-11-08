@@ -5,67 +5,69 @@ from host_bird_eye_view import BirdsEyeView
 from host_rgb_conference_node import CombineOutputs
 from host_display import Display
 
-output_shape = (1280, 720)
-nn_shape = (416, 416)
 
-model_description = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2")
-archive_path = dai.getModelFromZoo(model_description)
-
-with dai.Pipeline() as pipeline:
-
+device = dai.Device()
+device.setIrLaserDotProjectorIntensity(1)
+platform = device.getPlatform()
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
+
+    OUTPUT_SHAPE = (512, 288)
+    FPS = 10 if platform == dai.Platform.RVC2 else 30
+
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
     cam.initialControl.setManualFocus(130)
-    cam_output = cam.requestOutput(output_shape)
+    cam_output = cam.requestOutput(OUTPUT_SHAPE, type=dai.ImgFrame.Type.NV12, fps=FPS)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left.requestOutput(output_shape, dai.ImgFrame.Type.RGB888p),
-        right=right.requestOutput(output_shape, dai.ImgFrame.Type.RGB888p)
+        left=left.requestOutput(OUTPUT_SHAPE, type=dai.ImgFrame.Type.NV12, fps=FPS),
+        right=right.requestOutput(OUTPUT_SHAPE, type=dai.ImgFrame.Type.NV12, fps=FPS),
+        presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY
     )
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setLeftRightCheck(True)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     stereo.setSubpixel(False)
-    stereo.setOutputSize(*output_shape)
+    if platform == dai.Platform.RVC2:
+        stereo.setOutputSize(*OUTPUT_SHAPE)
 
-    manip = pipeline.create(dai.node.ImageManip)
-    manip.initialConfig.setResize(*nn_shape)
-    manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
-    manip.initialConfig.setKeepAspectRatio(False)
-    manip.setMaxOutputFrameSize(nn_shape[0] * nn_shape[1] * 3)
-    cam_output.link(manip.inputImage)
-
-    nn_archive = dai.NNArchive(archive_path)
-    spatialDetectionNetwork = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
-    spatialDetectionNetwork.setNNArchive(nn_archive)
+    spatialDetectionNetwork = pipeline.create(dai.node.SpatialDetectionNetwork).build(cam, stereo, dai.NNModelDescription(modelSlug="yolov6-nano", modelVersionSlug="r2-coco-512x288"), fps=FPS)
     spatialDetectionNetwork.setConfidenceThreshold(0.5)
     spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
     spatialDetectionNetwork.setDepthLowerThreshold(300)
     spatialDetectionNetwork.setDepthUpperThreshold(35000)
     spatialDetectionNetwork.input.setMaxSize(1)
     spatialDetectionNetwork.input.setBlocking(False)
-    manip.out.link(spatialDetectionNetwork.input)
-    stereo.depth.link(spatialDetectionNetwork.inputDepth)
+    spatialDetectionNetwork.inputDepth.setMaxSize(1)
+    spatialDetectionNetwork.inputDepth.setBlocking(False)
 
-    # Yolo specific parameters
-    spatialDetectionNetwork.setNumClasses(80)
-    spatialDetectionNetwork.setCoordinateSize(4)
-    spatialDetectionNetwork.setAnchors([10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319])
-    spatialDetectionNetwork.setAnchorMasks({"side26": [1, 2, 3], "side13": [3, 4, 5]})
-    spatialDetectionNetwork.setIouThreshold(0.5)
+    # In order to not loose synced messages (on low bandwidth), do all syncing on device
+    sync = pipeline.create(dai.node.Sync)
+    sync.setRunOnHost(False)
+    sync_color_input = sync.inputs["color"]
+    sync_color_input.setBlocking(True)
+    cam_output.link(sync_color_input)
+    sync_depth_input = sync.inputs["depth"]
+    sync_depth_input.setBlocking(False)
+    spatialDetectionNetwork.passthroughDepth.link(sync_depth_input)
+    sync_detections_input = sync.inputs["detections"]
+    sync_detections_input.setMaxSize(1)
+    sync_detections_input.setBlocking(False)
+    spatialDetectionNetwork.out.link(sync_detections_input)
 
-    bird_eye = pipeline.create(BirdsEyeView).build(spatialDetectionNetwork.out)
+    demux = pipeline.create(dai.node.MessageDemux)
+    sync.out.link(demux.input)
+
+    bird_eye = pipeline.create(BirdsEyeView).build(demux.outputs["detections"])
 
     combined = pipeline.create(CombineOutputs).build(
-        color=cam_output,
-        depth=spatialDetectionNetwork.passthroughDepth,
+        color=demux.outputs["color"],
+        depth=demux.outputs["depth"],
         birdseye=bird_eye.output,
-        detections=spatialDetectionNetwork.out
+        detections=demux.outputs["detections"]
     )
-
     display = pipeline.create(Display).build(combined.output)
     display.setName("Luxonis")
 

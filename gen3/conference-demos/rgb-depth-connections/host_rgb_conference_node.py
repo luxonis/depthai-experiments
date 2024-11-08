@@ -31,9 +31,7 @@ labelMap = [
 class CombineOutputs(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-
         self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
-
         self.text = TextHelper()
         self.title = TitleHelper()
 
@@ -41,22 +39,28 @@ class CombineOutputs(dai.node.HostNode):
         self.link_args(color, depth, birdseye, detections)
         return self
 
-    def process(self, color_frame: dai.ImgFrame, depth_frame: dai.Buffer, bird_frame: dai.ImgFrame, detections: dai.ImgDetections) -> None:
+    def process(self, color_frame: dai.Buffer, depth_frame: dai.Buffer, bird_frame: dai.ImgFrame, spatial_dets: dai.Buffer) -> None:
+        assert(isinstance(color_frame, dai.ImgFrame))
         assert(isinstance(depth_frame, dai.ImgFrame))
+        assert(isinstance(spatial_dets, dai.SpatialImgDetections))
 
         combined_frame = color_frame.getCvFrame()
-        depth_frame = depth_frame.getCvFrame()
-        bird_frame = bird_frame.getCvFrame()
-        detections = detections.detections
+        depth = depth_frame.getCvFrame()
+        bird_view = bird_frame.getCvFrame()
+        detections = spatial_dets.detections
 
-        depth_frame = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
-        depth_frame = cv2.equalizeHist(depth_frame)
-        depth_frame = cv2.applyColorMap(depth_frame, JET_CUSTOM)
-        combined_frame[:, 640:] = depth_frame[:, 640:]
+        depth = cv2.normalize(depth, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
+        depth = cv2.equalizeHist(depth)
+        depth = cv2.applyColorMap(depth, JET_CUSTOM)
+        half_frame = depth.shape[1] // 2
+        combined_frame[:, half_frame:] = depth[:, half_frame:]
 
         height = combined_frame.shape[0]
         width = combined_frame.shape[1]
         combined_frame = cv2.flip(combined_frame, 1)
+
+        resized_frame = cv2.resize(combined_frame, (1920, 1080))
+        height, width = resized_frame.shape[:2]
 
         for detection in detections:
             # Denormalize bounding box
@@ -72,25 +76,25 @@ class CombineOutputs(dai.node.HostNode):
             except KeyError:
                 label = detection.label
 
-            self.text.putText(combined_frame, str(label), (x2 + 10, y1 + 20))
-            self.text.putText(combined_frame, "{:.0f}%".format(detection.confidence*100), (x2 + 10, y1 + 40))
-            self.text.rectangle(combined_frame, (x1, y1), (x2, y2), detection.label)
+            self.text.putText(resized_frame, str(label), (x2 + 10, y1 + 20))
+            self.text.putText(resized_frame, "{:.0f}%".format(detection.confidence*100), (x2 + 10, y1 + 40))
+            self.text.rectangle(resized_frame, (x1, y1), (x2, y2), detection.label)
             if detection.spatialCoordinates.z != 0:
-                self.text.putText(combined_frame, "X: {:.2f} m".format(detection.spatialCoordinates.x/1000), (x2 + 10, y1 + 60))
-                self.text.putText(combined_frame, "Y: {:.2f} m".format(detection.spatialCoordinates.y/1000), (x2 + 10, y1 + 80))
-                self.text.putText(combined_frame, "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000), (x2 + 10, y1 + 100))
+                self.text.putText(resized_frame, "X: {:.2f} m".format(detection.spatialCoordinates.x/1000), (x2 + 10, y1 + 60))
+                self.text.putText(resized_frame, "Y: {:.2f} m".format(detection.spatialCoordinates.y/1000), (x2 + 10, y1 + 80))
+                self.text.putText(resized_frame, "Z: {:.2f} m".format(detection.spatialCoordinates.z/1000), (x2 + 10, y1 + 100))
 
-        if combined_frame is not None:
-            self.title.putText(combined_frame, 'DEPTH', (30, 50))
-            self.title.putText(combined_frame, 'RGB', (width // 2 + 30, 50))
-            # Add Luxonis logo
-            cv2.rectangle(combined_frame, (width // 2 - 140, height - 90), (width // 2 + 140, height - 10), (255, 255, 255), -1)
-            combined_frame[(height - 82):(height - 15), (width // 2 - 125):(width // 2 + 125)] = LOGO
+        self.title.putText(resized_frame, 'DEPTH', (30, 50))
+        self.title.putText(resized_frame, 'RGB', (width // 2 + 30, 50))
+        
+        # Add Luxonis logo
+        cv2.rectangle(resized_frame, (width // 2 - 140, height - 90), (width // 2 + 140, height - 10), (255, 255, 255), -1)
+        resized_frame[(height - 82):(height - 15), (width // 2 - 125):(width // 2 + 125)] = LOGO
 
-            # Birdseye view
-            cv2.rectangle(combined_frame, (10, 210), (110,510), (255, 255, 255), 3)
-            combined_frame[210:510, 10:110] = bird_frame
+        # Birdseye view
+        cv2.rectangle(resized_frame, (10, 390), (110,690), (255, 255, 255), 3)
+        resized_frame[390:690, 10:110] = bird_view
 
-            output_frame = dai.ImgFrame()
-            output_frame.setCvFrame(cv2.resize(combined_frame, (1920, 1080)), dai.ImgFrame.Type.BGR888p)
-            self.output.send(output_frame)
+        output_frame = dai.ImgFrame()
+        output_frame.setCvFrame(resized_frame, dai.ImgFrame.Type.BGR888i) #TODO: first resize then add birdframe and logo
+        self.output.send(output_frame)

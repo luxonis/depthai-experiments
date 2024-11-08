@@ -18,7 +18,8 @@ class BirdsEyeView(dai.node.HostNode):
         self.link_args(detections)
         return self
 
-    def process(self, detections: dai.ImgDetections) -> None:
+    def process(self, detections: dai.Buffer) -> None:
+        assert(isinstance(detections, dai.SpatialImgDetections))
         frame = self.frame.copy()
 
         for detection in detections.detections:
