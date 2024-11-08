@@ -4,7 +4,7 @@ All experimens are not yet supported on all our platforms. All of the experiment
 
 | Name                                   | RVC2 | RVC4 (peripheral) | RVC4 (standalone) |
 |----------------------------------------|------|--------------------|--------------------|
-| apps/conference-demos/rgb-depth-detections | ✅ | ❌                 | ❌                 |
+| apps/conference-demos/rgb-depth-detections | ✅ | ✅                 | ❌                 |
 | camera-demo                       | ✅ | ✅                 | ❌                 |
 | custom-models                     | ✅ | ❌                 | ❌                 |
 | display-detections                | ✅ | ✅                 | ❌                 |
