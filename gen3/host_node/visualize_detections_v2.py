@@ -133,7 +133,9 @@ class VisualizeDetectionsV2(dai.node.HostNode):
         ):
             self._draw_bboxes(detections.detections, annotation_builder)
         if isinstance(detections, ImgDetectionsExtended) and self.draw_kpts:
-            kpts = [i.keypoints for i in detections.detections]
+            kpts = [
+                [(kpt.x, kpt.y) for kpt in i.keypoints] for i in detections.detections
+            ]
             self._draw_kpts(kpts, annotation_builder)
             self._draw_lines(kpts, self.lines, annotation_builder)
         if isinstance(detections, Keypoints) and self.draw_kpts:
