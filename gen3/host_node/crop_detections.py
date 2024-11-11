@@ -24,7 +24,6 @@ class CropDetections(dai.node.HostNode):
 
     def build(self, detections: dai.Node.Output) -> "CropDetections":
         self.link_args(detections)
-        self.sendProcessingToPipeline(True)
         return self
 
     def set_resize(self, size: tuple[int, int] | None) -> None:
@@ -46,20 +45,23 @@ class CropDetections(dai.node.HostNode):
         
         for detection in dets:
             cfg = dai.ImageManipConfigV2()
-            rect = self._get_rotated_rect(detection)
-            cfg.addCropRotatedRect(rect, True)
+            rect = self._get_rect(detection)
+            cfg.addCrop(rect, True)
 
             if self._resize is not None:
                 cfg.addResize(*self._resize)
 
             self._last_config = cfg
             cfg.setTimestamp(dets_msg.getTimestamp())
-            self.output_config.send(cfg)
+            try:
+                self.output_config.send(cfg)
+            except dai.MessageQueue.QueueException as e:
+                return
 
         self.detection_passthrough.send(dets_msg)
 
-    def _get_rotated_rect(self, detection: dai.ImgDetection) -> dai.RotatedRect:
-        rect = dai.RotatedRect()
-        rect.size = dai.Size2f(detection.xmax - detection.xmin + self._bbox_padding, detection.ymax - detection.ymin + self._bbox_padding)
-        rect.center = dai.Point2f((detection.xmin + detection.xmax) / 2, (detection.ymin + detection.ymax) / 2)
+    def _get_rect(self, detection: dai.ImgDetection) -> dai.Rect:
+        min = dai.Point2f(detection.xmin, detection.ymin)
+        max = dai.Point2f(detection.xmax, detection.ymax)
+        rect = dai.Rect(min, max)
         return rect

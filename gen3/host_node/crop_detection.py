@@ -25,7 +25,6 @@ class CropDetection(dai.node.HostNode):
 
     def build(self, nn: dai.Node.Output) -> "CropDetection":
         self.link_args(nn)
-        self.sendProcessingToPipeline(True)
         return self
 
     def set_resize(self, size: tuple[int, int] | None) -> None:
