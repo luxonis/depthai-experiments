@@ -1,103 +1,89 @@
-from pathlib import Path
 import depthai as dai
 from detections_recognitions_sync import DetectionsRecognitionsSync
 from emotions_recognition import DisplayEmotions
-
+from depthai_nodes import YuNetParser
+from host_node.depth_merger import DepthMerger
+from host_node.crop_detections import CropDetections
 
 device = dai.Device()
-recognition_model_description = dai.NNModelDescription(modelSlug="emotion-recognition", platform=device.getPlatform().name, modelVersionSlug="260x260")
+device_platform = device.getPlatform()
+
+modelSlug = "gray-64x64" if device.getPlatform() == dai.Platform.RVC2 else "260x260"
+recognition_model_description = dai.NNModelDescription(model=f"luxonis/emotion-recognition:{modelSlug}", platform=device_platform.name)
 recognition_model_path = dai.getModelFromZoo(recognition_model_description)
 
-face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
-face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
-face_det_nn_archive = dai.NNArchive(face_det_archive_path)
-
 with dai.Pipeline(device) as pipeline:
-
     stereo = 1 < len(device.getConnectedCameras())
+    
+    output_dimensions = (640, 640)
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    if device.getPlatform() == dai.Platform.RVC2:
+        model_dimensions = (320, 320)
+        nn_archive = dai.NNArchive(dai.getModelFromZoo(dai.NNModelDescription(modelSlug="yunet", platform=device_platform.name, modelVersionSlug=f"{model_dimensions[0]}x{model_dimensions[1]}")))
+        face_det_nn = pipeline.create(dai.node.NeuralNetwork)
+        face_det_nn.setNNArchive(nn_archive, numShaves=4)
+        cam.requestOutput(model_dimensions, dai.ImgFrame.Type.BGR888p).link(face_det_nn.input)
+    else:
+        model_dimensions = (640, 640)
+        face_det_nn = pipeline.create(dai.node.NeuralNetwork).build(
+            cam,
+            dai.NNModelDescription(model=f"yunet:{model_dimensions[0]}x{model_dimensions[1]}")
+        )
 
-    print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(1280, 800)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam.setPreviewNumFramesPool(15)
-    cam.setFps(10)
-
-    # ImageManip that will crop the frame before sending it to the Face detection NN node
-    face_det_manip = pipeline.create(dai.node.ImageManip)
-    face_det_manip.initialConfig.setResize(300, 300)
-    face_det_manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
-    cam.preview.link(face_det_manip.inputImage)
+    cam_out = cam.requestOutput((output_dimensions), dai.ImgFrame.Type.NV12)
+    parser = pipeline.create(YuNetParser)
+    parser.setConfidenceThreshold(0.5)
+    face_det_nn.out.link(parser.input)
 
     if stereo:
-        monoLeft = pipeline.create(dai.node.MonoCamera)
-        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        monoLeft.setBoardSocket(dai.CameraBoardSocket.CAM_B)
-
-        monoRight = pipeline.create(dai.node.MonoCamera)
-        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-
-        stereo = pipeline.create(dai.node.StereoDepth)
-        stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B).requestOutput(output_dimensions, dai.ImgFrame.Type.NV12)
+        right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C).requestOutput(output_dimensions, dai.ImgFrame.Type.NV12)
+        
+        stereo = pipeline.create(dai.node.StereoDepth).build(
+            left,
+            right,
+            presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY
+        )
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-        monoLeft.out.link(stereo.left)
-        monoRight.out.link(stereo.right)
+        if device_platform == dai.Platform.RVC2:
+            stereo.setOutputSize(output_dimensions[0], output_dimensions[1])
 
         # Spatial Detection network if OAK-D
         print("OAK-D detected, app will display spatial coordiantes")
-        face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-        face_det_nn.setBoundingBoxScaleFactor(0.8)
-        face_det_nn.setDepthLowerThreshold(100)
-        face_det_nn.setDepthUpperThreshold(5000)
-        stereo.depth.link(face_det_nn.inputDepth)
+        depth_merger = pipeline.create(DepthMerger).build(parser.out, stereo.depth, device.readCalibration())
+        depth_merger.host_spatials_calc.setLowerThreshold(100)
+        depth_merger.host_spatials_calc.setUpperThreshold(5000)
+        nn_out = depth_merger.output
     else: # Detection network if OAK-1
         print("OAK-1 detected, app won't display spatial coordiantes")
-        face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+        nn_out = parser.out
 
-    face_det_nn.setConfidenceThreshold(0.5)
-    # face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5))
-    face_det_nn.setNNArchive(face_det_nn_archive)
-    face_det_manip.out.link(face_det_nn.input)
+    nn_input_type = dai.ImgFrame.Type.GRAY8 if device_platform == dai.Platform.RVC2 else dai.ImgFrame.Type.BGR888i
+    nn_input_shape = (64, 64) if device_platform == dai.Platform.RVC2 else (260, 260)
+    crop_detections = pipeline.create(CropDetections).build(nn_out)
+    crop_detections.set_resize(nn_input_shape)
+    crop_detections.set_frame_type(nn_input_type)
 
-    # Script node will take the output from the face detection NN as an input and set ImageManipConfig
-    # to the 'age_gender_manip' to crop the initial frame
-    image_manip_script = pipeline.create(dai.node.Script)
-    # image_manip_script.setProcessor(dai.ProcessorType.LEON_CSS)
-    face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
+    detection_manip = pipeline.create(dai.node.ImageManipV2)
+    detection_manip.initialConfig.setFrameType(nn_input_type)
+    detection_manip.initialConfig.addResize(*nn_input_shape)
+    detection_manip.inputConfig.setWaitForMessage(False)
+    crop_detections.output_config.link(detection_manip.inputConfig)
+    cam_out.link(detection_manip.inputImage)
 
-    # Only send metadata, we are only interested in timestamp, so we can sync
-    # depth frames with NN output
-    # face_det_nn.passthrough.link(image_manip_script.inputs['passthrough'])
-    cam.preview.link(image_manip_script.inputs['preview'])
-
-    image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
-
-    manip_manip = pipeline.create(dai.node.ImageManip)
-    manip_manip.initialConfig.setResize(260, 260)  
-    manip_manip.initialConfig.setFrameType(dai.ImgFrame.Type.GRAY8)
-    manip_manip.inputConfig.setWaitForMessage(True)
-    image_manip_script.outputs['manip_cfg'].link(manip_manip.inputConfig)
-    image_manip_script.outputs['manip_img'].link(manip_manip.inputImage)
-
-    # This ImageManip will crop the mono frame based on the NN detections. Resulting image will be the cropped
-    # face that was detected by the face-detection NN.
     emotions_nn = pipeline.create(dai.node.NeuralNetwork)
-    emotions_nn.setNNArchive(dai.NNArchive(recognition_model_path), numShaves=5)
+    emotions_nn.setNNArchive(dai.NNArchive(recognition_model_path))
     emotions_nn.input.setBlocking(False)
     emotions_nn.input.setMaxSize(2)
-    manip_manip.out.link(emotions_nn.input)
+    detection_manip.out.link(emotions_nn.input)
 
-    sync_node = pipeline.create(DetectionsRecognitionsSync).build()
-    sync_node.set_camera_fps(cam.getFps())
+    sync_node = pipeline.create(DetectionsRecognitionsSync)
 
-    face_det_nn.out.link(sync_node.input_detections)
+    nn_out.link(sync_node.input_detections)
     emotions_nn.out.link(sync_node.input_recognitions)
 
     pipeline.create(DisplayEmotions).build(
-        rgb=cam.preview,
+        rgb=cam_out,
         detected_recognitions=sync_node.output,
         stereo=stereo
     )
