@@ -9,6 +9,7 @@ class CropDetections(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
         self._resize = None
+        self._type: dai.ImgFrame.Type = None
         self._bbox_padding = 0.1
         self._last_config = dai.ImageManipConfigV2()
         self.output_config = self.createOutput(
@@ -31,11 +32,15 @@ class CropDetections(dai.node.HostNode):
         self._resize = size
         self._last_config.addResize(*size)
 
+    def set_frame_type(self, frame_type: dai.ImgFrame.Type) -> None:
+        """Sets the output frame type for the cropped image"""
+        self._type = frame_type
+
     def set_bbox_padding(self, padding: float) -> None:
         self._bbox_padding = padding
 
     def process(self, dets_msg: dai.Buffer) -> None:
-        assert isinstance(dets_msg, (dai.ImgDetections, ImgDetectionsExtended))
+        assert isinstance(dets_msg, (dai.ImgDetections, dai.SpatialImgDetections, ImgDetectionsExtended))
         dets = dets_msg.detections
         if len(dets) == 0:
             # No detections, there is nothing to crop
@@ -50,6 +55,8 @@ class CropDetections(dai.node.HostNode):
 
             if self._resize is not None:
                 cfg.addResize(*self._resize)
+            if self._type is not None:
+                cfg.setFrameType(self._type)
 
             self._last_config = cfg
             cfg.setTimestamp(dets_msg.getTimestamp())
