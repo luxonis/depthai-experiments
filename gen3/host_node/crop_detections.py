@@ -17,14 +17,19 @@ class CropDetections(dai.node.HostNode):
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfigV2, True)
             ]
         )
+        self.img_passthrough = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
         self.detection_passthrough = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgDetections, True)
             ]
         )
 
-    def build(self, detections: dai.Node.Output) -> "CropDetections":
-        self.link_args(detections)
+    def build(self, passthrough: dai.Node.Output, detections: dai.Node.Output) -> "CropDetections":
+        self.link_args(passthrough, detections)
         return self
 
     def set_resize(self, size: tuple[int, int] | None) -> None:
@@ -35,15 +40,17 @@ class CropDetections(dai.node.HostNode):
     def set_frame_type(self, frame_type: dai.ImgFrame.Type) -> None:
         """Sets the output frame type for the cropped image"""
         self._type = frame_type
+        self._last_config.setFrameType(frame_type)
 
     def set_bbox_padding(self, padding: float) -> None:
         self._bbox_padding = padding
 
-    def process(self, dets_msg: dai.Buffer) -> None:
+    def process(self, img_passthrough: dai.Buffer, dets_msg: dai.Buffer) -> None:
         assert isinstance(dets_msg, (dai.ImgDetections, dai.SpatialImgDetections, ImgDetectionsExtended))
         dets = dets_msg.detections
         if len(dets) == 0:
             # No detections, there is nothing to crop
+            self.img_passthrough.send(img_passthrough)
             self.detection_passthrough.send(dets_msg)
             self.output_config.send(self._last_config)
             return
@@ -61,10 +68,11 @@ class CropDetections(dai.node.HostNode):
             self._last_config = cfg
             cfg.setTimestamp(dets_msg.getTimestamp())
             try:
+                self.img_passthrough.send(img_passthrough)
                 self.output_config.send(cfg)
             except dai.MessageQueue.QueueException as e:
                 return
-
+            
         self.detection_passthrough.send(dets_msg)
 
     def _get_rect(self, detection: dai.ImgDetection) -> dai.Rect:
