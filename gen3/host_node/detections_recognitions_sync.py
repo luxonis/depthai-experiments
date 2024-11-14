@@ -1,7 +1,7 @@
 from queue import PriorityQueue
 import time
 import depthai as dai
-from detected_recognitions import DetectedRecognitions
+from .detected_recognitions import DetectedRecognitions
 
 
 class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
