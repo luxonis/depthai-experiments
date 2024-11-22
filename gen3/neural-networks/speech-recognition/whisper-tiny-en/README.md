@@ -1,4 +1,4 @@
-Palm detection
+Speech Recognition
 ================
 
 This example demonstrates the Gen3 Pipeline Builder running
