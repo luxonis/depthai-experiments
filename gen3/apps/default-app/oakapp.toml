@@ -1,4 +1,5 @@
-identifier = "com.luxonis.yolo.device-decoding"
+identifier = "com.luxonis.default"
+app_version="0.1.0"
 
 entrypoint = ["bash", "-c", "python3 /app/main.py"]
 
