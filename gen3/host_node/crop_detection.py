@@ -51,7 +51,7 @@ class CropDetection(dai.node.HostNode):
             best_detection.xmax + self._bbox_padding,
             best_detection.ymax + self._bbox_padding,
         )
-
+        
         bbox = self._limit_roi(bbox)
         cfg = dai.ImageManipConfig()
         cfg.setCropRect(*bbox)

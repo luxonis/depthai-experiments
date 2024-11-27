@@ -1,48 +1,46 @@
 import depthai as dai
+from depthai_nodes.ml.messages import ImgDetectionExtended, ImgDetectionsExtended
 
-from utils import RotatedRectBuffer
+import cv2
+import numpy as np
 
-class ProcessDetections(dai.node.HostNode):
-    def __init__(self) -> None:
+class ProcessDetections(dai.node.ThreadedHostNode):
+    def __init__(self):
         super().__init__()
-        self.passthrough = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
-        self.output_rect = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)])
-        self.output_config = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)])
+        self.detections_input = self.createInput(blocking=False)
+        self.frame = self.createInput(blocking=False)
+        
+        self.crop_config = self.createOutput()
+        self.output_frame = self.createOutput()
+        # self.output_rect = self.createOutput()
 
-    def build(self, frame: dai.Node.Output, detections: dai.Node.Output) -> "ProcessDetections":
-        self.link_args(frame, detections)
-        self.sendProcessingToPipeline(True)
-        return self
+    def run(self) -> None:
+        while self.isRunning():
+            detections = self.detections_input.get()
+            
+            detections = detections.detections
+            frame = self.frame.get()
+            cvframe = frame.getCvFrame()    
+            
+            # print(f"Processing {len(detections)} detections.")
+            for detection in detections:
+                detection: ImgDetectionExtended = detection
+                cfg = dai.ImageManipConfigV2()
+                cfg.addCropRotatedRect(detection.rotated_rect, normalizedCoords=True)
+                cfg.addResize(320, 48)
+                cfg.setTimestamp(self.detections_input.get().getTimestamp())
 
-    def process(self, frame: dai.ImgFrame, detections: dai.ImgDetections) -> None:
-        # Casting values that were sent in this exact format
-        rotated_rectangles = [((d.xmin, d.ymin), (d.xmax, d.ymax), d.confidence) for d in detections.detections]
+                self.crop_config.send(cfg)
+                self.output_frame.send(frame)
+                
 
-        for idx, rotated_rect in enumerate(rotated_rectangles):
-            rr = dai.RotatedRect()
-            rr.center.x = rotated_rect[0][0]
-            rr.center.y = rotated_rect[0][1]
-            rr.size.width = rotated_rect[1][0]
-            rr.size.height = rotated_rect[1][1]
-            rr.angle = rotated_rect[2]
+                rect = detection.rotated_rect   
+                points = rect.getPoints()
+                points = [[int(p.x * cvframe.shape[1]), int(p.y * cvframe.shape[0])] for p in points]
+                points = np.array(points, dtype=np.int32).reshape((-1, 1, 2))
 
-            cfg = dai.ImageManipConfig()
-            cfg.setCropRotatedRect(rr, False)
-            cfg.setResize(120, 32)
-            cfg.setTimestamp(frame.getTimestamp())
-            cfg.setTimestampDevice(frame.getTimestampDevice())
-
-            rr_buffer = RotatedRectBuffer()
-            rr_buffer.set_rect(rr)
-            rr_buffer.setTimestamp(frame.getTimestamp())
-            rr_buffer.setTimestampDevice(frame.getTimestampDevice())
-
-            # Send outputs to device
-            if idx == 0:
-                self.passthrough.send(frame)
-                cfg.setReusePreviousImage(False)
-            else:
-                cfg.setReusePreviousImage(True)
-            self.output_rect.send(rr_buffer)
-            self.output_config.send(cfg)
-
+                cv2.polylines(cvframe, [points], isClosed=True, color=(0, 255, 0), thickness=3)
+                
+            cv2.imshow("cvframe", cvframe)
+            cv2.waitKey(1)
+            

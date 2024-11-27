@@ -12,12 +12,10 @@ device = dai.Device()
 
 modelDescription = dai.NNModelDescription(
     modelSlug="yolov6-nano",
-    platform=device.getPlatform().name,
-    modelVersionSlug="r2-coco-512x288",
 )
+
 archivePath = dai.getModelFromZoo(modelDescription)
 nn_archive = dai.NNArchive(archivePath)
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -31,7 +29,7 @@ parser.add_argument(
     "-cam", "--cam", help="Use camera instead of video.", action="store_true"
 )
 args = parser.parse_args()
-
+dai.Point3f
 
 cam = args.cam
 if not cam:
@@ -45,9 +43,6 @@ with dai.Pipeline(device) as pipeline:
         cam = pipeline.create(dai.node.Camera).build(
             boardSocket=dai.CameraBoardSocket.CAM_A
         )
-        color_out = cam.requestOutput(
-            size=nn_input_shape, type=dai.ImgFrame.Type.BGR888p
-        )
     else:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(video_path)
@@ -57,24 +52,21 @@ with dai.Pipeline(device) as pipeline:
         img_manip = pipeline.create(dai.node.ImageManip)
         img_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
         replay.out.link(img_manip.inputImage)
-        color_out = img_manip.out
+        cam = img_manip.out
 
-    nn = pipeline.create(dai.node.DetectionNetwork)
-    nn.setNNArchive(nn_archive)
-    color_out.link(nn.input)
-
+    nn = pipeline.create(dai.node.DetectionNetwork).build(
+        cam, dai.NNModelDescription("yolov6-nano")
+    )
+    
     # Filter out all detections except for cars
     detection_filter = pipeline.create(DetectionLabelFilter).build(
         nn=nn.out, accepted_labels=[2]
     )
 
-    fps = pipeline.create(FPSDrawer).build(preview=color_out)
-    normalize_bbox = pipeline.create(NormalizeBbox).build(
-        frame=color_out, nn=detection_filter.output
-    )
     draw_detections = pipeline.create(DrawDetections).build(
-        frame=fps.output, nn=normalize_bbox.output, label_map=nn.getClasses()
+        frame=detection_filter.output
     )
+    
     draw_detections.set_draw_labels(False)
     draw_detections.set_draw_confidence(False)
     draw_detections.set_color((0, 255, 0))

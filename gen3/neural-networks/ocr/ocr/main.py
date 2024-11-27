@@ -1,77 +1,97 @@
 import depthai as dai
-import blobconverter
+import argparse
+from depthai_nodes import ParsingNeuralNetwork
+import time
+import cv2
+import numpy as np
 
-from host_east import East
 from host_process_detections import ProcessDetections
-from host_ocr import OCR
-from detections_recognitions_sync import DetectionsRecognitionsSync
+from host_sync import CustomSyncNode
 
-FPS = 10
+FPS = 15
 
-detection_model_description = dai.NNModelDescription(modelSlug="east-text-detection", platform="RVC2", modelVersionSlug="256x256")
-detection_archive_path = dai.getModelFromZoo(detection_model_description)
-detection_nn_archive = dai.NNArchive(detection_archive_path)
+parser = argparse.ArgumentParser()
+parser.add_argument("--ip", 
+                    help="Specify the IP address of your RVC4 device",
+                    default="10.12.121.161",
+                    )
 
-recognition_model_description = dai.NNModelDescription(modelSlug="text-recognition", platform="RVC2", modelVersionSlug="0012")
-recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
-recognition_nn_archive = dai.NNArchive(recognition_archive_path)
+deviceInfo = dai.DeviceInfo(parser.parse_args().ip)
+device = dai.Device(deviceInfo)
+platform = device.getPlatform()
 
-with dai.Pipeline() as pipeline:
+detection_model_description = dai.NNModelDescription("luxonis/paddle-text-detection:320x576:5a0bbb0", platform="RVC4")
+detection_nn_archive = dai.NNArchive(dai.getModelFromZoo(detection_model_description))
 
+ocr_model_description = dai.NNModelDescription("luxonis/paddle-text-recognition:320x48", platform="RVC4")
+ocr_nn_archive = dai.NNArchive(dai.getModelFromZoo(ocr_model_description))
+
+
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(256, 256)
-    cam.setVideoSize(1024, 1024)  # 4 times larger in both axis
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam.setFps(FPS)
+    cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cameraOutput = cameraNode.requestOutput((1052, 640), dai.ImgFrame.Type.BGR888i, fps= FPS)
+    
+    manipNode = pipeline.create(dai.node.ImageManipV2)
+    manipNode.initialConfig.addResize(576, 320)
+    cameraOutput.link(manipNode.inputImage)
+    
+    detectionNode = pipeline.create(ParsingNeuralNetwork).build(
+        manipNode.out, detection_nn_archive
+        )
+    
+    detectionProcessNode = pipeline.create(ProcessDetections)
+    detectionNode.out.link(detectionProcessNode.detections_input)
+    cameraOutput.link(detectionProcessNode.frame)
+    
+    
+    cropNode = pipeline.create(dai.node.ImageManipV2)
+    detectionProcessNode.crop_config.link(cropNode.inputConfig)
+    detectionProcessNode.output_frame.link(cropNode.inputImage)
 
-    detection_nn = pipeline.create(dai.node.NeuralNetwork)
-    # detection_nn.setBlobPath(blobconverter.from_zoo(name="east_text_detection_256x256", zoo_type="depthai", shaves=6, version="2021.4"))
-    detection_nn.setNNArchive(detection_nn_archive)
-    cam.preview.link(detection_nn.input)
-
-    east = pipeline.create(East).build(
-        video=cam.video,
-        nn=detection_nn.out
-    )
-    east.inputs["video"].setBlocking(False)
-    east.inputs["video"].setMaxSize(4)
-
-    process_detections = pipeline.create(ProcessDetections).build(
-        frame=cam.video,
-        detections=east.output
-    )
-
-    manip = pipeline.create(dai.node.ImageManip)
-    manip.initialConfig.setResize(120, 32)
-    manip.inputConfig.setWaitForMessage(True)
-    process_detections.output_config.link(manip.inputConfig)
-    process_detections.passthrough.link(manip.inputImage)
-
-    recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    # recognition_nn.setBlobPath(blobconverter.from_zoo(name="text-recognition-0012", shaves=6, version="2021.4"))
-    recognition_nn.setNNArchive(recognition_nn_archive)
-    recognition_nn.setNumInferenceThreads(2)
-    manip.out.link(recognition_nn.input)
-
-    recognition_sync = pipeline.create(DetectionsRecognitionsSync).build()
-    recognition_sync.set_camera_fps(FPS)
-    recognition_nn.out.link(recognition_sync.input_recognitions)
-    east.output.link(recognition_sync.input_detections)
-
-    manip_sync = pipeline.create(DetectionsRecognitionsSync).build()
-    manip_sync.set_camera_fps(FPS)
-    manip.out.link(manip_sync.input_recognitions)
-    east.output.link(manip_sync.input_detections)
-
-    ocr = pipeline.create(OCR).build(
-        preview=east.passthrough,
-        manips=manip_sync.output,
-        recognitions=recognition_sync.output
-    )
-    ocr.inputs["preview"].setBlocking(False)
-
+    # ocrNode = pipeline.create(ParsingNeuralNetwork).build(
+    #     cropNode.out, ocr_nn_archive
+    #     )
+    
+    
+    # syncNode = pipeline.create(CustomSyncNode)
+    # ocrNode.out.link(syncNode.ocr_inputs)
+    # detectionNode.passthrough.link(syncNode.passthrough_input)
+    # detectionNode.out.link(syncNode.detections_inputs)
+    
+    cropQueue = cropNode.out.createOutputQueue()
+    # out_queue = syncNode.output.createOutputQueue()
+    # det_queue = detectionNode.out.createOutputQueue()
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    
+    while pipeline.isRunning():
+        # outputs = out_queue.get()
+        
+        # frame = outputs.passthrough.getCvFrame()
+        
+        # detections = outputs.detections
+        
+        # for det in detections:
+        #     classes = det.classes
+        #     rect = det.detection.rotated_rect
+            
+        #     points = rect.getPoints()
+        #     points = [[int(p.x * frame.shape[1]), int(p.y * frame.shape[0])] for p in points]
+        #     points = np.array(points, dtype=np.int32).reshape((-1, 1, 2))
+
+        #     cv2.polylines(frame, [points], isClosed=True, color=(0, 255, 0), thickness=3)
+        #     for txt in classes:
+        #         cv2.putText(frame, txt, points[0][0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            
+                        
+        # cv2.imshow("cvframe", frame)
+        # cv2.waitKey(1)
+        
+        # crop = cropQueue.get().getCvFrame()
+        # cv2.imshow("crop", crop)
+        # cv2.waitKey(1)
+        time.sleep(1/FPS)
+        
+        
+                  

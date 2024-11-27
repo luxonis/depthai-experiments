@@ -1,36 +1,44 @@
 import depthai as dai
-from depthai_nodes import MPPalmDetectionParser
+from depthai_nodes import ParsingNeuralNetwork
+import time
 
-
-device = dai.Device()
+IP = "10.12.121.14"
+deviceInfo = dai.DeviceInfo(IP)
+device = dai.Device(deviceInfo)
+# device = dai.Device()
 platform = device.getPlatform()
-model_dimension = 192
-modelDescription = dai.NNModelDescription(
-    modelSlug="mediapipe-palm-detection",
-    platform=platform.name,
-    modelVersionSlug=f"{model_dimension}x{model_dimension}",
-)
-archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 
-visualizer = dai.RemoteConnection()
+visualizer = dai.RemoteConnection(webSocketPort=8765, httpPort=8082)
+ENCODER_PROFILE = dai.VideoEncoderProperties.Profile.MJPEG
+
+description1 = dai.NNModelDescription("luxonis/fastsam-s:512x288:0.0.1")
+
+### 
+# need a better way to get model shape for the output, other option is to use networkNode.passthrough
+description = dai.NNModelDescription("luxonis/fastsam-s:512x288:0.0.1", 
+                                     platform="RVC4")
+archive_path = dai.getModelFromZoo(description, useCached=False)
+archive = dai.NNArchive(archivePath=archive_path)
+model_shape =  archive.getConfig().model.inputs[0].shape[1:3]
+model_shape = (model_shape[1]*2, model_shape[0]*2)
+###
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    output_type = dai.ImgFrame.Type.BGR888i if platform == dai.Platform.RVC4 else dai.ImgFrame.Type.BGR888p
-    cam_nn = cam.requestOutput((model_dimension, model_dimension), output_type)
-    cam_output = cam.requestOutput((model_dimension * 5, model_dimension * 5), dai.ImgFrame.Type.NV12)
+    cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     
-    nn_archive = dai.NNArchive(archivePath)
-    model_nn = pipeline.create(dai.node.NeuralNetwork).build(cam_nn, nn_archive)
-    model_nn.input.setBlocking(False)
-
-    parser = pipeline.create(MPPalmDetectionParser)
-    parser.setScale(192)
-    model_nn.out.link(parser.input)
-
-    visualizer.addTopic("Palm Detection", cam_output)
-    visualizer.addTopic("Palm Bounding Boxes", parser.out)
-    #visualizer.registerPipeline(pipeline) # TODO: remove comment when registerPipeline is fixed
+    networkNode = pipeline.create(ParsingNeuralNetwork).build(
+        cameraNode, description1, fps=30 # FPS would need to be adjusted based on the model + RVC version
+        )
+    
+    visualizer_output = cameraNode.requestOutput(model_shape, dai.ImgFrame.Type.NV12, fps=30)
+    visualizer.addTopic("Video", visualizer_output, "images") 
+    visualizer.addTopic("Visualizations", networkNode.out, "images")
     
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+    
+    while pipeline.isRunning():
+        time.sleep(1/30)
