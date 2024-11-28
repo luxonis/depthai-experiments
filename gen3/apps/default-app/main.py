@@ -18,9 +18,8 @@ with dai.Pipeline(device) as pipeline:
     nnArchive = dai.NNArchive(
         dai.getModelFromZoo(
             dai.NNModelDescription(
-                "yolov6-nano",
-                platform=platform.name,
-                modelVersionSlug=f"r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}")
+                model=f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}",
+                platform=platform.name)
         )
     )
     if platform == dai.Platform.RVC2:
