@@ -8,19 +8,19 @@ import numpy as np
 from host_process_detections import ProcessDetections
 from host_sync import CustomSyncNode
 
-FPS = 15
+FPS = 10
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ip", 
                     help="Specify the IP address of your RVC4 device",
-                    default="10.12.121.161",
+                    default="10.12.121.123",
                     )
 
-deviceInfo = dai.DeviceInfo(parser.parse_args().ip)
+deviceInfo = dai.DeviceInfo("10.12.121.85")
 device = dai.Device(deviceInfo)
 platform = device.getPlatform()
 
-detection_model_description = dai.NNModelDescription("luxonis/paddle-text-detection:320x576:5a0bbb0", platform="RVC4")
+detection_model_description = dai.NNModelDescription("luxonis/paddle-text-detection:320x576", platform="RVC4")
 detection_nn_archive = dai.NNArchive(dai.getModelFromZoo(detection_model_description))
 
 ocr_model_description = dai.NNModelDescription("luxonis/paddle-text-recognition:320x48", platform="RVC4")
@@ -30,14 +30,14 @@ ocr_nn_archive = dai.NNArchive(dai.getModelFromZoo(ocr_model_description))
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    cameraOutput = cameraNode.requestOutput((1052, 640), dai.ImgFrame.Type.BGR888i, fps= FPS)
+    cameraOutput = cameraNode.requestOutput((1728, 960), dai.ImgFrame.Type.BGR888i, fps= FPS)
     
-    manipNode = pipeline.create(dai.node.ImageManipV2)
-    manipNode.initialConfig.addResize(576, 320)
-    cameraOutput.link(manipNode.inputImage)
+    resizeNode = pipeline.create(dai.node.ImageManipV2)
+    resizeNode.initialConfig.addResize(576, 320)
+    cameraOutput.link(resizeNode.inputImage)
     
     detectionNode = pipeline.create(ParsingNeuralNetwork).build(
-        manipNode.out, detection_nn_archive
+        resizeNode.out, detection_nn_archive
         )
     
     detectionProcessNode = pipeline.create(ProcessDetections)
@@ -88,10 +88,11 @@ with dai.Pipeline(device) as pipeline:
         # cv2.imshow("cvframe", frame)
         # cv2.waitKey(1)
         
-        # crop = cropQueue.get().getCvFrame()
-        # cv2.imshow("crop", crop)
-        # cv2.waitKey(1)
-        time.sleep(1/FPS)
+        crop = cropQueue.get().getCvFrame()
+        
+        cv2.imshow("crop", crop)
+        cv2.waitKey(1)
+        # time.sleep(1/FPS)
         
         
                   

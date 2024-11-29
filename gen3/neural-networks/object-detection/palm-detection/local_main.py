@@ -3,7 +3,7 @@ from depthai_nodes import ParsingNeuralNetwork
 import cv2
 import numpy as np 
 
-IP = "10.12.121.121"
+IP = "10.12.121.85"
 deviceInfo = dai.DeviceInfo(IP)
 device = dai.Device(deviceInfo)
 # device = dai.Device()
