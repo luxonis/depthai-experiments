@@ -1,22 +1,15 @@
 import depthai as dai
 import numpy as np
-from depthai_nodes.ml.messages import ImgDetectionExtended
+from depthai_nodes.ml.messages import ImgDetectionsExtended
 
  
-class DetectedRecognition(dai.Buffer):
-    def __init__(self, detection: ImgDetectionExtended, classes: list[str]):
+class DetectedRecognitions(dai.Buffer):
+    def __init__(self, det: ImgDetectionsExtended, classes: list[str]):
         super().__init__()
-        self.detection = detection
-        self.classes = classes
+        self.detections: ImgDetectionsExtended = det.detections
+        self.classes: list[str] = classes
         
-        self.setTimestamp(detection.getTimestamp())
-        
-class SyncedData(dai.Buffer):
-    def __init__(self, detections: list[DetectedRecognition], passthrough: dai.ImgFrame):
-        super().__init__()
-        self.detections = detections
-        self.passthrough = passthrough
-        
+        self.setTimestamp(det.getTimestamp())
 
 class CustomSyncNode(dai.node.ThreadedHostNode):
     def __init__(self):
@@ -26,22 +19,27 @@ class CustomSyncNode(dai.node.ThreadedHostNode):
         self.passthrough_input = self.createInput(blocking=False)
         
         self.output = self.createOutput()
+        self.passthrough = self.createOutput()
         
     def run(self) -> None:
         
         while self.isRunning():
-            detections = self.detections_inputs.get().detections
             passthrough = self.passthrough_input.get()
+            detections_queue = self.detections_inputs.get()
+            
+            
             ocrs = []
-            print(f"Processing {len(detections)} ocrs.")
-            for i, detection in enumerate(detections):
-                ocr_output = self.ocr_inputs.get()
+            print(f"Processing {len(detections_queue.detections)} ocrs.")
+            for i, detection in enumerate(detections_queue.detections):
                 print(f"waiting for ocr recognition to finish for detection: {i}")
+                ocr_output = self.ocr_inputs.get()
                 print("ocr output received")
                 print(ocr_output.classes)
-                ocrs.append(DetectedRecognition(detection, ocr_output.classes))
-                break
+                ocrs.append( ocr_output.classes)
+                
             
-            print("sending synced data")
-            self.output.send(SyncedData(ocrs, passthrough))
+            det_recog = DetectedRecognitions(detections_queue, ocrs)
+            
+            self.output.send(det_recog)
+            self.passthrough.send(passthrough)
         

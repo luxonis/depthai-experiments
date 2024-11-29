@@ -49,48 +49,53 @@ with dai.Pipeline(device) as pipeline:
     detectionProcessNode.crop_config.link(cropNode.inputConfig)
     detectionProcessNode.output_frame.link(cropNode.inputImage)
 
-    # ocrNode = pipeline.create(ParsingNeuralNetwork).build(
-    #     cropNode.out, ocr_nn_archive
-    #     )
+    ocrNode = pipeline.create(ParsingNeuralNetwork).build(
+        cropNode.out, ocr_nn_archive
+        )
     
     
-    # syncNode = pipeline.create(CustomSyncNode)
-    # ocrNode.out.link(syncNode.ocr_inputs)
-    # detectionNode.passthrough.link(syncNode.passthrough_input)
-    # detectionNode.out.link(syncNode.detections_inputs)
+    syncNode = pipeline.create(CustomSyncNode)
+    ocrNode.out.link(syncNode.ocr_inputs)
+    detectionNode.passthrough.link(syncNode.passthrough_input)
+    detectionNode.out.link(syncNode.detections_inputs)
     
-    cropQueue = cropNode.out.createOutputQueue()
-    # out_queue = syncNode.output.createOutputQueue()
-    # det_queue = detectionNode.out.createOutputQueue()
+    # cropQueue = cropNode.out.createOutputQueue()
+    
+    det_recs_queue = syncNode.output.createOutputQueue()
+    frame_queue = syncNode.passthrough.createOutputQueue()
+    
     print("Pipeline created.")
     pipeline.start()
     
     while pipeline.isRunning():
-        # outputs = out_queue.get()
+        det_recs = det_recs_queue.get()
+        frame = frame_queue.get().getCvFrame()
         
-        # frame = outputs.passthrough.getCvFrame()
         
-        # detections = outputs.detections
+        detections = det_recs.detections
+        classes = det_recs.classes
         
-        # for det in detections:
-        #     classes = det.classes
-        #     rect = det.detection.rotated_rect
-            
-        #     points = rect.getPoints()
-        #     points = [[int(p.x * frame.shape[1]), int(p.y * frame.shape[0])] for p in points]
-        #     points = np.array(points, dtype=np.int32).reshape((-1, 1, 2))
-
-        #     cv2.polylines(frame, [points], isClosed=True, color=(0, 255, 0), thickness=3)
-        #     for txt in classes:
-        #         cv2.putText(frame, txt, points[0][0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-            
+        if len(detections) != 0:
+            for det, text in zip(detections, classes):
+                print(text)
+                
+                rect = det.rotated_rect
+                points = rect.getPoints()
+                
+                points = [[int(p.x * frame.shape[1]), int(p.y * frame.shape[0])] for p in points]
+                points = np.array(points, dtype=np.int32).reshape((-1, 1, 2))
+                
+                cv2.polylines(frame, [points], isClosed=True, color=(0, 255, 0), thickness=3)
+                for txt in text:
+                    cv2.putText(frame, txt, np.mean(points[:, 0, :], axis=0, dtype=np.int32), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                
                         
         # cv2.imshow("cvframe", frame)
         # cv2.waitKey(1)
         
-        crop = cropQueue.get().getCvFrame()
+        # crop = cropQueue.get().getCvFrame()
         
-        cv2.imshow("crop", crop)
+        cv2.imshow("crop", frame)
         cv2.waitKey(1)
         # time.sleep(1/FPS)
         
