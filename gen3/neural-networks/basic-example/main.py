@@ -6,8 +6,7 @@ from utils.arguments import initialize_argparser
 arg_parser, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
-device_info = dai.DeviceInfo(args.device)
-device = dai.Device(device_info)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device != "" else dai.Device()
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")

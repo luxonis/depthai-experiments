@@ -1,14 +1,13 @@
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
-import time
-from utils.arguments import initialize_argparser
 from seg_annotation_node import SegAnnotationNode
+from utils.arguments import initialize_argparser
+import time
 
 arg_parser, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device != "" else dai.Device()
-# device = dai.Device(device_info)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
