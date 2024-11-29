@@ -5,21 +5,20 @@ from utils.arguments import initialize_argparser
 
 arg_parser, args = initialize_argparser()
 
-visualizer = dai.RemoteConnection()
-
-deviceInfo = dai.DeviceInfo(args.ip)
-device = dai.Device(deviceInfo)
+visualizer = dai.RemoteConnection(httpPort=8082)
+device_info = dai.DeviceInfo(args.device)
+device = dai.Device(device_info)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    camera_node = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     
-    networkNode = pipeline.create(ParsingNeuralNetwork).build(
-        cameraNode, dai.NNModelDescription(args.model_slug), fps=args.fps_limit
+    nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
+        camera_node, dai.NNModelDescription(args.model_slug), fps=args.fps_limit
         )
     
-    visualizer.addTopic("Video", networkNode.passthrough, "images") 
-    visualizer.addTopic("Visualizations", networkNode.out, "images")
+    visualizer.addTopic("Video", camera_node.passthrough, "images") 
+    visualizer.addTopic("Visualizations", camera_node.out, "images")
     
     print("Pipeline created.")
 
