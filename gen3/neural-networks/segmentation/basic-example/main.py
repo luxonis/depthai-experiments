@@ -1,7 +1,8 @@
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
-import time
+from seg_annotation_node import SegAnnotationNode
 from utils.arguments import initialize_argparser
+import time
 
 arg_parser, args = initialize_argparser()
 
@@ -16,8 +17,11 @@ with dai.Pipeline(device) as pipeline:
         camera_node, dai.NNModelDescription(args.model_slug), fps=args.fps_limit
         )
     
-    visualizer.addTopic("Video", camera_node.passthrough, "images") 
-    visualizer.addTopic("Visualizations", camera_node.out, "images")
+    annotation_node = pipeline.create(SegAnnotationNode)
+    nn_with_parser.passthrough.link(annotation_node.input_frame)
+    nn_with_parser.out.link(annotation_node.input_segmentation)
+
+    visualizer.addTopic("Video", annotation_node.out, "images") 
     
     print("Pipeline created.")
 
