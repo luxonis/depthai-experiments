@@ -23,6 +23,9 @@ class DetSegAnntotationNode(dai.node.ThreadedHostNode):
 
             label_mask = extended_detections.masks
             detections = extended_detections.detections
+            if len(label_mask.shape) < 2:
+                self.out.send(output_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888i))
+                continue
             
             detection_labels = {idx: detection.label for idx, detection in enumerate(detections)}
             detection_labels[-1] = -1
