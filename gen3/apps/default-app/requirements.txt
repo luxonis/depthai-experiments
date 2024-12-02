@@ -1,4 +1,4 @@
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local
-depthai==3.0.0a6
+depthai==3.0.0a8
 opencv-python-headless==4.10.0.84
 numpy==2.1.2
