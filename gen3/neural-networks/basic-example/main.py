@@ -16,8 +16,8 @@ with dai.Pipeline(device) as pipeline:
         camera_node, dai.NNModelDescription(args.model_slug), fps=args.fps_limit
         )
     
-    visualizer.addTopic("Video", camera_node.passthrough, "images") 
-    visualizer.addTopic("Visualizations", camera_node.out, "images")
+    visualizer.addTopic("Video", nn_with_parser.passthrough, "images") 
+    visualizer.addTopic("Visualizations", nn_with_parser.out, "images")
     
     print("Pipeline created.")
 
