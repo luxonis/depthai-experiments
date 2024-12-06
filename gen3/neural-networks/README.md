@@ -20,6 +20,8 @@ Below we list all the available **Gen3 examples** (with links to their **Gen2 co
 | HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |
 |-------------|------|------|------|--------------|
 | [yunet](https://hub.luxonis.com/ai/models/5d635f3c-45c0-41d2-8800-7ca3681b1915?view=page) | [gen2-face-detection](../../gen2/gen2-face-detection) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [mediapipe-face-landmarker](https://hub.luxonis.com/ai/models/4632304b-91cb-4fcb-b4cc-c8c414e13f56?view=page) | [gen2-facemesh](../../gen2/gen2-facemesh) | YES | YES | [🔗](basic-example/illustrations/dummy.gif) |
+
 
 ## Monocular Depth Estimation
 
