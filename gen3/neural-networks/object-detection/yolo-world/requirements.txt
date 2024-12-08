@@ -1,0 +1,7 @@
+numpy
+onnxruntime
+transformers
+opencv-python-headless
+depthai
+requests
+depthai==3.0.0a8
