@@ -25,6 +25,7 @@ Below we list all the available **Gen3 examples** (with links to their **Gen2 co
 | [yunet](https://hub.luxonis.com/ai/models/5d635f3c-45c0-41d2-8800-7ca3681b1915?view=page) | [gen2-face-detection](../../gen2/gen2-face-detection) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
 | [scrfd-face-detection](https://hub.luxonis.com/ai/models/1f3d7546-66e4-43a8-8724-2fa27df1096f?view=page) | [gen2-face-detection](../../gen2/gen2-face-detection) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
 | [mediapipe-palm-detection](https://hub.luxonis.com/ai/models/9531aba9-ef45-4ad3-ae03-808387d61bf3?view=page) | [gen2-palm-detection](../../gen2-palm-detection) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [qrdet](https://hub.luxonis.com/ai/models/d1183a0f-e9a0-4fa2-8437-f2f5b0181739?view=page) | [gen2-qr-code-scanner](../../gen2-qr-code-scanner) | YES | YES | [🔗](basic-example/illustrations/dummy.gif) |
 
 ## Keypoint Detection
 
