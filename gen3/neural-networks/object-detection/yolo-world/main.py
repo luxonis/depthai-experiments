@@ -56,8 +56,9 @@ def extract_text_embeddings(class_names):
 def main(args):
 
     text_features = extract_text_embeddings(args.class_names)
-    device_info = dai.DeviceInfo(args.device_ip)
-    device = dai.Device(device_info)
+    device = (
+        dai.Device(dai.DeviceInfo(args.device)) if args.device != "" else dai.Device()
+    )
 
     with dai.Pipeline(device) as pipeline:
 
@@ -134,18 +135,22 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser(description="Yolo World Demo")
     parser.add_argument(
-        "--device_ip",
+        "-d",
+        "--device",
+        help="Optional name, DeviceID or IP of the camera to connect to.",
+        required=False,
+        default="",
         type=str,
-        required=True,
-        help="The IP address of the target device",
     )
     parser.add_argument(
+        "-v",
         "--video_path",
         type=str,
         default=None,
         help="The path to the video file",
     )
     parser.add_argument(
+        "-c",
         "--class_names",
         type=str,
         nargs="+",
@@ -153,6 +158,7 @@ def parse_args():
         help="Class names to be detected",
     )
     parser.add_argument(
+        "-t",
         "--confidence_threshold",
         type=float,
         default=0.1,
