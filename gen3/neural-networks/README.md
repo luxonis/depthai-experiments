@@ -15,6 +15,15 @@ Below we list all the available **Gen3 examples** (with links to their **Gen2 co
 |-------------|------|------|------|--------------|
 | ... (ModelName) | ... (Gen2Example) | ... (YES/NO/TBA)  | ... (YES/NO/TBA)  | ... (LinkToMedia) |
 
+## Object Detection
+
+| HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |
+|-------------|------|------|------|--------------|
+| [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page) | [gen2-efficientDet](../../gen2/gen2-efficientDet) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [yolov6-large](https://hub.luxonis.com/ai/models/7937248a-c310-4765-97db-0850086f2dd9?view=page) | | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [yolov10-nano](https://hub.luxonis.com/ai/models/03153a9a-06f7-4ce9-b655-3762d21d0a8a?view=page) | [gen2-efficientDet](../../gen2/gen2-efficientDet) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+
+
 ## Keypoint Detection
 
 | HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |
