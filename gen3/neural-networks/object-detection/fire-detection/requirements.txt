@@ -1,5 +1,0 @@
-depthai~=3.0a1
-opencv-python==4.10.0.84
-numpy~=2.0
-scipy
-imutils
