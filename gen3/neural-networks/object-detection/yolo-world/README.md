@@ -18,11 +18,11 @@ This example demonstrates the implementation of multi-input YOLO-WORLD object de
 ## Usage
 Run the script with the required arguments:
 ```bash
-python main.py --device_ip <DEVICE_IP> --class_names <CLASS_NAMES> [OPTIONS]
+python main.py --device <DEVICE> --class_names <CLASS_NAMES> [OPTIONS]
 ```
 
 ### Required Arguments
-- `--device_ip`: IP address of the DepthAI device.
+- `--device`: Optional name, DeviceID or IP of the camera to connect to.
 - `--class_names`: Space-separated list of class names to detect (up to 80 classes).
 
 ### Optional Arguments
@@ -31,5 +31,5 @@ python main.py --device_ip <DEVICE_IP> --class_names <CLASS_NAMES> [OPTIONS]
 
 ### Example
 ```bash
-python main.py --device_ip 192.168.1.100 --class_names person car dog --video_path input.mp4 --confidence_threshold 0.2
+python main.py --device 192.168.1.100 --class_names person car dog --video_path input.mp4 --confidence_threshold 0.2
 ```
