@@ -3,4 +3,5 @@ onnxruntime
 transformers
 opencv-python>=4.0.0
 requests
-depthai==3.0.0a8
+depthai>=3.0.0a8
+git+https://github.com/luxonis/depthai-nodes.git@main

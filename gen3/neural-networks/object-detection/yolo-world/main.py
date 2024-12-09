@@ -3,15 +3,17 @@ import onnxruntime
 from transformers import AutoTokenizer
 import cv2
 import depthai as dai
+from depthai_nodes import ParsingNeuralNetwork
 import argparse
-import requests
 import os
+
 
 from utils import draw_detections, download_model
 
 MAX_NUM_CLASSES = 80
 QUANT_ZERO_POINT = 89.0
 QUANT_SCALE = 0.003838143777
+IMAGE_SIZE = (640, 640)
 
 
 def extract_text_embeddings(class_names):
@@ -63,9 +65,9 @@ def main(args):
     with dai.Pipeline(device) as pipeline:
 
         manip = pipeline.create(dai.node.ImageManipV2)
-        manip.setMaxOutputFrameSize(640 * 640 * 3)
+        manip.setMaxOutputFrameSize(IMAGE_SIZE[0] * IMAGE_SIZE[1] * 3)
         manip.initialConfig.setOutputSize(
-            640, 640, dai.ImageManipConfigV2.ResizeMode.LETTERBOX
+            IMAGE_SIZE[0], IMAGE_SIZE[1], dai.ImageManipConfigV2.ResizeMode.LETTERBOX
         )
 
         if args.video_path is not None:
@@ -78,7 +80,7 @@ def main(args):
             cam = pipeline.create(dai.node.Camera).build(
                 boardSocket=dai.CameraBoardSocket.CAM_A
             )
-            camOut = cam.requestOutput((640, 640), dai.ImgFrame.Type.RGB888i)
+            camOut = cam.requestOutput(IMAGE_SIZE, dai.ImgFrame.Type.RGB888i)
 
             camOut.link(manip.inputImage)
 
@@ -88,29 +90,24 @@ def main(args):
         archive_path = dai.getModelFromZoo(model_description, useCached=True)
         nn_archive = dai.NNArchive(archive_path)
 
-        nn = pipeline.create(dai.node.NeuralNetwork)
-        nn.setNNArchive(nn_archive)
+        nn_with_parser = pipeline.create(ParsingNeuralNetwork)
+        nn_with_parser.setNNArchive(nn_archive)
+        nn_with_parser.setBackend("snpe")
+        nn_with_parser.setBackendProperties(
+            {"runtime": "dsp", "performance_profile": "default"}
+        )
+        nn_with_parser.setNumInferenceThreads(1)
 
-        nn.setBackend("snpe")
-        nn.setBackendProperties({"runtime": "dsp", "performance_profile": "default"})
+        nn_with_parser.getParser(0).setConfidenceThreshold(args.confidence_threshold)
+        nn_with_parser.getParser(0).setInputImageSize(IMAGE_SIZE[0], IMAGE_SIZE[1])
 
-        detectionParser = pipeline.create(dai.node.DetectionParser)
-        detectionParser.setConfidenceThreshold(args.confidence_threshold)
-        detectionParser.setNumClasses(MAX_NUM_CLASSES)
-        detectionParser.setCoordinateSize(4)
-        detectionParser.setIouThreshold(0.3)
-        detectionParser.setInputImageSize(640, 640)
-        nn.setNumInferenceThreads(1)
-
-        # Linking
-        manip.out.link(nn.inputs["images"])
-        qDet = detectionParser.out.createOutputQueue()
+        manip.out.link(nn_with_parser.inputs["images"])
+        qDet = nn_with_parser.out.createOutputQueue()
         # qImg = nn.passthroughs['images'].createOutputQueue()
         qImg = manip.out.createOutputQueue()
-        nn.out.link(detectionParser.input)
 
-        textInputQueue = nn.inputs["texts"].createInputQueue()
-        nn.inputs["texts"].setReusePreviousMessage(True)
+        textInputQueue = nn_with_parser.inputs["texts"].createInputQueue()
+        nn_with_parser.inputs["texts"].setReusePreviousMessage(True)
 
         pipeline.start()
 
@@ -121,7 +118,7 @@ def main(args):
         textInputQueue.send(inputNNData)
 
         print("Press 'q' to stop")
-        while pipeline.isRunning():  # and replayNode.isRunning():
+        while pipeline.isRunning():
             inDet: dai.ImgDetections = qDet.get()
             inImage: dai.ImgFrame = qImg.get()
             cvFrame = inImage.getCvFrame()
