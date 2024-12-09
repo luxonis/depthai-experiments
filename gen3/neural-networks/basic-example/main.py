@@ -29,6 +29,9 @@ with dai.Pipeline(device) as pipeline:
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
         imageManip = pipeline.create(dai.node.ImageManipV2)
+        imageManip.setMaxOutputFrameSize(
+            nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
+        )
         imageManip.initialConfig.addResize(
             nn_archive.getInputWidth(), nn_archive.getInputHeight()
         )

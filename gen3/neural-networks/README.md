@@ -19,9 +19,9 @@ Below we list all the available **Gen3 examples** (with links to their **Gen2 co
 
 | HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |
 |-------------|------|------|------|--------------|
-| [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page) | [gen2-efficientDet](../../gen2/gen2-efficientDet) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
-| [yolov6-large](https://hub.luxonis.com/ai/models/7937248a-c310-4765-97db-0850086f2dd9?view=page) | | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
-| [yolov10-nano](https://hub.luxonis.com/ai/models/03153a9a-06f7-4ce9-b655-3762d21d0a8a?view=page) | [gen2-efficientDet](../../gen2/gen2-efficientDet) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page) | [gen2-efficientDet](../../gen2/gen2-efficientDet) | YES | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [yolov6-large](https://hub.luxonis.com/ai/models/7937248a-c310-4765-97db-0850086f2dd9?view=page) | | NO | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [yolov10-nano](https://hub.luxonis.com/ai/models/03153a9a-06f7-4ce9-b655-3762d21d0a8a?view=page) | [gen2-efficientDet](../../gen2/gen2-efficientDet) | YES | YES | [🔗](basic-example/illustrations/dummy.gif) |
 
 
 ## Keypoint Detection
@@ -29,6 +29,7 @@ Below we list all the available **Gen3 examples** (with links to their **Gen2 co
 | HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |
 |-------------|------|------|------|--------------|
 | [yunet](https://hub.luxonis.com/ai/models/5d635f3c-45c0-41d2-8800-7ca3681b1915?view=page) | [gen2-face-detection](../../gen2/gen2-face-detection) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [scrfd-face-detection](https://hub.luxonis.com/ai/models/1f3d7546-66e4-43a8-8724-2fa27df1096f?view=page) | [gen2-face-detection](../../gen2/gen2-face-detection) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
 | [mediapipe-face-landmarker](https://hub.luxonis.com/ai/models/4632304b-91cb-4fcb-b4cc-c8c414e13f56?view=page) | [gen2-facemesh](../../gen2/gen2-facemesh) | YES | YES | [🔗](basic-example/illustrations/dummy.gif) |
 | [yolov8-nano-pose-estimation](https://hub.luxonis.com/ai/models/12acd8d7-25c0-4a07-9dff-ab8c5fcae7b1?view=page) | [gen2-human-pose](../../gen2/gen2-human-pose) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
 | [yolov8-large-pose-estimation](https://hub.luxonis.com/ai/models/8be178a0-e643-4f1e-b925-06512e4e15c7?view=page) | [gen2-human-pose](../../gen2/gen2-human-pose) | NO | YES | [🔗](basic-example/illustrations/dummy.gif) |
