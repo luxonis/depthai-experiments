@@ -1,7 +1,6 @@
 numpy
 onnxruntime
 transformers
-opencv-python-headless
-depthai
+opencv-python>=4.0.0
 requests
 depthai==3.0.0a8

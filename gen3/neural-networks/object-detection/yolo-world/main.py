@@ -9,10 +9,6 @@ import os
 
 from utils import draw_detections, download_model
 
-MAJOR, MINOR = map(int, cv2.__version__.split(".")[:2])
-assert MAJOR == 4
-
-
 MAX_NUM_CLASSES = 80
 QUANT_ZERO_POINT = 89.0
 QUANT_SCALE = 0.003838143777
