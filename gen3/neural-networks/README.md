@@ -19,9 +19,8 @@ Below we list all the available **Gen3 examples** (with links to their **Gen2 co
 
 | HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |
 |-------------|------|------|------|--------------|
-| [efficientnet-lite](https://hub.luxonis.com/ai/models/fdacd30d-97f4-4c55-843f-8b7e872d8acb?view=page) | [gen2-efficientnet-classification](../../gen2/gen2-efficientnet-classification) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
-
-gen2/
+| [efficientnet-lite](https://hub.luxonis.com/ai/models/fdacd30d-97f4-4c55-843f-8b7e872d8acb?view=page) | [gen2-efficientnet-classification](../../gen2/gen2-efficientnet-classification) | YES | YES | [🔗](basic-example/illustrations/dummy.gif) |
+| [image-quality-assessment](https://hub.luxonis.com/ai/models/1c43753e-5e4d-4d32-b08a-584098290d72?view=page) | [gen2-image-quality-assessment](../../gen2/gen2-image-quality-assessment) | YES | NO | [🔗](basic-example/illustrations/dummy.gif) |
 
 ## Object Detection
 
