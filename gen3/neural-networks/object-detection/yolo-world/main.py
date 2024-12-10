@@ -103,8 +103,7 @@ def main(args):
 
         manip.out.link(nn_with_parser.inputs["images"])
         qDet = nn_with_parser.out.createOutputQueue()
-        # qImg = nn.passthroughs['images'].createOutputQueue()
-        qImg = manip.out.createOutputQueue()
+        qImg = nn_with_parser.passthroughs["images"].createOutputQueue()
 
         textInputQueue = nn_with_parser.inputs["texts"].createInputQueue()
         nn_with_parser.inputs["texts"].setReusePreviousMessage(True)
