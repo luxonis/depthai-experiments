@@ -29,12 +29,11 @@ class CustomSyncNode(dai.node.ThreadedHostNode):
             
             
             ocrs = []
-            print(f"Processing {len(detections_queue.detections)} ocrs.")
+            # print(f"Processing {len(detections_queue.detections)} ocrs.")
             for i, detection in enumerate(detections_queue.detections):
-                print(f"waiting for ocr recognition to finish for detection: {i}")
+                # print(f"waiting for ocr recognition to finish for detection: {i}")
                 ocr_output = self.ocr_inputs.get()
-                print("ocr output received")
-                print(ocr_output.classes)
+                
                 ocrs.append( ocr_output.classes)
                 
             

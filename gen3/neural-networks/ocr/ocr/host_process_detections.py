@@ -25,28 +25,29 @@ class ProcessDetections(dai.node.ThreadedHostNode):
             
             # print(f"Processing {len(detections)} detections.")
             for detection in detections:
-                detection: ImgDetectionExtended = detection
+                print("Number of detections: ", len(detections))
                 cfg = dai.ImageManipConfigV2()
+                detection: ImgDetectionExtended = detection
                 rect = detection.rotated_rect
                 rect = rect.denormalize(w, h)
                 cfg.addCropRotatedRect(rect, normalizedCoords=False)
-                cfg.addResize(320, 48)
+                # cfg.addResize(320, 48)
+                cfg.setOutputSize(320, 48)
                 cfg.setTimestamp(self.detections_input.get().getTimestamp())
-                cfg.setTimestampDevice(self.detections_input.get().getTimestampDevice())
                 
                 self.crop_config.send(cfg)
                 self.output_frame.send(frame)
-            
-            if len(detections) == 0:
-                self.crop_config.send(dai.ImageManipConfigV2())
-                black_frame = dai.ImgFrame()
-                black_frame.setFrame(np.zeros((48, 320, 3), dtype=np.uint8))
-                black_frame.setWidth(320)
-                black_frame.setHeight(48)
-                black_frame.setTimestamp(frame.getTimestamp())
-                black_frame.setType(dai.ImgFrame.Type.BGR888i)
                 
-                self.output_frame.send(black_frame)
+                
+            #     self.crop_config.send(dai.ImageManipConfigV2())
+            #     black_frame = dai.ImgFrame()
+            #     black_frame.setFrame(np.zeros((48, 320, 3), dtype=np.uint8))
+            #     black_frame.setWidth(320)
+            #     black_frame.setHeight(48)
+            #     black_frame.setTimestamp(frame.getTimestamp())
+            #     black_frame.setType(dai.ImgFrame.Type.BGR888i)
+                
+            #     self.output_frame.send(black_frame)
 
             #     points = rect.getPoints()
             #     points = [[int(p.x ), int(p.y )] for p in points]
