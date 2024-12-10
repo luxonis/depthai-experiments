@@ -4,12 +4,12 @@ The examples utilize publicly available models from the [HubAI Model ZOO](https:
 The inference is made either on camera inputs or custom media files (image or video) and the results are displayed in the browser.
 
 The examples are organized into two categories:
-- [Basic example](basic-example/): Generic inference pipeline running a **single model** with a **single-image input** and a **single-head output**;
+- [Generic example](generic-example/): Generic inference pipeline running a **single model** with a **single-image input** and a **single-head output**;
 - [Advanced examples](advanced-examples/): Custom single- or multiple-model inference pipelines, with input that can be a single image, multiple images, or other data, and can have multi-head outputs.
 
 Below we list all the available **Gen3 examples** (with links to their **Gen2 counterparts**).
 
-# Basic Examples
+# Generic Examples
 
 ## Classification
 
