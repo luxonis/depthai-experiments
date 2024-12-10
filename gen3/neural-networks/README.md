@@ -15,6 +15,14 @@ Below we list all the available **Gen3 examples** (with links to their **Gen2 co
 |-------------|------|------|------|--------------|
 | ... (ModelName) | ... (Gen2Example) | ... (YES/NO/TBA)  | ... (YES/NO/TBA)  | ... (LinkToMedia) |
 
+## Classification
+
+| HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |
+|-------------|------|------|------|--------------|
+| [efficientnet-lite](https://hub.luxonis.com/ai/models/fdacd30d-97f4-4c55-843f-8b7e872d8acb?view=page) | [gen2-efficientnet-classification](../../gen2/gen2-efficientnet-classification) | TBA | YES | [🔗](basic-example/illustrations/dummy.gif) |
+
+gen2/
+
 ## Object Detection
 
 | HubAI Model | Gen2 | RVC2 | RVC4 | Illustration |

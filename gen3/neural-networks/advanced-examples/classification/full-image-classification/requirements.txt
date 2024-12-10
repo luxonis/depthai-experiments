@@ -1,5 +1,0 @@
-opencv-python==4.10.0.84
-numpy~=2.0
-depthai==3.0.0a4.dev0+5f0c39ea983c4212f70a58952e23d4f2e3196072
-depthai-nodes==0.0.2
-blobconverter==1.4.3
