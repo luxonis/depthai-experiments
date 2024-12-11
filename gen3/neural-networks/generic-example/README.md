@@ -28,6 +28,7 @@ The inference is ran using a simple CLI call:
 python3 main.py \
     --model_slug ... \
     --device ... \
+    --annotation_mode ... \
     --fps_limit ... \
     --media ...
 ```
@@ -36,6 +37,7 @@ The relevant arguments:
 - **--model_slug**: A unique HubAI identifier of the model;
 - **--device** [OPTIONAL]: DeviceID or IP of the camera to connect to.
 By default, the first locally available device is used;
+- **--annotation_mode** [OPTIONAL]: Annotation mode. Set to 'segmentation_overlay' to overlay segmentation masks over the model inputs. Leave empty to use the default visualization.
 - **--fps_limit** [OPTIONAL]: The upper limit for camera captures in frames per second (FPS).
 The limit is not used when infering on media.
 By default, the FPS is not limited.

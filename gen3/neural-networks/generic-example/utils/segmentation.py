@@ -38,6 +38,9 @@ class SegAnnotationNode(dai.node.ThreadedHostNode):
                 scaled_mask[mask == -1] = 0
             colored_mask = cv2.applyColorMap(scaled_mask, cv2.COLORMAP_RAINBOW)
             colored_mask[mask == -1] = [0, 0, 0]
+
+            frame_height, frame_width, _ = frame.shape
+            colored_mask = cv2.resize(colored_mask, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
             
             colored_frame = cv2.addWeighted(frame, 0.5, colored_mask, 0.5, 0)
             

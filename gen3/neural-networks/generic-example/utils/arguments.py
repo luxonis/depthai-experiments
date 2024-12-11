@@ -29,6 +29,15 @@ def initialize_argparser():
     )
 
     parser.add_argument(
+        "-mode",
+        "--annotation_mode",
+        help="Annotation mode. Can be either 'segmentation' or default.",
+        required=False,
+        default=None,
+        type=str,
+    )
+
+    parser.add_argument(
         "-fps",
         "--fps_limit",
         help="FPS limit for the model runtime.",
