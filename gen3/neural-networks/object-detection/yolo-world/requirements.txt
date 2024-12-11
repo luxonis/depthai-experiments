@@ -1,0 +1,7 @@
+numpy
+onnxruntime
+transformers
+opencv-python>=4.0.0
+requests
+depthai>=3.0.0a10
+git+https://github.com/luxonis/depthai-nodes.git@main
