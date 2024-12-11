@@ -1,7 +1,8 @@
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
+depthai>=3.0.0a10
+depthai-nodes>=0.1.1
 numpy
 onnxruntime
 transformers
 opencv-python>=4.0.0
 requests
-depthai>=3.0.0a10
-git+https://github.com/luxonis/depthai-nodes.git@main
