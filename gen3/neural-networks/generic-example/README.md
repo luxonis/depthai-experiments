@@ -8,18 +8,9 @@ Moreover, you need to prepare a **Python 3.10** environment with the following p
 - [DepthAI](https://pypi.org/project/depthai/),
 - [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
 
-## DepthAI
-As **DepthAI v3** is not officially released yet, you need to install it from the artifacts:
+You can do this by running:
 ```bash
-python3 -m pip install -U --prefer-binary --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local "depthai==3.0.0-alpha.6.dev0+1eb20bd1b5b598282271a790713b9eb65b7546a7"
-```
-
-## DepthAI Nodes
-As **DepthAI Nodes** is still work-in-progress, we suggest installing the latest version from the **GitHub**:
-```bash
-git clone git@github.com:luxonis/depthai-nodes.git
-cd depthai-nodes
-pip install -e .
+pip install -r requirements.txt
 ```
 
 # Usage
