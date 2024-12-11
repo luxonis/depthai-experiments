@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
-from utils.segmentation import SegAnnotationNode
+from utils.segmentation import SegAnnotationNode, DetSegAnntotationNode
 from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
@@ -53,7 +53,13 @@ with dai.Pipeline(device) as pipeline:
         annotation_node = pipeline.create(SegAnnotationNode)
         nn_with_parser.passthrough.link(annotation_node.input_frame)
         nn_with_parser.out.link(annotation_node.input_segmentation)
-        visualizer.addTopic("Video", annotation_node.out, "images") 
+        visualizer.addTopic("Video", annotation_node.out, "images")
+    if args.annotation_mode == "segmentation_with_annotation":
+        annotation_node = pipeline.create(DetSegAnntotationNode)
+        nn_with_parser.passthrough.link(annotation_node.input_frame)
+        nn_with_parser.out.link(annotation_node.input_detections)
+        visualizer.addTopic("Video", annotation_node.out, "images")
+        visualizer.addTopic("Detections", nn_with_parser.out, "detections")
     else:
         visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
         visualizer.addTopic("Visualizations", nn_with_parser.out, "images")
