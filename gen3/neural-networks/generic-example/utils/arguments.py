@@ -13,8 +13,8 @@ def initialize_argparser():
 
     parser.add_argument(
         "-m",
-        "--model_slug",
-        help="Slug of the model copied from HubAI.",
+        "--model",
+        help="HubAI model reference.",
         required=True,
         type=str,
     )
@@ -29,9 +29,9 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-        "-mode",
+        "-ann",
         "--annotation_mode",
-        help="Annotation mode. Can be either 'segmentation' or default.",
+        help="Annotation mode. Can be either 'segmentation', 'segmentation_with_annotation', or None (default).",
         required=False,
         default=None,
         type=str,

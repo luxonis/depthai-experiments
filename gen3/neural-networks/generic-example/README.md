@@ -4,11 +4,7 @@ The example is generic and can be used for various single-image input models fro
 
 # Instalation
 Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
-Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
-- [DepthAI](https://pypi.org/project/depthai/),
-- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
-
-You can do this by running:
+Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 ```bash
 pip install -r requirements.txt
 ```
@@ -17,7 +13,7 @@ pip install -r requirements.txt
 The inference is ran using a simple CLI call:
 ```bash
 python3 main.py \
-    --model_slug ... \
+    --model ... \
     --device ... \
     --annotation_mode ... \
     --fps_limit ... \
@@ -25,10 +21,10 @@ python3 main.py \
 ```
 
 The relevant arguments:
-- **--model_slug**: A unique HubAI identifier of the model;
+- **--model**: A unique HubAI identifier of the model;
 - **--device** [OPTIONAL]: DeviceID or IP of the camera to connect to.
 By default, the first locally available device is used;
-- **--annotation_mode** [OPTIONAL]: Annotation mode. Set to 'segmentation' to overlay segmentation masks over the model inputs, or 'segmentation_with_annotation' to visualize the additional annotations. Leave empty to use the default visualization.
+- **--annotation_mode** [OPTIONAL]: Annotation mode. Set to `segmentation` to overlay segmentation masks over the model inputs, or to `segmentation_with_annotation` to overlay segmentation masks together with additional annotations. If left empty, the default visualization is used.
 - **--fps_limit** [OPTIONAL]: The upper limit for camera captures in frames per second (FPS).
 The limit is not used when infering on media.
 By default, the FPS is not limited.
