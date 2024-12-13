@@ -19,7 +19,7 @@ class ProcessDetections(dai.node.ThreadedHostNode):
             w, h = 1728, 960 
             
             num_frames = len(detections)
-            
+            print(f"process num detections: {len(detections)}")
             for i, detection in enumerate(detections):
                 cfg = dai.ImageManipConfigV2()
                 detection: ImgDetectionExtended = detection

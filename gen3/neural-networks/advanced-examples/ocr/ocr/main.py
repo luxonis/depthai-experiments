@@ -7,7 +7,7 @@ import numpy as np
 from host_process_detections import ProcessDetections
 from host_sync import CustomSyncNode
 
-FPS = 5
+FPS = 20
 
 parser = argparse.ArgumentParser()
 
@@ -57,14 +57,16 @@ with dai.Pipeline(device) as pipeline:
     detectionProcessNode.num_frames_output.link(frameSenderNode.inputs['num_frames_input'])
     
     cropNode = pipeline.create(dai.node.ImageManipV2)
-    cropNode.initialConfig.setReusePreviousImage(False)
     cropNode.inputConfig.setMaxSize(100)
+    cropNode.inputConfig.setReusePreviousMessage(False)
     cropNode.inputImage.setReusePreviousMessage(False)
     cropNode.inputImage.setMaxSize(100)
+    # cropNode.setMaxOutputFrameSize(4976640)
     
     detectionProcessNode.crop_config.link(cropNode.inputConfig)
     frameSenderNode.outputs['output_frame'].link(cropNode.inputImage)
-
+    
+    
     ocrNode: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         cropNode.out, "luxonis/paddle-text-recognition:320x48"
         )

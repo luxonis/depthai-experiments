@@ -25,6 +25,8 @@ class CustomSyncNode(dai.node.ThreadedHostNode):
             
             ocrs = []
             ocr_ts = det_ts
+            
+            print(f"Sync num detections: {len(detections_queue.detections)}")
             for i, detection in enumerate(detections_queue.detections):
                 ocr_output = self.ocr_inputs.get()
                 
@@ -39,9 +41,9 @@ class CustomSyncNode(dai.node.ThreadedHostNode):
                 
             ocr_message = DetectedRecognitions(ocrs)
             ocr_message.setTimestamp(det_ts)
-            message_group.__setitem__("detections", detections_queue)
-            message_group.__setitem__("ocrs", ocr_message)
-            message_group.__setitem__("passthrough", passthrough)
+            message_group["detections"]= detections_queue
+            message_group["ocrs"]= ocr_message
+            message_group["passthrough"]= passthrough
                 
             self.out.send(message_group)
         
