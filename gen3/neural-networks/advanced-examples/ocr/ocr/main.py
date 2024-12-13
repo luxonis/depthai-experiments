@@ -1,77 +1,115 @@
 import depthai as dai
-import blobconverter
+import argparse
+from depthai_nodes import ParsingNeuralNetwork
+import cv2
+import numpy as np
 
-from host_east import East
 from host_process_detections import ProcessDetections
-from host_ocr import OCR
-from detections_recognitions_sync import DetectionsRecognitionsSync
+from host_sync import CustomSyncNode
 
-FPS = 10
+FPS = 5
 
-detection_model_description = dai.NNModelDescription(modelSlug="east-text-detection", platform="RVC2", modelVersionSlug="256x256")
-detection_archive_path = dai.getModelFromZoo(detection_model_description)
-detection_nn_archive = dai.NNArchive(detection_archive_path)
+parser = argparse.ArgumentParser()
 
-recognition_model_description = dai.NNModelDescription(modelSlug="text-recognition", platform="RVC2", modelVersionSlug="0012")
-recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
-recognition_nn_archive = dai.NNArchive(recognition_archive_path)
+device = dai.Device()
+platform = device.getPlatform()
+if "RVC4" in str(platform):
+    frame_type = dai.ImgFrame.Type.BGR888i
+else:
+    frame_type = dai.ImgFrame.Type.BGR888p
 
-with dai.Pipeline() as pipeline:
-
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(256, 256)
-    cam.setVideoSize(1024, 1024)  # 4 times larger in both axis
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam.setFps(FPS)
+    
+    cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cameraOutput = cameraNode.requestOutput((1728, 960), frame_type, fps= FPS)
+    
+    resizeNode = pipeline.create(dai.node.ImageManipV2) 
+    resizeNode.initialConfig.setOutputSize(576, 320)
+    resizeNode.initialConfig.setReusePreviousImage(False)
+    cameraOutput.link(resizeNode.inputImage)
+    
+    detectionNode: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        resizeNode.out, "luxonis/paddle-text-detection:320x576"
+        )
+    # detectionNode.input.setBlocking(True)
+    detectionNode.input.setMaxSize(100)
+    
+    detectionProcessNode = pipeline.create(ProcessDetections)
+    detectionNode.out.link(detectionProcessNode.detections_input)
+    
+    
+    frameSenderNode = pipeline.create(dai.node.Script)
+    frameSenderNode.setScript("""
+        try:
+            while True:
+                frame = node.inputs['frame_input'].get()
+                num_frames = node.inputs['num_frames_input'].get().getData()[0]
+                
+                for i in range(num_frames):
+                    node.outputs['output_frame'].send(frame)
+                
+        except Exception as e:
+            node.warn(str(e))
+    """)
+    
+    cameraOutput.link(frameSenderNode.inputs['frame_input'])
+    detectionProcessNode.num_frames_output.link(frameSenderNode.inputs['num_frames_input'])
+    
+    cropNode = pipeline.create(dai.node.ImageManipV2)
+    cropNode.initialConfig.setReusePreviousImage(False)
+    cropNode.inputConfig.setMaxSize(100)
+    cropNode.inputImage.setReusePreviousMessage(False)
+    cropNode.inputImage.setMaxSize(100)
+    
+    detectionProcessNode.crop_config.link(cropNode.inputConfig)
+    frameSenderNode.outputs['output_frame'].link(cropNode.inputImage)
 
-    detection_nn = pipeline.create(dai.node.NeuralNetwork)
-    # detection_nn.setBlobPath(blobconverter.from_zoo(name="east_text_detection_256x256", zoo_type="depthai", shaves=6, version="2021.4"))
-    detection_nn.setNNArchive(detection_nn_archive)
-    cam.preview.link(detection_nn.input)
-
-    east = pipeline.create(East).build(
-        video=cam.video,
-        nn=detection_nn.out
-    )
-    east.inputs["video"].setBlocking(False)
-    east.inputs["video"].setMaxSize(4)
-
-    process_detections = pipeline.create(ProcessDetections).build(
-        frame=cam.video,
-        detections=east.output
-    )
-
-    manip = pipeline.create(dai.node.ImageManip)
-    manip.initialConfig.setResize(120, 32)
-    manip.inputConfig.setWaitForMessage(True)
-    process_detections.output_config.link(manip.inputConfig)
-    process_detections.passthrough.link(manip.inputImage)
-
-    recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    # recognition_nn.setBlobPath(blobconverter.from_zoo(name="text-recognition-0012", shaves=6, version="2021.4"))
-    recognition_nn.setNNArchive(recognition_nn_archive)
-    recognition_nn.setNumInferenceThreads(2)
-    manip.out.link(recognition_nn.input)
-
-    recognition_sync = pipeline.create(DetectionsRecognitionsSync).build()
-    recognition_sync.set_camera_fps(FPS)
-    recognition_nn.out.link(recognition_sync.input_recognitions)
-    east.output.link(recognition_sync.input_detections)
-
-    manip_sync = pipeline.create(DetectionsRecognitionsSync).build()
-    manip_sync.set_camera_fps(FPS)
-    manip.out.link(manip_sync.input_recognitions)
-    east.output.link(manip_sync.input_detections)
-
-    ocr = pipeline.create(OCR).build(
-        preview=east.passthrough,
-        manips=manip_sync.output,
-        recognitions=recognition_sync.output
-    )
-    ocr.inputs["preview"].setBlocking(False)
+    ocrNode: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        cropNode.out, "luxonis/paddle-text-recognition:320x48"
+        )
+    ocrNode.input.setBlocking(True)
+    ocrNode.input.setMaxSize(100)
+    
+    syncNode = pipeline.create(CustomSyncNode)
+    syncNode.ocr_inputs.setBlocking(True)
+    syncNode.ocr_inputs.setMaxSize(100)
+    syncNode.detections_inputs.setMaxSize(100)
+    syncNode.passthrough_input.setMaxSize(100)
+    
+    ocrNode.out.link(syncNode.ocr_inputs)
+    detectionNode.passthrough.link(syncNode.passthrough_input)
+    detectionNode.out.link(syncNode.detections_inputs)
+    
+    sync_queue = syncNode.out.createOutputQueue()
 
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    
+    while pipeline.isRunning():
+        
+        message_group = sync_queue.get()
+        frame_msg = message_group.__getitem__("passthrough")
+        det_msg = message_group.__getitem__("detections")
+        ocrs_msg = message_group.__getitem__("ocrs")
+        
+        frame = frame_msg.getCvFrame()
+        white_frame = np.ones(frame.shape, dtype=np.uint8) * 255
+        
+        for i, det in enumerate(det_msg.detections):
+            rect = det.rotated_rect
+            points = rect.getPoints()
+            points = [[int(p.x * frame.shape[1]), int(p.y * frame.shape[0])] for p in points]
+            points = np.array(points, dtype=np.int32)
+            location = (points[0] + points[3]) // 2
+            text = ocrs_msg.classes[i]
+            concatenated_text = "".join(text)
+            cv2.putText(white_frame, concatenated_text, location, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+        
+        concatenated_frames = np.concatenate((frame, white_frame), axis=1)                
+                        
+        cv2.imshow("crop", concatenated_frames)
+        cv2.waitKey(1)
+        
+        
+                  
