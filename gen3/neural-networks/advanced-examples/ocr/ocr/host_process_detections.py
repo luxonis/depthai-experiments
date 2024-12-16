@@ -1,5 +1,6 @@
 import depthai as dai
 from depthai_nodes.ml.messages import ImgDetectionExtended
+from typing import List
 
 import numpy as np
 
@@ -8,8 +9,7 @@ class ProcessDetections(dai.node.ThreadedHostNode):
         super().__init__()
         self.detections_input = self.createInput()
         
-        self.crop_config = self.createOutput()
-        self.num_frames_output = self.createOutput()
+        self.config_output = self.createOutput()
 
     def run(self) -> None:
         while self.isRunning():
@@ -18,8 +18,7 @@ class ProcessDetections(dai.node.ThreadedHostNode):
             # w, h = img_detections.transformation.getSize()
             w, h = 1728, 960 
             
-            num_frames = len(detections)
-            print(f"process num detections: {len(detections)}")
+            configs_message = dai.MessageGroup()
             for i, detection in enumerate(detections):
                 cfg = dai.ImageManipConfigV2()
                 detection: ImgDetectionExtended = detection
@@ -28,10 +27,9 @@ class ProcessDetections(dai.node.ThreadedHostNode):
                 cfg.addCropRotatedRect(rect, normalizedCoords=False)
                 cfg.setOutputSize(320, 48)
                 cfg.setReusePreviousImage(False)
+                cfg.setTimestamp(img_detections.getTimestamp())
                 
-                self.crop_config.send(cfg)
-            
-            frame_message = dai.Buffer()
-            frame_message.setData(np.array([num_frames], dtype=np.uint8))
-            
-            self.num_frames_output.send(frame_message)
+                configs_message[str(i+100)] = cfg
+                            
+            configs_message.setTimestamp(img_detections.getTimestamp())
+            self.config_output.send(configs_message)
