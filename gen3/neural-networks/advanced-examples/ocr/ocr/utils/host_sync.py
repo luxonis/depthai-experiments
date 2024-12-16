@@ -24,9 +24,7 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
             det_ts = detections_message.getTimestamp()
             
             recognitions = []
-            
             for i, detection in enumerate(detections_message.detections):
-                print("Processing detection: ", i)
                 recognition_output = self.recognitions_input.get()
                 rec_ts = recognition_output.getTimestamp()
                 

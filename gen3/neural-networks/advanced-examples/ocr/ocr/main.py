@@ -1,17 +1,18 @@
 import depthai as dai
-import argparse
 from depthai_nodes import ParsingNeuralNetwork
-import cv2
-import numpy as np
-from host_process_detections import ProcessDetections
-from host_sync import DetectionsRecognitionsSync
+from utils.host_process_detections import ProcessDetections
+from utils.host_sync import DetectionsRecognitionsSync
+from utils.annotation_node import OCRAnnotationNode
+from utils.arguments import initialize_argparser
+from pathlib import Path
+
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection()
+device = dai.Device( dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+platform = device.getPlatform()
 
 FPS = 5
-
-parser = argparse.ArgumentParser()
-
-device = dai.Device()
-platform = device.getPlatform()
 if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
     FPS = 20
@@ -21,24 +22,37 @@ else:
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     
-    cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    cameraOutput = cameraNode.requestOutput((1728, 960), frame_type, fps= FPS)
+    if args.media_path:
+        replay_node = pipeline.create(dai.node.ReplayVideo)
+        replay_node.setReplayVideoFile(Path(args.media_path))
+        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay_node.setLoop(True)
+        
+        video_resize_node = pipeline.create(dai.node.ImageManipV2)
+        video_resize_node.initialConfig.setOutputSize(1728, 960)
+        video_resize_node.initialConfig.setFrameType(frame_type)
+        
+        replay_node.out.link(video_resize_node.inputImage)
+        
+        input_node = video_resize_node.out
+    else:
+        camera_node = pipeline.create(dai.node.Camera).build()
+        input_node = camera_node.requestOutput((1728, 960), frame_type, fps= FPS)   
     
-    resizeNode = pipeline.create(dai.node.ImageManipV2) 
-    resizeNode.initialConfig.setOutputSize(576, 320)
-    resizeNode.initialConfig.setReusePreviousImage(False)
-    cameraOutput.link(resizeNode.inputImage)
+    resize_node = pipeline.create(dai.node.ImageManipV2) 
+    resize_node.initialConfig.setOutputSize(576, 320)
+    resize_node.initialConfig.setReusePreviousImage(False)
+    input_node.link(resize_node.inputImage)
     
-    detectionNode: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        resizeNode.out, "luxonis/paddle-text-detection:320x576"
+    detection_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        resize_node.out, "luxonis/paddle-text-detection:320x576"
         )
     
-    detectionProcessNode = pipeline.create(ProcessDetections)
-    detectionNode.out.link(detectionProcessNode.detections_input)
-    
-    
-    frameSenderNode = pipeline.create(dai.node.Script)
-    frameSenderNode.setScript("""
+    detection_process_node = pipeline.create(ProcessDetections)
+    detection_node.out.link(detection_process_node.detections_input)
+
+    config_sender_node = pipeline.create(dai.node.Script)
+    config_sender_node.setScript("""
         try:
             while True:
                 frame = node.inputs['frame_input'].get()
@@ -54,8 +68,8 @@ with dai.Pipeline(device) as pipeline:
             node.warn(str(e))
     """)
     
-    cameraOutput.link(frameSenderNode.inputs['frame_input'])
-    detectionProcessNode.config_output.link(frameSenderNode.inputs['config_input'])
+    input_node.link(config_sender_node.inputs['frame_input'])
+    detection_process_node.config_output.link(config_sender_node.inputs['config_input'])
     
     cropNode = pipeline.create(dai.node.ImageManipV2)
     cropNode.inputConfig.setReusePreviousMessage(False)
@@ -63,53 +77,37 @@ with dai.Pipeline(device) as pipeline:
     cropNode.inputImage.setReusePreviousMessage(False)
     cropNode.inputImage.setMaxSize(20)
     
-    frameSenderNode.outputs["output_config"].link(cropNode.inputConfig)
-    frameSenderNode.outputs['output_frame'].link(cropNode.inputImage)
+    config_sender_node.outputs["output_config"].link(cropNode.inputConfig)
+    config_sender_node.outputs['output_frame'].link(cropNode.inputImage)
     
     
-    ocrNode: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+    ocr_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         cropNode.out, "luxonis/paddle-text-recognition:320x48"
         )
-    ocrNode.input.setBlocking(True)
-    ocrNode.input.setMaxSize(20)
+    ocr_node.input.setBlocking(True)
+    ocr_node.input.setMaxSize(20)
     
-    syncNode = pipeline.create(DetectionsRecognitionsSync)
-    syncNode.recognitions_input.setBlocking(True)
-    syncNode.recognitions_input.setMaxSize(20)
+    sync_node = pipeline.create(DetectionsRecognitionsSync)
+    sync_node.recognitions_input.setBlocking(True)
+    sync_node.recognitions_input.setMaxSize(20)
     
-    ocrNode.out.link(syncNode.recognitions_input)
-    detectionNode.passthrough.link(syncNode.passthrough_input)
-    detectionNode.out.link(syncNode.detections_input)
+    ocr_node.out.link(sync_node.recognitions_input)
+    detection_node.passthrough.link(sync_node.passthrough_input)
+    detection_node.out.link(sync_node.detections_input)
     
-    sync_queue = syncNode.out.createOutputQueue()
+    annotation_node = pipeline.create(OCRAnnotationNode)
+    sync_node.out.link(annotation_node.input)
+    
+    visualizer.addTopic("Video",resize_node.out )
+    visualizer.addTopic("OCR", annotation_node.white_frame_output)
+    visualizer.addTopic("Text", annotation_node.text_annotations_output)
     
     print("Pipeline created.")
     pipeline.start()
+    visualizer.registerPipeline(pipeline)
     
     while pipeline.isRunning():
-        
-        message_group = sync_queue.get()
-        frame_msg = message_group["passthrough"]
-        det_msg = message_group["detections"]
-        ocrs_msg = message_group["recognitions"]
-        
-        frame = frame_msg.getCvFrame()
-        white_frame = np.ones(frame.shape, dtype=np.uint8) * 255
-        
-        for i, det in enumerate(det_msg.detections):
-            rect = det.rotated_rect
-            points = rect.getPoints()
-            points = [[int(p.x * frame.shape[1]), int(p.y * frame.shape[0])] for p in points]
-            points = np.array(points, dtype=np.int32)
-            location = (points[0] + points[3]) // 2
-            text = ocrs_msg.recognitions[i].classes
-            concatenated_text = "".join(text)
-            cv2.putText(white_frame, concatenated_text, location, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
-        
-        concatenated_frames = np.concatenate((frame, white_frame), axis=1)                
-                        
-        cv2.imshow("crop", concatenated_frames)
-        cv2.waitKey(1)
-        
-        
-                  
+        key = visualizer.waitKey(1)
+        if key == ord('q'):
+            print("Got q key. Exiting...")
+            break
