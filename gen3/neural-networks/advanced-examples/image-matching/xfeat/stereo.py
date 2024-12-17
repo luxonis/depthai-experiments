@@ -7,6 +7,10 @@ def stereo_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.R
     with dai.Pipeline(device) as pipeline:
         print("Creating pipeline...")
 
+        platform = device.getPlatform().name
+        print(f"Platform: {platform}")
+        img_frame_type = dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+
         available_cameras = [
             camera.name for camera in device.getConnectedCameraFeatures()
         ]
@@ -21,7 +25,7 @@ def stereo_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.R
 
         left_network = pipeline.create(dai.node.NeuralNetwork).build(
             left_cam.requestOutput(
-                nn_archive.getInputSize(), type=dai.ImgFrame.Type.BGR888p, fps=fps_limit
+                nn_archive.getInputSize(), type=img_frame_type, fps=fps_limit
             ),
             nn_archive,
         )
@@ -29,7 +33,7 @@ def stereo_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.R
 
         right_network = pipeline.create(dai.node.NeuralNetwork).build(
             right_cam.requestOutput(
-                nn_archive.getInputSize(), type=dai.ImgFrame.Type.BGR888p, fps=fps_limit
+                nn_archive.getInputSize(), type=img_frame_type, fps=fps_limit
             ),
             nn_archive,
         )

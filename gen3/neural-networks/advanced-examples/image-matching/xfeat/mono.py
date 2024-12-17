@@ -9,9 +9,13 @@ def mono_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.Rem
         
         cam = pipeline.create(dai.node.Camera).build()
         
+        platform = device.getPlatform().name
+        print(f"Platform: {platform}")
+        img_frame_type = dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+
         network = pipeline.create(dai.node.NeuralNetwork).build(
             cam.requestOutput(
-                nn_archive.getInputSize(), type=dai.ImgFrame.Type.BGR888p, fps=fps_limit
+                nn_archive.getInputSize(), type=img_frame_type, fps=fps_limit
             ),
             nn_archive,
         )
