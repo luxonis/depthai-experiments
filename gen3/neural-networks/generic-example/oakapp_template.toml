@@ -1,4 +1,4 @@
-identifier = "com.luxonis.generic-example.device-decoding"
+identifier = "com.luxonis.generic-example"
 
 entrypoint = ["bash", "-c", "python3 /app/main.py <Model> <Mode> <FPS> <Media>"]
 
