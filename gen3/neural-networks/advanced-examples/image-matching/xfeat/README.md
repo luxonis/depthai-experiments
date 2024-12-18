@@ -11,7 +11,7 @@ In `mono` mode we visualize the matches between the frames and the reference fra
 
 ## Demo
     
-![XFeat: Accelerated Features for Lightweight Image Matching](https://drive.google.com/thumbnail?id=15P1N52ZhRpKkgJYD-acT4BQ2qPq-0PKU&sz=w1000)
+![XFeat Mono Demo on OAK](media/xfeat_demo.gif)
 
 ## Installation
 
