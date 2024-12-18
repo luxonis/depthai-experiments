@@ -15,18 +15,13 @@ def stereo_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.R
             camera.name for camera in device.getConnectedCameraFeatures()
         ]
 
-        if len(available_cameras) != 3:
+        if "left" not in available_cameras or "right" not in available_cameras:
             raise RuntimeError(
-                f"Expected 3 cameras, but found {len(available_cameras)} cameras: {available_cameras}"
+                f"Stereo cameras are not available! Available cameras: {available_cameras}"
             )
 
-        try:
-            left_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-            right_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-        except ValueError as e:
-            raise RuntimeError(
-                "Could not build left and right cameras."
-            ) from e
+        left_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+        right_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
         left_network = pipeline.create(dai.node.NeuralNetwork).build(
             left_cam.requestOutput(
