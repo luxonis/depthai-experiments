@@ -1,6 +1,6 @@
-identifier = "com.luxonis.basic-example.device-decoding"
+identifier = "com.luxonis.generic-example.device-decoding"
 
-entrypoint = ["bash", "-c", "python3 /app/main.py --model_slug luxonis/yolov6-nano:r2-coco-512x288"]
+entrypoint = ["bash", "-c", "python3 /app/main.py <Model> <Mode> <FPS> <Media>"]
 
 prepare_container = [
     { type = "RUN", command = "apt-get update" },

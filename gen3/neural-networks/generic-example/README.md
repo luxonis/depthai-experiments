@@ -8,13 +8,13 @@ Moreover, you need to prepare a **Python 3.10** environment with the following p
 - [DepthAI](https://pypi.org/project/depthai/),
 - [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
 
-You can do this by running:
+You can simply install them by running:
 ```bash
 pip install -r requirements.txt
 ```
 
 # Usage
-The inference is ran using a simple CLI call:
+The example is ran using a simple CLI call as:
 ```bash
 python3 main.py \
     --model_slug ... \
@@ -24,8 +24,8 @@ python3 main.py \
     --media ...
 ```
 
-The relevant arguments:
-- **--model_slug**: A unique HubAI identifier of the model;
+Relevant arguments:
+- **--model**: A unique HubAI identifier of the model;
 - **--device** [OPTIONAL]: DeviceID or IP of the camera to connect to.
 By default, the first locally available device is used;
 - **--annotation_mode** [OPTIONAL]: Annotation mode. Set to 'segmentation' to overlay segmentation masks over the model inputs, or 'segmentation_with_annotation' to visualize the additional annotations. Leave empty to use the default visualization.
@@ -41,13 +41,19 @@ Running the script downloads the model, creates a DepthAI pipeline, infers on ca
 The latter runs in the browser at `http://localhost:8082`.
 In case of a different client, replace `localhost` with the correct hostname.
 
-## Example
-To try it out, let's run a simple YOLOv6 object detection model on your camera input.
+If you want to run the example without any host computation, you can use run inference standalone mode as:
 ```bash
-python3 main.py \
-    --model_slug luxonis/yolov6-nano:r2-coco-512x288
+bash main_standalone.sh \
+    --model ... \
+    --device ... \
+    --annotation_mode ... \
+    --fps_limit ... \
+    --media ...
 ```
 
-## Standalone Mode
-If you want to run the example without any host computation, you can use the standalone mode.
-Modify the oakapp.toml file to use the model of choice and run the following command: TODO
+## Example
+To try it out, let's run a simple YOLOv6 object detection model on your camera input:
+```bash
+python3 main.py \
+    --model luxonis/yolov6-nano:r2-coco-512x288
+```
