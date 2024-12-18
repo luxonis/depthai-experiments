@@ -30,6 +30,7 @@ def mono_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.Rem
         visualizer.addTopic("Matches", custom_visualizer.out, "images")
 
         print("Pipeline created.")
+        print("\nPress 's' to set the reference frame.\n")
 
         pipeline.start()
         visualizer.registerPipeline(pipeline)
