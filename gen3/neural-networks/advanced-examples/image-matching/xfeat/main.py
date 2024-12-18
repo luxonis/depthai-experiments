@@ -6,12 +6,12 @@ from mono import mono_mode
 _, args = initialize_argparser()
 
 
-model_slug = args.model
+model = args.model
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-model_description = dai.NNModelDescription(model_slug)
+model_description = dai.NNModelDescription(model)
 platform = device.getPlatform().name
 model_description.platform = platform
 nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
