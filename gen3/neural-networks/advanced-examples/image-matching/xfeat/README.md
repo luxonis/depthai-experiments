@@ -9,6 +9,10 @@ The model used in the example is available in our HubAI Model ZOO [here](https:/
 We offer two modes of operation: `mono` and `stereo`. In `mono` mode we use a single camera as an input and match the frames to the reference image. In `stereo` mode we use two cameras to match the frames to each other.
 In `mono` mode we visualize the matches between the frames and the reference frame which can be set by pressing `s` key in the visualizer. In `stereo` mode we visualize the matches between the frames from the left and right camera.
 
+## Demo
+    
+![XFeat: Accelerated Features for Lightweight Image Matching](https://drive.google.com/thumbnail?id=15P1N52ZhRpKkgJYD-acT4BQ2qPq-0PKU&sz=w1000)
+
 ## Installation
 
 You need to prepare a Python 3.10 environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
