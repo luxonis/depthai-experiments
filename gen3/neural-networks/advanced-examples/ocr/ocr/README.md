@@ -1,5 +1,5 @@
 # Overview
-We provide here an example for running a two stage text detection and OCR pipeline. This example uses PaddlePaddle text detection and text recognition (OCR) models from [HubAI Model ZOO](https://hub.luxonis.com/ai/models). The example visualizes the recognized text on an adjacent white image in the locations in which it was detected. This example showcases how a twostage pipeline can easily be built using depthai.
+We provide here an example for running a two stage text detection and OCR pipeline. This example uses PaddlePaddle [text detection]() and [text recognition (OCR)](https://hub.luxonis.com/ai/models/9ae12b58-3551-49b1-af22-721ba4bcf269?view=page) models from HubAI Model ZOO. The example visualizes the recognized text on an adjacent white image in the locations in which it was detected. This example showcases how a twostage pipeline can easily be built using depthai.
 
 
 **WARNING:** As of depthai alpha10 the example only works on OAK4 devices. 
@@ -32,7 +32,7 @@ The latter runs in the browser at `http://localhost:8082`.
 In case of a different client, replace `localhost` with the correct hostname.
 
 ## Example
-To try it out, let's run a simple YOLOv6 object detection model on your camera input.
+To run the example you can simply run the following command:
 ```bash
 python3 main.py \ 
         -d <<device ip / mxid>>

@@ -82,7 +82,7 @@ with dai.Pipeline(device) as pipeline:
     
     
     ocr_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        cropNode.out, "luxonis/paddle-text-recognition:320x48"
+        cropNode.out, "paddle-text-recognition:320x48"
         )
     ocr_node.input.setBlocking(True)
     ocr_node.input.setMaxSize(20)
