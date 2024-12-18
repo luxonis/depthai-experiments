@@ -47,3 +47,7 @@ To try it out, let's run a simple YOLOv6 object detection model on your camera i
 python3 main.py \
     --model_slug luxonis/yolov6-nano:r2-coco-512x288
 ```
+
+## Standalone Mode
+If you want to run the example without any host computation, you can use the standalone mode.
+Modify the oakapp.toml file to use the model of choice and run the following command: TODO
