@@ -1,31 +1,39 @@
-## Text Detection + Optical Character Recognition (OCR) Pipeline
+# Overview
+We provide here an example for running a two stage text detection and OCR pipeline. This example uses PaddlePaddle [text detection]() and [text recognition (OCR)](https://hub.luxonis.com/ai/models/9ae12b58-3551-49b1-af22-721ba4bcf269?view=page) models from HubAI Model ZOO. The example visualizes the recognized text on an adjacent white image in the locations in which it was detected. This example showcases how a twostage pipeline can easily be built using depthai.
 
-This pipeline implements text detection (EAST) followed by optical character recognition of the detected text.
 
-## Installation
+**WARNING:** As of depthai alpha10 the example only works on OAK4 devices. 
 
-```
-python3 -m pip install -r requirements.txt
-```
 
-## Usage
-
-Run the application
-
-```
-python3 main.py
+# Instalation
+Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
+```bash
+pip install -r requirements.txt
 ```
 
-## Example Results
+# Usage
+The inference is ran using a simple CLI call:
+```bash
+python3 main.py \
+    --device ... \
+    --media ...
+```
 
-Upon running, you can point this at text of interest to get the detection and the resultant text in the detected areas (and the locations of the text in pixel space).  
+The relevant arguments:
+- **--device** [OPTIONAL]: DeviceID or IP of the camera to connect to.
+By default, the first locally available device is used;
+- **--media** [OPTIONAL]: Path to the media file to be used as input. 
+Currently, only video files are supported but we plan to add support for more formats (e.g. images) in the future.
+By default, camera input is used;
 
-Note that the more text in the frame, the slower the network will run - as it is running OCR on every detected region of text.  
-And you will see this variance in the examples below:
+Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results by **DepthAI visualizer**
+The latter runs in the browser at `http://localhost:8082`.
+In case of a different client, replace `localhost` with the correct hostname.
 
-
-[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749743-13febe00-5f01-11eb-8b5f-dca801f5d125.png)]
-
-[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749667-f6315900-5f00-11eb-92bd-a297590adedc.png)]
-
-[![Text Detection + OCR on DepthAI](https://user-images.githubusercontent.com/32992551/105749638-eb76c400-5f00-11eb-8e9a-18e550b35ae4.png)]
+## Example
+To run the example you can simply run the following command:
+```bash
+python3 main.py \ 
+        -d <<device ip / mxid>>
+```
