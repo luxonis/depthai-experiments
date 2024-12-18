@@ -28,7 +28,7 @@ python3 main.py --model <MODEL> --device <DEVICE> --fps_limit <FPS_LIMIT>
 ```
 
 
-- `<MODEL>`: Model slug from Luxonis HubAI. Default: `luxonis/xfeat:mono-240x320`.
+- `<MODEL>`: HubAI Model Reference from Luxonis HubAI. Default: `luxonis/xfeat:mono-240x320`.
 - `<DEVICE>`: Device IP or ID. Default: ``.
 - `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
 

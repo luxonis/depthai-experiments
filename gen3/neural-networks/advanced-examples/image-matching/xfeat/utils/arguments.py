@@ -25,7 +25,7 @@ def initialize_argparser():
     parser.add_argument(
         "-m",
         "--model",
-        help="The XFeat model. Get it from the Luxonis HubAI.",
+        help="The HubAI model reference for XFeat model. Get it from the Luxonis HubAI.",
         required=False,
         default="luxonis/xfeat:mono-240x320",
         type=str,
