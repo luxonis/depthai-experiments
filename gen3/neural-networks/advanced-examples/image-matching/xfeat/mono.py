@@ -40,3 +40,6 @@ def mono_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.Rem
             if key_pressed == ord("s"):
                 parser.setTrigger()
                 custom_visualizer.setReferenceFrame()
+            elif key_pressed == ord("q"):
+                pipeline.stop()
+                break
