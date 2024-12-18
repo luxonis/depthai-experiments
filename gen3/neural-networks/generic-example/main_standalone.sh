@@ -30,6 +30,7 @@ if [ -n "$MODEL" ]; then
     sed -i "s|<Model>|--model $MODEL|g" "$OAKAPP"
 else
     echo "Error: --model argument is required."
+    rm $OAKAPP
     exit 1
 fi
 
