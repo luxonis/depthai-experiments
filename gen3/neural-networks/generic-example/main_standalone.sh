@@ -30,6 +30,7 @@ if [ -n "$MODEL" ]; then
     sed -i "s|<Model>|--model $MODEL|g" "$OAKAPP"
 else
     echo "Error: --model argument is required."
+    exit 1
 fi
 
 if [ -n "$ANNOTATION_MODE" ]; then
@@ -45,7 +46,7 @@ else
 fi
 
 if [ -n "$MEDIA" ]; then
-    sed -i "s|<Media>|--media $MEDIA|g" "$OAKAPP"
+    sed -i "s|<Media>|--media /app/$MEDIA|g" "$OAKAPP"
 else
     sed -i "s|<Media>||g" "$OAKAPP"
 fi
