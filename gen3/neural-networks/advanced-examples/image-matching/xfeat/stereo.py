@@ -59,7 +59,6 @@ def stereo_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.R
         visualizer.registerPipeline(pipeline)
 
         while pipeline.isRunning():
-            time.sleep(1 / 30)
             key_pressed = visualizer.waitKey(1)
             if key_pressed == ord("q"):
                 pipeline.stop()
