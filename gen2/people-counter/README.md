@@ -1,1 +1,0 @@
-Moved to [Gen2-People-Counter](https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter)
