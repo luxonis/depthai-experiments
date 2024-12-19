@@ -1,6 +1,9 @@
 .DS_Store
 */data/*
 data
+*.mp4
+*.avi
+*.mov
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

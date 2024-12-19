@@ -1,33 +1,135 @@
 import argparse
 from pathlib import Path
-import blobconverter
 import depthai as dai
+from depthai_nodes import ParsingNeuralNetwork
+from utils.host_process_detections import ProcessDetections
+from utils.host_sync import DetectionsRecognitionsSync
+from utils.arguments import initialize_argparser
+from pathlib import Path
 
-from detections_recognitions_sync import DetectionsRecognitionsSync
-from host_license_plate_recognition import LicensePlateRecognition
+_, args = initialize_argparser()
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-vid', '--video', type=str
-                    , help="Path to video file to be used for inference (otherwises uses the DepthAI RGB Cam Input Feed)")
-args = parser.parse_args()
+visualizer = dai.RemoteConnection()
+device = dai.Device( dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+platform = device.getPlatform()
 
-FPS = 10
+FPS = 5
+if "RVC4" in str(platform):
+    frame_type = dai.ImgFrame.Type.BGR888i
+    FPS = 20
+else:
+    frame_type = dai.ImgFrame.Type.BGR888p
 
-plate_detection_model_description = dai.NNModelDescription(modelSlug="yolov8n-license-plate-detection", platform="RVC2", modelVersionSlug="640x640")
-plate_detection_archive_path = dai.getModelFromZoo(plate_detection_model_description)
-plate_detection_nn_archive = dai.NNArchive(plate_detection_archive_path)
+with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
+    
+    if args.media_path:
+        replay_node = pipeline.create(dai.node.ReplayVideo)
+        replay_node.setReplayVideoFile(Path(args.media_path))
+        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay_node.setLoop(True)
+        
+        video_resize_node = pipeline.create(dai.node.ImageManipV2)
+        video_resize_node.initialConfig.setOutputSize(1920, 1080)
+        video_resize_node.initialConfig.setFrameType(frame_type)
+        
+        replay_node.out.link(video_resize_node.inputImage)
+        
+        input_node = video_resize_node.out
+    else:
+        camera_node = pipeline.create(dai.node.Camera).build()
+        input_node = camera_node.requestOutput((1920, 1080), frame_type, fps= FPS)   
+    
+    vehicle_detection_resize_node = pipeline.create(dai.node.ImageManipV2) 
+    vehicle_detection_resize_node.initialConfig.setOutputSize(512, 288)
+    vehicle_detection_resize_node.initialConfig.setReusePreviousImage(False)
+    input_node.link(vehicle_detection_resize_node.inputImage)
+    
+    
+    vehicle_detection_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        vehicle_detection_resize_node.out, "yolov6-nano:r2-coco-512x288"
+        )
+    
+    config_sender_node = pipeline.create(dai.node.Script)
+    config_sender_node.setScript("""
+        try:
+            while True:
+                frame = node.inputs['frame_input'].get()
+                detections_message = node.inputs['detections_input'].get()
+                
+                for d in detections_message.detections:
+                    det_w = d.xmax - d.xmin
+                    det_h = d.ymax - d.ymin
+                    det_center = dai.Point2f((d.xmin + d.xmax) / 2, (d.ymin + d.ymax) / 2)
+                    det_size = dai.Size2f(det_w, det_h)
+                    det_rect = dai.RotatedRect(det_center, det_size, 0)
+                    det_rect = det_rect.denormalize(frame.getWidth(), frame.getHeight())
+                    
+                    cfg = dai.ImageManipConfig()
+                    cfg.addCropRotatedRect(det_rect, normalizedCoords=False)
+                    cfg.setOutputSize(640, 640)
+                    cfg.setReusePreviousImage(False)
+                    cfg.setTimestamp(detections_message.getTimestamp())
+                    
+                    node.outputs['output_config'].send(cfg)
+                    node.outputs['output_frame'].send(frame)
 
-car_detection_model_description = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="r2-coco-512x288")
-car_detection_archive_path = dai.getModelFromZoo(car_detection_model_description)
-car_detection_nn_archive = dai.NNArchive(car_detection_archive_path)
+        except Exception as e:
+            node.warn(str(e))
+    """)
+    input_node.link(config_sender_node.inputs['frame_input'])
+    vehicle_detection_node.out.link(config_sender_node.inputs['detections_input'])
+    
+    vehicle_crop_node = pipeline.create(dai.node.ImageManipV2)
+    vehicle_crop_node.inputConfig.setReusePreviousMessage(False)
+    vehicle_crop_node.inputImage.setReusePreviousMessage(False)
+    
+    config_sender_node.outputs["output_config"].link(vehicle_crop_node.inputConfig)
+    config_sender_node.outputs['output_frame'].link(vehicle_crop_node.inputImage)
+    
+    
+    
+    
+    license_plate_detection = pipeline.create(ParsingNeuralNetwork).build(
+        vehicle_crop_node.out, "license-plate-detection:640x640"
+        )
+    
+    ocr_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        cropNode.out, "paddle-text-recognition:320x48"
+        )
+    ocr_node.input.setBlocking(True)
+    ocr_node.input.setMaxSize(20)
+    
+    sync_node = pipeline.create(DetectionsRecognitionsSync)
+    sync_node.recognitions_input.setBlocking(True)
+    sync_node.recognitions_input.setMaxSize(20)
+    
+    ocr_node.out.link(sync_node.recognitions_input)
+    detection_node.passthrough.link(sync_node.passthrough_input)
+    detection_node.out.link(sync_node.detections_input)
+    
+    annotation_node = pipeline.create(OCRAnnotationNode)
+    sync_node.out.link(annotation_node.input)
+    
+    visualizer.addTopic("Video",resize_node.out )
+    visualizer.addTopic("OCR", annotation_node.white_frame_output)
+    visualizer.addTopic("Text", annotation_node.text_annotations_output)
+    
+    print("Pipeline created.")
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+    
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord('q'):
+            print("Got q key. Exiting...")
+            break
 
-plate_recognition_model_description = dai.NNModelDescription(modelSlug="license-plate-recognition-barrier", platform="RVC2", modelVersionSlug="0007")
-plate_recognition_archive_path = dai.getModelFromZoo(plate_recognition_model_description)
-plate_recognition_nn_archive = dai.NNArchive(plate_recognition_archive_path)
 
-car_attribute_model_description = dai.NNModelDescription(modelSlug="vehicle-attributes-classification", platform="RVC2", modelVersionSlug="72x72")
-car_attribute_archive_path = dai.getModelFromZoo(car_attribute_model_description)
-car_attribute_nn_archive = dai.NNArchive(car_attribute_archive_path)
+
+
+
+
 
 with dai.Pipeline() as pipeline:
 
