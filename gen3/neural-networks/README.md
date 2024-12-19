@@ -108,7 +108,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 ### Feature Detection
 | HubAI Model | Gen2 | Gen3 | RVC2 | RVC4 | Illustration | Notes |
 |-------------|------|------|------|------|--------------|-------|
-| [xfeat](https://hub.luxonis.com/ai/models/6c2790a1-bf68-4e89-a4b3-5c9ae68183b5?view=page) |  | 🚧 | 🚧 | 🚧 | 🚧 |  |
+| [xfeat](https://hub.luxonis.com/ai/models/6c2790a1-bf68-4e89-a4b3-5c9ae68183b5?view=page) | ❌ | ✅ | ✅ | ✅ | [📸](advanced-examples/image-matching/xfeat/media/xfeat_demo.gif) |  |
 
 
 
