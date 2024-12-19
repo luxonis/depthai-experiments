@@ -31,16 +31,15 @@ with dai.Pipeline(device) as pipeline:
             cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888i),
             nnArchive
         )
-    
+
+    ENCODING = dai.VideoEncoderProperties.Profile.MJPEG if platform == dai.Platform.RVC2 else dai.VideoEncoderProperties.Profile.H264_MAIN
     outputToEncode = cameraNode.requestOutput((1440, 1080), type=dai.ImgFrame.Type.NV12)
-    h264Encoder = pipeline.create(dai.node.VideoEncoder)
-    encoding = dai.VideoEncoderProperties.Profile.MJPEG if platform == dai.Platform.RVC2 else dai.VideoEncoderProperties.Profile.H264_MAIN
-    h264Encoder.setDefaultProfilePreset(30, encoding)
-    outputToEncode.link(h264Encoder.input)
+    colorEncoder = pipeline.create(dai.node.VideoEncoder)
+    colorEncoder.setDefaultProfilePreset(30, ENCODING)
+    outputToEncode.link(colorEncoder.input)
 
     # Add the remote connector topics
-    remoteConnector.addTopic("Raw video", outputToEncode)
-    remoteConnector.addTopic("Video H264", h264Encoder.out)
+    remoteConnector.addTopic("Encoded Video", colorEncoder.out)
     remoteConnector.addTopic("Detections", detectionNetwork.out)
 
     # Stereo depth - only for stereo devices
@@ -69,7 +68,16 @@ with dai.Pipeline(device) as pipeline:
         
         coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
         coloredDepth.setColormap(cv2.COLORMAP_JET)
-        remoteConnector.addTopic("Depth", coloredDepth.output)
+        
+        coloredDepthManip = pipeline.create(dai.node.ImageManipV2)
+        coloredDepthManip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+        coloredDepth.output.link(coloredDepthManip.inputImage)
 
-    remoteConnector.registerPipeline(pipeline)
+        depthEncoder = pipeline.create(dai.node.VideoEncoder)
+        depthEncoder.setDefaultProfilePreset(30, ENCODING)
+        coloredDepthManip.out.link(depthEncoder.input) 
+
+        remoteConnector.addTopic("Encoded Depth", depthEncoder.out)
+
+    #remoteConnector.registerPipeline(pipeline)
     pipeline.run()
