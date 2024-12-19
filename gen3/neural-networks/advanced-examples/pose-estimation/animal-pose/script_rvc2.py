@@ -51,19 +51,9 @@ while True:
             cfg = ImageManipConfig()
             correct_bb(det)
             padding = 0.005
-            cfg.setCropRect(det.xmin - padding, det.ymin - padding, det.xmax + padding, det.ymax + padding)
-            cfg.setResize(192, 256)
+            cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
+            cfg.setResize(256, 256)
             cfg.setKeepAspectRatio(False)
-            # cfg = ImageManipConfigV2()
-            # correct_bb(det)
-            # rect = RotatedRect()
-            # rect.center.x = (det.xmin + det.xmax) / 2
-            # rect.center.y = (det.ymin + det.ymax) / 2
-            # rect.size.width = det.xmax - det.xmin
-            # rect.size.height = det.ymax - det.ymin
-            # rect.angle = 0
-            # cfg.addCropRotatedRect(rect=rect, normalizedCoords=True)
-            # cfg.addResize(256, 256)
 
             node.io['manip_cfg'].send(cfg)
             node.io['manip_img'].send(img)
