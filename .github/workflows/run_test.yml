@@ -37,7 +37,7 @@ jobs:
         run: |
           cd hil_framework
           sudo chmod +x setup_hil_tools.sh 
-          ./setup_hil_tools.sh -ga
+          ./setup/setup_hil_tools.sh -ga
           
       - name: Add HIL Tools to Path
         run: |
