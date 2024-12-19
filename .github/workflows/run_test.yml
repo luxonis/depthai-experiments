@@ -19,18 +19,29 @@ jobs:
         platform: [RVC2] #TODO: add RVC4 platform
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
       - name: Add HIL Tools to Path
         run: |
           echo "/home/$USER/hil_framework/lib_testbed/tools" >> $GITHUB_PATH
           echo "PYTHONPATH="$PYTHONPATH:/home/$USER/hil_framework"" >> $GITHUB_ENV
           echo "HIL_FRAMEWORK_PATH="/home/$USER/hil_framework"" >> $GITHUB_ENV
+
+      - name: Set model variable
+        run: |
+          if [ "${{ matrix.platform }}" = "RVC2" ]; then
+            echo "MODEL=oak_d_s2" >> $GITHUB_ENV
+          elif [ "${{ matrix.platform }}" = "RVC4" ]; then
+            echo "MODEL=oak4_pro" >> $GITHUB_ENV
+          fi
           
       - name: Run Test
         run: |
-          CMD="hil --testbed oak4-pro --reservation-name 'dominik.zacek@luxonis.com' --commands 'cd ~/Documents/source/depthai-experiments' 'git fetch' 'git checkout ${{ github.ref_name }}' 'git pull' 'python3 gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
+          export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/${{ github.run_id }}-${{ matrix.python-version }}-${{ matrix.platform }}"
+          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' 'python3 gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
           if [ -n "${{ github.event.inputs.depthai_version }}" ]; then
             CMD="$CMD --depthai-version ${{ github.event.inputs.depthai_version }}"
           fi
           CMD="$CMD'"
           eval $CMD
-        #TODO: swap for hil --revision RVC4 when possible infrastructure-wise
