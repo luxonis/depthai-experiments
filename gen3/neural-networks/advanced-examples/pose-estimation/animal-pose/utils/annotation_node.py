@@ -24,7 +24,6 @@ class AnnotationNode(dai.node.ThreadedHostNode):
             annotations = dai.ImgAnnotations()  # custom annotations for drawing lines between keypoints
             annotation = dai.ImgAnnotation()
 
-            padding = 0.1
 
             for ix, detection in enumerate(detections_list):
                 img_detection_extended = ImgDetectionExtended()
@@ -39,15 +38,15 @@ class AnnotationNode(dai.node.ThreadedHostNode):
 
                 if keypoints_msg_list is not None:
                     keypoints_msg = keypoints_msg_list[ix]
-                    slope_x = (detection.xmax + padding) - (detection.xmin - padding)
-                    slope_y = (detection.ymax + padding) - (detection.ymin - padding)
+                    slope_x = detection.xmax - detection.xmin
+                    slope_y = detection.ymax - detection.ymin
                     new_keypoints = []
                     xs = []
                     ys = []
                     for kp in keypoints_msg.keypoints:
                         new_kp = Keypoint()
-                        new_kp.x = min(max(detection.xmin - padding + slope_x * kp.x, 0.0), 1.0)
-                        new_kp.y = min(max(detection.ymin - padding + slope_y * kp.y, 0.0), 1.0)
+                        new_kp.x = min(max(detection.xmin + slope_x * kp.x, 0.0), 1.0)
+                        new_kp.y = min(max(detection.ymin + slope_y * kp.y, 0.0), 1.0)
                         xs.append(new_kp.x)
                         ys.append(new_kp.y)
                         new_kp.z = kp.z
