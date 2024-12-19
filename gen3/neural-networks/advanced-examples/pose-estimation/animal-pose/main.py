@@ -57,7 +57,7 @@ with dai.Pipeline(device) as pipeline:
         replay.out.link(imageManip.inputImage)
     
     else:
-        cam = pipeline.create(dai.node.Camera).build()#.requestOutput(detection_nn_archive.getInputSize(), type=frame_type, fps=args.fps_limit)
+        cam = pipeline.create(dai.node.Camera).build()
     input_node = (
         imageManip.out if args.media_path else cam
     )
@@ -66,7 +66,7 @@ with dai.Pipeline(device) as pipeline:
         input_node, detection_nn_archive, fps=args.fps_limit
     )
 
-    filter_classes = pipeline.create(FilterClasses, labels=[0, 15, 16, 17, 18, 19, 20, 21, 22, 23])
+    filter_classes = pipeline.create(FilterClasses, labels=[0, 15, 16, 17, 18, 19, 20, 21, 22, 23], only_one_detection=True)
 
     detection_nn.out.link(filter_classes.input_detections)
 
