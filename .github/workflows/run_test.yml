@@ -19,10 +19,6 @@ jobs:
         platform: [RVC2] #TODO: add RVC4 platform
 
     steps:
-      - name: Clone HIL Framework
-        run: |
-          git clone https://oauth2:${{secrets.GITLAB_TOKEN}}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git --recursive
-                
       - name: Add HIL Tools to Path
         run: |
           echo "/home/$USER/hil_framework/lib_testbed/tools" >> $GITHUB_PATH
