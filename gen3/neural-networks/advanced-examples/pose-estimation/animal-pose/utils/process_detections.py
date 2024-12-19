@@ -15,6 +15,8 @@ class ProcessDetections(dai.node.ThreadedHostNode):
             # w, h = img_detections.transformation.getSize()
             w, h = 1728, 960
             
+            padding = 0.1
+
             configs_message = dai.MessageGroup()
             for i, detection in enumerate(detections):
                 cfg = dai.ImageManipConfigV2()
@@ -24,6 +26,10 @@ class ProcessDetections(dai.node.ThreadedHostNode):
                 rect.center.y = (detection.ymin + detection.ymax) / 2
                 rect.size.width = detection.xmax - detection.xmin
                 rect.size.height = detection.ymax - detection.ymin
+                rect.center.x += padding
+                rect.center.y += padding
+                rect.size.width += padding * 2
+                rect.size.height += padding * 2
                 rect.angle = 0
                 cfg.addCropRotatedRect(rect=rect, normalizedCoords=True)
                 cfg.addResize(256, 256)
