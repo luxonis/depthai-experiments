@@ -1,6 +1,6 @@
 # Experiments Supported Platforms
 
-All experimens are not yet supported on all our platforms. All of the experiments should be working on RVC2 platform. RVC4 platform compatibility is still work in progress. The exact experiments, which are working and have been tested on RVC4 platform are marked in the table below.
+Every experiment is not yet supported on all our platforms. Each experiment should be working on RVC2 platform. RVC4 platform compatibility is still work in progress. The exact experiments, which are working and have been tested on RVC4 platform are marked in the table below. 
 
 | Name                                   | RVC2 | RVC4 (peripheral) | RVC4 (standalone) |
 |----------------------------------------|------|--------------------|--------------------|
