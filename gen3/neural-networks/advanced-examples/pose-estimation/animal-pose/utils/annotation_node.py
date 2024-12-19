@@ -24,6 +24,8 @@ class AnnotationNode(dai.node.ThreadedHostNode):
             annotations = dai.ImgAnnotations()  # custom annotations for drawing lines between keypoints
             annotation = dai.ImgAnnotation()
 
+            padding = 0.1
+
             for ix, detection in enumerate(detections_list):
                 img_detection_extended = ImgDetectionExtended()
                 center_x = detection.xmin + (detection.xmax - detection.xmin) / 2
@@ -37,15 +39,15 @@ class AnnotationNode(dai.node.ThreadedHostNode):
 
                 if keypoints_msg_list is not None:
                     keypoints_msg = keypoints_msg_list[ix]
-                    slope_x = detection.xmax - detection.xmin
-                    slope_y = detection.ymax - detection.ymin
+                    slope_x = (detection.xmax + padding) - (detection.xmin - padding)
+                    slope_y = (detection.ymax + padding) - (detection.ymin - padding)
                     new_keypoints = []
                     xs = []
                     ys = []
                     for kp in keypoints_msg.keypoints:
                         new_kp = Keypoint()
-                        new_kp.x = min(max(detection.xmin + slope_x * kp.x, 0.0), 1.0)
-                        new_kp.y = min(max(detection.ymin + slope_y * kp.y, 0.0), 1.0)
+                        new_kp.x = min(max(detection.xmin - padding + slope_x * kp.x, 0.0), 1.0)
+                        new_kp.y = min(max(detection.ymin - padding + slope_y * kp.y, 0.0), 1.0)
                         xs.append(new_kp.x)
                         ys.append(new_kp.y)
                         new_kp.z = kp.z
@@ -76,26 +78,4 @@ class AnnotationNode(dai.node.ThreadedHostNode):
 
             self.out_detections.send(img_detections_exteded)
             self.out_pose_annotations.send(annotations)
-            # self.out_keypoints.send(annotations)                
-
-            # white_frame = np.ones(frame.shape, dtype=np.uint8) * 255
-            # annotation = dai.ImgAnnotation()
-            # img_annotations = dai.ImgAnnotations()
-            # for i, recognition in enumerate(recognitions_message.recognitions):
-            #     detection = detections_list[i]
-            #     points = detection.rotated_rect.getPoints()
-                
-            #     text_annotation = dai.TextAnnotation()
-            #     text_annotation.position = points[3]
-            #     text_annotation.text = "".join(recognition.classes)
-            #     text_annotation.fontSize = (points[3].y - points[0].y) * white_frame.shape[0]
-            #     text_annotation.textColor = TEXT_COLOR
-            #     annotation.texts.append(text_annotation)
-            
-            # img_annotations.annotations.append(annotation)
-            # img_annotations.setTimestamp(recognitions_message.getTimestamp())
-            # output_frame = dai.ImgFrame()
-            
-            # self.white_frame_output.send(output_frame.setCvFrame(white_frame, dai.ImgFrame.Type.NV12))
-            # self.text_annotations_output.send(img_annotations)
                 
