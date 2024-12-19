@@ -79,5 +79,10 @@ with dai.Pipeline(device) as pipeline:
 
         remoteConnector.addTopic("Encoded Depth", depthEncoder.out)
 
-    #remoteConnector.registerPipeline(pipeline)
-    pipeline.run()
+    pipeline.start()
+    remoteConnector.registerPipeline(pipeline)
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = remoteConnector.waitKey(1)
+        if key == ord('q'):
+            pipeline.stop()
