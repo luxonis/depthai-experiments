@@ -90,17 +90,10 @@ with dai.Pipeline(device) as pipeline:
     pose_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(pose_manip.out, pose_nn_archive)
 
     sync = pipeline.create(dai.node.Sync)
-    sync.setSyncThreshold(timedelta(milliseconds=100))
-    # sync.setSyncAttempts(0)
+    sync.setSyncThreshold(timedelta(milliseconds=50))
     sync.setRunOnHost(True)
     detection_nn.out.link(sync.inputs["detections"])
     pose_nn.out.link(sync.inputs["keypoints"])
-
-    # demux = pipeline.create(dai.node.MessageDemux)
-
-    # sync = pipeline.create(DetectionsRecognitionsSync).build()
-    # detection_nn.out.link(sync.input_detections)
-    # pose_nn.out.link(sync.input_recognitions)
 
     custom_visualizer = pipeline.create(CustomVisualizer, connection_pairs=connection_pairs)
     sync.out.link(custom_visualizer.input)
