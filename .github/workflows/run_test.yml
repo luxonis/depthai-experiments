@@ -45,9 +45,3 @@ jobs:
           CMD="$CMD'"
           eval $CMD
         #TODO: swap for hil --revision RVC4 when possible infrastructure-wise
-
-      - name: Stop WireGuard
-        if: always()
-        run: |
-          sudo ip link set down dev wg0
-          sudo ip link delete dev wg0
