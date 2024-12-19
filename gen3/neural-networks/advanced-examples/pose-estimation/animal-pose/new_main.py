@@ -3,6 +3,7 @@ from depthai_nodes import ParsingNeuralNetwork
 from utils.process_detections import ProcessDetections
 from utils.detection_kpts_sync import DetectionsRecognitionsSync
 from utils.annotation_node import AnnotationNode
+from utils.filter_classes import FilterClasses
 from utils.arguments import initialize_argparser
 from pathlib import Path
 
@@ -27,6 +28,7 @@ with dai.Pipeline(device) as pipeline:
         replay_node.setReplayVideoFile(Path(args.media_path))
         replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay_node.setLoop(True)
+        replay_node.setFps(FPS)
         
         video_resize_node = pipeline.create(dai.node.ImageManipV2)
         video_resize_node.initialConfig.setOutputSize(1728, 960)
@@ -49,8 +51,12 @@ with dai.Pipeline(device) as pipeline:
         resize_node.out, "luxonis/yolov6-nano:r2-coco-512x288"
         )
     
+    filter_classes = pipeline.create(FilterClasses, labels=[0, 15, 16, 17, 18, 19, 20, 21, 22, 23], only_one_detection=True)
+
+    detection_node.out.link(filter_classes.input_detections)
+
     detection_process_node = pipeline.create(ProcessDetections)
-    detection_node.out.link(detection_process_node.detections_input)
+    filter_classes.out.link(detection_process_node.detections_input)
 
     config_sender_node = pipeline.create(dai.node.Script)
     config_sender_node.setScript("""
