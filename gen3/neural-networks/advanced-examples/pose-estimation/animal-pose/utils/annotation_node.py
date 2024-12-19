@@ -17,7 +17,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
         while self.isRunning():
             message_group = self.input.get()
             detections_list: List[dai.ImgDetection] = message_group["detections"].detections
-            keypoints_msg_list: List[Keypoints] = message_group["recognitions"].recognitions
+            keypoints_msg_list: List[Keypoints] = message_group["keypoints"].keypoints
 
             img_detections_exteded = ImgDetectionsExtended()
 
