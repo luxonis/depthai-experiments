@@ -87,6 +87,10 @@ with dai.Pipeline(device) as pipeline:
     config_sender_node.outputs["output_config"].link(cropNode.inputConfig)
     config_sender_node.outputs['output_frame'].link(cropNode.inputImage)
     
+    pose_model_reference = "luxonis/superanimal-landmarker:256x256"
+    pose_model_path = dai.getModelFromZoo(dai.NNModelDescription(pose_model_reference, platform=device.getPlatform().name))
+    pose_nn_archive = dai.NNArchive(pose_model_path)
+    connection_pairs = pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["connection_pairs"]
     
     ocr_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         cropNode.out, "luxonis/superanimal-landmarker:256x256"
@@ -100,14 +104,14 @@ with dai.Pipeline(device) as pipeline:
     
     ocr_node.out.link(sync_node.recognitions_input)
     detection_node.passthrough.link(sync_node.passthrough_input)
-    detection_node.out.link(sync_node.detections_input)
+    filter_classes.out.link(sync_node.detections_input)
     
-    annotation_node = pipeline.create(AnnotationNode)
+    annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs)
     sync_node.out.link(annotation_node.input)
     
     visualizer.addTopic("Video", detection_node.passthrough, "images")
     visualizer.addTopic("Detections", annotation_node.out_detections, "images")
-    # visualizer.addTopic("Text", annotation_node.out_keypoints, "images")
+    visualizer.addTopic("Pose", annotation_node.out_pose_annotations, "images")
     
     print("Pipeline created.")
     pipeline.start()
