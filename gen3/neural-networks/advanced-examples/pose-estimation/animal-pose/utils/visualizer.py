@@ -46,8 +46,8 @@ class CustomVisualizer(dai.node.ThreadedHostNode):
                     ys = []
                     for kp in keypoints_msg.keypoints:
                         new_kp = Keypoint()
-                        new_kp.x = detection.xmin + slope_x * kp.x
-                        new_kp.y = detection.ymin + slope_y * kp.y
+                        new_kp.x = min(max(detection.xmin + slope_x * kp.x, 0.0), 1.0)
+                        new_kp.y = min(max(detection.ymin + slope_y * kp.y, 0.0), 1.0)
                         xs.append(new_kp.x)
                         ys.append(new_kp.y)
                         new_kp.z = kp.z
