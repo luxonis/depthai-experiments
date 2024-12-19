@@ -22,12 +22,7 @@ jobs:
       - name: Clone HIL Framework
         run: |
           git clone https://oauth2:${{secrets.GITLAB_TOKEN}}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git --recursive
-      
-      - name: Setup HIL Tools
-        run: |
-          cd hil_framework
-          ./setup/setup_hil_tools.sh -ga
-          
+                
       - name: Add HIL Tools to Path
         run: |
           cd hil_framework
