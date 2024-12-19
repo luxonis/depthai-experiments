@@ -1,7 +1,7 @@
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.process_detections import ProcessDetections
-from utils.detection_kpts_sync import DetectionsRecognitionsSync
+from utils.detection_kpts_sync import DetectionsKeypointsSync
 from utils.annotation_node import AnnotationNode
 from utils.filter_classes import FilterClasses
 from utils.arguments import initialize_argparser
@@ -92,17 +92,17 @@ with dai.Pipeline(device) as pipeline:
     pose_nn_archive = dai.NNArchive(pose_model_path)
     connection_pairs = pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["connection_pairs"]
     
-    ocr_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+    pose_estimation_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         cropNode.out, "luxonis/superanimal-landmarker:256x256"
         )
-    ocr_node.input.setBlocking(True)
-    ocr_node.input.setMaxSize(20)
+    pose_estimation_node.input.setBlocking(True)
+    pose_estimation_node.input.setMaxSize(20)
     
-    sync_node = pipeline.create(DetectionsRecognitionsSync)
-    sync_node.recognitions_input.setBlocking(True)
-    sync_node.recognitions_input.setMaxSize(20)
+    sync_node = pipeline.create(DetectionsKeypointsSync)
+    sync_node.keypoints_input.setBlocking(True)
+    sync_node.keypoints_input.setMaxSize(20)
     
-    ocr_node.out.link(sync_node.recognitions_input)
+    pose_estimation_node.out.link(sync_node.keypoints_input)
     detection_node.passthrough.link(sync_node.passthrough_input)
     filter_classes.out.link(sync_node.detections_input)
     

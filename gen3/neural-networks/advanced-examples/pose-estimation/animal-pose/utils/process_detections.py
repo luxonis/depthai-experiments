@@ -1,5 +1,4 @@
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionExtended
 
 class ProcessDetections(dai.node.ThreadedHostNode):
     def __init__(self):
