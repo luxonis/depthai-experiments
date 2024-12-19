@@ -11,7 +11,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ["self-hosted", "testbed-runner"]
 
     strategy:
       matrix:
@@ -19,16 +19,6 @@ jobs:
         platform: [RVC2] #TODO: add RVC4 platform
 
     steps:
-      - name: Setup WireGuard
-        run: |
-          sudo apt install wireguard
-          echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey
-          sudo ip link add dev wg0 type wireguard
-          sudo ip address add dev wg0 10.12.99.26 peer 10.12.99.1
-          sudo wg set wg0 listen-port 48123 private-key privatekey peer ${{ secrets.WIREGUARD_PUBLIC_KEY }} allowed-ips 10.12.99.1/32,10.12.99.26/32,10.12.0.0/16 endpoint "${{ secrets.WIREGUARD_PUBLIC_ENDPOINT }}"
-          sudo ip link set up dev wg0
-          sudo ip route add 10.12.0.0/16 dev wg0
-
       - name: Clone HIL Framework
         run: |
           git clone https://oauth2:${{secrets.GITLAB_TOKEN}}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git --recursive
