@@ -60,7 +60,9 @@ class DetSegAnntotationNode(dai.node.ThreadedHostNode):
     def run(self):
         while self.isRunning():
             extended_detections = self.input_detections.get()
-            frame = self.input_frame.get().getCvFrame()
+            frame = self.input_frame.get()
+            time_stamp = frame.getTimestamp()
+            frame = frame.getCvFrame()
             output_frame = dai.ImgFrame()
             
             if not isinstance(extended_detections, ImgDetectionsExtended):
@@ -86,4 +88,5 @@ class DetSegAnntotationNode(dai.node.ThreadedHostNode):
 
             colored_frame = cv2.addWeighted(frame, 0.5, color_mask, 0.5, 0)
             
+            output_frame.setTimestamp(time_stamp)
             self.out.send(output_frame.setCvFrame(colored_frame, dai.ImgFrame.Type.BGR888i))
