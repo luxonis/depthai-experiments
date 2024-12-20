@@ -90,10 +90,12 @@ with dai.Pipeline(device) as pipeline:
     
     # OCR
     ocr_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        lp_crop_node.out, "luxonis/paddle-text-recognition:320x48:855bf9b"
+        lp_crop_node.out, "luxonis/paddle-text-recognition:320x48:cb55eb4"
         )
+    ocr_node.getParser(0).setIgnoredIndexes([0, 11, 12, 13, 14, 15, 16, 17, 44, 45, 46, 47, 48, 49, 76, 77, 78, 79, 
+                                80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 93, 94, 95, 96])
 
-
+    
     vehicle_lp_queue = license_plate_detection.out.createOutputQueue()
     vehicle_lp_passthrough =  license_plate_detection.passthrough.createOutputQueue()
     vehicle_det_queue = license_plate_config_sender.outputs["output_valid_detections"].createOutputQueue()
@@ -175,14 +177,16 @@ with dai.Pipeline(device) as pipeline:
             lp_y_max = np.clip(lp_y_max, 0, frame.shape[0])
             
             text = " ".join(ocr_message.classes)
+            if len(text) < 4:
+                continue
             cv2.rectangle(frame, (lp_x_min, lp_y_min), (lp_x_max, lp_y_max), (0, 0, 255), 2)
             cv2.putText(frame, text, (lp_x_min, lp_y_min-5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
             
             crop_frame = crop_queue.get().getCvFrame()
             cv2.imshow(f"License Plate {i}", crop_frame)
             
-            cv2.imwrite(f"cropped_frames/license_plate_{crop_index}.jpg", crop_frame)
-            crop_index += 1
+            # cv2.imwrite(f"cropped_frames/license_plate_{crop_index}.jpg", crop_frame)
+            # crop_index += 1
             
             i = i + 1
             

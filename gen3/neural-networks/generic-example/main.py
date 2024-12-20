@@ -60,6 +60,7 @@ with dai.Pipeline(device) as pipeline:
         nn_with_parser.out.link(annotation_node.input_detections)
         visualizer.addTopic("Video", annotation_node.out, "images")
         visualizer.addTopic("Detections", nn_with_parser.out, "detections")
+        visualizer.addTopic("Segmentation", nn_with_parser.passthrough, "detections")
     else:
         visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
         visualizer.addTopic("Visualizations", nn_with_parser.out, "images")
