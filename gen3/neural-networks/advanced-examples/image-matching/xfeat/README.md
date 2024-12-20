@@ -23,6 +23,10 @@ pip install -r requirements.txt
 
 ## Usage
 
+You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+### Peripheral Mode
+
 ```
 python3 main.py --model <MODEL> --device <DEVICE> --fps_limit <FPS_LIMIT>
 ```
@@ -36,7 +40,7 @@ If you use model with mono mode (e.g. ``luxonis/xfeat:mono-240x320``), you can s
 
 **NOTE**: Stereo mode will run only with 2-camera devices.
 
-## Example
+#### Examples
 
 ```
 python3 main.py
@@ -55,3 +59,26 @@ python3 main.py --model luxonis/xfeat:stereo-240x320
 ```
 
 This will run the XFeat model in stereo mode with the `luxonis/xfeat:stereo-240x320` model. The model will match the frames from two cameras (e.g. left and right camera).
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+and run the example using the `run_standalone.py` script:
+```bash
+python3 run_standalone.py \
+    --model <Model> \
+    --device <Device> \
+    --fps_limit <FPS>
+```
+
+The arguments are the same as in the Peripheral mode.
+
+#### Example
+```bash
+python3 run_standalone.py \
+    --model xfeat:stereo-240x320 \
+```
