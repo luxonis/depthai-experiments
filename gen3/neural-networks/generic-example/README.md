@@ -57,9 +57,9 @@ To run the example in this mode, first install the [oakctl](https://rvc4.docs.lu
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
-and run the example using the `main_standalone.sh` script:
+and run the example using the `run_standalone.sh` script:
 ```bash
-bash main_standalone.sh \
+bash run_standalone.sh \
     --model <Model> \
     --device <Device> \
     --annotation_mode <Mode> \
@@ -74,6 +74,6 @@ Therefore, make sure to provide the file's path relative to the `generic-example
 
 ### Example
 ```bash
-bash main_standalone.sh \
+bash run_standalone.sh \
     --model luxonis/yolov6-nano:r2-coco-512x288
 ```
