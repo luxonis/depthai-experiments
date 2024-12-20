@@ -39,7 +39,7 @@ jobs:
       - name: Run Test
         run: |
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/${{ github.run_id }}-${{ matrix.python-version }}-${{ matrix.platform }}"
-          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' 'python3 gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
+          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' 'python3 gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display"
           if [ -n "${{ github.event.inputs.depthai_version }}" ]; then
             CMD="$CMD --depthai-version ${{ github.event.inputs.depthai_version }}"
           fi
