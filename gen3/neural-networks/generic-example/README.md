@@ -33,7 +33,6 @@ Relevant arguments:
 By default, the first locally available device is used;
 - `<Mode>` [OPTIONAL]: Annotation mode. Set to 'segmentation' to overlay segmentation masks over the model inputs, or 'segmentation_with_annotation' to visualize the additional annotations. Leave empty to use the default visualization.
 - `<FPS>` [OPTIONAL]: The upper limit for camera captures in frames per second (FPS).
-
 The limit is not used when infering on media.
 By default, the FPS is not limited.
 If using OAK-D Lite, make sure to set it under 28.5;
