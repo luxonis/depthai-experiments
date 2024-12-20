@@ -71,6 +71,8 @@ with dai.Pipeline(device) as pipeline:
         
         coloredDepthManip = pipeline.create(dai.node.ImageManipV2)
         coloredDepthManip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+        if platform != dai.Platform.RVC2:
+            coloredDepthManip.initialConfig.setOutputSize(480, 640)
         coloredDepth.output.link(coloredDepthManip.inputImage)
 
         depthEncoder = pipeline.create(dai.node.VideoEncoder)
