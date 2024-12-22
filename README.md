@@ -20,7 +20,7 @@ Examples demonstrating various camera control features like focus, exposure, whi
 Collection of demos presented at conferences and events, showing advanced use cases.
 
 ### [🔌 Connectivity](connectivity/)
-Examples showing different ways to connect and stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
+
 
 ### [📏 Depth Measurement](depth-measurement/)
 Demonstrations of depth perception capabilities, including spatial calculations, depth visualization, and 3D measurements.
@@ -29,7 +29,7 @@ Demonstrations of depth perception capabilities, including spatial calculations,
 Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
 
 ### [🔄 Stream Manipulation](stream-manipulation/)
-Examples showing how to manipulate, process, and transform different types of streams (RGB, depth, neural inference).
+Examples showing different ways to stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
 
 ### [📚 Tutorial](tutorial/)
 Step-by-step guides and educational content to help you get started with DepthAI.
