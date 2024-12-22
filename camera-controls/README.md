@@ -4,6 +4,8 @@ This section contains examples demonstrating various camera control features and
 
 LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
+## Platform Compatibility
+
 | Name | Gen2 | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Notes |
 |------|------|------|-------------------|-------------------|-------|
 | [manual-camera-control](manual-camera-control/) | [gen2-color-isp-raw](https://github.com/luxonis/depthai-experiments/tree/master/gen2-color-isp-raw) | ✅ | 🚧 | 🚧 | Examples of manual camera control features including exposure, focus, white balance, and ISO |
