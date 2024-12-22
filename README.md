@@ -17,7 +17,7 @@ Ready-to-use applications built with DepthAI, demonstrating real-world use cases
 Examples demonstrating various camera control features like focus, exposure, white balance, and other camera parameters.
 
 ### [📊 Conference Demos](conference-demos/)
-Collection of demos presented at conferences and events, showing advanced use cases and integrations.
+Collection of demos presented at conferences and events, showing advanced use cases.
 
 ### [🔌 Connectivity](connectivity/)
 Examples showing different ways to connect and stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
