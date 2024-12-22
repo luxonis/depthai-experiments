@@ -1,5 +1,9 @@
 # DepthAI Experiments
 
+[![Discord](https://img.shields.io/discord/790680891252932659?label=Discord)](https://discord.gg/luxonis)
+[![Forum](https://img.shields.io/badge/Forum-discuss-orange)](https://discuss.luxonis.com/)
+[![Docs](https://img.shields.io/badge/Docs-DepthAI-yellow)](https://docs.luxonis.com)
+
 The repository contains various demonstrations, tutorials and examples showcasing different capabilities of DepthAI and OAK devices. Each category focuses on specific aspects of the technology.
 
 Click on any category below to explore detailed examples for that specific domain.
