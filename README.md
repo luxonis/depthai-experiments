@@ -22,7 +22,7 @@ Examples showing different ways to connect and stream data from DepthAI devices,
 Demonstrations of depth perception capabilities, including spatial calculations, depth visualization, and 3D measurements.
 
 ### [🧠 Neural Networks](neural-networks/)
-Comprehensive collection of AI model implementations, including object detection, classification, segmentation, and many more.
+Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
 
 ### [🔄 Stream Manipulation](stream-manipulation/)
 Examples showing how to manipulate, process, and transform different types of streams (RGB, depth, neural inference).
