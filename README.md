@@ -23,7 +23,7 @@ Collection of demos presented at conferences and events, showing advanced use ca
 Shows how to integrate DepthAI with different frameworks and tools like [Foxglove](https://docs.foxglove.dev/docs/introduction/) or [Rerun](https://rerun.io/docs/getting-started/what-is-rerun).
 
 ### [📏 Depth Measurement](depth-measurement/)
-Demonstrations of depth perception capabilities, including spatial calculations, depth visualization, and 3D measurements.
+Demonstrations of depth perception capabilities, including spatial calculations, depth visualization, and 3D measurements including pointcloud.
 
 ### [🧠 Neural Networks](neural-networks/)
 Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
