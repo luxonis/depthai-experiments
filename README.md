@@ -2,7 +2,7 @@
 
 The repository contains various demonstrations, tutorials and examples showcasing different capabilities of DepthAI and OAK devices. Each category focuses on specific aspects of the technology.
 
-For platform compatibility information, see our [supported platforms table](README.md).
+Click on any category below to explore detailed examples for that specific domain.
 
 ## Categories
 
@@ -12,7 +12,7 @@ Ready-to-use applications built with DepthAI, demonstrating real-world use cases
 ### [🎥 Camera Controls](camera-controls/)
 Examples demonstrating various camera control features like focus, exposure, white balance, and other camera parameters.
 
-### [🎯 Conference Demos](conference-demos/)
+### [📊 Conference Demos](conference-demos/)
 Collection of demos presented at conferences and events, showing advanced use cases and integrations.
 
 ### [🔌 Connectivity](connectivity/)
