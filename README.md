@@ -1,82 +1,35 @@
-# Experiments Supported Platforms
+# DepthAI Experiments
 
-Every experiment is not yet supported on all our platforms. Each experiment should be working on RVC2 platform. RVC4 platform compatibility is still work in progress. The exact experiments, which are working and have been tested on RVC4 platform are marked in the table below. 
+[![Discord](https://img.shields.io/discord/790680891252932659?label=Discord)](https://discord.gg/luxonis)
+[![Forum](https://img.shields.io/badge/Forum-discuss-orange)](https://discuss.luxonis.com/)
+[![Docs](https://img.shields.io/badge/Docs-DepthAI-yellow)](https://docs.luxonis.com)
 
-| Name                                   | RVC2 | RVC4 (peripheral) | RVC4 (standalone) |
-|----------------------------------------|------|--------------------|--------------------|
-| conference-demos/rgb-depth-detections | ✅ | ✅                 | ❌                 |
-| apps/default-app | ✅ | ✅                 | ❌                 |
-| camera-demo                       | ✅ | ✅                 | ❌                 |
-| custom-models                     | ✅ | ❌                 | ❌                 |
-| display-detections                | ✅ | ✅                 | ❌                 |
-| full-fov-nn                       | ✅ | ❌                 | ❌                 |
-| multiple-devices                  | ✅ | ❌                 | ❌                 |
-| play-encoded-stream               | ✅ | ✅                 | ❌                 |
-| calc-spatials-on-host             | ✅ | ✅                 | ❌                 |
-| qt-gui                            | ✅ | ❌                 | ❌                 |
-| wls-filter                        | ✅ | ✅                 | ❌                 |
-| stereo-on-host                    | ✅ | ✅                 | ❌                 |
-| triangulation                     | ✅ | ✅                 | ❌                 |
-| box_measurement                   | ✅ | ❌                 | ❌                 |
-| pointcloud                        | ✅ | ❌                 | ❌                 |
-| fire-detection                    | ✅ | ❌                 | ❌                 |
-| human-machine-safety              | ✅ | ❌                 | ❌                 |
-| mobile-object-localizer           | ✅ | ✅                 | ❌                 |
-| palm-detection                    | ✅ | ✅                 | ✅                 |
-| qr-code-scanner                   | ✅ | ❌                 | ❌                 |
-| social-distancing                 | ✅ | ❌                 | ❌                 |
-| text-blur                         | ✅ | ✅                 | ❌                 |
-| yolo-car-detection                | ✅ | ❌                 | ❌                 |
-| yolo-device-decoding              | ✅ | ✅                 | ✅                 |
-| yolo-host-decoding                | ✅ | ❌                 | ❌                 |
-| yolo-yolop                        | ✅ | ❌                 | ❌                 |
-| objectron                         | ✅ | ❌                 | ❌                 |
-| class-saver-jpeg                  | ✅ | ❌                 | ❌                 |
-| efficientDet                      | ✅ | ❌                 | ❌                 |
-| full-image-classification              | ✅ | ❌                 | ❌                 |
-| image-quality-assessment          | ✅ | ❌                 | ❌                 |
-| crowdcounting                     | ✅ | ❌                 | ❌                 |
-| cumulative-object-counting        | ✅ | ❌                 | ❌                 |
-| depth-people-counting             | ✅ | ❌                 | ❌                 |
-| people-counter                    | ✅ | ❌                 | ❌                 |
-| nanosam                           | ✅ | ❌                 | ❌                 |
-| deeplabv3                              | ✅ | ❌                 | ❌                 |
-| road-segmentation                 | ✅ | ❌                 | ❌                 |
-| lanenet                           | ✅ | ❌                 | ❌                 |
-| deeplabv3_depth                   | ✅ | ❌                 | ❌                 |
-| mask-rcnn                         | ✅ | ❌                 | ❌                 |
-| crestereo-stereo-matching         | ✅ | ❌                 | ❌                 |
-| depth-estimation                  | ✅ | ❌                 | ❌                 |
-| human-pose                        | ✅ | ✅                 | ✅                 |
-| face-detection                    | ✅ | ❌                 | ❌                 |
-| facemesh                          | ✅ | ❌                 | ❌                 |
-| age-gender                        | ✅ | ❌                 | ❌                 |
-| blur-faces                        | ✅ | ❌                 | ❌                 |
-| emotion-recognition               | ✅ | ❌                 | ❌                 |
-| fatigue-detection                 | ✅ | ❌                 | ❌                 |
-| gaze-estimation                   | ✅ | ❌                 | ❌                 |
-| head-posture-detection            | ✅ | ❌                 | ❌                 |
-| mask-detection                    | ✅ | ❌                 | ❌                 |
-| pedestrian-reidentification       | ✅ | ❌                 | ❌                 |
-| face-recognition                  | ✅ | ❌                 | ❌                 |
-| collision-avoidance                    | ✅ | ❌                 | ❌                 |
-| bounding-box-filtering/kalman     | ✅ | ❌                 | ❌                 |
-| deepsort-tracking                 | ✅ | ❌                 | ❌                 |
-| people-tracker                    | ✅ | ❌                 | ❌                 |
-| license-plate-recognition         | ✅ | ❌                 | ❌                 |
-| ocr                               | ✅ | ❌                 | ❌                 |
-| seven-segment-recognition         | ✅ | ❌                 | ❌                 |
-| anomaly-detection (postponed)     | ✅ | ❌                 | ❌                 |
-| manual-camera-control             | ✅ | ❌                 | ❌                 |
-| depth-driven-focus                | ✅ | ❌                 | ❌                 |
-| lossless-zooming                  | ✅ | ❌                 | ❌                 |
-| on-device-encoding                | ✅ | ❌                 | ❌                 |
-| mjpeg-streaming                   | ✅ | ❌                 | ❌                 |
-| poe-mqtt                          | ✅ | ❌                 | ❌                 |
-| poe-tcp-streaming                 | ✅ | ❌                 | ❌                 |
-| rtsp-streaming                    | ✅ | ❌                 | ❌                 |
-| webrtc-streaming                  | ✅ | ❌                 | ❌                 |
-| foxglove                          | ✅ | ❌                 | ❌                 |
-| rerun                             | ✅ | ❌                 | ❌                 |
-| roboflow-integration              | ✅ | ❌                 | ❌                 |
-| qr-with-tiling                         | ✅ | ❌                 | ❌                 |
+The repository contains various demonstrations, tutorials and examples showcasing different capabilities of DepthAI and OAK devices. Each category focuses on specific aspects of the technology.
+
+Click on any category below to explore detailed examples for that specific domain.
+
+## Categories
+
+### [📱 Apps](apps/)
+Ready-to-use applications built with DepthAI, demonstrating real-world use cases and implementations.
+
+### [🎥 Camera Controls](camera-controls/)
+Examples demonstrating various camera control features like focus, exposure, white balance, and other camera parameters.
+
+### [📊 Conference Demos](conference-demos/)
+Collection of demos presented at conferences and events, showing advanced use cases.
+
+### [🔌 Connectivity](connectivity/)
+Shows how to integrate DepthAI with different frameworks and tools like [Foxglove](https://docs.foxglove.dev/docs/introduction/) or [Rerun](https://rerun.io/docs/getting-started/what-is-rerun).
+
+### [📏 Depth Measurement](depth-measurement/)
+Demonstrations of depth perception capabilities, including spatial calculations, depth visualization, and 3D measurements including pointcloud.
+
+### [🧠 Neural Networks](neural-networks/)
+Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
+
+### [🔄 Stream Manipulation](stream-manipulation/)
+Examples showing different ways to stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
+
+### [📚 Tutorial](tutorial/)
+Step-by-step guides and educational content to help you get started with DepthAI.
