@@ -10,4 +10,4 @@ This section contains examples demonstrating various camera control features and
 | [depth-driven-focus](depth-driven-focus/) | [gen2-depth-driven-focus](https://github.com/luxonis/depthai-experiments/tree/master/gen2-depth-driven-focus) | ✅ | 🚧 | 🚧 | Demonstration of autofocus system driven by depth information |
 | [lossless-zooming](lossless-zooming/) | [gen2-lossless-zooming](https://github.com/luxonis/depthai-experiments/tree/master/gen2-lossless-zooming) | ✅ | 🚧 | 🚧 | Example showing how to implement lossless digital zoom using crop control |
 
-LEGEND: ✅: available; ❌: not available; 🚧: work in progress
+✅: available; ❌: not available; 🚧: work in progress

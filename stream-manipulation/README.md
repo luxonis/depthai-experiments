@@ -13,4 +13,4 @@ This section contains examples showing different ways to manipulate and stream d
 | [webrtc-streaming](webrtc-streaming/) | [gen2-webrtc-streaming](https://github.com/luxonis/depthai-experiments/tree/master/gen2-webrtc-streaming) | ✅ | 🚧 | 🚧 | Example showing WebRTC streaming capabilities |
 | [on-device-encoding](on-device-encoding/) | [gen2-container-encoding](https://github.com/luxonis/depthai-experiments/tree/master/gen2-container-encoding) | ✅ | 🚧 | 🚧 | Demonstration of video encoding directly on OAK device |
 
-LEGEND: ✅: available; ❌: not available; 🚧: work in progress
+✅: available; ❌: not available; 🚧: work in progress

@@ -14,4 +14,4 @@ This section contains examples demonstrating depth perception capabilities and s
 | [stereo-on-host](stereo-on-host/) | [gen2-stereo-on-host](https://github.com/luxonis/depthai-experiments/tree/master/gen2-stereo-on-host) | ✅ | ✅ | 🚧 | Example performing stereo depth calculations on host |
 | [triangulation](triangulation/) | [gen2-triangulation](https://github.com/luxonis/depthai-experiments/tree/master/gen2-triangulation) | ✅ | ✅ | 🚧 | Demonstration of 3D position calculation using triangulation |
 
-LEGEND: ✅: available; ❌: not available; 🚧: work in progress
+✅: available; ❌: not available; 🚧: work in progress

@@ -14,4 +14,4 @@ This section contains step-by-step guides and educational content to help you ge
 | [play-encoded-stream](play-encoded-stream/) | [gen2-play-encoded-stream](https://github.com/luxonis/depthai-experiments/tree/master/gen2-play-encoded-stream) | ✅ | ✅ | 🚧 | Guide on playing back encoded video streams |
 | [qr-with-tiling](qr-with-tiling/) | | ✅ | 🚧 | 🚧 | Tutorial on QR code detection using camera tiling |
 
-LEGEND: ✅: available; ❌: not available; 🚧: work in progress
+✅: available; ❌: not available; 🚧: work in progress

@@ -8,4 +8,4 @@ This section contains ready-to-use applications that demonstrate the capabilitie
 |------|------|------|-------------------|-------------------|-------|
 | [default-app](default-app/) | | ✅ | ✅ | ✅ | Default application pre-loaded on OAK4 devices showing color stream, depth stream, encoded stream and object detections using YOLO network |
 
-LEGEND: ✅: available; ❌: not available
+✅: available; ❌: not available
