@@ -2,8 +2,6 @@
 
 This section contains examples demonstrating depth perception capabilities and spatial measurements using DepthAI and OAK devices. Experiments below only work with devices that have stereo depth capabilities (mono cameras).
 
-LEGEND: ✅: available; ❌: not available; 🚧: work in progress
-
 ## Platform Compatibility
 
 | Name | Gen2 | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Notes |
@@ -15,3 +13,5 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | [wls-filter](wls-filter/) | [gen2-wls-filter](https://github.com/luxonis/depthai-experiments/tree/master/gen2-wls-filter) | ✅ | ✅ | 🚧 | Implementation of Weighted Least Squares filter for depth refinement |
 | [stereo-on-host](stereo-on-host/) | [gen2-stereo-on-host](https://github.com/luxonis/depthai-experiments/tree/master/gen2-stereo-on-host) | ✅ | ✅ | 🚧 | Example performing stereo depth calculations on host |
 | [triangulation](triangulation/) | [gen2-triangulation](https://github.com/luxonis/depthai-experiments/tree/master/gen2-triangulation) | ✅ | ✅ | 🚧 | Demonstration of 3D position calculation using triangulation |
+
+LEGEND: ✅: available; ❌: not available; 🚧: work in progress

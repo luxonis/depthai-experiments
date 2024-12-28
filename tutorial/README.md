@@ -2,8 +2,6 @@
 
 This section contains step-by-step guides and educational content to help you get started with various aspects of DepthAI and OAK devices.
 
-LEGEND: ✅: available; ❌: not available; 🚧: work in progress
-
 ## Platform Compatibility
 
 | Name | Gen2 | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Notes |
@@ -15,3 +13,5 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | [multiple-devices](multiple-devices/) | [gen2-multiple-devices](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices) | ✅ | 🚧 | 🚧 | Tutorial on working with multiple OAK devices |
 | [play-encoded-stream](play-encoded-stream/) | [gen2-play-encoded-stream](https://github.com/luxonis/depthai-experiments/tree/master/gen2-play-encoded-stream) | ✅ | ✅ | 🚧 | Guide on playing back encoded video streams |
 | [qr-with-tiling](qr-with-tiling/) | | ✅ | 🚧 | 🚧 | Tutorial on QR code detection using camera tiling |
+
+LEGEND: ✅: available; ❌: not available; 🚧: work in progress
