@@ -3,3 +3,4 @@ aiohttp==3.9.5
 aiohttp-cors==0.7.0
 blobconverter==1.4.3
 depthai~=3.0a1
+numpy~=2.0
