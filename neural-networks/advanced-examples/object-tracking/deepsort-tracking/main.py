@@ -1,5 +1,5 @@
 from pathlib import Path
-import blobconverter
+#import blobconverter
 import depthai as dai
 
 from deepsort_tracking import DeepsortTracking
