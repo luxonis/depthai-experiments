@@ -38,7 +38,7 @@ with dai.Pipeline() as pipeline:
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_out = cam.requestOutput(CAM_SIZE, dai.ImgFrame.Type.BGR888p, fps=10)
     manip = pipeline.create(dai.node.ImageManipV2)
-    manip.initialConfig.addResize(*NN_SIZE)
+    manip.initialConfig.setOutputSize(*NN_SIZE)
     color_out.link(manip.inputImage)
     nn = pipeline.create(dai.node.NeuralNetwork).build(manip.out, nn_archive)
 
