@@ -1,4 +1,3 @@
-import blobconverter
 import depthai as dai
 
 from collision_avoidance_node import CollisionAvoidanceNode
@@ -28,8 +27,7 @@ with dai.Pipeline() as pipeline:
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    # nn.setBlobPath(blobconverter.from_zoo(name="vehicle-detection-adas-0002", shaves=5))
+    nn = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
     nn.setNNArchive(nn_archive)
     nn.setNumInferenceThreads(2)
     nn.setConfidenceThreshold(0.5)
