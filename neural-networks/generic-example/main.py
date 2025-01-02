@@ -1,4 +1,3 @@
-import time
 from pathlib import Path
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
