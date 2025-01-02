@@ -90,6 +90,7 @@ def setup_venv_exe(dir, requirements_path, f=None):
                 error_printed = True
         if not error_printed:
             output("Error message:\n" + str(e.stdout), f)
+        output("----------------------------", f)
         return None
     else:
         output("Requirements installed", f)
