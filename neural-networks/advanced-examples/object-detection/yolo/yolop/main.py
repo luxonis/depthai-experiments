@@ -13,7 +13,7 @@ python3 -m pip install -r requirements.txt
 python3 main.py -v path/to/video
 '''
 
-model_description = dai.NNModelDescription(modelSlug="yolop", platform="RVC2", modelVersionSlug="320x320") # only for RVC2
+model_description = dai.NNModelDescription(model="luxonis/yolo-p:bdd100k-320x320", platform="RVC2")
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
