@@ -1,5 +1,4 @@
 import depthai as dai
-import re
 import depthai_nodes as nodes
 
 from host_triangulation import Triangulation

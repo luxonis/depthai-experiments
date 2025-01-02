@@ -101,8 +101,9 @@ class Triangulation(dai.node.HostNode):
 
     def _displayDetections(self, frame: np.ndarray, detections: list[ImgDetectionExtended], color) -> None:
         for detection in detections:
-            x = int(detection.x_center * frame.shape[1])
-            y = int(detection.y_center * frame.shape[0])
-            w = int(detection.width * frame.shape[1])
-            h = int(detection.height * frame.shape[0])
+            rect = detection.rotated_rect
+            x = int(rect.center.x * frame.shape[1])
+            y = int(rect.center.y * frame.shape[0])
+            w = int(rect.size.width * frame.shape[1])
+            h = int(rect.size.height * frame.shape[0])
             cv2.rectangle(frame, (x-(w//2), y-(h//2)), ((x+(w//2), y+(h//2))), color, 2)
