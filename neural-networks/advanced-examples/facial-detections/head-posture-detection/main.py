@@ -1,5 +1,4 @@
 from pathlib import Path
-import blobconverter
 import depthai as dai
 
 from head_posture_detection import HeadPostureDetection
@@ -55,7 +54,6 @@ with dai.Pipeline(device) as pipeline:
         face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
 
     face_det_nn.setConfidenceThreshold(0.5)
-    # face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
     face_det_nn.setNNArchive(face_det_nn_archive)
     face_det_nn.input.setBlocking(False)
     face_det_nn.input.setMaxSize(1)
@@ -74,7 +72,6 @@ with dai.Pipeline(device) as pipeline:
 
     print("Creating recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    # recognition_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=6))
     recognition_nn.setNNArchive(recognition_nn_archive)
     recognition_manip.out.link(recognition_nn.input)
 
