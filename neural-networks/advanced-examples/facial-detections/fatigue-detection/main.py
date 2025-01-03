@@ -6,7 +6,7 @@ from host_fatigue_detection import FatigueDetection
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setIspScale(2,3)
     cam.setInterleaved(False)
     cam.setPreviewSize(720, 720)
@@ -15,7 +15,7 @@ with dai.Pipeline() as pipeline:
     face_det_manip.initialConfig.setResize(300, 300)
     cam.preview.link(face_det_manip.inputImage)
 
-    face_nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    face_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     face_nn.setConfidenceThreshold(0.3)
     face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6))
     face_det_manip.out.link(face_nn.input)
