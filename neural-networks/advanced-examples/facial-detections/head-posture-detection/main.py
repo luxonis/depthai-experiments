@@ -4,11 +4,11 @@ import depthai as dai
 from head_posture_detection import HeadPostureDetection
 from detections_recognitions_sync import DetectionsRecognitionsSync
 
-face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+face_det_model_description = dai.NNModelDescription(model="luxonis/yunet:640x640", platform="RVC2")
 face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
 face_det_nn_archive = dai.NNArchive(face_det_archive_path)
 
-recognition_model_description = dai.NNModelDescription(modelSlug="head-pose-estimation-adas", platform="RVC2", modelVersionSlug="0001")
+recognition_model_description = dai.NNModelDescription(model="luxonis/head-pose-estimation:60x60", platform="RVC2")
 recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
 recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 
