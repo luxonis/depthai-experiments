@@ -6,3 +6,4 @@ tiktoken
 torch
 tqdm
 numba
+openai-whisper
