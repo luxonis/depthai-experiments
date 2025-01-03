@@ -4,3 +4,4 @@ aiohttp-cors==0.7.0
 blobconverter==1.4.3
 depthai~=3.0a1
 numpy~=2.0
+opencv-python==4.10.0.84
