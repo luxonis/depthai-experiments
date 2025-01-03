@@ -20,7 +20,7 @@ recognition_model_description = dai.NNModelDescription(modelSlug="paddle-text-re
 # recognition_model_description = dai.NNModelDescription(modelSlug="paddle-text-recognition", platform="RVC2", modelVersionSlug="160x48")
 recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
 recognition_nn_archive = dai.NNArchive(recognition_archive_path)
-classes = recognition_nn_archive.getConfig().getConfigV1().model.heads[0].metadata.classes
+classes = recognition_nn_archive.getConfigV1().model.heads[0].metadata.classes
 
 
 
