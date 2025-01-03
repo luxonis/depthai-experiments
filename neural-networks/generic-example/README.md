@@ -2,7 +2,7 @@
 We provide here an example for running inference with a **single model** on a **single-image input** with a **single-head output**.
 The example is generic and can be used for various single-image input models from the [HubAI Model ZOO](https://hub.luxonis.com/ai/models).
 
-# Instalation
+# Installation
 Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
 - [DepthAI](https://pypi.org/project/depthai/),

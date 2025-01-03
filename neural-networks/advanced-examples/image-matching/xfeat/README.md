@@ -27,7 +27,7 @@ You can run the experiment in fully on device (`STANDALONE` mode) or using your 
 
 ### Peripheral Mode
 
-```
+```bash
 python3 main.py --model <MODEL> --device <DEVICE> --fps_limit <FPS_LIMIT>
 ```
 
@@ -42,7 +42,7 @@ If you use model with mono mode (e.g. ``luxonis/xfeat:mono-240x320``), you can s
 
 #### Examples
 
-```
+```bash
 python3 main.py
 ```
 
