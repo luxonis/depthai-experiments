@@ -1,3 +1,4 @@
+from pathlib import Path
 import depthai as dai
 import blobconverter
 
@@ -49,7 +50,7 @@ with dai.Pipeline() as pipeline:
             (ok, id) = mqttc.publish("{MQTT_TOPIC}", avrg, qos=2)
     """
 
-    with open("paho-mqtt.py", "r") as f:
+    with open(Path(__file__).parent / "paho-mqtt.py", "r") as f:
         paho_script = f.read()
         script.setScript(f"{paho_script}\n{script_text}")
     print('Connected to OAK')
