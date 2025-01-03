@@ -4,7 +4,7 @@ from pathlib import Path
 from displayPeopleCounter import DisplayPeopleCounter
 from hostNodes import FrameEditor, InputsConnector
 
-PATH = Path("./resources").resolve().absolute()
+PATH = (Path(__file__).parent / "resources").resolve().absolute()
 SIZE = (1280, 800)
 
 
