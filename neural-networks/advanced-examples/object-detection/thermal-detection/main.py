@@ -2,6 +2,7 @@ import depthai as dai
 from pathlib import Path
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
+from utils.yuv2bgr import YUV2BGR
 
 _, args = initialize_argparser()
 
@@ -47,13 +48,8 @@ with dai.Pipeline(device) as pipeline:
         cam = pipeline.create(dai.node.Thermal).build()
 
         # Thermal "color" output is YUV, model needs BGR
-        yuv2bgr = pipeline.create(dai.node.ImageManip)
-        yuv2bgr.initialConfig.setResize(
-            nn_archive.getInputWidth(), nn_archive.getInputHeight()
-        )
-        yuv2bgr.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-
-        cam.color.link(yuv2bgr.inputImage)
+        yuv2bgr = pipeline.create(YUV2BGR)
+        cam.color.link(yuv2bgr.input)
 
         input_node = yuv2bgr.out
 
