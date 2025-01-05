@@ -27,12 +27,21 @@ jobs:
 
       - name: Install Python to Custom Directory
         run: |
-          mkdir -p custom_python
-          sudo apt-get install --download-only python${{ matrix.python-version }}
-          for deb in /var/cache/apt/archives/python${{ matrix.python-version }}*.deb; do
-            sudo dpkg -x "$deb" ./
+          sudo add-apt-repository ppa:deadsnakes/ppa -y
+          sudo apt-get update
+          mkdir -p python
+          apt-get download \
+            python3.8 \
+            python3.8-minimal \
+            libpython3.8-minimal \
+            libpython3.8-stdlib \
+            python3.8-venv
+          
+          for deb in *.deb; do
+            sudo dpkg -x "$deb" python
+            rm "$deb"
           done
-      
+
       - name: Add HIL Tools to Path
         run: |
           echo "/home/$USER/hil_framework/lib_testbed/tools" >> $GITHUB_PATH
@@ -50,7 +59,7 @@ jobs:
       - name: Run Test
         run: |
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#${{ matrix.python-version}}-${{ matrix.platform }}"
-          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' '/tmp/python gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
+          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' '/tmp/python/usr/bin/python${{ matrix.python-version }} gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
           if [ -n "${{ github.event.inputs.depthai_version }}" ]; then
             CMD="$CMD --depthai-version ${{ github.event.inputs.depthai_version }}"
           fi
