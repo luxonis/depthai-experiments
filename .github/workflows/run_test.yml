@@ -25,13 +25,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Move Python to Current Directory
-        run: cp $(which python) ./
+      - name: Install Python to Custom Directory
+        run: |
+          mkdir -p custom_python
+          sudo apt-get install --download-only python${{ matrix.python-version }}
+          for deb in /var/cache/apt/archives/python${{ matrix.python-version }}*.deb; do
+            sudo dpkg -x "$deb" ./
+          done
       
       - name: Add HIL Tools to Path
         run: |
