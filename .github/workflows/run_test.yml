@@ -27,8 +27,8 @@ jobs:
 
       - name: Install Python to Custom Directory
         run: |
-          sudo add-apt-repository ppa:deadsnakes/ppa -y
-          sudo apt-get update
+          add-apt-repository ppa:deadsnakes/ppa -y
+          apt-get update
           mkdir -p python
           apt-get download \
             python3.8 \
@@ -38,7 +38,7 @@ jobs:
             python3.8-venv
           
           for deb in *.deb; do
-            sudo dpkg -x "$deb" python
+            dpkg -x "$deb" python
             rm "$deb"
           done
 
