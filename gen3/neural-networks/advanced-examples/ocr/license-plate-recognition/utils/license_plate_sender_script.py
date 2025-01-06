@@ -33,12 +33,12 @@ try:
                 continue
 
             license_plate_detection = sorted(license_plate_detections, key=lambda x: x.confidence, reverse=True)[0]
-            if license_plate_detection.confidence < 0.7:
+            if license_plate_detection.confidence < 0.5:
                 continue
             
-            # license_plate_detection.xmin = license_plate_detection.xmin * 1.5
+            license_plate_detection.xmin = license_plate_detection.xmin * 1.02
             license_plate_detection.ymin = license_plate_detection.ymin * 1.03
-            # license_plate_detection.xmax = license_plate_detection.xmax * 0.95
+            license_plate_detection.xmax = license_plate_detection.xmax * 0.98
             license_plate_detection.ymax = license_plate_detection.ymax * 0.97
             
             lp_x_min, lp_y_min, lp_x_max, lp_y_max = denormalize_detection(license_plate_detection, w, h)                            
@@ -62,8 +62,8 @@ try:
             
             valid_detections.append(d)
             valid_crops.append(license_plate_detection)
-            node.outputs['output_config'].send(cfg)
-            node.outputs['output_frame'].send(frame)
+            node.outputs['lp_crop_config'].send(cfg)
+            node.outputs['lp_crop_frame'].send(frame)
             
         valid_detections_msg = dai.ImgDetections()
         valid_detections_msg.detections = valid_detections
