@@ -5,7 +5,6 @@ This example shows an implementation of [Text Detection](https://hub.luxonis.com
 ![Image example](imgs/output.gif)
 
 # Instalation
-Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 ```bash
 pip install -r requirements.txt
