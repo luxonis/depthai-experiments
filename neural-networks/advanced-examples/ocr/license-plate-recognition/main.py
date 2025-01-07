@@ -1,15 +1,12 @@
-import argparse
 from pathlib import Path
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from pathlib import Path
-
-import cv2
-import numpy as np
+from utils.visualizer_node import VisualizeLicensePlates
 
 _, args = initialize_argparser()
-
+visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device( dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
 platform = device.getPlatform()
 
@@ -93,61 +90,24 @@ with dai.Pipeline(device) as pipeline:
     ocr_node.getParser(0).setIgnoredIndexes([0, 11, 12, 13, 14, 15, 16, 17, 44, 45, 46, 47, 48, 49, 76, 77, 78, 79, 
                                 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 93, 94, 95, 96])
 
-    # link to output queues
-    vehicle_detections_queue = lp_config_sender.outputs["output_valid_detections"].createOutputQueue()
-    vehicle_det_passthrough_image = vehicle_detection_node.passthrough.createOutputQueue()
-    ocr_output_queue = ocr_node.out.createOutputQueue()
-    lp_crop_detections_queue = lp_config_sender.outputs["output_valid_crops"].createOutputQueue()
-    lp_crop_image_queue = lp_crop_node.out.createOutputQueue()
+    # link to visualizer node
+    visualizer_node = pipeline.create(VisualizeLicensePlates)
+    lp_config_sender.outputs["output_valid_detections"].link(visualizer_node.vehicle_detections)
+    vehicle_detection_node.passthrough.link(visualizer_node.input_frame)
+    ocr_node.out.link(visualizer_node.ocr_results)
+    lp_config_sender.outputs["output_valid_crops"].link(visualizer_node.lp_crop_detections)
+    lp_crop_node.out.link(visualizer_node.lp_crop_images)
+
+    visualizer.addTopic("License Plates", visualizer_node.out)
     
     print("Pipeline created.")
     pipeline.start()
-
+    visualizer.registerPipeline(pipeline)
     while pipeline.isRunning():
-        frame = vehicle_det_passthrough_image.get().getCvFrame()
-        frame_h, frame_w = frame.shape[:2]   
-        
-        detections = vehicle_detections_queue.get().detections
-        crop_detections = lp_crop_detections_queue.get().detections
-        
-        for detection, lp_detection in zip(detections, crop_detections):
-            x_min = int(detection.xmin * frame_w)
-            y_min = int(detection.ymin * frame_h)
-            x_max = int(detection.xmax * frame_w)
-            y_max = int(detection.ymax * frame_h)
-            
-            vehicle_w = x_max - x_min
-            vehicle_h = y_max - y_min
-            
-            ocr_message = ocr_output_queue.get()
-            text = "".join(ocr_message.classes)
-            license_plate = lp_crop_image_queue.get().getCvFrame()
-            
-            if len(text) < 5:
-                continue
-            
-            lp_x_min = int(lp_detection.xmin * vehicle_w) + x_min
-            lp_y_min = int(lp_detection.ymin * vehicle_h) + y_min
-            lp_x_max = int(lp_detection.xmax * vehicle_w) + x_min
-            lp_y_max = int(lp_detection.ymax * vehicle_h) + y_min
-            
-            lp_x_min = np.clip(lp_x_min, 0, frame_w)
-            lp_y_min = np.clip(lp_y_min, 0, frame_h)
-            lp_x_max = np.clip(lp_x_max, 0, frame_w)
-            lp_y_max = np.clip(lp_y_max, 0, frame_h)
-            
-            license_plate = cv2.resize(license_plate, (80, 12))
-
-            white_frame = np.ones((12, 80, 3)) * 255
-            cv2.putText(white_frame, text,(2, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
-            crop_region = frame[lp_y_max:lp_y_max + 24, lp_x_min:lp_x_min+80]
-            lp_text = np.concatenate((license_plate, white_frame), axis=0)
-            lp_text = cv2.resize(lp_text, (crop_region.shape[1], crop_region.shape[0]))
-            
-            frame[lp_y_max:lp_y_max + crop_region.shape[0], lp_x_min:lp_x_min+crop_region.shape[1]] = lp_text
-
-        cv2.imshow("License Plate Detection", frame)
-        cv2.waitKey(1)
+            key = visualizer.waitKey(1)
+            if key == ord('q'):
+                print("Got q key. Exiting...")
+                break
         
     pipeline.stop()
     
