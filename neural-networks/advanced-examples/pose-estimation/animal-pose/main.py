@@ -41,7 +41,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        replay.setFps(6 if platform == "RVC2" else 20)
+        replay.setFps(4 if platform == "RVC2" else 20)
         imageManip = pipeline.create(dai.node.ImageManipV2)
         imageManip.setMaxOutputFrameSize(
             detection_nn_archive.getInputWidth() * detection_nn_archive.getInputHeight() * 3
