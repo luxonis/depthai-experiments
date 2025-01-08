@@ -4,7 +4,7 @@ from depthai_nodes.ml.messages import ImgDetectionsExtended, ImgDetectionExtende
 from typing import List
 
 class AnnotationNode(dai.node.ThreadedHostNode):
-    def __init__(self, connection_pairs: List[List[int]], valid_labels: List[int] = [56]) -> None:
+    def __init__(self, connection_pairs: List[List[int]], valid_labels: List[int] = [56], padding: float = 0.2) -> None:
         super().__init__()
 
         self.input_detections = self.createInput()
@@ -14,6 +14,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
         
         self.connection_pairs = connection_pairs
         self.valid_labels = valid_labels
+        self.padding = padding
 
     def run(self):
         while self.isRunning():
@@ -28,7 +29,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
 
             annotations = dai.ImgAnnotations()  # custom annotations for drawing lines between keypoints
 
-            padding = 0.2
+            padding = self.padding
 
             for ix, detection in enumerate(detections_list):
                 if detection.label not in self.valid_labels:  # label not chair

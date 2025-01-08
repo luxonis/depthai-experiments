@@ -3,11 +3,15 @@ import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
+from utils.script import generate_script_content
 
 _, args = initialize_argparser()
 
 detection_model_slug = "luxonis/yolov6-nano:r2-coco-512x288"
 pose_model_slug = "luxonis/objectron:chair-224x224"
+
+padding = 0.2
+valid_labels = [56] # chair
 
 if args.fps_limit and args.media_path:
     args.fps_limit = None
@@ -68,8 +72,14 @@ with dai.Pipeline(device) as pipeline:
     script = pipeline.create(dai.node.Script)
     detection_nn.out.link(script.inputs['det_in'])
     detection_nn.passthrough.link(script.inputs['preview'])
-    script_filename = "script_rvc2.py" if platform == "RVC2" else "script_rvc4.py"
-    script.setScriptPath(Path(__file__).parent / script_filename)
+    script_content = generate_script_content(
+        platform=platform.lower(),
+        resize_width=pose_nn_archive.getInputWidth(),
+        resize_height=pose_nn_archive.getInputHeight(),
+        padding=padding,
+        valid_labels=valid_labels
+    )
+    script.setScript(script_content)
 
     if platform == "RVC2":
         pose_manip = pipeline.create(dai.node.ImageManip)
@@ -84,7 +94,7 @@ with dai.Pipeline(device) as pipeline:
 
     pose_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(pose_manip.out, pose_nn_archive)
 
-    annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs)
+    annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs, padding=padding, valid_labels=valid_labels)
     detection_nn.out.link(annotation_node.input_detections)
     pose_nn.getOutput(0).link(annotation_node.input_keypoints)
 
