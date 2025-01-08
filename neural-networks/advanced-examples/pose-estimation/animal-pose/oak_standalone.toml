@@ -1,4 +1,4 @@
-identifier = "com.luxonis.xfeat-example"
+identifier = "com.luxonis.superanimal-example"
 
 entrypoint = ["bash", "-c", "python3 /app/main.py <FPS> <MEDIA>"]
 
