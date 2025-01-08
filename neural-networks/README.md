@@ -50,7 +50,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | [yolov8-large-pose-estimation](https://hub.luxonis.com/ai/models/8be178a0-e643-4f1e-b925-06512e4e15c7?view=page) | [gen2-human-pose](https://github.com/luxonis/depthai-experiments/tree/master/gen2-human-pose) | [generic-example](generic-example/) | ❌ | ✅ | 🚧 |  |
 | [lite-hrnet](https://hub.luxonis.com/ai/models/c7c9e353-9f6d-43e1-9b45-8edeae82db70?view=page) | [gen2-human-pose](https://github.com/luxonis/depthai-experiments/tree/master/gen2-human-pose) | [generic-example](generic-example/) | ✅ | ✅ | 🚧 | must be coupled with a human detection model for optimal performance |
 | [superanimal-landmarker](https://hub.luxonis.com/ai/models/894cf1a2-23fb-4c96-8944-a0d1be38a7c7?view=page) | | [generic-example](generic-example/) | ✅ | ✅ | 🚧 | must be coupled with an animal detection model for optimal performance |
-| [objectron](https://hub.luxonis.com/ai/models/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11?view=page) | | 🚧 | 🚧 | 🚧 | 🚧 | multi-head |
+| [objectron](https://hub.luxonis.com/ai/models/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11?view=page) | | [objectron](advanced-examples/3D-detections/objectron/) | ✅ | ✅ | [📸](advanced-examples/3D-detections/objectron/media/chair.gif) | |
 | [mediapipe-hand-landmarker](https://hub.luxonis.com/ai/models/42815cca-deab-4860-b4a9-d44ebbe2988a?view=page) | | 🚧 | 🚧 | 🚧 | 🚧 | multi-head; must be coupled with a hand detection model for optimal performance |
 
 ### Segmentation
