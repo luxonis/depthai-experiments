@@ -33,7 +33,7 @@ target_res = [int(x) for x in args.upload_res.split("x")]
 with dai.Pipeline() as pipeline:
 
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera).build()
+    cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(target_res[0], target_res[1])
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
     cam.setInterleaved(False)
@@ -45,7 +45,7 @@ with dai.Pipeline() as pipeline:
     manip.initialConfig.setResize(300, 300)
     cam.preview.link(manip.inputImage)
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork).build()
+    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
     nn.setConfidenceThreshold(0.5)
     nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=5))
     nn.setNumInferenceThreads(2)
