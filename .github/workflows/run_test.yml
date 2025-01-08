@@ -25,6 +25,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Update HIL
+        run: |
+          cd /home/$USER/hil_framework
+          git pull https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git 
+
       - name: Add HIL Tools to Path
         run: |
           echo "/home/$USER/hil_framework/lib_testbed/tools" >> $GITHUB_PATH
