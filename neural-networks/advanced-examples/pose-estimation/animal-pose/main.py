@@ -72,11 +72,11 @@ with dai.Pipeline(device) as pipeline:
 
     if platform == "RVC2":
         pose_manip = pipeline.create(dai.node.ImageManip)
-        pose_manip.initialConfig.setResize(256, 256)
+        pose_manip.initialConfig.setResize(pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight())
         pose_manip.inputConfig.setWaitForMessage(True)
     elif platform == "RVC4":
         pose_manip = pipeline.create(dai.node.ImageManipV2)
-        pose_manip.initialConfig.setOutputSize(256, 256)
+        pose_manip.initialConfig.setOutputSize(pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight())
         pose_manip.inputConfig.setWaitForMessage(True)
     script.outputs['manip_cfg'].link(pose_manip.inputConfig)
     script.outputs['manip_img'].link(pose_manip.inputImage)
