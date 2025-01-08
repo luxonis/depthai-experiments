@@ -4,13 +4,10 @@ try:
         dets = node.inputs['det_in'].get()
 
         labels = [56] # chair
-        score_threshold = 0.5
         padding = 0.2
         
         for i, det in enumerate(dets.detections):
             if det.label not in labels:
-                continue
-            if det.confidence < score_threshold:
                 continue
             cfg = ImageManipConfigV2()
             rect = RotatedRect()
