@@ -1,6 +1,7 @@
 ARG PYTHON_VERSION
 FROM alpine AS arg-check
 ARG PYTHON_VERSION
+RUN echo ${PYTHON_VERSION}
 RUN [ -n "$PYTHON_VERSION" ] || (echo "PYTHON_VERSION build argument is required" && exit 1)
 
 FROM python:${PYTHON_VERSION}
