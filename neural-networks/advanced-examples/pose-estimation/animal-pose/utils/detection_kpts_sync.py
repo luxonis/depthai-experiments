@@ -11,13 +11,11 @@ class DetectionsKeypointsSync(dai.node.ThreadedHostNode):
         super().__init__()
         self.keypoints_input = self.createInput(blocking=True)
         self.detections_input = self.createInput(blocking=True)
-        self.passthrough_input = self.createInput(blocking=True)
         
         self.out = self.createOutput()
         
     def run(self) -> None:
         while self.isRunning():
-            passthrough = self.passthrough_input.get()
             detections_message: dai.ImgDetections = self.detections_input.get()
             
             message_group = dai.MessageGroup()
@@ -38,6 +36,5 @@ class DetectionsKeypointsSync(dai.node.ThreadedHostNode):
             keypoints_message.setTimestamp(det_ts)
             message_group["detections"]= detections_message
             message_group["keypoints"]= keypoints_message
-            message_group["passthrough"]= passthrough
                 
             self.out.send(message_group)

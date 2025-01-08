@@ -22,7 +22,6 @@ class AnnotationNode(dai.node.ThreadedHostNode):
             img_detections_exteded = ImgDetectionsExtended()
 
             annotations = dai.ImgAnnotations()  # custom annotations for drawing lines between keypoints
-            annotation = dai.ImgAnnotation()
 
             padding = 0.1
 
@@ -55,6 +54,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                         new_keypoints.append(new_kp)
                     img_detection_extended.keypoints = new_keypoints
 
+                    annotation = dai.ImgAnnotation()
                     for connection in self.connection_pairs:
                         pt1_idx, pt2_idx = connection
                         if pt1_idx < len(new_keypoints) and pt2_idx < len(new_keypoints):
@@ -66,16 +66,14 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                                 [dai.Point2f(x=x1, y=y1, normalized=True), dai.Point2f(x=x2, y=y2, normalized=True)]
                             )
                             pointsAnnotation.outlineColor = OUTLINE_COLOR
-                            pointsAnnotation.thickness = 2.0
+                            pointsAnnotation.thickness = 1.0
                             annotation.points.append(pointsAnnotation)
                 
                 img_detections_exteded.detections.append(img_detection_extended)
                 annotations.annotations.append(annotation)
-                annotations.setTimestamp(message_group["detections"].getTimestamp())
-            
+            annotations.setTimestamp(message_group["detections"].getTimestamp())
             img_detections_exteded.setTimestamp(message_group["detections"].getTimestamp())
             img_detections_exteded.transformation = message_group["detections"].getTransformation()
 
             self.out_detections.send(img_detections_exteded)
             self.out_pose_annotations.send(annotations)
-                
