@@ -1,9 +1,8 @@
 ARG PYTHON_VERSION
-ARG PLATFORM
-ARG DAI_VERSION
 FROM python:${PYTHON_VERSION}
 
-RUN echo "Python version: ${PYTHON_VERSION}, PLATFORM: ${PLATFORM}, ${DAI_VERSION}"
+ENV PLATFORM=""
+ENV DAI_VERSION=""
 
 # Install Virtual Display
 RUN apt-get update && apt-get install -y \
@@ -14,9 +13,14 @@ RUN apt-get update && apt-get install -y \
 ENV DISPLAY=:99
 
 # Setup Test Command
-RUN ls
-RUN $CMD="python test/gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${PLATFORM} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
-RUN if [ -n "$DAI_VERSION" ]; then CMD="$CMD --depthai-version $DAI_VERSION" fi
-RUN CMD="$CMD'"
-
-ENTRYPOINT ["/bin/sh", "-c", "eval $CMD"]
+WORKDIR /tmp/depthai-experiments
+ENTRYPOINT ["sh", "-c", "\
+    if [ -z \"$PLATFORM\" ]; then \
+        echo 'Error: PLATFORM environment variable is required' && \
+        exit 1; \
+    fi && \
+    python test/gen3_script_tester.py \
+    --environment-variables DEPTHAI_PLATFORM=${PLATFORM} \
+    --virtual-display \
+    --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer \
+    ${DAI_VERSION:+--depthai-version ${DAI_VERSION}}"]
