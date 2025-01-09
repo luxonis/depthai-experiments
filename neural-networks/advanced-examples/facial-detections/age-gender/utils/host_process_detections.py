@@ -36,15 +36,10 @@ class ProcessDetections(dai.node.ThreadedHostNode):
 
     def run(self) -> None:
         while self.isRunning():
-            print("[ProcessDetections] get process_detections/img_detections_input")
             img_detections = self.detections_input.get()
-            
-            print(f"[ProcessDetections {img_detections.getSequenceNum()}] got process_detections/img_detections_input with ts {img_detections.getTimestamp()}")
             detections = img_detections.detections
 
             # w, h = img_detections.transformation.getSize()
-            
-            print(f"[ProcessDetections {img_detections.getSequenceNum()}] got {len(detections)} process_detections/img_detections_input")
             configs_message = dai.MessageGroup()
             for i, detection in enumerate(detections):
                 cfg = dai.ImageManipConfigV2()
@@ -61,20 +56,15 @@ class ProcessDetections(dai.node.ThreadedHostNode):
                 
             configs_message.setSequenceNum(img_detections.getSequenceNum()) 
             configs_message.setTimestamp(img_detections.getTimestamp())
-            print(f"[ProcessDetections {img_detections.getSequenceNum()}] sending {len(detections)} process_detections/img_detections_input")
             self.config_output.send(configs_message)
-            print(f"[ProcessDetections {img_detections.getSequenceNum()}] sent {len(detections)} process_detections/img_detections_input")
-            
     
     def set_target_size(self, w: int, h: int):
         """ Set the target size for the output image. """
-
         self._target_w = w
         self._target_h = h
     
     def set_source_size(self, w: int , h: int):
         """ Set the source size for the input image. """
-        
         self._w = w
         self._h = h
 
