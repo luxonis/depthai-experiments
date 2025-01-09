@@ -1,105 +1,114 @@
+from pathlib import Path
 import depthai as dai
-from depthai_nodes.ml.parsers import KeypointParser
-from host_node.crop_detection import CropDetection
-from host_node.detection_label_filter import DetectionLabelFilter
-from host_node.draw_detections import DrawDetections
-from host_node.host_display import Display
-from host_node.normalize_detections import NormalizeDetections
-from host_node.translate_cropped_detection import TranslateCroppedDetection
+from depthai_nodes import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.annotation_node import AnnotationNode
+from utils.script import generate_script_content
 
-device = dai.Device()
+_, args = initialize_argparser()
 
+detection_model_slug = "luxonis/yolov6-nano:r2-coco-512x288"
+pose_model_slug = "luxonis/objectron:chair-224x224"
 
-detection_model_description = dai.NNModelDescription(
-    modelSlug="yolov6-nano",
-    platform=device.getPlatform().name,
-    modelVersionSlug="r2-coco-512x288",
-)
-detection_archive_path = dai.getModelFromZoo(detection_model_description)
-detection_nn_archive = dai.NNArchive(detection_archive_path)
+padding = 0.2
+valid_labels = [56] # chair
 
-pose_model_description = dai.NNModelDescription(
-    modelSlug="objectron",
-    platform=device.getPlatform().name,
-    modelVersionSlug="chair-224x224",
-)
-pose_archive_path = dai.getModelFromZoo(pose_model_description)
-pose_nn_archive = dai.NNArchive(pose_archive_path)
+if args.fps_limit and args.media_path:
+    args.fps_limit = None
+    print(
+        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
+    )
 
-DETECTION_NN_WIDTH, DETECTION_NN_HEIGHT = 512, 288
-POSE_NN_WIDTH, POSE_NN_HEIGHT = 224, 224
-VIDEO_WIDTH, VIDEO_HEIGHT = 1280, 720
-DETECTION_BBOX_PADDING = 0.1
-
-OBJECTRON_LINES = [
-    (1, 2),
-    (2, 4),
-    (1, 3),
-    (4, 3),
-    (2, 6),
-    (1, 5),
-    (3, 7),
-    (4, 8),
-    (6, 8),
-    (7, 8),
-    (7, 5),
-    (5, 6),
-]
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
 with dai.Pipeline(device) as pipeline:
-    # Create a camera
-    cam = pipeline.create(dai.node.Camera).build(
-        boardSocket=dai.CameraBoardSocket.CAM_A
-    )
-    video = cam.requestOutput(
-        size=(VIDEO_WIDTH, VIDEO_HEIGHT), type=dai.ImgFrame.Type.BGR888p, fps=10
+    print("Creating pipeline...")
+
+    detection_model_description = dai.NNModelDescription(detection_model_slug)
+    platform = device.getPlatform().name
+    print(f"Platform: {platform}")
+    detection_model_description.platform = platform
+    detection_nn_archive = dai.NNArchive(dai.getModelFromZoo(detection_model_description))
+    classes = detection_nn_archive.getConfig().model.heads[0].metadata.classes
+
+    pose_model_description = dai.NNModelDescription(pose_model_slug)
+    pose_model_description.platform = platform
+    pose_nn_archive = dai.NNArchive(dai.getModelFromZoo(pose_model_description, useCached=False))
+    connection_pairs = pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["lines"]
+
+    frame_type = dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        replay.setFps(12 if platform == "RVC2" else 20)
+        imageManip = pipeline.create(dai.node.ImageManipV2)
+        imageManip.setMaxOutputFrameSize(
+            detection_nn_archive.getInputWidth() * detection_nn_archive.getInputHeight() * 3
+        )
+        imageManip.initialConfig.setOutputSize(
+            detection_nn_archive.getInputWidth(), detection_nn_archive.getInputHeight()
+        )
+        imageManip.initialConfig.setFrameType(frame_type)
+        if platform == "RVC4":
+            imageManip.initialConfig.setFrameType(frame_type)
+        replay.out.link(imageManip.inputImage)
+
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+    input_node = (
+        imageManip.out if args.media_path else cam
     )
 
-    # Create a Manip that resizes image before detection
-    manip_det = pipeline.create(dai.node.ImageManip)
-    manip_det.initialConfig.setResize(DETECTION_NN_WIDTH, DETECTION_NN_HEIGHT)
-    manip_det.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    video.link(manip_det.inputImage)
-
-    nn_detection = pipeline.create(dai.node.DetectionNetwork)
-    nn_detection.build(manip_det.out, detection_nn_archive)
-    nn_detection.setConfidenceThreshold(0.5)
-
-    detection_filter = pipeline.create(DetectionLabelFilter).build(
-        nn=nn_detection.out, accepted_labels=[nn_detection.getClasses().index("chair")]
-    )  # Filter only chairs
-    crop_bbox = pipeline.create(CropDetection).build(nn=detection_filter.output)
-    crop_bbox.set_resize((POSE_NN_WIDTH, POSE_NN_HEIGHT))
-    crop_bbox.set_bbox_padding(DETECTION_BBOX_PADDING)
-    crop_bbox_manip = pipeline.create(dai.node.ImageManip)
-    crop_bbox_manip.initialConfig.setResize(POSE_NN_WIDTH, POSE_NN_HEIGHT)
-    crop_bbox_manip.inputConfig.setWaitForMessage(False)
-    manip_det.out.link(crop_bbox_manip.inputImage)
-    crop_bbox.output_config.link(crop_bbox_manip.inputConfig)
-
-    nn_pose = pipeline.create(dai.node.NeuralNetwork).build(
-        input=crop_bbox_manip.out, nnArchive=pose_nn_archive
+    detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        input_node,
+        detection_nn_archive,
+        args.fps_limit
     )
-    pose_parser = pipeline.create(KeypointParser)
-    pose_parser.setNumKeypoints(9)
-    pose_parser.setScaleFactor(224)
-    nn_pose.out.link(pose_parser.input)
-    translate_cropped = pipeline.create(TranslateCroppedDetection).build(
-        detection_nn=crop_bbox.detection_passthrough, cropped_nn=pose_parser.out
-    )
-    translate_cropped.set_bbox_padding(DETECTION_BBOX_PADDING)
-    normalize_pose = pipeline.create(NormalizeDetections).build(
-        frame=video, nn=translate_cropped.output
-    )
-    draw_pose = pipeline.create(DrawDetections).build(
-        frame=video,
-        nn=normalize_pose.output,
-        label_map=["chair"],
-        lines=OBJECTRON_LINES,
-    )
-    display_pose = pipeline.create(Display).build(frames=draw_pose.output)
-    display_pose.setName("Objectron")
 
-    print("pipeline created")
-    pipeline.run()
-    print("pipeline finished")
+    script = pipeline.create(dai.node.Script)
+    detection_nn.out.link(script.inputs['det_in'])
+    detection_nn.passthrough.link(script.inputs['preview'])
+    script_content = generate_script_content(
+        platform=platform.lower(),
+        resize_width=pose_nn_archive.getInputWidth(),
+        resize_height=pose_nn_archive.getInputHeight(),
+        padding=padding,
+        valid_labels=valid_labels
+    )
+    script.setScript(script_content)
+
+    if platform == "RVC2":
+        pose_manip = pipeline.create(dai.node.ImageManip)
+        pose_manip.initialConfig.setResize(pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight())
+        pose_manip.inputConfig.setWaitForMessage(True)
+    elif platform == "RVC4":
+        pose_manip = pipeline.create(dai.node.ImageManipV2)
+        pose_manip.initialConfig.setOutputSize(pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight())
+        pose_manip.inputConfig.setWaitForMessage(True)
+    script.outputs['manip_cfg'].link(pose_manip.inputConfig)
+    script.outputs['manip_img'].link(pose_manip.inputImage)
+
+    pose_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(pose_manip.out, pose_nn_archive)
+
+    annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs, padding=padding, valid_labels=valid_labels)
+    detection_nn.out.link(annotation_node.input_detections)
+    pose_nn.getOutput(0).link(annotation_node.input_keypoints)
+
+    visualizer.addTopic("Video", detection_nn.passthrough, "images")
+    visualizer.addTopic("Detections", annotation_node.out_detections, "images")
+    visualizer.addTopic("Pose", annotation_node.out_pose_annotations, "images")
+
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            pipeline.stop()
+            break
