@@ -7,8 +7,8 @@ from utils.script import generate_script_content
 
 _, args = initialize_argparser()
 
-detection_model_slug = "luxonis/yolov6-nano:r2-coco-512x288"
-pose_model_slug = "luxonis/lite-hrnet:18-coco-256x192"
+detection_model_slug: str = "luxonis/yolov6-nano:r2-coco-512x288"
+pose_model_slug: str = args.model
 
 padding = 0.1
 valid_labels=[0]
@@ -36,8 +36,7 @@ with dai.Pipeline(device) as pipeline:
     pose_model_description = dai.NNModelDescription(pose_model_slug)
     pose_model_description.platform = platform
     pose_nn_archive = dai.NNArchive(dai.getModelFromZoo(pose_model_description, useCached=False))
-    # connection_pairs = pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["connection_pairs"]
-    connection_pairs = [[15, 13], [13, 11], [16, 14], [14, 12], [11, 12],[5, 11], [6, 12], [5, 6], [5, 7], [6, 8], [7, 9],[8, 10], [1, 2], [0, 1], [0, 2], [1, 3], [2, 4],[3, 5], [4, 6]]
+    connection_pairs = pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["connection_pairs"]
 
     frame_type = dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
 

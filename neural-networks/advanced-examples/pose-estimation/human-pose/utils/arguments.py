@@ -5,6 +5,15 @@ def initialize_argparser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        "-m",
+        "--model",
+        help="Pose model to run the inference on.",
+        required=False,
+        default="luxonis/lite-hrnet:18-coco-256x192",
+        type=str,
+    )
+
+    parser.add_argument(
         "-d",
         "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
