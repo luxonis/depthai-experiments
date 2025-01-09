@@ -47,4 +47,4 @@ jobs:
       - name: Run Test
         run: |
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#${{ matrix.python-version}}-${{ matrix.platform }}"
-          hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --dockerfile /tmp/depthai-experiments/test/Dockerfile --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }} PLATFORM=${{ matrix.platform }} DAI_VERSION=${{ github.event.inputs.depthai_version }}"
+          hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --dockerfile ./test/Dockerfile --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }} PLATFORM=${{ matrix.platform }} DAI_VERSION=${{ github.event.inputs.depthai_version }}"
