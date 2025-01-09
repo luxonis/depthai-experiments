@@ -93,15 +93,9 @@ with dai.Pipeline(device) as pipeline:
 
     pose_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(pose_manip.out, pose_nn_archive)
 
-    sync = pipeline.create(DetectionsKeypointsSync)
-    sync.keypoints_input.setBlocking(True)
-    sync.keypoints_input.setMaxSize(20)
-
-    pose_nn.out.link(sync.keypoints_input)
-    detection_nn.out.link(sync.detections_input)
-
-    annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs, padding=padding)
-    sync.out.link(annotation_node.input)
+    annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs, valid_labels=valid_labels, padding=padding)
+    detection_nn.out.link(annotation_node.input_detections)
+    pose_nn.out.link(annotation_node.input_keypoints)
     
     visualizer.addTopic("Video", detection_nn.passthrough, "images")
     visualizer.addTopic("Detections", annotation_node.out_detections, "images")
