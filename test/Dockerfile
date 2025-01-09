@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y \
 ENV DISPLAY=:99
 
 # Setup Test Command
-COPY . .
 RUN ls
 RUN $CMD="python test/gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${PLATFORM} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
 RUN if [ -n "$DAI_VERSION" ]; then CMD="$CMD --depthai-version $DAI_VERSION" fi
