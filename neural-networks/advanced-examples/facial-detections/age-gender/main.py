@@ -3,18 +3,21 @@ import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
-from utils.host_sync import DetectionsRecognitionsSync
+from utils.host_sync import DetectionsAgeGenderSync
+from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
-# visualizer = dai.RemoteConnection(httpPort=8082)
+visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device( dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
 platform = device.getPlatform()
 
-FPS = 5
+FPS = 20
 frame_type = dai.ImgFrame.Type.BGR888p
 if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 15
+    FPS = 30
+else:
+    raise RuntimeError("This demo is currently only supported on RVC4")
     
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -61,7 +64,6 @@ with dai.Pipeline(device) as pipeline:
     input_node.link(config_sender_node.inputs["frame_input"])
     detection_process_node.config_output.link(config_sender_node.inputs["config_input"])
     
-    
     crop_node = pipeline.create(dai.node.ImageManipV2)
     crop_node.initialConfig.setReusePreviousImage(False)
     crop_node.inputConfig.setReusePreviousMessage(False)
@@ -75,30 +77,24 @@ with dai.Pipeline(device) as pipeline:
         crop_node.out, "luxonis/age-gender-recognition:new-62x62"
         )
 
+    sync_node = pipeline.create(DetectionsAgeGenderSync)
+    input_node.link(sync_node.passthrough_input)
+    face_detection_node.out.link(sync_node.detections_input)
+    age_gender_node.getOutput(0).link(sync_node.age_input)
+    age_gender_node.getOutput(1).link(sync_node.gender_input)
     
-    sync = pipeline.create(DetectionsRecognitionsSync)
-    input_node.link(sync.passthrough_input)
-    face_detection_node.out.link(sync.detections_input)
-    age_gender_node.out.link(sync.recognitions_input)
+    annotation_node = pipeline.create(AnnotationNode)
+    sync_node.out.link(annotation_node.input)
     
-    output_q = sync.out.createOutputQueue()
+    visualizer.addTopic("Video", sync_node.out_frame)
+    visualizer.addTopic("Text", annotation_node.output)
     
     print("Pipeline created.")
     pipeline.start()
-
+    visualizer.registerPipeline(pipeline)
+    
     while pipeline.isRunning():
-        msg = output_q.get()
-        frame = msg["passthrough"].getCvFrame()
-        det_msg = msg["detections"]
-        rec_msg = msg["recognitions"]
-        
-        frame_ts = frame.getTimestamp()
-        det_ts = det_msg.getTimestamp()
-        rec_ts = rec_msg.getTimestamp()
-        print(f"Frame ts: {frame_ts}, Det ts: {det_ts}, Rec ts: {rec_ts}")
-        
-        for detection, recognition in zip(det_msg.detections, rec_msg.recognitions):
-            print(detection)
-            print("rec", recognition)
-            
-        
+        key = visualizer.waitKey(1)
+        if key == ord('q'):
+            print("Got q key. Exiting...")
+            break

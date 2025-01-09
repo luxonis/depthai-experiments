@@ -1,43 +1,43 @@
 import depthai as dai
 import numpy as np
-from depthai_nodes.ml.helpers.constants import TEXT_COLOR
+from depthai_nodes.ml.helpers.constants import TEXT_COLOR, OUTLINE_COLOR
 
-class OCRAnnotationNode(dai.node.ThreadedHostNode):
+class AnnotationNode(dai.node.ThreadedHostNode):
     def __init__(self):
         super().__init__()
-        
         self.input = self.createInput()
-        self.white_frame_output = self.createOutput()
-        self.text_annotations_output = self.createOutput()
+        self.output = self.createOutput()
         
     def run(self):
         while self.isRunning():
-            print("[Ann] get annotation_node/text_descriptions")
-            text_descriptions = self.input.get()
-            print(f"[Ann {text_descriptions.getSequenceNum()}] got annotation_node/text_descriptions with ts {text_descriptions.getTimestamp()}")
-            frame = text_descriptions["passthrough"].getCvFrame()
-            detections_list = text_descriptions["detections"].detections
-            recognitions_message = text_descriptions["recognitions"]
+            descriptions = self.input.get()
             
-            white_frame = np.ones(frame.shape, dtype=np.uint8) * 255
+            detections_msg = descriptions["detections"]
+            genders_msg = descriptions["genders"]
+            ages_msg = descriptions["ages"]
+            
             annotation = dai.ImgAnnotation()
             img_annotations = dai.ImgAnnotations()
-            for i, recognition in enumerate(recognitions_message.recognitions):
-                detection = detections_list[i]
+            for detection, gender, age in zip(detections_msg.detections, genders_msg.genders, ages_msg.ages):
                 points = detection.rotated_rect.getPoints()
-                
+
+                points_annotation = dai.PointsAnnotation()
+                points_annotation.type = dai.PointsAnnotationType.LINE_LOOP
+                points_annotation.points =  dai.VectorPoint2f(points)
+                points_annotation.outlineColor = OUTLINE_COLOR
+                points_annotation.thickness = 2
+                annotation.points.append(points_annotation)
+
                 text_annotation = dai.TextAnnotation()
-                text_annotation.position = points[3]
-                text_annotation.text = "".join(recognition.classes)
-                text_annotation.fontSize = (points[3].y - points[0].y) * white_frame.shape[0]
+                text_annotation.position = points[0]
+                text_annotation.text =f"{gender.classes[0]} {int(age.prediction * 100)}"
+                text_annotation.fontSize = 50
                 text_annotation.textColor = TEXT_COLOR
                 annotation.texts.append(text_annotation)
             
-            img_annotations.annotations.append(annotation)
-            img_annotations.setTimestamp(recognitions_message.getTimestamp())
-            output_frame = dai.ImgFrame()
-            img_annotations.setSequenceNum(text_descriptions.getSequenceNum())
             
-            self.white_frame_output.send(output_frame.setCvFrame(white_frame, dai.ImgFrame.Type.NV12))
-            self.text_annotations_output.send(img_annotations)
-                
+            img_annotations.annotations.append(annotation)
+            img_annotations.setTimestamp(descriptions.getTimestamp())
+            img_annotations.setSequenceNum(descriptions.getSequenceNum())
+            
+            self.output.send(img_annotations)

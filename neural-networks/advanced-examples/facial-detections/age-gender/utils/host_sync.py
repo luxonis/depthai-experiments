@@ -1,20 +1,26 @@
 import depthai as dai
 from typing import List
 
-class DetectedRecognitions(dai.Buffer):
-    def __init__(self, recognitions: List[dai.Buffer]):
+class Ages(dai.Buffer):
+    def __init__(self, ages: List[dai.Buffer]):
         super().__init__()
-        self.recognitions: List[dai.Buffer] = recognitions
-        
-class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
+        self.ages: List[dai.Buffer] = ages
 
+class Genders(dai.Buffer):
+    def __init__(self, genders: List[dai.Buffer]):
+        super().__init__()
+        self.genders: List[dai.Buffer] = genders
+        
+class DetectionsAgeGenderSync(dai.node.ThreadedHostNode):
     def __init__(self):
         super().__init__()
-        self.recognitions_input = self.createInput(blocking=True)
-        self.detections_input = self.createInput(blocking=True)
-        self.passthrough_input = self.createInput(blocking=True)
+        self.age_input = self.createInput()
+        self.gender_input = self.createInput()
+        self.detections_input = self.createInput()
+        self.passthrough_input = self.createInput()
         
         self.out = self.createOutput()
+        self.out_frame = self.createOutput()
         
     def run(self) -> None:
         while self.isRunning():
@@ -24,24 +30,29 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
             message_group = dai.MessageGroup()
             det_ts = detections_message.getTimestamp()
             
-            recognitions = []
+            ages = []
+            genders = []
+            
             for i, detection in enumerate(detections_message.detections):
-                print("getting recognition")
-                recognition_output = self.recognitions_input.get()
-                print("got recognition")
-                if detections_message.getSequenceNum() != recognition_output.getSequenceNum():
-                    print(f"[DetRectSync {recognition_output.getSequenceNum()}] Recognition message is not in sync with detection message. Det seq: {detections_message.getSequenceNum()}, Rec seq: {recognition_output.getSequenceNum()}")
-                    
-                recognitions.append(recognition_output)
+                age_message = self.age_input.get()
+                gender_message = self.gender_input.get()
                 
-            recognition_message = DetectedRecognitions(recognitions)
-            recognition_message.setTimestamp(det_ts)
-            recognition_message.setSequenceNum(passthrough.getSequenceNum())
+                ages.append(age_message.predictions[0])
+                genders.append(gender_message)
+
+            ages = Ages(ages)
+            ages.setTimestamp(det_ts)
+            ages.setSequenceNum(passthrough.getSequenceNum())
+            
+            genders = Genders(genders)
+            genders.setTimestamp(det_ts)
+            genders.setSequenceNum(passthrough.getSequenceNum())
             
             message_group["detections"]= detections_message
-            message_group["recognitions"]= recognition_message
-            message_group["passthrough"]= passthrough
+            message_group["ages"]= ages
+            message_group["genders"]= genders
             message_group.setTimestamp(det_ts)
             message_group.setSequenceNum(passthrough.getSequenceNum())
-            print(f"[HostSync {recognition_message.getSequenceNum()}] Sending message group with {len(recognitions)} recognitions")
+            
             self.out.send(message_group)
+            self.out_frame.send(passthrough)
