@@ -5,13 +5,14 @@ from depthai_nodes.ml.messages import ImgDetectionsExtended, ImgDetectionExtende
 from typing import List
 
 class AnnotationNode(dai.node.ThreadedHostNode):
-    def __init__(self, connection_pairs: List[List[int]]) -> None:
+    def __init__(self, connection_pairs: List[List[int]], padding: float = 0.1) -> None:
         super().__init__()
         
         self.input = self.createInput()
         self.out_detections = self.createOutput()
         self.out_pose_annotations = self.createOutput()
         self.connection_pairs = connection_pairs
+        self.padding = padding
         
     def run(self):
         while self.isRunning():
@@ -23,7 +24,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
 
             annotations = dai.ImgAnnotations()  # custom annotations for drawing lines between keypoints
 
-            padding = 0.1
+            padding = self.padding
 
             for ix, detection in enumerate(detections_list):
                 img_detection_extended = ImgDetectionExtended()
@@ -40,24 +41,18 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                     keypoints_msg = keypoints_msg_list[ix]
                     slope_x = (detection.xmax + padding) - (detection.xmin - padding)
                     slope_y = (detection.ymax + padding) - (detection.ymin - padding)
-                    new_keypoints = []
                     xs = []
                     ys = []
                     for kp in keypoints_msg.keypoints:
-                        new_kp = Keypoint()
-                        new_kp.x = min(max(detection.xmin - padding + slope_x * kp.x, 0.0), 1.0)
-                        new_kp.y = min(max(detection.ymin - padding + slope_y * kp.y, 0.0), 1.0)
-                        xs.append(new_kp.x)
-                        ys.append(new_kp.y)
-                        new_kp.z = kp.z
-                        new_kp.confidence = kp.confidence
-                        new_keypoints.append(new_kp)
-                    img_detection_extended.keypoints = new_keypoints
+                        x = min(max(detection.xmin - padding + slope_x * kp.x, 0.0), 1.0)
+                        y = min(max(detection.ymin - padding + slope_y * kp.y, 0.0), 1.0)
+                        xs.append(x)
+                        ys.append(y)
 
                     annotation = dai.ImgAnnotation()
                     for connection in self.connection_pairs:
                         pt1_idx, pt2_idx = connection
-                        if pt1_idx < len(new_keypoints) and pt2_idx < len(new_keypoints):
+                        if pt1_idx < len(xs) and pt2_idx < len(xs):
                             x1, y1 = xs[pt1_idx], ys[pt1_idx]
                             x2, y2 = xs[pt2_idx], ys[pt2_idx]
                             pointsAnnotation = dai.PointsAnnotation()
