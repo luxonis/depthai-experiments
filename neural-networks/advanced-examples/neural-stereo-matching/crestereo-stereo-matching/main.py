@@ -1,74 +1,64 @@
-import depthai as dai
 import argparse
-from host_stereo_matching import StereoMatching
-from pathlib import Path
-from download import download_blobs
-from os.path import isfile
+import cv2
+import depthai as dai
+import depthai_nodes as nodes
+from host_node.host_depth_color_transform import DepthColorTransform
 
+device = dai.Device()
+platform = device.getPlatform()
 parser = argparse.ArgumentParser()
-parser.add_argument('-nn', '--nn-choice', type=str
-                    , help="Choose between 2 neural network models from {120x160,160x240} (the bigger one is default)")
+
+if platform == dai.Platform.RVC2:
+    choices = ["luxonis/crestereo:iter2-120x160", "luxonis/crestereo:iter2-240x320"]
+elif platform == dai.Platform.RVC4:
+    choices = ["luxonis/crestereo:iter5-240x320", "luxonis/crestereo:iter4-360x640"]
+
+parser.add_argument('-nn', '--nn-choice', type=str, choices=choices, default=choices[-1],
+                    help=f"Crestereo model to be used for inference. By default the bigger model is chosen.")
 args = parser.parse_args()
 
-if args.nn_choice is None or args.nn_choice == "160x240":
-    nn_path = Path("models/crestereo_init_iter2_160x240_6_shaves.blob").resolve().absolute()
-    nn_shape = (160, 240)
-elif args.nn_choice == "120x160":
-    nn_path = Path("models/crestereo_init_iter2_120x160_6_shaves.blob").resolve().absolute()
-    nn_shape = (120, 160)
-else:
-    nn_path = None
-    nn_shape = None
-
-# Download neural network models
-if not isfile(Path("models/crestereo_init_iter2_160x240_6_shaves.blob").resolve().absolute()) or \
-    not isfile(Path("models/crestereo_init_iter2_120x160_6_shaves.blob").resolve().absolute()):
-    download_blobs()
-
-with dai.Pipeline() as pipeline:
-
+model = dai.NNArchive(dai.getModelFromZoo(dai.NNModelDescription(args.nn_choice, platform.name)))
+visualizer = dai.RemoteConnection()
+with dai.Pipeline(device) as pipeline:
+    FPS_CAP = 2 if platform == dai.Platform.RVC2 else 15
     print("Creating pipeline...")
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setFps(2)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    left_steam = left.requestOutput((640,400), type=dai.ImgFrame.Type.NV12, fps=FPS_CAP)
+    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+    right_steam = right.requestOutput((640,400), type=dai.ImgFrame.Type.NV12, fps=FPS_CAP)
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setFps(2)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    stereo = pipeline.create(dai.node.StereoDepth).build(
+        left=left_steam,
+        right=right_steam,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT
+    )
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-    stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
-    stereo.setLeftRightCheck(True)
-    stereo.setExtendedDisparity(True)
-    stereo.setSubpixel(False)
-
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(nn_path)
-
-    manip_left = pipeline.create(dai.node.ImageManip)
-    manip_left.initialConfig.setResize(nn_shape[1], nn_shape[0])
+    model_input_shape = model.getInputSize()
+    manip_left = pipeline.create(dai.node.ImageManipV2)
+    manip_left.initialConfig.setOutputSize(*model_input_shape)
     manip_left.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
     stereo.rectifiedLeft.link(manip_left.inputImage)
 
-    manip_right = pipeline.create(dai.node.ImageManip)
-    manip_right.initialConfig.setResize(nn_shape[1], nn_shape[0])
+    manip_right = pipeline.create(dai.node.ImageManipV2)
+    manip_right.initialConfig.setOutputSize(*model_input_shape)
     manip_right.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
     stereo.rectifiedRight.link(manip_right.inputImage)
 
+    nn = pipeline.create(nodes.ParsingNeuralNetwork)
+    nn.setNNArchive(model)
     manip_left.out.link(nn.inputs["left"])
     manip_right.out.link(nn.inputs["right"])
 
-    classification = pipeline.create(StereoMatching).build(
-        disparity=stereo.disparity,
-        nn=nn.out,
-        nn_shape=nn_shape,
-        max_disparity=stereo.initialConfig.getMaxDisparity()
-    )
-    classification.inputs["disparity"].setBlocking(True)
-    classification.inputs["nn"].setBlocking(True)
+    disparity_coloring = pipeline.create(DepthColorTransform).build(stereo.disparity)
+    disparity_coloring.setColormap(cv2.COLORMAP_PLASMA)
 
+    visualizer.addTopic("Stereo Disparity", disparity_coloring.output)
+    visualizer.addTopic("NN", nn.out)
+    
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+    while pipeline.isRunning():
+        if visualizer.waitKey(1) == "q":
+            print("Q pressed. Stopping the pipeline.")
+            pipeline.stop()
