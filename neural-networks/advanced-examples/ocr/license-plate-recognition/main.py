@@ -24,12 +24,13 @@ with dai.Pipeline(device) as pipeline:
         replay_node.setReplayVideoFile(Path(args.media_path))
         replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay_node.setLoop(True)
+        replay_node.setSize(1920*2, 1080*2)
         
         video_resize_node = pipeline.create(dai.node.ImageManipV2)
         video_resize_node.initialConfig.setOutputSize(1920*2, 1080*2)
         video_resize_node.initialConfig.setFrameType(frame_type)
         video_resize_node.initialConfig.setReusePreviousImage(False)
-        video_resize_node.setMaxOutputFrameSize(1920*1080*3 * 4)
+        video_resize_node.setMaxOutputFrameSize(1920*1080*3 * 4 )
         
         replay_node.out.link(video_resize_node.inputImage)
         

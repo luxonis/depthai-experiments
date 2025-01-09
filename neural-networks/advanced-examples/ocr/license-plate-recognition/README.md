@@ -5,7 +5,7 @@ which tries to decode the license plates texts.
 **WARNING:** Due to the high comutational cost, this example only works on OAK4 devices. 
 
 Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis OAK](https://blog.roboflow.com/oak-deploy-license-plate/) tutorial for training a custom detector using the Roboflow platform.
-![Detection Output](output.gif)git 
+![Detection Output](output.gif)
 
 # Instalation
 Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
