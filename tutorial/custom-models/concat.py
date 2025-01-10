@@ -5,10 +5,13 @@ from host_nodes.host_display import Display
 
 
 with dai.Pipeline() as pipeline:
+    cam_rgb = pipeline.create(dai.node.Camera).build(
+        boardSocket=dai.CameraBoardSocket.CAM_A
+    )
+    preview = cam_rgb.requestOutput(
+        size=(CONCAT_SHAPE, CONCAT_SHAPE), type=dai.ImgFrame.Type.BGR888p
+    )
 
-    cam_rgb = pipeline.create(dai.node.Camera).build(boardSocket=dai.CameraBoardSocket.CAM_A)
-    preview = cam_rgb.requestOutput(size=(CONCAT_SHAPE, CONCAT_SHAPE), type=dai.ImgFrame.Type.BGR888p)    
-    
     left = pipeline.create(dai.node.MonoCamera)
     left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
     left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
@@ -35,14 +38,12 @@ with dai.Pipeline() as pipeline:
     nn.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
     nn.setNumInferenceThreads(2)
 
-    manipLeft.out.link(nn.inputs['img1'])
-    preview.link(nn.inputs['img2'])
-    manipRight.out.link(nn.inputs['img3'])
+    manipLeft.out.link(nn.inputs["img1"])
+    preview.link(nn.inputs["img2"])
+    manipRight.out.link(nn.inputs["img3"])
 
-    reshape = pipeline.create(ReshapeNNOutputConcat).build(
-        nn_out=nn.out
-    )
-    
+    reshape = pipeline.create(ReshapeNNOutputConcat).build(nn_out=nn.out)
+
     concat = pipeline.create(Display).build(frame=reshape.output)
     concat.setName("Concat")
 

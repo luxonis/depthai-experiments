@@ -12,13 +12,19 @@ class DisplayPointCloud(dai.node.HostNode):
 
         self.visualizer = o3d.visualization.VisualizerWithKeyCallback()
         self.visualizer.create_window()
-        self.visualizer.register_key_callback(ord('q'), lambda vis: vis.destroy_window())
+        self.visualizer.register_key_callback(
+            ord("q"), lambda vis: vis.destroy_window()
+        )
         self.visualizer.add_geometry(self.pcl_data)
 
-        coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1000, origin=[0., 0., 0.])
+        coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
+            size=1000, origin=[0.0, 0.0, 0.0]
+        )
         self.visualizer.add_geometry(coordinate_frame)
 
-    def build(self, preview: dai.Node.Output, pointcloud: dai.Node.Output) -> "DisplayPointCloud":
+    def build(
+        self, preview: dai.Node.Output, pointcloud: dai.Node.Output
+    ) -> "DisplayPointCloud":
         self.link_args(preview, pointcloud)
         self.sendProcessingToPipeline(True)
         return self
@@ -39,6 +45,6 @@ class DisplayPointCloud(dai.node.HostNode):
         self.visualizer.update_renderer()
 
         cv2.imshow("Preview", frame)
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             print("Pipeline exited.")
             self.stopPipeline()

@@ -1,5 +1,6 @@
 ## Gen3 Camera Demo
-This example shows how to use the DepthAI/OAK cameras in the Gen3 Pipeline Builder over USB.  
+
+This example shows how to use the DepthAI/OAK cameras in the Gen3 Pipeline Builder over USB.
 
 ## Installation
 

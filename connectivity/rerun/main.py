@@ -8,7 +8,6 @@ from host_rerun import Rerun
 async def main():
     device = dai.Device()
     with dai.Pipeline(device) as pipeline:
-
         print("Creating pipeline...")
         device.setIrLaserDotProjectorIntensity(1)
 
@@ -18,7 +17,7 @@ async def main():
 
         stereo = pipeline.create(dai.node.StereoDepth).build(
             left=left.requestOutput(size=(640, 400)),
-            right=right.requestOutput(size=(640, 400))
+            right=right.requestOutput(size=(640, 400)),
         )
         stereo.setOutputSize(1920, 1080)
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
@@ -42,12 +41,12 @@ async def main():
         stereo.depth.link(pcl.inputDepth)
 
         pipeline.create(Rerun).build(
-            color=rgb.requestOutput((1920, 1080)),
-            pcl=pcl.outputPointCloud
+            color=rgb.requestOutput((1920, 1080)), pcl=pcl.outputPointCloud
         )
 
         print("Pipeline created.")
         pipeline.run()
+
 
 if __name__ == "__main__":
     rr.init("Rerun")

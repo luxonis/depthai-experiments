@@ -124,7 +124,7 @@ class KalmanFilterNode(dai.node.HostNode):
 
             try:
                 label = self._label_map[t.label]
-            except Exception as e:
+            except Exception:
                 label = t.label
 
             cv2.putText(

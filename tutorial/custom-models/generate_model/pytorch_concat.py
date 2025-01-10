@@ -5,9 +5,11 @@ import torch
 from torch import nn
 import blobconverter
 
+
 class CatImgs(nn.Module):
     def forward(self, img1, img2, img3):
         return torch.cat((img1, img2, img3), 3)
+
 
 # Define the expected input shape (dummy input)
 shape = (1, 3, 300, 300)
@@ -24,8 +26,8 @@ torch.onnx.export(
     onnx_file,
     opset_version=12,
     do_constant_folding=True,
-    input_names = ['img1', 'img2', 'img3'], # Optional
-    output_names = ['output'], # Optional
+    input_names=["img1", "img2", "img3"],  # Optional
+    output_names=["output"],  # Optional
 )
 
 # No need for onnx-simplifier here
@@ -37,5 +39,5 @@ blobconverter.from_onnx(
     shaves=6,
     use_cache=False,
     output_dir="../models",
-    optimizer_params=[]
+    optimizer_params=[],
 )

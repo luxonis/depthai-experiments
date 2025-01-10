@@ -25,7 +25,7 @@ with dai.Pipeline(device) as pipeline:
     stereo = pipeline.create(dai.node.StereoDepth).build(
         left=left.requestOutput(OUTPUT_SHAPE, type=dai.ImgFrame.Type.NV12, fps=FPS),
         right=right.requestOutput(OUTPUT_SHAPE, type=dai.ImgFrame.Type.NV12, fps=FPS),
-        presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY
+        presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY,
     )
     stereo.setLeftRightCheck(True)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
@@ -33,7 +33,14 @@ with dai.Pipeline(device) as pipeline:
     if platform == dai.Platform.RVC2:
         stereo.setOutputSize(*OUTPUT_SHAPE)
 
-    spatialDetectionNetwork = pipeline.create(dai.node.SpatialDetectionNetwork).build(cam, stereo, dai.NNModelDescription(modelSlug="yolov6-nano", modelVersionSlug="r2-coco-512x288"), fps=FPS)
+    spatialDetectionNetwork = pipeline.create(dai.node.SpatialDetectionNetwork).build(
+        cam,
+        stereo,
+        dai.NNModelDescription(
+            modelSlug="yolov6-nano", modelVersionSlug="r2-coco-512x288"
+        ),
+        fps=FPS,
+    )
     spatialDetectionNetwork.setConfidenceThreshold(0.5)
     spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
     spatialDetectionNetwork.setDepthLowerThreshold(300)
@@ -66,7 +73,7 @@ with dai.Pipeline(device) as pipeline:
         color=demux.outputs["color"],
         depth=demux.outputs["depth"],
         birdseye=bird_eye.output,
-        detections=demux.outputs["detections"]
+        detections=demux.outputs["detections"],
     )
     display = pipeline.create(Display).build(combined.output)
     display.setName("Luxonis")

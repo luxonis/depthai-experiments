@@ -5,12 +5,26 @@ from detection import Detection
 
 
 class BirdsEyeView:
-    colors = [(0, 255, 255), (255, 0, 255), (255, 255, 0), (0,0,255), (0,255,0), (255,0,0)]
+    colors = [
+        (0, 255, 255),
+        (255, 0, 255),
+        (255, 255, 0),
+        (0, 0, 255),
+        (0, 255, 0),
+        (255, 0, 0),
+    ]
 
-    def __init__(self, cam_to_world : dict[str, any],friendly_id : dict[str, int], 
-                 width, height, scale, trail_length=300):
+    def __init__(
+        self,
+        cam_to_world: dict[str, any],
+        friendly_id: dict[str, int],
+        width,
+        height,
+        scale,
+        trail_length=300,
+    ):
         self.cam_to_world = cam_to_world
-        self.detected_objects : list[Detection] = []
+        self.detected_objects: list[Detection] = []
         self.friendly_id = friendly_id
         self.width = width
         self.height = height
@@ -18,10 +32,12 @@ class BirdsEyeView:
         self.history = collections.deque(maxlen=trail_length)
 
         self.img = np.zeros((height, width, 3), np.uint8)
-        self.world_to_birds_eye = np.array([
-            [scale, 0, 0, width//2],
-            [0, scale, 0, height//2],
-        ])
+        self.world_to_birds_eye = np.array(
+            [
+                [scale, 0, 0, width // 2],
+                [0, scale, 0, height // 2],
+            ]
+        )
 
     def draw_coordinate_system(self):
         p_0 = (self.world_to_birds_eye @ np.array([0, 0, 0, 1])).astype(np.int64)
@@ -34,21 +50,29 @@ class BirdsEyeView:
         for dx_id, cam_to_world in self.cam_to_world.items():
             try:
                 color = self.colors[self.friendly_id[dx_id] - 1]
-            except:
-                color = (255,255,255)
+            except Exception as _:
+                color = (255, 255, 255)
 
             # draw the camera position
             if cam_to_world is not None:
-                p = (self.world_to_birds_eye @ (cam_to_world @ np.array([0,0,0,1]))).astype(np.int64)
-                p_l = (self.world_to_birds_eye @ (cam_to_world @ np.array([0.2,0,0.1,1]))).astype(np.int64)
-                p_r = (self.world_to_birds_eye @ (cam_to_world @ np.array([-0.2,0,0.1,1]))).astype(np.int64)
+                p = (
+                    self.world_to_birds_eye @ (cam_to_world @ np.array([0, 0, 0, 1]))
+                ).astype(np.int64)
+                p_l = (
+                    self.world_to_birds_eye
+                    @ (cam_to_world @ np.array([0.2, 0, 0.1, 1]))
+                ).astype(np.int64)
+                p_r = (
+                    self.world_to_birds_eye
+                    @ (cam_to_world @ np.array([-0.2, 0, 0.1, 1]))
+                ).astype(np.int64)
                 cv2.circle(self.img, p, 5, color, -1)
                 cv2.line(self.img, p, p_l, color, 1)
                 cv2.line(self.img, p, p_r, color, 1)
 
     def make_groups(self):
-        n = 2 # use only first n components
-        distance_threshold = 1.5 # m
+        n = 2  # use only first n components
+        distance_threshold = 1.5  # m
         for det in self.detected_objects:
             det.corresponding_detections = []
             # find closest detection
@@ -57,16 +81,20 @@ class BirdsEyeView:
             for other_det in self.detected_objects:
                 if other_det.label != det.label:
                     continue
-                d_ = np.linalg.norm(det.pos[:,:n] - other_det.pos[:,:n])
+                d_ = np.linalg.norm(det.pos[:, :n] - other_det.pos[:, :n])
                 if d_ < d:
                     d = d_
                     closest_det = other_det
             if closest_det is not None and d < distance_threshold:
                 det.corresponding_detections.append(closest_det)
-                        
+
         # keep only double correspondences
         for det in self.detected_objects:
-            det.corresponding_detections = [other_det for other_det in det.corresponding_detections if det in other_det.corresponding_detections]
+            det.corresponding_detections = [
+                other_det
+                for other_det in det.corresponding_detections
+                if det in other_det.corresponding_detections
+            ]
 
         # find groups of correspondences
         groups = []
@@ -94,15 +122,25 @@ class BirdsEyeView:
             label = ""
             for det in group:
                 label = det.label
-                try: c = self.colors[det.camera_friendly_id - 1]
-                except: c = (255,255,255)
+                try:
+                    c = self.colors[det.camera_friendly_id - 1]
+                except Exception as _:
+                    c = (255, 255, 255)
                 p = (self.world_to_birds_eye @ det.pos).flatten().astype(np.int64)
                 avg += p
                 cv2.circle(self.img, p, 2, c, -1)
 
-            avg = (avg/len(group)).astype(np.int64)
-            cv2.circle(self.img, avg, int(0.25*self.scale), (255, 255, 255), 0)
-            cv2.putText(self.img, str(label), avg+np.array([0, int(0.25*self.scale) + 10]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            avg = (avg / len(group)).astype(np.int64)
+            cv2.circle(self.img, avg, int(0.25 * self.scale), (255, 255, 255), 0)
+            cv2.putText(
+                self.img,
+                str(label),
+                avg + np.array([0, int(0.25 * self.scale) + 10]),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 255),
+                1,
+            )
 
     def draw_history(self):
         for i, groups in enumerate(self.history):
@@ -111,11 +149,13 @@ class BirdsEyeView:
                 for det in group:
                     p = (self.world_to_birds_eye @ det.pos).flatten().astype(np.int64)
                     avg += p
-                avg = (avg/len(group)).astype(np.int64)
-                c = int(i/self.history.maxlen*50)
-                cv2.circle(self.img, avg, int(i/self.history.maxlen*10), (c, c, c), -1)
+                avg = (avg / len(group)).astype(np.int64)
+                c = int(i / self.history.maxlen * 50)
+                cv2.circle(
+                    self.img, avg, int(i / self.history.maxlen * 10), (c, c, c), -1
+                )
 
-    def render(self, detected_objects : list[Detection]):
+    def render(self, detected_objects: list[Detection]):
         self.detected_objects = detected_objects
         self.img = np.zeros((self.height, self.width, 3), np.uint8)
         self.draw_coordinate_system()

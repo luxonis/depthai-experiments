@@ -3,10 +3,11 @@ repos:
     rev: v0.6.4
     hooks:
       - id: ruff
-        # F821 are undefined name errors due to script nodes
-        # E741 are ambiguous variable names
-        # F841 are unused variable names
-        args: [--fix, --exit-non-zero-on-fix, "--ignore=F821,E741,F841"] 
+        # F821 Undefined name `node` - due to script nodes
+        # F841 Local variable <> is assigned to but never used
+        # E701 Multiple statements on one line (colon)
+        # E741 Ambiguous variable name:
+        args: [--fix, --exit-non-zero-on-fix, "--ignore=F821,F841,E701,E741"] 
         types_or: [python, pyi, jupyter]
       - id: ruff-format
         types_or: [python, pyi, jupyter]

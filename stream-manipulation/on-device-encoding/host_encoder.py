@@ -5,15 +5,22 @@ import cv2
 
 from fractions import Fraction
 
+
 class Encoder(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, preview: dai.Node.Output, stream: dai.Node.Output, codec: str, output_shape: tuple[int, int]) -> "Encoder":
+    def build(
+        self,
+        preview: dai.Node.Output,
+        stream: dai.Node.Output,
+        codec: str,
+        output_shape: tuple[int, int],
+    ) -> "Encoder":
         self.link_args(preview, stream)
         self.sendProcessingToPipeline(True)
 
-        self.output_container = av.open("video.mp4", 'w')
+        self.output_container = av.open("video.mp4", "w")
         self.stream = self.output_container.add_stream(codec, rate=30)
 
         if codec == "mjpeg":
@@ -43,7 +50,7 @@ class Encoder(dai.node.HostNode):
 
         cv2.imshow("Preview", preview.getCvFrame())
 
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             # Flush the encoder
             for packet in self.stream.encode():
                 self.output_container.mux(packet)

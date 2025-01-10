@@ -1,6 +1,7 @@
 import depthai as dai
 import cv2
 
+
 class Display(dai.node.HostNode):
     # Only one instance of this class can call cv2.waitKey at a time
     _wait_key_instance = None
@@ -30,9 +31,8 @@ class Display(dai.node.HostNode):
             self.process_wait_key = False
             Display._wait_key_instance = None
 
-
     def process(self, frame) -> None:
         cv2.imshow(self.name, frame.getCvFrame())
 
-        if self.process_wait_key and cv2.waitKey(1) == ord('q'):
+        if self.process_wait_key and cv2.waitKey(1) == ord("q"):
             self.stopPipeline()

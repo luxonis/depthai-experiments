@@ -11,7 +11,11 @@ class BirdsEyeView(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-        self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
         self.frame = create_bird_frame()
 
     def build(self, detections: dai.Node.Output) -> "BirdsEyeView":
@@ -19,7 +23,7 @@ class BirdsEyeView(dai.node.HostNode):
         return self
 
     def process(self, detections: dai.Buffer) -> None:
-        assert(isinstance(detections, dai.SpatialImgDetections))
+        assert isinstance(detections, dai.SpatialImgDetections)
         frame = self.frame.copy()
 
         for detection in detections.detections:
@@ -44,14 +48,16 @@ def create_bird_frame():
     alpha = (180 - fov) / 2
     center = int(frame.shape[1] / 2)
     max_p = frame.shape[0] - int(math.tan(math.radians(alpha)) * center)
-    fov_cnt = np.array([
-        (0, frame.shape[0]),
-        (frame.shape[1], frame.shape[0]),
-        (frame.shape[1], max_p),
-        (center, frame.shape[0]),
-        (0, max_p),
-        (0, frame.shape[0]),
-    ])
+    fov_cnt = np.array(
+        [
+            (0, frame.shape[0]),
+            (frame.shape[1], frame.shape[0]),
+            (frame.shape[1], max_p),
+            (center, frame.shape[0]),
+            (0, max_p),
+            (0, frame.shape[0]),
+        ]
+    )
     cv2.fillPoly(frame, [fov_cnt], color=(70, 70, 70))
 
     return frame

@@ -35,6 +35,7 @@ python3 main.py
 ```
 
 Run the simple tutorials
+
 ```
 python3 passthrough.py
 python3 crop_highres.py

@@ -4,29 +4,33 @@ from socketserver import ThreadingMixIn
 from time import sleep
 import depthai as dai
 import cv2
-import blobconverter
 
 from host_stream_output import StreamOutput
 
 HTTP_SERVER_PORT = 8090
 
-modelDescription = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+modelDescription = dai.NNModelDescription(
+    modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300"
+)
 archivePath = dai.getModelFromZoo(modelDescription)
 nn_archive = dai.NNArchive(archivePath)
+
 
 # HTTPServer MJPEG
 class VideoStreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
-        self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
+        self.send_header(
+            "Content-type", "multipart/x-mixed-replace; boundary=--jpgboundary"
+        )
         self.end_headers()
         while True:
             sleep(0.1)
-            if hasattr(self.server, 'frametosend'):
-                ok, encoded = cv2.imencode('.jpg', self.server.frametosend)
+            if hasattr(self.server, "frametosend"):
+                ok, encoded = cv2.imencode(".jpg", self.server.frametosend)
                 self.wfile.write("--jpgboundary".encode())
-                self.send_header('Content-type', 'image/jpeg')
-                self.send_header('Content-length', str(len(encoded)))
+                self.send_header("Content-type", "image/jpeg")
+                self.send_header("Content-length", str(len(encoded)))
                 self.end_headers()
                 self.wfile.write(encoded)
                 self.end_headers()
@@ -34,17 +38,17 @@ class VideoStreamHandler(BaseHTTPRequestHandler):
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Handle requests in a separate thread."""
+
     pass
 
 
 # start MJPEG HTTP Server
-server = ThreadedHTTPServer(('localhost', HTTP_SERVER_PORT), VideoStreamHandler)
+server = ThreadedHTTPServer(("localhost", HTTP_SERVER_PORT), VideoStreamHandler)
 th = threading.Thread(target=server.serve_forever)
 th.daemon = True
 th.start()
 
 with dai.Pipeline() as pipeline:
-
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -64,7 +68,7 @@ with dai.Pipeline() as pipeline:
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
     nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    #nn.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=5))
+    # nn.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=5))
     nn.setNNArchive(nn_archive)
     nn.setConfidenceThreshold(0.5)
     nn.input.setBlocking(False)
@@ -75,10 +79,7 @@ with dai.Pipeline() as pipeline:
     stereo.depth.link(nn.inputDepth)
 
     output = pipeline.create(StreamOutput).build(
-        preview=cam.preview,
-        depth=nn.passthroughDepth,
-        nn=nn.out,
-        server=server
+        preview=cam.preview, depth=nn.passthroughDepth, nn=nn.out, server=server
     )
     output.inputs["preview"].setBlocking(False)
     output.inputs["preview"].setMaxSize(4)
@@ -87,5 +88,7 @@ with dai.Pipeline() as pipeline:
     output.inputs["nn"].setBlocking(False)
     output.inputs["nn"].setMaxSize(4)
 
-    print(f"Pipeline created. Navigate to 'localhost:{str(HTTP_SERVER_PORT)}' with Chrome to see the mjpeg stream")
+    print(
+        f"Pipeline created. Navigate to 'localhost:{str(HTTP_SERVER_PORT)}' with Chrome to see the mjpeg stream"
+    )
     pipeline.run()

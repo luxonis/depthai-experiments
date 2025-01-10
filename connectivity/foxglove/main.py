@@ -14,10 +14,30 @@ from foxglove_websocket.server import FoxgloveServer
 from projector_device import PointCloudVisualizer
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-l', '--left', default=False, action="store_true", help="enable left camera stream")
-parser.add_argument('-r', '--right', default=False, action="store_true", help="enable right camera stream")
-parser.add_argument('-pc', '--pointcloud', default=False, action="store_true", help="enable pointcloud stream")
-parser.add_argument('-nc', '--no-color', default=False, action="store_true", help="disable color camera stream")
+parser.add_argument(
+    "-l", "--left", default=False, action="store_true", help="enable left camera stream"
+)
+parser.add_argument(
+    "-r",
+    "--right",
+    default=False,
+    action="store_true",
+    help="enable right camera stream",
+)
+parser.add_argument(
+    "-pc",
+    "--pointcloud",
+    default=False,
+    action="store_true",
+    help="enable pointcloud stream",
+)
+parser.add_argument(
+    "-nc",
+    "--no-color",
+    default=False,
+    action="store_true",
+    help="disable color camera stream",
+)
 args = parser.parse_args()
 
 resolution = (640, 400)
@@ -25,10 +45,10 @@ resolution = (640, 400)
 downsample_pcl = True
 process_pointcloud = PointCloudVisualizer() if args.pointcloud else None
 
+
 async def main():
     device = dai.Device()
     with dai.Pipeline(device) as pipeline:
-
         print("Creating pipeline...")
         cam = pipeline.create(dai.node.ColorCamera)
         cam.setIspScale(1, 3)
@@ -41,7 +61,9 @@ async def main():
         right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
 
-        stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
+        stereo = pipeline.create(dai.node.StereoDepth).build(
+            left=left.out, right=right.out
+        )
         stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
         stereo.setLeftRightCheck(True)
         stereo.setExtendedDisparity(False)
@@ -72,7 +94,9 @@ async def main():
         seq = 0
         if args.pointcloud:
             calibration = device.readCalibration()
-            M_right = calibration.getCameraIntrinsics(dai.CameraBoardSocket.CAM_C, dai.Size2f(resolution[0], resolution[1]))
+            M_right = calibration.getCameraIntrinsics(
+                dai.CameraBoardSocket.CAM_C, dai.Size2f(resolution[0], resolution[1])
+            )
             xyz = create_xyz(resolution[0], resolution[1], np.array(M_right))
 
             buffer = dai.NNData()
@@ -95,8 +119,14 @@ async def main():
         async with FoxgloveServer("0.0.0.0", 8765, "DepthAI server") as server:
             server.set_listener(Listener())
 
-            color_channel, pointcloud_channel, left_channel, right_channel \
-                = await create_channels(server, not args.no_color, args.pointcloud, args.left, args.right)
+            (
+                color_channel,
+                pointcloud_channel,
+                left_channel,
+                right_channel,
+            ) = await create_channels(
+                server, not args.no_color, args.pointcloud, args.left, args.right
+            )
 
             while pipeline.isRunning():
                 tmpTime = time.time_ns()
@@ -120,16 +150,24 @@ async def main():
                 if args.pointcloud and pcl_q.has():
                     pointcloud = pcl_q.get()
 
-                    pcl_data = pointcloud.getFirstTensor().flatten().reshape(1, 3, resolution[0], resolution[1])
+                    pcl_data = (
+                        pointcloud.getFirstTensor()
+                        .flatten()
+                        .reshape(1, 3, resolution[0], resolution[1])
+                    )
                     pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
 
-                    process_pointcloud.visualize_pcl(pcl_data, downsample=downsample_pcl)
+                    process_pointcloud.visualize_pcl(
+                        pcl_data, downsample=downsample_pcl
+                    )
                     pcl_data = process_pointcloud.pcl.points
 
-                    await send_pointcloud(server, pcl_data, sec, nsec, pointcloud_channel, seq)
+                    await send_pointcloud(
+                        server, pcl_data, sec, nsec, pointcloud_channel, seq
+                    )
                     seq += 1
 
-                if cv2.waitKey(1) == ord('q'):
+                if cv2.waitKey(1) == ord("q"):
                     print("Pipeline exited.")
                     break
 
@@ -158,6 +196,7 @@ def create_xyz(width, height, camera_matrix):
 
     xyz = np.stack([x_coord, y_coord], axis=-1)
     return np.pad(xyz, ((0, 0), (0, 0), (0, 1)), "constant", constant_values=1.0)
+
 
 if __name__ == "__main__":
     run_cancellable(main())

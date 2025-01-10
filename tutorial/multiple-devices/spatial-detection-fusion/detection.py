@@ -1,7 +1,10 @@
 import numpy as np
 
+
 class Detection:
-    def __init__(self, label: str, confidence: float, pos: np.ndarray, camera_friendly_id: int):
+    def __init__(
+        self, label: str, confidence: float, pos: np.ndarray, camera_friendly_id: int
+    ):
         self.label = label
         self.confidence = confidence
         self.pos = pos

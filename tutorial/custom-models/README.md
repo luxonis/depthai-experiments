@@ -1,5 +1,4 @@
-
-## [Gen3] Creating custom models
+## \[Gen3\] Creating custom models
 
 This experiment can be used as a tutorial on how users can create custom models with
 PyTorch/Kornia, convert them and run them on the DepthAI.
@@ -32,10 +31,10 @@ main.py
 
 ![diff-demo](https://user-images.githubusercontent.com/18037362/185765421-3f391d9c-341a-4e5c-9f5d-3ce322347af1.gif)
 
-
 ## Pre-requisites
 
 Install requirements
+
 ```
 python3 -m pip install -r requirements.txt
 ```

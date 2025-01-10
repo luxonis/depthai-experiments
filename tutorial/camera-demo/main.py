@@ -16,8 +16,7 @@ with dai.Pipeline() as pipeline:
     right_output = right.requestFullResolutionOutput()
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left_output,
-        right=right_output
+        left=left_output, right=right_output
     )
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     stereo.setOutputSize(*color_resolution)
@@ -27,9 +26,7 @@ with dai.Pipeline() as pipeline:
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(False)
 
-    depth_parser = pipeline.create(DepthColorTransform).build(
-        stereo.disparity
-    )
+    depth_parser = pipeline.create(DepthColorTransform).build(stereo.disparity)
 
     color_display = pipeline.create(Display).build(color_output)
     color_display.setName("Color camera")

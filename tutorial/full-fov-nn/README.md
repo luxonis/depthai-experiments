@@ -8,20 +8,22 @@ resultion, which can only be obtained from `isp` and `still` outputs of [ColorCa
 Here we have 3 options:
 
 1. Crop the ISP frame before inferencing to 1:1 aspect ratio and lose some FOV
-2. Apply letterboxing to the ISP frame to get 1:1 aspect ratio and lose some accuracy
-3. Stretch the ISP frame to the 1:1 aspect ratio of the NN and lose some accuracy
+1. Apply letterboxing to the ISP frame to get 1:1 aspect ratio and lose some accuracy
+1. Stretch the ISP frame to the 1:1 aspect ratio of the NN and lose some accuracy
 
 ## Demos
 
 ### Cropping
+
 ![cropping](https://user-images.githubusercontent.com/18037362/180607873-6a476ea4-55e0-4557-a93e-a7cadcd80725.jpg)
 
 ### Letterboxing
+
 ![letterboxing](https://user-images.githubusercontent.com/18037362/180607958-0db7fb34-1221-42a1-b889-10d1f9793912.jpg)
 
 ### Stretching
-![stretched](https://user-images.githubusercontent.com/18037362/180607962-e616cdc7-fcad-4bc8-a15f-617b89a2c047.jpg)
 
+![stretched](https://user-images.githubusercontent.com/18037362/180607962-e616cdc7-fcad-4bc8-a15f-617b89a2c047.jpg)
 
 ## Installation
 
@@ -45,6 +47,7 @@ python3 main.py
 ```
 
 Run the simple tutorials
+
 ```
 python3 cropping.py
 python3 letterboxing.py

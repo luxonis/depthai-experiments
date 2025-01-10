@@ -5,6 +5,7 @@ import torch
 from torch import nn
 import blobconverter
 
+
 class Model(nn.Module):
     def forward(self, img1, img2):
         sum1 = torch.sum(img1, dim=0)
@@ -12,6 +13,7 @@ class Model(nn.Module):
         print(sum1.shape)
         sum2 = torch.sum(img2, dim=0)
         return torch.sub(sum1, sum2)
+
 
 # Define the expected input shape (dummy input)
 shape = (3, 720, 720)
@@ -28,8 +30,8 @@ torch.onnx.export(
     onnx_file,
     opset_version=12,
     do_constant_folding=True,
-    input_names = ['img1', 'img2'], # Optional
-    output_names = ['output'], # Optional
+    input_names=["img1", "img2"],  # Optional
+    output_names=["output"],  # Optional
 )
 
 # No need for onnx-simplifier here
@@ -41,5 +43,5 @@ blobconverter.from_onnx(
     shaves=6,
     use_cache=False,
     output_dir="../models",
-    optimizer_params=[]
+    optimizer_params=[],
 )

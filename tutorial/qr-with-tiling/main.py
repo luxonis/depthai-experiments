@@ -13,7 +13,7 @@ with dai.Pipeline() as pipeline:
     # IMG_SHAPE = (1920, 1080)
     # IMG_SHAPE = (1280, 720)
     IMG_SHAPE = (3840, 2160)
-    
+
     # cam = pipeline.create(dai.node.ColorCamera)
     # cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
     # cam.setPreviewSize(IMG_SHAPE)
@@ -24,7 +24,7 @@ with dai.Pipeline() as pipeline:
     replay = pipeline.create(dai.node.ReplayVideo)
     replay.setLoop(False)
     replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-    replay.setReplayVideoFile(Path('videos/home_test_2.mp4'))
+    replay.setReplayVideoFile(Path("videos/home_test_2.mp4"))
     replay.setSize(IMG_SHAPE)
     replay.setFps(10)
     cam_out = replay.out
@@ -47,24 +47,21 @@ with dai.Pipeline() as pipeline:
         grid_size=grid_size,
         grid_matrix=grid_matrix,
         global_detection=False,
-        nn_shape=(512, 288)
+        nn_shape=(512, 288),
     )
 
-    nn = pipeline.create(dai.node.DetectionNetwork).build(nnArchive=nn_archive, input=tile_manager.out, confidenceThreshold=0.3)
+    nn = pipeline.create(dai.node.DetectionNetwork).build(
+        nnArchive=nn_archive, input=tile_manager.out, confidenceThreshold=0.3
+    )
     nn.input.setMaxSize(len(tile_manager.tile_positions))
     nn.input.setBlocking(False)
 
     patcher = pipeline.create(TilesPatcher).build(
-        tile_manager=tile_manager,
-        nn=nn.out,
-        conf_thresh=0.3,
-        iou_thresh=0.2
+        tile_manager=tile_manager, nn=nn.out, conf_thresh=0.3, iou_thresh=0.2
     )
 
     scanner = pipeline.create(QRScanner).build(
-        preview=cam_out,
-        nn=patcher.out,
-        tile_positions=tile_manager.tile_positions
+        preview=cam_out, nn=patcher.out, tile_positions=tile_manager.tile_positions
     )
     scanner.inputs["detections"].setBlocking(False)
     scanner.inputs["detections"].setMaxSize(2)

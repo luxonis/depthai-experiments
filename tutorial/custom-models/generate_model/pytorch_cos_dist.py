@@ -10,30 +10,32 @@ from onnxsim import simplify
 
 name = "cos_dist"
 
+
 class Model(nn.Module):
     def forward(self, a, b):
-        w12 =  torch.matmul(a, b)
-        print('w12', w12)
+        w12 = torch.matmul(a, b)
+        print("w12", w12)
         w1 = torch.matmul(a, a)
         w2 = torch.matmul(b, b)
         # Values w12,w1,w2 can be up to 10000. Multiplying
         # w1*w2 would mean Inf at FP16 (max value 65k),
         # so we divide both values by 1000
         # RESULT: Cos distance will be 0..1000.0
-        mul = torch.multiply(torch.div(w1, 1000),torch.div(w2, 1000))
-        print('mul',mul)
+        mul = torch.multiply(torch.div(w1, 1000), torch.div(w2, 1000))
+        print("mul", mul)
         # const = torch.tensor(1e-8) # To avoid division by 0
         n12 = torch.sqrt(mul)
-        print('n12',n12)
+        print("n12", n12)
         return torch.div(w12, n12)
 
+
 # Define the expected input shape (dummy input)
-shape = (256)
+shape = 256
 X = torch.ones(shape, dtype=torch.float32)
 
 path = Path("out/")
 path.mkdir(parents=True, exist_ok=True)
-onnx_path = str(path / (name + '.onnx'))
+onnx_path = str(path / (name + ".onnx"))
 
 print(f"Writing to {onnx_path}")
 torch.onnx.export(
@@ -42,11 +44,11 @@ torch.onnx.export(
     onnx_path,
     opset_version=12,
     do_constant_folding=True,
-    input_names = ['a', 'b'], # Optional
-    output_names = ['output'], # Optional
+    input_names=["a", "b"],  # Optional
+    output_names=["output"],  # Optional
 )
 
-onnx_simplified_path = str(path / (name + '_simplified.onnx'))
+onnx_simplified_path = str(path / (name + "_simplified.onnx"))
 # Use onnx-simplifier to simplify the onnx model
 onnx_model = onnx.load(onnx_path)
 model_simp, check = simplify(onnx_model)
@@ -61,7 +63,7 @@ blobconverter.from_onnx(
     use_cache=False,
     output_dir="../models",
     optimizer_params=[],
-    compile_params = [] # To avoid `-ip U8` by default
+    compile_params=[],  # To avoid `-ip U8` by default
 )
 
 # Testing if this would work

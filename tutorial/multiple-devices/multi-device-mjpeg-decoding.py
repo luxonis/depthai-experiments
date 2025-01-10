@@ -3,12 +3,12 @@ import threading
 import cv2
 from utility import filter_internal_cameras, run_pipeline
 
+
 class OpencvManager:
-    def __init__(self, keys : list[int]):
+    def __init__(self, keys: list[int]):
         self.newFrameEvent = threading.Event()
         self.lock = threading.Lock()
         self.frames = self._init_frames(keys)
-
 
     def run(self) -> None:
         while True:
@@ -19,17 +19,15 @@ class OpencvManager:
                     frame = cv2.pyrDown(frame)
                     cv2.imshow(dx_id, frame)
 
-                    if cv2.waitKey(1) == ord('q'):
+                    if cv2.waitKey(1) == ord("q"):
                         return
-    
 
-    def setFrame(self, frame : dai.ImgFrame, dx_id : int) -> None:
+    def setFrame(self, frame: dai.ImgFrame, dx_id: int) -> None:
         with self.lock:
             self.frames[dx_id] = frame
             self.newFrameEvent.set()
 
-    
-    def _init_frames(self, keys : list[int]) -> dict:
+    def _init_frames(self, keys: list[int]) -> dict:
         dic = dict()
         for key in keys:
             dic[key] = None
@@ -37,27 +35,27 @@ class OpencvManager:
 
 
 class DisplayDecodedVideo(dai.node.HostNode):
-    def __init__(self, callback : callable, dx_id : int) -> None:
+    def __init__(self, callback: callable, dx_id: int) -> None:
         super().__init__()
         self.callback = callback
         self.dx_id = dx_id
 
-
-    def build(self, bitstream_out : dai.Node.Output) -> "DisplayDecodedVideo":
+    def build(self, bitstream_out: dai.Node.Output) -> "DisplayDecodedVideo":
         self.link_args(bitstream_out)
         self.sendProcessingToPipeline(True)
         return self
-    
 
-    def process(self, bitstream : dai.ImgFrame) -> None:
+    def process(self, bitstream: dai.ImgFrame) -> None:
         self.callback(bitstream, self.dx_id)
 
 
-def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
+def getPipeline(dev: dai.Device, callback: callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(dev)
 
     camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    rgb_video = camRgb.requestOutput(size=(1920, 1080), fps=30, type=dai.ImgFrame.Type.NV12)
+    rgb_video = camRgb.requestOutput(
+        size=(1920, 1080), fps=30, type=dai.ImgFrame.Type.NV12
+    )
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
     videoEnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
@@ -70,7 +68,9 @@ def getPipeline(dev : dai.Device, callback : callable) -> dai.Pipeline:
     return pipeline
 
 
-def pair_device_with_pipeline(dev_info : dai.DeviceInfo, pipelines : list[dai.Pipeline], callback : callable) -> None: 
+def pair_device_with_pipeline(
+    dev_info: dai.DeviceInfo, pipelines: list[dai.Pipeline], callback: callable
+) -> None:
     device: dai.Device = dai.Device(dev_info)
 
     print("=== Connected to " + dev_info.getMxId())
@@ -85,12 +85,12 @@ def pair_device_with_pipeline(dev_info : dai.DeviceInfo, pipelines : list[dai.Pi
 
 
 devices = filter_internal_cameras(dai.Device.getAllAvailableDevices())
-print(f'Found {len(devices)} devices')
+print(f"Found {len(devices)} devices")
 
 
-pipelines : list[dai.Pipeline] = []
+pipelines: list[dai.Pipeline] = []
 manager = OpencvManager([device.getMxId() for device in devices])
-threads : list[threading.Thread]= []
+threads: list[threading.Thread] = []
 
 for dev in devices:
     pair_device_with_pipeline(dev, pipelines, manager.setFrame)
@@ -108,4 +108,4 @@ for pipeline in pipelines:
 for t in threads:
     t.join()
 
-print('Devices closed')
+print("Devices closed")
