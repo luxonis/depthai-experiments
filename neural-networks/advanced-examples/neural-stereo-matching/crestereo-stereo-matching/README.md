@@ -1,44 +1,56 @@
-## CREStereo
+# CREStereo
 
-CREStereo: Practical Stereo Matching via Cascaded Recurrent Network with Adaptive Correlation
+This experiment compares depth output of neural stereo matching using [CREStereo](https://hub.luxonis.com/ai/models/4729a8bd-54df-467a-92ca-a8a5e70b52ab) to output of stereo disparity. The model is not yet quantized for RVC4, thus is executed on cpu and is slower. The experiment works on both RVC2 and RVC4.
+
+There are 2 available model variants for the [CREStereo](https://hub.luxonis.com/ai/models/4729a8bd-54df-467a-92ca-a8a5e70b52ab) model for each platform. If you choose to use a different model please adjust `fps_limit` argument accordingly.
 
 ## Demo
 
-### 160x240
-
->```crestereo_init_iter2_160x240_6_shaves.blob```
-
-![demo-gif](https://i.imgur.com/S4BElZo.png)
-
-
-### 120x160
-
->```crestereo_init_iter2_120x160_6_shaves.blob```
-
-![demo-gif](https://i.imgur.com/4Gpt2On.png)
+[![CREStereo](media/person.gif)](media/person.gif)
 
 ## Installation
 
-```
-python3 -m pip install -r requirements.txt
-python3 download.py
+You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run the application
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
+### Peripheral Mode
+
+```bash
+python3 main.py --model <MODEL> --fps_limit <FPS_LIMIT>
 ```
+
+- `<MODEL>`: HubAI Model Reference from Luxonis HubAI..
+- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+
+#### Examples
+
+```bash
 python3 main.py
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -nn {120x160,160x240}, --nn-choice {120x160,160x240}
-                        Choose between 2 neural network models from {120x160,160x240} (the bigger one is default)
 ```
 
-## References
+This will run the CREStereo experiment with the default model.
 
-* [ibaiGorordo/CREStereo-Pytorch](https://github.com/ibaiGorordo/CREStereo-Pytorch)
-* [PINTO0309/PINTO_model_zoo](https://github.com/PINTO0309/PINTO_model_zoo)
-* [Paper](https://arxiv.org/abs/2203.11483)
+```bash
+python3 main.py --model luxonis/lite-hrnet:30-coco-256x192 --fps_limit 5
+```
+
+This will run the CREStereo experiment with the default model, but with a `5` FPS limit.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+Then, while you are in the experiment folder, you can run the example with:
+```bash
+oakctl app run .
+```
