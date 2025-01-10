@@ -15,8 +15,8 @@ elif platform == dai.Platform.RVC4:
     choices = ["luxonis/crestereo:iter5-240x320", "luxonis/crestereo:iter4-360x640"]
 
 parser.add_argument(
-        '-nn',
-        '--nn-choice',
+        '-m',
+        '--model',
         type=str,
         choices=choices,
         default=choices[-1],
