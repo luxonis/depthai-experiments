@@ -4,6 +4,7 @@ import depthai as dai
 import depthai_nodes as nodes
 from host_node.host_depth_color_transform import DepthColorTransform
 
+
 device = dai.Device()
 platform = device.getPlatform()
 parser = argparse.ArgumentParser()
@@ -20,34 +21,40 @@ args = parser.parse_args()
 model = dai.NNArchive(dai.getModelFromZoo(dai.NNModelDescription(args.nn_choice, platform.name)))
 visualizer = dai.RemoteConnection()
 with dai.Pipeline(device) as pipeline:
-    FPS_CAP = 2 if platform == dai.Platform.RVC2 else 15
+    FPS_CAP = 2 if platform == dai.Platform.RVC2 else 5
+    OUTPUT_TYPE = dai.ImgFrame.Type.BGR888p if platform == dai.Platform.RVC2 else dai.ImgFrame.Type.BGR888i
     print("Creating pipeline...")
+
+    model_input_shape = model.getInputSize()
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-    left_steam = left.requestOutput((640,400), type=dai.ImgFrame.Type.NV12, fps=FPS_CAP)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-    right_steam = right.requestOutput((640,400), type=dai.ImgFrame.Type.NV12, fps=FPS_CAP)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left_steam,
-        right=right_steam,
+        left=left.requestOutput(model_input_shape, type=dai.ImgFrame.Type.NV12, fps=FPS_CAP),
+        right=right.requestOutput(model_input_shape, type=dai.ImgFrame.Type.NV12, fps=FPS_CAP),
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT
     )
 
-    model_input_shape = model.getInputSize()
-    manip_left = pipeline.create(dai.node.ImageManipV2)
-    manip_left.initialConfig.setOutputSize(*model_input_shape)
-    manip_left.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
-    stereo.rectifiedLeft.link(manip_left.inputImage)
-
-    manip_right = pipeline.create(dai.node.ImageManipV2)
-    manip_right.initialConfig.setOutputSize(*model_input_shape)
-    manip_right.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
-    stereo.rectifiedRight.link(manip_right.inputImage)
+    lr_sync = pipeline.create(dai.node.Sync)
+    left.requestOutput(model_input_shape, type=OUTPUT_TYPE, fps=FPS_CAP).link(lr_sync.inputs["left"])
+    right.requestOutput(model_input_shape, type=OUTPUT_TYPE, fps=FPS_CAP).link(lr_sync.inputs["right"])
+    
+    demux = pipeline.create(dai.node.MessageDemux)
+    lr_sync.out.link(demux.input)
 
     nn = pipeline.create(nodes.ParsingNeuralNetwork)
     nn.setNNArchive(model)
-    manip_left.out.link(nn.inputs["left"])
-    manip_right.out.link(nn.inputs["right"])
+    if platform == dai.Platform.RVC4:
+        nn.setBackend("snpe")
+        nn.setBackendProperties(
+            {
+                "runtime": "cpu",  # using "cpu" since the model is not quantized, use "dsp" if the model is quantized
+                "performance_profile": "default",
+            }
+        )
+
+    demux.outputs["left"].link(nn.inputs["left"])
+    demux.outputs["right"].link(nn.inputs["right"])
 
     disparity_coloring = pipeline.create(DepthColorTransform).build(stereo.disparity)
     disparity_coloring.setColormap(cv2.COLORMAP_PLASMA)
@@ -59,6 +66,6 @@ with dai.Pipeline(device) as pipeline:
     pipeline.start()
     visualizer.registerPipeline(pipeline)
     while pipeline.isRunning():
-        if visualizer.waitKey(1) == "q":
+        if visualizer.waitKey(1) == ord("q"):
             print("Q pressed. Stopping the pipeline.")
             pipeline.stop()
