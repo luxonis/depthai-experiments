@@ -14,14 +14,28 @@ if platform == dai.Platform.RVC2:
 elif platform == dai.Platform.RVC4:
     choices = ["luxonis/crestereo:iter5-240x320", "luxonis/crestereo:iter4-360x640"]
 
-parser.add_argument('-nn', '--nn-choice', type=str, choices=choices, default=choices[-1],
-                    help=f"Crestereo model to be used for inference. By default the bigger model is chosen.")
+parser.add_argument(
+        '-nn',
+        '--nn-choice',
+        type=str,
+        choices=choices,
+        default=choices[-1],
+        help=f"Crestereo model to be used for inference. By default the bigger model is chosen.")
+default_fps = 2 if platform == dai.Platform.RVC2 else 5
+parser.add_argument(
+        "-fps",
+        "--fps_limit",
+        help=f"FPS limit of the video. Default for the device is {default_fps}",
+        required=False,
+        default=default_fps,
+        type=int,
+    )
 args = parser.parse_args()
 
 model = dai.NNArchive(dai.getModelFromZoo(dai.NNModelDescription(args.nn_choice, platform.name)))
 visualizer = dai.RemoteConnection()
 with dai.Pipeline(device) as pipeline:
-    FPS_CAP = 2 if platform == dai.Platform.RVC2 else 5
+    fps_cap = args.fps_limit
     OUTPUT_TYPE = dai.ImgFrame.Type.BGR888p if platform == dai.Platform.RVC2 else dai.ImgFrame.Type.BGR888i
     print("Creating pipeline...")
 
@@ -30,14 +44,14 @@ with dai.Pipeline(device) as pipeline:
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left.requestOutput(model_input_shape, type=dai.ImgFrame.Type.NV12, fps=FPS_CAP),
-        right=right.requestOutput(model_input_shape, type=dai.ImgFrame.Type.NV12, fps=FPS_CAP),
+        left=left.requestOutput(model_input_shape, type=dai.ImgFrame.Type.NV12, fps=fps_cap),
+        right=right.requestOutput(model_input_shape, type=dai.ImgFrame.Type.NV12, fps=fps_cap),
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT
     )
 
     lr_sync = pipeline.create(dai.node.Sync)
-    left.requestOutput(model_input_shape, type=OUTPUT_TYPE, fps=FPS_CAP).link(lr_sync.inputs["left"])
-    right.requestOutput(model_input_shape, type=OUTPUT_TYPE, fps=FPS_CAP).link(lr_sync.inputs["right"])
+    left.requestOutput(model_input_shape, type=OUTPUT_TYPE, fps=fps_cap).link(lr_sync.inputs["left"])
+    right.requestOutput(model_input_shape, type=OUTPUT_TYPE, fps=fps_cap).link(lr_sync.inputs["right"])
     
     demux = pipeline.create(dai.node.MessageDemux)
     lr_sync.out.link(demux.input)
