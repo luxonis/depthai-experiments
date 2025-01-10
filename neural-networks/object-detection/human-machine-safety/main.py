@@ -42,10 +42,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.setOutputSize(*VIDEO_SIZE)
 
     yolo_nn = pipeline.create(dai.node.SpatialDetectionNetwork).build(
-        input=color_cam,
-        stereo=stereo, 
-        model=yolo_description,
-        fps=FPS
+        input=color_cam, stereo=stereo, model=yolo_description, fps=FPS
     )
     yolo_nn.setConfidenceThreshold(0.5)
     yolo_nn.input.setBlocking(False)

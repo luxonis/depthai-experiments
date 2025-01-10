@@ -2,15 +2,15 @@
 import os
 import argparse
 from pathlib import Path
-import blobconverter
 import depthai as dai
 from face_recognition import FaceRecognition
 from face_recognition_node import FaceRecognitionNode
 from detections_recognitions_sync import DetectionsRecognitionsSync
-import cv2
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-name", "--name", type=str, help="Name of the person for database saving")
+parser.add_argument(
+    "-name", "--name", type=str, help="Name of the person for database saving"
+)
 
 args = parser.parse_args()
 
@@ -19,15 +19,21 @@ databases = "databases"
 if not os.path.exists(databases):
     os.mkdir(databases)
 
-face_det_model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
+face_det_model_description = dai.NNModelDescription(
+    modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640"
+)
 face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
 face_det_nn_archive = dai.NNArchive(face_det_archive_path)
 
-headpose_model_description = dai.NNModelDescription(modelSlug="head-pose-estimation-adas", platform="RVC2", modelVersionSlug="0001")
+headpose_model_description = dai.NNModelDescription(
+    modelSlug="head-pose-estimation-adas", platform="RVC2", modelVersionSlug="0001"
+)
 headpose_archive_path = dai.getModelFromZoo(headpose_model_description)
 headpose_nn_archive = dai.NNArchive(headpose_archive_path)
 
-face_rec_model_description = dai.NNModelDescription(modelSlug="face-recognition-arcface", platform="RVC2", modelVersionSlug="112x112")
+face_rec_model_description = dai.NNModelDescription(
+    modelSlug="face-recognition-arcface", platform="RVC2", modelVersionSlug="112x112"
+)
 face_rec_archive_path = dai.getModelFromZoo(face_rec_model_description)
 face_rec_nn_archive = dai.NNArchive(face_rec_archive_path)
 
@@ -48,7 +54,7 @@ with dai.Pipeline() as pipeline:
     # higher number will fix this issue.
     copy_manip = pipeline.create(dai.node.ImageManip)
     copy_manip.setNumFramesPool(20)
-    copy_manip.setMaxOutputFrameSize(1072*1072*3)
+    copy_manip.setMaxOutputFrameSize(1072 * 1072 * 3)
     cam.preview.link(copy_manip.inputImage)
 
     # ImageManip that will crop the frame before sending it to the Face detection NN node
@@ -70,11 +76,11 @@ with dai.Pipeline() as pipeline:
     script = pipeline.create(dai.node.Script)
     script.setProcessor(dai.ProcessorType.LEON_CSS)
 
-    face_det_nn.out.link(script.inputs['face_det_in'])
+    face_det_nn.out.link(script.inputs["face_det_in"])
     # We also interested in sequence number for syncing
-    face_det_nn.passthrough.link(script.inputs['face_pass'])
+    face_det_nn.passthrough.link(script.inputs["face_pass"])
 
-    copy_manip.out.link(script.inputs['preview'])
+    copy_manip.out.link(script.inputs["preview"])
 
     with open(Path(__file__).parent / Path("script.py"), "r") as f:
         script.setScript(f.read())
@@ -84,16 +90,16 @@ with dai.Pipeline() as pipeline:
     headpose_manip = pipeline.create(dai.node.ImageManip)
     headpose_manip.initialConfig.setResize(60, 60)
     headpose_manip.inputConfig.setWaitForMessage(True)
-    script.outputs['manip_cfg'].link(headpose_manip.inputConfig)
-    script.outputs['manip_img'].link(headpose_manip.inputImage)
+    script.outputs["manip_cfg"].link(headpose_manip.inputConfig)
+    script.outputs["manip_img"].link(headpose_manip.inputImage)
 
     headpose_nn = pipeline.create(dai.node.NeuralNetwork)
     # headpose_nn.setBlobPath(blobconverter.from_zoo(name="head-pose-estimation-adas-0001", shaves=6))
     headpose_nn.setNNArchive(headpose_nn_archive)
     headpose_manip.out.link(headpose_nn.input)
 
-    headpose_nn.out.link(script.inputs['headpose_in'])
-    headpose_nn.passthrough.link(script.inputs['headpose_pass'])
+    headpose_nn.out.link(script.inputs["headpose_in"])
+    headpose_nn.passthrough.link(script.inputs["headpose_pass"])
 
     print("Creating face recognition ImageManip/NN")
 
@@ -101,8 +107,8 @@ with dai.Pipeline() as pipeline:
     face_rec_manip.initialConfig.setResize(112, 112)
     face_rec_manip.inputConfig.setWaitForMessage(True)
 
-    script.outputs['manip2_cfg'].link(face_rec_manip.inputConfig)
-    script.outputs['manip2_img'].link(face_rec_manip.inputImage)
+    script.outputs["manip2_cfg"].link(face_rec_manip.inputConfig)
+    script.outputs["manip2_img"].link(face_rec_manip.inputImage)
 
     face_rec_nn = pipeline.create(dai.node.NeuralNetwork)
     # face_rec_nn.setBlobPath(blobconverter.from_zoo(name="face-recognition-arcface-112x112", zoo_type="depthai", shaves=6))
@@ -120,7 +126,7 @@ with dai.Pipeline() as pipeline:
     pipeline.create(FaceRecognitionNode).build(
         img_output=cam.video,
         detected_recognitions=sync_node.output,
-        face_recognition=facerec
+        face_recognition=facerec,
     )
 
     print("Pipeline created.")

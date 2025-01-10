@@ -1,13 +1,35 @@
-import blobconverter
 import depthai as dai
 
 from kalman_filter_node import KalmanFilterNode
 
 
-label_map = ['background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
-            'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
+label_map = [
+    "background",
+    "aeroplane",
+    "bicycle",
+    "bird",
+    "boat",
+    "bottle",
+    "bus",
+    "car",
+    "cat",
+    "chair",
+    "cow",
+    "diningtable",
+    "dog",
+    "horse",
+    "motorbike",
+    "person",
+    "pottedplant",
+    "sheep",
+    "sofa",
+    "train",
+    "tvmonitor",
+]
 
-model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+model_description = dai.NNModelDescription(
+    modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
@@ -50,7 +72,7 @@ with dai.Pipeline(device) as pipeline:
     q_rgb = object_tracker.passthroughTrackerFrame.createOutputQueue(4, False)
     q_tracklets = object_tracker.out.createOutputQueue(4, False)
     q_detections = object_tracker.passthroughDetections.createOutputQueue(4, False)
-    
+
     detection_network.passthrough.link(object_tracker.inputTrackerFrame)
     detection_network.passthrough.link(object_tracker.inputDetectionFrame)
     detection_network.out.link(object_tracker.inputDetections)
@@ -59,14 +81,16 @@ with dai.Pipeline(device) as pipeline:
     # Connect to device and start pipeline
     calibration_handler = device.readCalibration()
     baseline = calibration_handler.getBaselineDistance() * 10
-    focal_length = calibration_handler.getCameraIntrinsics(dai.CameraBoardSocket.CAM_C, 640, 400)[0][0]
+    focal_length = calibration_handler.getCameraIntrinsics(
+        dai.CameraBoardSocket.CAM_C, 640, 400
+    )[0][0]
 
     pipeline.create(KalmanFilterNode).build(
         rgb=object_tracker.passthroughTrackerFrame,
         tracker_out=object_tracker.out,
         baseline=baseline,
         focal_length=focal_length,
-        label_map=label_map
+        label_map=label_map,
     )
 
     print("Running pipeline...")

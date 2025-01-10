@@ -6,14 +6,13 @@ CREStereo: Practical Stereo Matching via Cascaded Recurrent Network with Adaptiv
 
 ### 160x240
 
->```crestereo_init_iter2_160x240_6_shaves.blob```
+> `crestereo_init_iter2_160x240_6_shaves.blob`
 
 ![demo-gif](https://i.imgur.com/S4BElZo.png)
 
-
 ### 120x160
 
->```crestereo_init_iter2_120x160_6_shaves.blob```
+> `crestereo_init_iter2_120x160_6_shaves.blob`
 
 ![demo-gif](https://i.imgur.com/4Gpt2On.png)
 
@@ -39,6 +38,6 @@ optional arguments:
 
 ## References
 
-* [ibaiGorordo/CREStereo-Pytorch](https://github.com/ibaiGorordo/CREStereo-Pytorch)
-* [PINTO0309/PINTO_model_zoo](https://github.com/PINTO0309/PINTO_model_zoo)
-* [Paper](https://arxiv.org/abs/2203.11483)
+- [ibaiGorordo/CREStereo-Pytorch](https://github.com/ibaiGorordo/CREStereo-Pytorch)
+- [PINTO0309/PINTO_model_zoo](https://github.com/PINTO0309/PINTO_model_zoo)
+- [Paper](https://arxiv.org/abs/2203.11483)

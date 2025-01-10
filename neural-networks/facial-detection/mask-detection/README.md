@@ -10,13 +10,13 @@ https://user-images.githubusercontent.com/18037362/171852659-2b0d127d-5b45-4c8f-
 ### How it works
 
 1. Color camera produces high-res frames, sends them to host, Script node and downscale ImageManip node
-2. Downscale ImageManip will downscale from high-res frame to 300x300, required by 1st NN in this pipeline; object detection model
-3. 300x300 frames are sent from downscale ImageManip node to the object detection model (MobileNetSpatialDetectionNetwork)
-4. Object detections are sent to the Script node
-5. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected face. These configs then get sent to ImageManip together with synced high-res frame
-6. ImageManip will crop only the face out of the original frame. It will also resize the face frame to required size (224,224) by the SBD-Mask classification NN model
-7. Face frames get send to the 2nd NN - SBD-Mask NN model. NN recognition results are sent back to the host
-8. Frames, object detections, and recognition results are all **synced on the host** side and then displayed to the user
+1. Downscale ImageManip will downscale from high-res frame to 300x300, required by 1st NN in this pipeline; object detection model
+1. 300x300 frames are sent from downscale ImageManip node to the object detection model (MobileNetSpatialDetectionNetwork)
+1. Object detections are sent to the Script node
+1. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected face. These configs then get sent to ImageManip together with synced high-res frame
+1. ImageManip will crop only the face out of the original frame. It will also resize the face frame to required size (224,224) by the SBD-Mask classification NN model
+1. Face frames get send to the 2nd NN - SBD-Mask NN model. NN recognition results are sent back to the host
+1. Frames, object detections, and recognition results are all **synced on the host** side and then displayed to the user
 
 ## 2-stage NN pipeline graph
 

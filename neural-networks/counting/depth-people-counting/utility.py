@@ -1,7 +1,12 @@
 import depthai as dai
 import cv2
 
-DETECTION_ROI = (200,300,1000,700) # Specific to `depth-person-counting-01` recording
+DETECTION_ROI = (
+    200,
+    300,
+    1000,
+    700,
+)  # Specific to `depth-person-counting-01` recording
 THRESH_DIST_DELTA = 0.5
 
 
@@ -13,21 +18,25 @@ class TextHelper:
         self.line_type = cv2.LINE_AA
 
     def putText(self, frame, text, coords):
-        cv2.putText(frame, text, coords, self.text_type, 1.3, self.bg_color, 5, self.line_type)
-        cv2.putText(frame, text, coords, self.text_type, 1.3, self.color, 2, self.line_type)
+        cv2.putText(
+            frame, text, coords, self.text_type, 1.3, self.bg_color, 5, self.line_type
+        )
+        cv2.putText(
+            frame, text, coords, self.text_type, 1.3, self.color, 2, self.line_type
+        )
         return frame
 
-    def rectangle(self, frame, topLeft,bottomRight, size=1.):
-        cv2.rectangle(frame, topLeft, bottomRight, self.bg_color, int(size*4))
+    def rectangle(self, frame, topLeft, bottomRight, size=1.0):
+        cv2.rectangle(frame, topLeft, bottomRight, self.bg_color, int(size * 4))
         cv2.rectangle(frame, topLeft, bottomRight, self.color, int(size))
         return frame
-    
+
 
 class PeopleCounter:
     def __init__(self):
         self.tracking = {}
         self.lost_cnt = {}
-        self.people_counter = [0, 0, 0, 0] # Up, Down, Left, Right
+        self.people_counter = [0, 0, 0, 0]  # Up, Down, Left, Right
 
     def __str__(self) -> str:
         return f"Left: {self.people_counter[2]}, Right: {self.people_counter[3]}"
@@ -60,8 +69,12 @@ class PeopleCounter:
                 # Tracklet has been lost for too long
                 if 10 < self.lost_cnt[str(t.id)]:
                     self.lost_cnt[str(t.id)] = -999
-                    self.tracklet_removed(self.tracking[str(t.id)], self.get_centroid(t.roi))
+                    self.tracklet_removed(
+                        self.tracking[str(t.id)], self.get_centroid(t.roi)
+                    )
             elif t.status == dai.Tracklet.TrackingStatus.REMOVED:
                 if 0 <= self.lost_cnt[str(t.id)]:
                     self.lost_cnt[str(t.id)] = -999
-                    self.tracklet_removed(self.tracking[str(t.id)], self.get_centroid(t.roi))
+                    self.tracklet_removed(
+                        self.tracking[str(t.id)], self.get_centroid(t.roi)
+                    )

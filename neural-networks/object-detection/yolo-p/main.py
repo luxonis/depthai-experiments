@@ -6,21 +6,34 @@ import argparse
 import errno
 import os
 from yolop import YoloP
-'''
+
+"""
 YOLOP demo running on device with video input from host.
 Run as:
 python3 -m pip install -r requirements.txt
 python3 main.py -v path/to/video
-'''
+"""
 
-model_description = dai.NNModelDescription(model="luxonis/yolo-p:bdd100k-320x320", platform="RVC2")
+model_description = dai.NNModelDescription(
+    model="luxonis/yolo-p:bdd100k-320x320", platform="RVC2"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-v', '--video_path', help="Path to video frame", default="vids/1.mp4")
-parser.add_argument("-conf", "--confidence_thresh", help="set the confidence threshold", default=0.5, type=float)
-parser.add_argument("-iou", "--iou_thresh", help="set the NMS IoU threshold", default=0.3, type=float)
+parser.add_argument(
+    "-v", "--video_path", help="Path to video frame", default="vids/1.mp4"
+)
+parser.add_argument(
+    "-conf",
+    "--confidence_thresh",
+    help="set the confidence threshold",
+    default=0.5,
+    type=float,
+)
+parser.add_argument(
+    "-iou", "--iou_thresh", help="set the NMS IoU threshold", default=0.3, type=float
+)
 
 args = parser.parse_args()
 
@@ -53,12 +66,12 @@ with dai.Pipeline() as pipeline:
     replay.out.link(detection_nn.input)
 
     yolop = pipeline.create(YoloP).build(
-        img_frames=replay.out, 
-        nn_data=detection_nn.out, 
-        nn_height=NN_HEIGHT, 
-        nn_width=NN_WIDTH
+        img_frames=replay.out,
+        nn_data=detection_nn.out,
+        nn_height=NN_HEIGHT,
+        nn_width=NN_WIDTH,
     )
     yolop.set_confidence_threshold(CONFIDENCE_THRESHOLD)
     yolop.set_iou_threshold(IOU_THRESHOLD)
-    
+
     pipeline.run()

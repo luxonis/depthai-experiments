@@ -5,7 +5,9 @@ from host_depth_segmentation import DepthSegmentation
 from host_fps_drawer import FPSDrawer
 from host_display import Display
 
-model_description = dai.NNModelDescription(modelSlug="deeplab-v3-plus", platform="RVC2", modelVersionSlug="person-256x256")
+model_description = dai.NNModelDescription(
+    modelSlug="deeplab-v3-plus", platform="RVC2", modelVersionSlug="person-256x256"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
@@ -14,7 +16,6 @@ mono_shape = (640, 400)
 nn_shape = (256, 256)
 
 with dai.Pipeline() as pipeline:
-
     print("Creating pipeline...")
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_output = color.requestOutput(output_shape, dai.ImgFrame.Type.BGR888p)
@@ -29,8 +30,7 @@ with dai.Pipeline() as pipeline:
     color_output.link(manip.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork).build(
-        nnArchive=nn_archive,
-        input=manip.out
+        nnArchive=nn_archive, input=manip.out
     )
     nn.input.setBlocking(False)
     nn.input.setMaxSize(1)
@@ -40,8 +40,7 @@ with dai.Pipeline() as pipeline:
     parser.setBackgroundClass(True)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left.requestOutput(mono_shape),
-        right=right.requestOutput(mono_shape)
+        left=left.requestOutput(mono_shape), right=right.requestOutput(mono_shape)
     )
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
@@ -51,7 +50,7 @@ with dai.Pipeline() as pipeline:
         preview=color_output,
         mask=parser.out,
         disparity=stereo.disparity,
-        max_disparity=stereo.initialConfig.getMaxDisparity()
+        max_disparity=stereo.initialConfig.getMaxDisparity(),
     )
 
     fps_drawer = pipeline.create(FPSDrawer).build(depth_segmentation.output)

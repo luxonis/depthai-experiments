@@ -4,9 +4,9 @@ This example shows an implementation of [YOLOP](https://github.com/hustvl/YOLOP)
 
 The model performs:
 
-* lane segmentation,
-* line segmentation, and
-* vehicle detection.
+- lane segmentation,
+- line segmentation, and
+- vehicle detection.
 
 Input shape of the model is 320 x 320, and we resize the input video to the required shape. [Letterboxing](https://docs.luxonis.com/projects/api/en/latest/tutorials/maximize_fov/#letterboxing) might be useful for slightly better performance.
 
@@ -22,7 +22,7 @@ Python 3.8.19 is required.
    ```
    python3 -m pip install -r requirements.txt
    ```
-2. Download sample videos
+1. Download sample videos
    ```
    python3 download.py
    ```
@@ -35,6 +35,6 @@ python3 main.py [options]
 
 Options:
 
-* -v, --video_path: Path to the video input for inference. Default: *vids/1.mp4*.
-* -conf, --confidence_thresh: Set the confidence threshold. Default: 0.5.
-* -iou, --iou_thresh: Set the NMS IoU threshold. Default: 0.3.
+- -v, --video_path: Path to the video input for inference. Default: *vids/1.mp4*.
+- -conf, --confidence_thresh: Set the confidence threshold. Default: 0.5.
+- -iou, --iou_thresh: Set the NMS IoU threshold. Default: 0.3.

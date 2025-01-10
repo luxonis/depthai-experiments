@@ -18,7 +18,9 @@ class Tracker:
         self.history[self.nextObjectID] = [centroid]
         self.objects[self.nextObjectID] = centroid
         self.disappeared[self.nextObjectID] = 0
-        self.colors[self.nextObjectID] = np.random.choice(range(256), size=3).astype('i').tolist()
+        self.colors[self.nextObjectID] = (
+            np.random.choice(range(256), size=3).astype("i").tolist()
+        )
         self.nextObjectID += 1
 
     def deregister(self, objectID):
@@ -51,7 +53,7 @@ class Tracker:
             usedRows = set()
             usedCols = set()
 
-            for (row, col) in zip(rows, cols):
+            for row, col in zip(rows, cols):
                 if row in usedRows or col in usedCols:
                     continue
 
@@ -60,7 +62,9 @@ class Tracker:
 
                 objectID = objectIDs[row]
                 self.objects[objectID] = pts[col]
-                self.history[objectID] = (self.history[objectID] + [pts[col]])[-self.maxHistory:]
+                self.history[objectID] = (self.history[objectID] + [pts[col]])[
+                    -self.maxHistory :
+                ]
                 self.disappeared[objectID] = 0
 
                 usedRows.add(row)

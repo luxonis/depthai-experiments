@@ -13,6 +13,7 @@ uses function `def calc_spatials(self, bbox, depth):` to calculate spatial coord
 ## Pre-requisites
 
 Install requirements:
+
 ```bash
 python3 -m pip install -r requirements.txt
 ```

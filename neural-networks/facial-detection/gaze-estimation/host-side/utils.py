@@ -12,7 +12,12 @@ def frame_norm(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray[np.int64]:
 def to_planar(arr: np.ndarray, shape: tuple) -> list:
     if arr.size == 0:
         return []
-    return [val for channel in cv2.resize(arr, shape).transpose(2, 0, 1) for y_col in channel for val in y_col]
+    return [
+        val
+        for channel in cv2.resize(arr, shape).transpose(2, 0, 1)
+        for y_col in channel
+        for val in y_col
+    ]
 
 
 def copy_timestamps(source: dai.Buffer, target: dai.Buffer) -> None:

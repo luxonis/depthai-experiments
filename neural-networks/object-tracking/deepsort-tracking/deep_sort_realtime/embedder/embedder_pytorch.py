@@ -1,8 +1,8 @@
-import os
 import logging
 
 import cv2
 import numpy as np
+
 # import pkg_resources
 import torch
 import torch.nn as nn
@@ -22,9 +22,10 @@ def batch(iterable, bs=1):
 class Identity(nn.Module):
     def __init__(self):
         super(Identity, self).__init__()
-        
+
     def forward(self, x):
         return x
+
 
 class MobileNetv2_Embedder(object):
     """
@@ -42,13 +43,17 @@ class MobileNetv2_Embedder(object):
     def __init__(
         self, model_wts_path=None, half=True, max_batch_size=16, bgr=True, gpu=True
     ):
-        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', weights='MobileNet_V2_Weights.IMAGENET1K_V1')
-        
+        self.model = torch.hub.load(
+            "pytorch/vision:v0.10.0",
+            "mobilenet_v2",
+            weights="MobileNet_V2_Weights.IMAGENET1K_V1",
+        )
+
         if model_wts_path is not None:
             self.model.load_state_dict(torch.load(model_wts_path))
-        
+
         self.model.classifier = Identity()
-           
+
         self.gpu = gpu
         if self.gpu:
             self.model.cuda()  # loads model to gpu
@@ -92,9 +97,9 @@ class MobileNetv2_Embedder(object):
             np_image_rgb = np_image
 
         input_image = cv2.resize(np_image_rgb, (INPUT_WIDTH, INPUT_WIDTH))
-        
+
         input_image = torch.from_numpy(input_image)
-        input_image = input_image.float().permute(2, 0, 1)/255.0
+        input_image = input_image.float().permute(2, 0, 1) / 255.0
 
         # logger.info(f'input_image: {input_image.shape}') #, min: {np.amin(input_image)}, max: {np.amax(input_image)}')
         trans = transforms.Compose(

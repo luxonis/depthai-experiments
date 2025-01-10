@@ -10,7 +10,7 @@ We offer two modes of operation: `mono` and `stereo`. In `mono` mode we use a si
 In `mono` mode we visualize the matches between the frames and the reference frame which can be set by pressing `s` key in the visualizer. In `stereo` mode we visualize the matches between the frames from the left and right camera.
 
 ## Demo
-    
+
 ![XFeat Mono Demo on OAK](media/xfeat_demo.gif)
 
 ## Installation
@@ -31,12 +31,11 @@ You can run the experiment in fully on device (`STANDALONE` mode) or using your 
 python3 main.py --model <MODEL> --device <DEVICE> --fps_limit <FPS_LIMIT>
 ```
 
-
 - `<MODEL>`: HubAI Model Reference from Luxonis HubAI. Default: `luxonis/xfeat:mono-240x320`.
-- `<DEVICE>`: Device IP or ID. Default: ``.
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
 - `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
 
-If you use model with mono mode (e.g. ``luxonis/xfeat:mono-240x320``), you can set reference frame by pressing `s` key in the visualizer.
+If you use model with mono mode (e.g. `luxonis/xfeat:mono-240x320`), you can set reference frame by pressing `s` key in the visualizer.
 
 **NOTE**: Stereo mode will run only with 2-camera devices.
 
@@ -64,10 +63,13 @@ This will run the XFeat model in stereo mode with the `luxonis/xfeat:stereo-240x
 
 Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
+
 and run the example using the `run_standalone.py` script:
+
 ```bash
 python3 run_standalone.py \
     --model <Model> \
@@ -78,6 +80,7 @@ python3 run_standalone.py \
 The arguments are the same as in the Peripheral mode.
 
 #### Example
+
 ```bash
 python3 run_standalone.py \
     --model xfeat:stereo-240x320 \

@@ -5,6 +5,7 @@ This experiment demonstrates how to perform 3D object detection using the [Objec
 ## Demo
 
 <!-- ![chair](https://user-images.githubusercontent.com/60359299/153616321-83f9d7ae-100a-4317-afd4-72bb3d1011d4.gif) -->
+
 ![chair](media/chair.gif)
 
 ## Installation
@@ -19,7 +20,7 @@ pip install -r requirements.txt
 
 The provided experiment detects chairs, but you can change the object class by changing the valid labels in `script_*.py` file and in constructing the `AnnotationNode` in `main.py`: `annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs, valid_labels=[41])` where `41` is the label for cups.
 
-You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode). 
+You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
 **NOTE**: Camera and shoes can not be detected with general YOLOv6 detector. So, you need to provide your own detector for these objects.
 
@@ -29,7 +30,7 @@ You can run the experiment in fully on device (`STANDALONE` mode) or using your 
 python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
 ```
 
-- `<DEVICE>`: Device IP or ID. Default: ``.
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
 - `<MEDIA>`: Path to the video file. Default `None` - camera input.
 - `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
 
@@ -51,10 +52,13 @@ This will run the objectron experiment with the default device and the video fil
 
 Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
+
 and run the example using the `run_standalone.py` script:
+
 ```bash
 python3 run_standalone.py \
     --device <DEVICE IP> \
@@ -65,6 +69,7 @@ python3 run_standalone.py \
 The arguments are the same as in the Peripheral mode.
 
 #### Example
+
 ```bash
 python3 run_standalone.py \
     --fps_limit 20 \

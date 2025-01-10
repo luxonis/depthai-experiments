@@ -9,12 +9,9 @@ class NumpyBuffer(dai.Buffer):
         super().__init__(0)
         self.setData(np_data, sync_origin)
 
-
     def getData(self) -> np.ndarray:
         return self._np_data
-    
 
     def setData(self, data: np.ndarray, sync_origin: dai.Buffer) -> None:
         self._np_data = data
         copy_timestamps(sync_origin, self)
-    

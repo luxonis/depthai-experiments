@@ -1,11 +1,11 @@
 try:
     while True:
-        frame = node.inputs['preview'].get()
-        dets = node.inputs['det_in'].get()
+        frame = node.inputs["preview"].get()
+        dets = node.inputs["det_in"].get()
 
-        labels = [56] # chair
+        labels = [56]  # chair
         padding = 0.2
-        
+
         for i, det in enumerate(dets.detections):
             if det.label not in labels:
                 continue
@@ -22,8 +22,8 @@ try:
             cfg.addCropRotatedRect(rect=rect, normalizedCoords=True)
             cfg.setOutputSize(224, 224)
 
-            node.outputs['manip_cfg'].send(cfg)
-            node.outputs['manip_img'].send(frame)
+            node.outputs["manip_cfg"].send(cfg)
+            node.outputs["manip_img"].send(frame)
 
 except Exception as e:
     node.warn(str(e))

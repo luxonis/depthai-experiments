@@ -1,11 +1,20 @@
 import depthai as dai
-import numpy as np
 from depthai_nodes.ml.helpers.constants import OUTLINE_COLOR
-from depthai_nodes.ml.messages import ImgDetectionsExtended, ImgDetectionExtended, Keypoint, Keypoints
+from depthai_nodes.ml.messages import (
+    ImgDetectionsExtended,
+    ImgDetectionExtended,
+    Keypoints,
+)
 from typing import List
 
+
 class AnnotationNode(dai.node.ThreadedHostNode):
-    def __init__(self, connection_pairs: List[List[int]], valid_labels: List[int], padding: float = 0.1) -> None:
+    def __init__(
+        self,
+        connection_pairs: List[List[int]],
+        valid_labels: List[int],
+        padding: float = 0.1,
+    ) -> None:
         super().__init__()
         self.input_detections = self.createInput()
         self.input_keypoints = self.createInput()
@@ -14,7 +23,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
         self.connection_pairs = connection_pairs
         self.padding = padding
         self.valid_labels = valid_labels
-        
+
     def run(self):
         while self.isRunning():
             detections_message: dai.ImgDetections = self.input_detections.tryGet()
@@ -26,7 +35,9 @@ class AnnotationNode(dai.node.ThreadedHostNode):
 
             img_detections_exteded = ImgDetectionsExtended()
 
-            annotations = dai.ImgAnnotations()  # custom annotations for drawing lines between keypoints
+            annotations = (
+                dai.ImgAnnotations()
+            )  # custom annotations for drawing lines between keypoints
 
             padding = self.padding
 
@@ -39,7 +50,13 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                 width = detection.xmax - detection.xmin
                 height = detection.ymax - detection.ymin
                 angle = 0
-                img_detection_extended.rotated_rect = (center_x, center_y, width, height, angle)
+                img_detection_extended.rotated_rect = (
+                    center_x,
+                    center_y,
+                    width,
+                    height,
+                    angle,
+                )
                 img_detection_extended.label = detection.label
                 img_detection_extended.confidence = detection.confidence
 
@@ -64,18 +81,23 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                         pointsAnnotation = dai.PointsAnnotation()
                         pointsAnnotation.type = dai.PointsAnnotationType.LINE_STRIP
                         pointsAnnotation.points = dai.VectorPoint2f(
-                            [dai.Point2f(x=x1, y=y1, normalized=True), dai.Point2f(x=x2, y=y2, normalized=True)]
+                            [
+                                dai.Point2f(x=x1, y=y1, normalized=True),
+                                dai.Point2f(x=x2, y=y2, normalized=True),
+                            ]
                         )
                         pointsAnnotation.outlineColor = OUTLINE_COLOR
                         pointsAnnotation.thickness = 1.0
                         annotation.points.append(pointsAnnotation)
-                
+
                 img_detections_exteded.detections.append(img_detection_extended)
                 annotations.annotations.append(annotation)
-            
+
             annotations.setTimestamp(detections_message.getTimestamp())
             img_detections_exteded.setTimestamp(detections_message.getTimestamp())
-            img_detections_exteded.transformation = detections_message.getTransformation()
+            img_detections_exteded.transformation = (
+                detections_message.getTransformation()
+            )
 
             self.out_detections.send(img_detections_exteded)
             self.out_pose_annotations.send(annotations)

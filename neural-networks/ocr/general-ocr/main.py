@@ -1,5 +1,4 @@
 import depthai as dai
-import blobconverter
 
 from host_display import Display
 from depthai_nodes.ml.parsers import PPTextDetectionParser, PaddleOCRParser
@@ -12,21 +11,22 @@ FPS = 10
 device = dai.Device()
 
 # RVC2 models
-detection_model_description = dai.NNModelDescription(modelSlug="paddle-text-detection", platform="RVC2", modelVersionSlug="256x256")
+detection_model_description = dai.NNModelDescription(
+    modelSlug="paddle-text-detection", platform="RVC2", modelVersionSlug="256x256"
+)
 detection_archive_path = dai.getModelFromZoo(detection_model_description)
 detection_nn_archive = dai.NNArchive(detection_archive_path)
 
-recognition_model_description = dai.NNModelDescription(modelSlug="paddle-text-recognition", platform="RVC2", modelVersionSlug="320x48")
+recognition_model_description = dai.NNModelDescription(
+    modelSlug="paddle-text-recognition", platform="RVC2", modelVersionSlug="320x48"
+)
 # recognition_model_description = dai.NNModelDescription(modelSlug="paddle-text-recognition", platform="RVC2", modelVersionSlug="160x48")
 recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
 recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 classes = recognition_nn_archive.getConfigV1().model.heads[0].metadata.classes
 
 
-
-
 with dai.Pipeline(device) as pipeline:
-
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(256, 256)
@@ -43,11 +43,9 @@ with dai.Pipeline(device) as pipeline:
 
     paddle_det = pipeline.create(PPTextDetectionParser)
     detection_nn.out.link(paddle_det.input)
-    
 
     process_detections = pipeline.create(ProcessDetections).build(
-        frame=cam.video,
-        detections=paddle_det.out
+        frame=cam.video, detections=paddle_det.out
     )
 
     color_display = pipeline.create(Display).build(process_detections.display)
@@ -83,7 +81,7 @@ with dai.Pipeline(device) as pipeline:
     ocr = pipeline.create(OCR).build(
         preview=cam.video,
         manips=manip_sync.output,
-        recognitions=recognition_sync.output
+        recognitions=recognition_sync.output,
     )
     ocr.inputs["preview"].setBlocking(False)
 

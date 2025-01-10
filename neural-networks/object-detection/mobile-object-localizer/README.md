@@ -1,4 +1,4 @@
-## [Gen3] Mobile Object Localizer on DepthAI
+## \[Gen3\] Mobile Object Localizer on DepthAI
 
 This example shows an implementation of Mobile Object Localizer from [Tensorflow Hub](https://tfhub.dev/google/lite-model/object_detection/mobile_object_localizer_v1/1/default/1).
 
@@ -14,7 +14,7 @@ Input video is resized to 300 x 300 (W x H). Output is a list of 100 scores and 
    ```
    python3 download.py
    ```
-2. Install requirements
+1. Install requirements
    ```
    python3 -m pip install -r requirements.txt
    ```
@@ -27,4 +27,4 @@ python3 main.py [options]
 
 Options:
 
-* -t, --threshold: Box confidence threshold. Default: *0.2*
+- -t, --threshold: Box confidence threshold. Default: *0.2*

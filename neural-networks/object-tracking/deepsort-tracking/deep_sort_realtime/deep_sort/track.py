@@ -81,7 +81,7 @@ class Track:
         det_class=None,
         det_conf=None,
         others=None,
-        detection_id=-1
+        detection_id=-1,
     ):
         self.mean = mean
         self.covariance = covariance

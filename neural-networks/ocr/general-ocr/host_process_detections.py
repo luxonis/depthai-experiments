@@ -5,15 +5,34 @@ import depthai_nodes
 import cv2
 import numpy as np
 
+
 class ProcessDetections(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self.passthrough = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
-        self.output_rect = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)])
-        self.output_config = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)])
-        self.display = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)])
+        self.passthrough = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
+        self.output_rect = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)
+            ]
+        )
+        self.output_config = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)
+            ]
+        )
+        self.display = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
 
-    def build(self, frame: dai.Node.Output, detections: dai.Node.Output) -> "ProcessDetections":
+    def build(
+        self, frame: dai.Node.Output, detections: dai.Node.Output
+    ) -> "ProcessDetections":
         self.link_args(frame, detections)
         self.sendProcessingToPipeline(True)
         return self
@@ -21,18 +40,22 @@ class ProcessDetections(dai.node.HostNode):
     def process(self, frame: dai.ImgFrame, detections: dai.Buffer) -> None:
         # Casting values that were sent in this exact format
 
-        assert(isinstance(detections, depthai_nodes.ml.messages.img_detections.CornerDetections))
+        assert isinstance(
+            detections, depthai_nodes.ml.messages.img_detections.CornerDetections
+        )
         # print(detections.detections)
 
-
         key_pressed = cv2.waitKey(1)
-        
+
         frame_with_bboxes = frame.getCvFrame()
         for idx, det in enumerate(detections.detections):
             corners = det.keypoints
-            polygon = [[corners[0].x*4, corners[0].y*4], [corners[1].x*4, corners[1].y*4], [corners[2].x*4, corners[2].y*4], [corners[3].x*4, corners[3].y*4]]
-
-
+            polygon = [
+                [corners[0].x * 4, corners[0].y * 4],
+                [corners[1].x * 4, corners[1].y * 4],
+                [corners[2].x * 4, corners[2].y * 4],
+                [corners[3].x * 4, corners[3].y * 4],
+            ]
 
             rr = get_rotated_rect_from_detection(polygon)
 
@@ -40,7 +63,6 @@ class ProcessDetections(dai.node.HostNode):
 
             if key_pressed != ord("c"):
                 continue
-
 
             # print(det)
             # print(rr.center.x, rr.center.y, rr.size.width, rr.size.height)
@@ -84,14 +106,21 @@ def get_rotated_rect_from_detection(polygon: list[list[int]]) -> dai.RotatedRect
     rr.center.x = (polygon[0][0] + polygon[2][0]) // 2
     rr.center.y = (polygon[0][1] + polygon[2][1]) // 2
 
-    rr.size.width = ((polygon[1][0] - polygon[0][0])**2 + (polygon[1][1] - polygon[0][1])**2) ** (1/2)
-    rr.size.height = ((polygon[2][0] - polygon[1][0])**2 + (polygon[2][1] - polygon[1][1])**2) ** (1/2)
+    rr.size.width = (
+        (polygon[1][0] - polygon[0][0]) ** 2 + (polygon[1][1] - polygon[0][1]) ** 2
+    ) ** (1 / 2)
+    rr.size.height = (
+        (polygon[2][0] - polygon[1][0]) ** 2 + (polygon[2][1] - polygon[1][1]) ** 2
+    ) ** (1 / 2)
 
     rr.angle = np.arcsin((polygon[1][1] - polygon[0][1]) / rr.size.width) / np.pi * 180
 
-    return rr 
+    return rr
 
-def print_bboxes_on_frame(frame: dai.ImgFrame, polygon: list[list[int]]) -> dai.ImgFrame:
+
+def print_bboxes_on_frame(
+    frame: dai.ImgFrame, polygon: list[list[int]]
+) -> dai.ImgFrame:
     polygon = np.array(polygon).astype(np.int32)
     cv2.polylines(frame, [polygon], True, (0, 255, 0), 2)
 

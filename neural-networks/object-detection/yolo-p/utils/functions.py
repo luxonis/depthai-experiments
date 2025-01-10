@@ -4,6 +4,7 @@ import time
 import numpy as np
 import cv2
 
+
 # xywh2xyxy and non_max_suppression functions taken from
 # https://github.com/ultralytics/yolov5/blob/master/utils/general.py
 def xywh2xyxy(x):
@@ -16,12 +17,14 @@ def xywh2xyxy(x):
     return y
 
 
-def non_max_suppression(prediction, conf_thres=0.5, iou_thres=0.3, merge=False, classes=None, agnostic=False):
+def non_max_suppression(
+    prediction, conf_thres=0.5, iou_thres=0.3, merge=False, classes=None, agnostic=False
+):
     """Performs Non-Maximum Suppression (NMS) on inference results
     Returns:
          detections with shape: nx6 (x1, y1, x2, y2, conf, cls)
     """
-    prediction=torch.from_numpy(prediction)
+    prediction = torch.from_numpy(prediction)
     if prediction.dtype is torch.float16:
         prediction = prediction.float()  # to FP32
 
@@ -29,7 +32,10 @@ def non_max_suppression(prediction, conf_thres=0.5, iou_thres=0.3, merge=False, 
     xc = prediction[..., 4] > conf_thres  # candidates
 
     # Settings
-    min_wh, max_wh = 2, 4096  # (pixels) minimum and maximum box width and height
+    min_wh, max_wh = (
+        2,
+        4096,
+    )  # (pixels) minimum and maximum box width and height  # noqa: F841
     max_det = 500  # maximum number of detections per image
     time_limit = 10.0  # seconds to quit after
     multi_label = nc > 1  # multiple labels per box (adds 0.5ms/img)
@@ -73,7 +79,7 @@ def non_max_suppression(prediction, conf_thres=0.5, iou_thres=0.3, merge=False, 
             continue
 
         # Sort by confidence
-        #x = x[x[:, 4].argsort(descending=True)]
+        # x = x[x[:, 4].argsort(descending=True)]
 
         # Batched NMS
         c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
@@ -93,12 +99,16 @@ def show_boxes(frame, boxes):
     if boxes.ndim == 0:
         return frame
     else:
-
         color = (46, 87, 228)
 
         for i in range(boxes.shape[0]):
-            x1, y1, x2, y2 = int(boxes[i,0]), int(boxes[i,1]), int(boxes[i,2]), int(boxes[i,3])
-            conf, cls = boxes[i, 4], int(boxes[i, 5])
+            x1, y1, x2, y2 = (
+                int(boxes[i, 0]),
+                int(boxes[i, 1]),
+                int(boxes[i, 2]),
+                int(boxes[i, 3]),
+            )
+            conf, cls = boxes[i, 4], int(boxes[i, 5])  # noqa: F841
             label = f"{conf:.2f}"
 
             frame = cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
@@ -107,16 +117,24 @@ def show_boxes(frame, boxes):
             (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)
 
             # Shows the text.
-            frame = cv2.rectangle(frame, (x1, y1 - 2*h), (x1 + w, y1), color, -1)
-            frame = cv2.putText(frame, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,255), 1)
+            frame = cv2.rectangle(frame, (x1, y1 - 2 * h), (x1 + w, y1), color, -1)
+            frame = cv2.putText(
+                frame,
+                label,
+                (x1, y1 - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.3,
+                (255, 255, 255),
+                1,
+            )
     return frame
 
 
 def show_masks(frame, area, lines):
-    area = np.argmax(area, axis = 1)[0]
-    lines = np.argmax(lines, axis = 1)[0]
+    area = np.argmax(area, axis=1)[0]
+    lines = np.argmax(lines, axis=1)[0]
 
-    overlay = np.zeros((frame.shape[1], frame.shape[0], 3), dtype = np.uint8)
+    overlay = np.zeros((frame.shape[1], frame.shape[0], 3), dtype=np.uint8)
     overlay[area == 1] = [134, 198, 168]
     overlay[lines == 1] = [18, 167, 243]
 

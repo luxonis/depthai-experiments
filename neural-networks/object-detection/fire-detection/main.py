@@ -29,9 +29,7 @@ with dai.Pipeline() as pipeline:
     if not args.video:
         cam = pipeline.create(dai.node.ColorCamera)
         cam.setPreviewSize(cam_size)
-        cam.setResolution(
-            dai.ColorCameraProperties.SensorResolution.THE_4_K
-        )
+        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
         cam.setInterleaved(False)
         cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
         cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
@@ -45,14 +43,25 @@ with dai.Pipeline() as pipeline:
         img_output = replay.out
 
     neural_network = pipeline.create(dai.node.NeuralNetwork)
-    neural_network.setBlobPath(str((Path(__file__).parent / "models/fire-detection_openvino_2021.2_5shave.blob").resolve().absolute()))
+    neural_network.setBlobPath(
+        str(
+            (
+                Path(__file__).parent
+                / "models/fire-detection_openvino_2021.2_5shave.blob"
+            )
+            .resolve()
+            .absolute()
+        )
+    )
     neural_network.input.setBlocking(False)
     img_output.link(neural_network.input)
 
     fps_drawer = pipeline.create(FPSDrawer).build(img_output)
     fps_drawer.setRemoveOldFrames(False)
 
-    fire_detection = pipeline.create(FireDetection).build(fps_drawer.output, neural_network.out)
+    fire_detection = pipeline.create(FireDetection).build(
+        fps_drawer.output, neural_network.out
+    )
 
     if debug:
         display = pipeline.create(Display).build(fire_detection.output)

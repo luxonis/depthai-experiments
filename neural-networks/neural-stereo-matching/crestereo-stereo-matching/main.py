@@ -6,27 +6,37 @@ from download import download_blobs
 from os.path import isfile
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-nn', '--nn-choice', type=str
-                    , help="Choose between 2 neural network models from {120x160,160x240} (the bigger one is default)")
+parser.add_argument(
+    "-nn",
+    "--nn-choice",
+    type=str,
+    help="Choose between 2 neural network models from {120x160,160x240} (the bigger one is default)",
+)
 args = parser.parse_args()
 
 if args.nn_choice is None or args.nn_choice == "160x240":
-    nn_path = Path("models/crestereo_init_iter2_160x240_6_shaves.blob").resolve().absolute()
+    nn_path = (
+        Path("models/crestereo_init_iter2_160x240_6_shaves.blob").resolve().absolute()
+    )
     nn_shape = (160, 240)
 elif args.nn_choice == "120x160":
-    nn_path = Path("models/crestereo_init_iter2_120x160_6_shaves.blob").resolve().absolute()
+    nn_path = (
+        Path("models/crestereo_init_iter2_120x160_6_shaves.blob").resolve().absolute()
+    )
     nn_shape = (120, 160)
 else:
     nn_path = None
     nn_shape = None
 
 # Download neural network models
-if not isfile(Path("models/crestereo_init_iter2_160x240_6_shaves.blob").resolve().absolute()) or \
-    not isfile(Path("models/crestereo_init_iter2_120x160_6_shaves.blob").resolve().absolute()):
+if not isfile(
+    Path("models/crestereo_init_iter2_160x240_6_shaves.blob").resolve().absolute()
+) or not isfile(
+    Path("models/crestereo_init_iter2_120x160_6_shaves.blob").resolve().absolute()
+):
     download_blobs()
 
 with dai.Pipeline() as pipeline:
-
     print("Creating pipeline...")
     left = pipeline.create(dai.node.MonoCamera)
     left.setFps(2)
@@ -65,7 +75,7 @@ with dai.Pipeline() as pipeline:
         disparity=stereo.disparity,
         nn=nn.out,
         nn_shape=nn_shape,
-        max_disparity=stereo.initialConfig.getMaxDisparity()
+        max_disparity=stereo.initialConfig.getMaxDisparity(),
     )
     classification.inputs["disparity"].setBlocking(True)
     classification.inputs["nn"].setBlocking(True)

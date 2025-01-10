@@ -4,11 +4,15 @@ import depthai as dai
 from head_posture_detection import HeadPostureDetection
 from detections_recognitions_sync import DetectionsRecognitionsSync
 
-face_det_model_description = dai.NNModelDescription(model="luxonis/yunet:640x640", platform="RVC2")
+face_det_model_description = dai.NNModelDescription(
+    model="luxonis/yunet:640x640", platform="RVC2"
+)
 face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
 face_det_nn_archive = dai.NNArchive(face_det_archive_path)
 
-recognition_model_description = dai.NNModelDescription(model="luxonis/head-pose-estimation:60x60", platform="RVC2")
+recognition_model_description = dai.NNModelDescription(
+    model="luxonis/head-pose-estimation:60x60", platform="RVC2"
+)
 recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
 recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 
@@ -60,15 +64,15 @@ with dai.Pipeline(device) as pipeline:
     face_det_manip.out.link(face_det_nn.input)
 
     image_manip_script = pipeline.create(dai.node.Script)
-    image_manip_script.setScriptPath(Path(__file__).parent / 'script.py')
-    face_det_nn.out.link(image_manip_script.inputs['face_det_in'])
-    cam.preview.link(image_manip_script.inputs['preview'])
+    image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
+    face_det_nn.out.link(image_manip_script.inputs["face_det_in"])
+    cam.preview.link(image_manip_script.inputs["preview"])
 
     recognition_manip = pipeline.create(dai.node.ImageManip)
     recognition_manip.initialConfig.setResize(60, 60)
     recognition_manip.inputConfig.setWaitForMessage(True)
-    image_manip_script.outputs['manip_cfg'].link(recognition_manip.inputConfig)
-    image_manip_script.outputs['manip_img'].link(recognition_manip.inputImage)
+    image_manip_script.outputs["manip_cfg"].link(recognition_manip.inputConfig)
+    image_manip_script.outputs["manip_img"].link(recognition_manip.inputImage)
 
     print("Creating recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
@@ -79,8 +83,10 @@ with dai.Pipeline(device) as pipeline:
     face_det_nn.out.link(recognition_sync.input_detections)
     recognition_nn.out.link(recognition_sync.input_recognitions)
     recognition_sync.set_camera_fps(cam.getFps())
-    
-    head_pose_detection = pipeline.create(HeadPostureDetection).build(cam.preview, recognition_sync.output)
+
+    head_pose_detection = pipeline.create(HeadPostureDetection).build(
+        cam.preview, recognition_sync.output
+    )
     head_pose_detection.inputs["detected_recognitions"].setBlocking(False)
     head_pose_detection.inputs["detected_recognitions"].setMaxSize(1)
 

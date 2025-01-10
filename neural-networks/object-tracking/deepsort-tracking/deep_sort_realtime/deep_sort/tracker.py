@@ -189,7 +189,7 @@ class Tracker:
                 feature=detection.feature,
                 det_class=detection.class_name,
                 det_conf=detection.confidence,
-                detection_id=detection.id
+                detection_id=detection.id,
             )
         )
         self._next_id += 1

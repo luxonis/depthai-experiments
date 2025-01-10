@@ -4,9 +4,9 @@ This example shows how to run YoloV5 object detection on DepthAI with decoding o
 
 The following *.blob*s are available:
 
-* *yolov5s_default_openvino_2021.4_6shave.blob*: pretrained version of YoloV5s on Coco dataset.
-* *yolov5m_default_openvino_2021.4_6shave*: heavier version (YoloV5m) pretrained on Coco dataset.
-* *yolov5s_sku_openvino_2021.4_6shave.blob*: pretrained on YoloV5s on 3 epochs of SKU-110K dataset as can also be seen in the Colab.
+- *yolov5s_default_openvino_2021.4_6shave.blob*: pretrained version of YoloV5s on Coco dataset.
+- *yolov5m_default_openvino_2021.4_6shave*: heavier version (YoloV5m) pretrained on Coco dataset.
+- *yolov5s_sku_openvino_2021.4_6shave.blob*: pretrained on YoloV5s on 3 epochs of SKU-110K dataset as can also be seen in the Colab.
 
 For differences between YoloV5s and YoloV5m please refer to the [ultralytics/yolov5](https://github.com/ultralytics/yolov5).
 
@@ -24,7 +24,7 @@ Python 3.8.19 is needed to run this example.
    ```
    python3 -m pip install -r requirements.txt
    ```
-2. Download models
+1. Download models
    ```
    python3 download.py
    ```
@@ -37,7 +37,7 @@ python3 main.py [options]
 
 Options:
 
-* -cam, --cam_input: Select camera input source for inference. Available options: left, right, rgb (default).
-* -nn, --nn_model: Select model path for inference. Default: *models/yolov5s_sku_openvino_2021.4_6shave.blob*
-* -conf, --confidence_thresh: Set the confidence threshold. Default: 0.3.
-* -iou, --iou_thresh: Set the NMS IoU threshold. Default: 0.4.
+- -cam, --cam_input: Select camera input source for inference. Available options: left, right, rgb (default).
+- -nn, --nn_model: Select model path for inference. Default: *models/yolov5s_sku_openvino_2021.4_6shave.blob*
+- -conf, --confidence_thresh: Set the confidence threshold. Default: 0.3.
+- -iou, --iou_thresh: Set the NMS IoU threshold. Default: 0.4.

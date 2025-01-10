@@ -1,7 +1,6 @@
 [中文文档](README.zh-CN.md)
 
-Face recognition
-================
+# Face recognition
 
 This example demonstrates the DepthAI running [face detection network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_detection_retail_0004.html), [head posture estimation network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_head_pose_estimation_adas_0001.html) and [face recognition network](https://docs.openvinotoolkit.org/2021.3/omz_models_model_face_recognition_mobilefacenet_arcface.html). It recognizes multiple faces at once on the frame.
 
@@ -9,27 +8,25 @@ This example demonstrates the DepthAI running [face detection network](https://d
 
 [![Face recognition](https://user-images.githubusercontent.com/18037362/159522552-fde15cd4-4343-492e-be44-ae07f06c1d2e.gif)](https://youtu.be/Xb1cXu_SIbo)
 
-
 ### How it works
 
 1. The color camera produces high-res frames, sends them to host, Script node, and downscale ImageManip node.
-2. Downscale ImageManip will downscale from high-res frame to `300x300`, required by 1st NN in this pipeline; object detection model.
-3. `300x300` frames are sent from downscale ImageManip node to the object detection model (MobileNetDetectionNetwork).
-4. Object detections are sent to the Script node.
-5. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected face. These configs then get sent to ImageManip together with synced high-res frame.
-6. ImageManip will crop only the face out of the original frame. It will also resize the face frame to the required size (`60x60`) by the head pose estimation NN model.
-7. Face frames get sent to the 2nd NN - head pose estimation NN model. NN estimations results are sent back to the Script node together with the passthrough frame (for syncing).
-8. Script node syncs the head pose estimation, high-res frame, and face detection results. It then creates ImageManipConfig that will rotate the bounding box so that the face will also be vertical, which significantly improves face recognition accuracy.
-9. Created ImageManipConfig and high-res frame get sent to another ImageManip node, which crops rotated rectangle and feeds the `112x112` frame to the 3rd NN: face recognition the arcface model.
-10. Frames, object detections, and recognition results are all **synced on the host** side.
-11. Face recognition results are matched with faces in the database using cosine distance (inside `FaceRecognition` class) and then displayed to the user.
+1. Downscale ImageManip will downscale from high-res frame to `300x300`, required by 1st NN in this pipeline; object detection model.
+1. `300x300` frames are sent from downscale ImageManip node to the object detection model (MobileNetDetectionNetwork).
+1. Object detections are sent to the Script node.
+1. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected face. These configs then get sent to ImageManip together with synced high-res frame.
+1. ImageManip will crop only the face out of the original frame. It will also resize the face frame to the required size (`60x60`) by the head pose estimation NN model.
+1. Face frames get sent to the 2nd NN - head pose estimation NN model. NN estimations results are sent back to the Script node together with the passthrough frame (for syncing).
+1. Script node syncs the head pose estimation, high-res frame, and face detection results. It then creates ImageManipConfig that will rotate the bounding box so that the face will also be vertical, which significantly improves face recognition accuracy.
+1. Created ImageManipConfig and high-res frame get sent to another ImageManip node, which crops rotated rectangle and feeds the `112x112` frame to the 3rd NN: face recognition the arcface model.
+1. Frames, object detections, and recognition results are all **synced on the host** side.
+1. Face recognition results are matched with faces in the database using cosine distance (inside `FaceRecognition` class) and then displayed to the user.
 
 ## Pipeline graph
 
 ![image](https://user-images.githubusercontent.com/18037362/179375078-c2544a58-a9b3-464f-9f80-2e7deb49a727.png)
 
 [DepthAI Pipeline Graph](https://github.com/geaxgx/depthai_pipeline_graph#depthai-pipeline-graph-experimental) was used to generate this image.
-
 
 ## Potential improvements
 
@@ -54,34 +51,33 @@ optional arguments:
 **Before this example works, you have to "teach" it what face to associate with which name:**
 
 1. Run `python3 main.py --name JohnDoe`. Then you should face the camera to JohnDoe from different angles, so he will later be recognized from different angles as well. This will just save (his) face vectors to the person's databse (in this case `JohnDoe.npz`).
-2. Repeat step 1 for other people you would like to recognize
-3. Run `python3 main.py` for face recognition demo. Whenever the device sees a new face, it will calculate the face vector (arcface NN model) and it will get compared with other vectors from the databases (`.npz`) using cosine distance.
-
+1. Repeat step 1 for other people you would like to recognize
+1. Run `python3 main.py` for face recognition demo. Whenever the device sees a new face, it will calculate the face vector (arcface NN model) and it will get compared with other vectors from the databases (`.npz`) using cosine distance.
 
 ## How it works:
 
 ### 1. Run the face detection model
 
-> Run the [face-detection-retail-0004](models/face-detection-retail-0004_openvino_2020_1_4shave.blob) model to 
+> Run the [face-detection-retail-0004](models/face-detection-retail-0004_openvino_2020_1_4shave.blob) model to
 > detect the face in the image and intercept the facial image.
-> 
+>
 > ![detection_face](images/detection_face.png)
 
 ### 2. Run head-pose-estimation model
 
-> Run the [head-pose-estimation-adas-0001](models/head-pose-estimation-adas-0001.blob) model to 
+> Run the [head-pose-estimation-adas-0001](models/head-pose-estimation-adas-0001.blob) model to
 > Detect head tilt angle and adjust head posture.
-> 
->![face_corr](images/face_corr.png)
+>
+> ![face_corr](images/face_corr.png)
 
 ### 3. Run face recognition model
 
-> Run the [face-recognition-mobilefacenet-arcface.blob](models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob) model to 
+> Run the [face-recognition-mobilefacenet-arcface.blob](models/face-recognition-mobilefacenet-arcface_2021.2_4shave.blob) model to
 > Recognize the face.
 >
 > ![face_reg](images/face_reg.png)
 
---------------------
+______________________________________________________________________
 
 ## Pre-requisites
 

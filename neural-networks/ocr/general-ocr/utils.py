@@ -1,9 +1,10 @@
 import numpy as np
 import depthai as dai
 
+
 class RotatedRectBuffer(dai.Buffer):
     def __init__(self):
-        super().__init__(0) # Empty buffer init workaround
+        super().__init__(0)  # Empty buffer init workaround
         self.rotated_rect: dai.RotatedRect | None = None
 
     def set_rect(self, rect: dai.RotatedRect) -> None:
@@ -38,7 +39,7 @@ class CTCCodec(object):
         preds_sizes = np.array([preds_index.shape[1]] * preds_index.shape[0])
 
         for l in preds_sizes:
-            t = preds_index_reshape[index:index + l]
+            t = preds_index_reshape[index : index + l]
 
             # t might be zero size
             if t.shape[0] == 0:
@@ -48,9 +49,9 @@ class CTCCodec(object):
             for i in range(l):
                 # Removing repeated characters and blank
                 if not (i > 0 and t[i - 1] == t[i]):
-                    if self.characters[t[i]] != '#':
+                    if self.characters[t[i]] != "#":
                         char_list.append(self.characters[t[i]])
-            text = ''.join(char_list)
+            text = "".join(char_list)
             texts.append(text)
 
             index += l

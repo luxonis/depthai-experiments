@@ -7,14 +7,30 @@ from host_fps_drawer import FPSDrawer
 from host_display import Display
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-v', '--video_path', type=str, default="",
-                    help='Path to video. If empty OAK-RGB camera is used.')
-parser.add_argument('-roi', '--roi_position', type=float,
-                    default=0.5, help='ROI Position (0-1)')
-parser.add_argument('-a', '--axis', default=True, action='store_false',
-                    help='Axis for cumulative counting (default=x axis)')
-parser.add_argument('-sp', '--save_path', type=str, default='',
-                    help='Path to save the output. If None output won\'t be saved')
+parser.add_argument(
+    "-v",
+    "--video_path",
+    type=str,
+    default="",
+    help="Path to video. If empty OAK-RGB camera is used.",
+)
+parser.add_argument(
+    "-roi", "--roi_position", type=float, default=0.5, help="ROI Position (0-1)"
+)
+parser.add_argument(
+    "-a",
+    "--axis",
+    default=True,
+    action="store_false",
+    help="Axis for cumulative counting (default=x axis)",
+)
+parser.add_argument(
+    "-sp",
+    "--save_path",
+    type=str,
+    default="",
+    help="Path to save the output. If None output won't be saved",
+)
 args = parser.parse_args()
 
 model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
@@ -35,8 +51,7 @@ with dai.Pipeline() as pipeline:
         video_out = cam.requestOutput((300, 300), dai.ImgFrame.Type.BGR888p)
 
     nn = pipeline.create(dai.node.DetectionNetwork).build(
-        input=video_out,
-        nnArchive=dai.NNArchive(archive_path)
+        input=video_out, nnArchive=dai.NNArchive(archive_path)
     )
     nn.setConfidenceThreshold(0.5)
     nn.setNumInferenceThreads(2)
@@ -44,15 +59,16 @@ with dai.Pipeline() as pipeline:
 
     objectTracker = pipeline.create(dai.node.ObjectTracker)
     objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
-    objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.SMALLEST_ID)
+    objectTracker.setTrackerIdAssignmentPolicy(
+        dai.TrackerIdAssignmentPolicy.SMALLEST_ID
+    )
 
     nn.passthrough.link(objectTracker.inputTrackerFrame)
     nn.passthrough.link(objectTracker.inputDetectionFrame)
     nn.out.link(objectTracker.inputDetections)
 
     counting = pipeline.create(CumulativeObjectCounting).build(
-        img_frames=video_out, 
-        tracklets=objectTracker.out
+        img_frames=video_out, tracklets=objectTracker.out
     )
     counting.set_axis(args.axis)
     counting.set_roi_position(args.roi_position)

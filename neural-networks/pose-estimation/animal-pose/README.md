@@ -24,7 +24,7 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
 python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
 ```
 
-- `<DEVICE>`: Device IP or ID. Default: ``.
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
 - `<MEDIA>`: Path to the video file. Default `None` - camera input.
 - `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
 
@@ -52,10 +52,13 @@ This will run the animal detection and pose estimation experiment with the speci
 
 Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
+
 and run the example using the `run_standalone.py` script:
+
 ```bash
 python3 run_standalone.py \
     --device <Device> \
@@ -66,6 +69,7 @@ python3 run_standalone.py \
 The arguments are the same as in the Peripheral mode.
 
 #### Example
+
 ```bash
 python3 run_standalone.py \
     --device <DEVICE IP> \

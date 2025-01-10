@@ -1,16 +1,19 @@
 from pathlib import Path
-import blobconverter
 import depthai as dai
 
 from fps_drawer import FPSDrawer
 from detections_recognitions_sync import DetectionsRecognitionsSync
 from pedestrian_reidentification import PedestrianReidentification
 
-person_model_description = dai.NNModelDescription(modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640")
+person_model_description = dai.NNModelDescription(
+    modelSlug="scrfd-person-detection", platform="RVC2", modelVersionSlug="2-5g-640x640"
+)
 person_archive_path = dai.getModelFromZoo(person_model_description)
 person_nn_archive = dai.NNArchive(person_archive_path)
 
-recognition_model_description = dai.NNModelDescription(modelSlug="person-reidentification-retail", platform="RVC2", modelVersionSlug="0288")
+recognition_model_description = dai.NNModelDescription(
+    modelSlug="person-reidentification-retail", platform="RVC2", modelVersionSlug="0288"
+)
 recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
 recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 
@@ -39,14 +42,14 @@ with dai.Pipeline() as pipeline:
 
     image_manip_script = pipeline.create(dai.node.Script)
     image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
-    cam.preview.link(image_manip_script.inputs['preview'])
-    person_nn.out.link(image_manip_script.inputs['dets_in'])
+    cam.preview.link(image_manip_script.inputs["preview"])
+    person_nn.out.link(image_manip_script.inputs["dets_in"])
 
     recognition_manip = pipeline.create(dai.node.ImageManip)
     recognition_manip.initialConfig.setResize(128, 256)
     recognition_manip.inputConfig.setWaitForMessage(True)
-    image_manip_script.outputs['manip_cfg'].link(recognition_manip.inputConfig)
-    image_manip_script.outputs['manip_img'].link(recognition_manip.inputImage)
+    image_manip_script.outputs["manip_cfg"].link(recognition_manip.inputConfig)
+    image_manip_script.outputs["manip_img"].link(recognition_manip.inputImage)
 
     print("Creating Recognition Neural Network...")
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
@@ -63,8 +66,7 @@ with dai.Pipeline() as pipeline:
     cam.preview.link(fps_drawer.input)
 
     pedestrian_reidentification = pipeline.create(PedestrianReidentification).build(
-        fps_drawer.output, 
-        detections_sync.output
+        fps_drawer.output, detections_sync.output
     )
-    
+
     pipeline.run()

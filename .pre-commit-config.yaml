@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.4
+    hooks:
+      - id: ruff
+        # F821 are undefined name errors due to script nodes
+        # E741 are ambiguous variable names
+        # F841 are unused variable names
+        args: [--fix, --exit-non-zero-on-fix, "--ignore=F821,E741,F841"] 
+        types_or: [python, pyi, jupyter]
+      - id: ruff-format
+        types_or: [python, pyi, jupyter]
+
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.10
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-gfm==0.3.6

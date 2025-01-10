@@ -18,13 +18,14 @@ python3 main.py
 
 ## Background
 
-The calculation process of the collision relies on the depth information 
+The calculation process of the collision relies on the depth information
 provided by the OAK-D camera.
 
 Whereas we can operate in 3D coordinates, in fact most of the calculations are being made
 in 2D, taking only x (horizontal) and z (depth) into account
 
 The collsion may occur when:
+
 - Car trajectory is pointing towards the camera
 - Car speed, and therefore time to impact, is below a threshold
 

@@ -1,6 +1,3 @@
-from datetime import timedelta
-from depthai_nodes.ml.messages.img_detections import ImgDetectionsExtended, ImgDetectionExtended
-
 import cv2
 import depthai as dai
 import numpy as np
@@ -13,9 +10,9 @@ class BlurBboxes(dai.node.ThreadedHostNode):
         self.rounded_blur = False
         self.input_frame = self.createInput()
         self.input_detections = self.createInput()
-        
+
         self.out = self.createOutput()
-        
+
     def run(self) -> None:
         while self.isRunning():
             frame = self.input_frame.get()
@@ -66,5 +63,5 @@ class BlurBboxes(dai.node.ThreadedHostNode):
             img = dai.ImgFrame()
             img.setCvFrame(frame_copy, frame_type)
             img.setTimestamp(ts)
-            
+
             self.out.send(img)

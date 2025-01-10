@@ -1,11 +1,13 @@
 import depthai as dai
 from .visualizer_utils import xfeat_visualizer
 
+
 class StereoVersionVisualizer(dai.node.ThreadedHostNode):
     """
     Custom node for creating visualizations for stereo mode.
     It visualizes both frame and draw lines between matched features and returns the dai.ImgFrame.
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.left_frame_input = self.createInput()
@@ -26,7 +28,10 @@ class StereoVersionVisualizer(dai.node.ThreadedHostNode):
             right_frame = right_frame.getCvFrame()
 
             resulting_frame = xfeat_visualizer(
-                left_frame, right_frame, tracked_features.trackedFeatures, draw_warp_corners=False
+                left_frame,
+                right_frame,
+                tracked_features.trackedFeatures,
+                draw_warp_corners=False,
             )
 
             output_frame = dai.ImgFrame()
@@ -39,6 +44,7 @@ class MonoVersionVisualizer(dai.node.ThreadedHostNode):
     Custom node for creating visualizations for mono mode.
     It visualizes both frame and draw lines between matched features and returns the dai.ImgFrame.
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.referece_frame = None
@@ -65,7 +71,9 @@ class MonoVersionVisualizer(dai.node.ThreadedHostNode):
                 self.set_reference_frame = False
 
             if self.referece_frame is not None:
-                resulting_frame = xfeat_visualizer(self.referece_frame, target_frame, tracked_features.trackedFeatures)
+                resulting_frame = xfeat_visualizer(
+                    self.referece_frame, target_frame, tracked_features.trackedFeatures
+                )
 
             else:
                 resulting_frame = target_frame

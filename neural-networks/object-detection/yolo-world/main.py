@@ -56,14 +56,12 @@ def extract_text_embeddings(class_names):
 
 
 def main(args):
-
     text_features = extract_text_embeddings(args.class_names)
     device = (
         dai.Device(dai.DeviceInfo(args.device)) if args.device != "" else dai.Device()
     )
 
     with dai.Pipeline(device) as pipeline:
-
         manip = pipeline.create(dai.node.ImageManipV2)
         manip.setMaxOutputFrameSize(IMAGE_SIZE[0] * IMAGE_SIZE[1] * 3)
         manip.initialConfig.setOutputSize(

@@ -25,17 +25,19 @@ optional arguments:
 ```
 
 Camera example:
+
 ```
 python main.py
 ```
 
 Video example:
+
 ```
 python main.py -v demo/example_01.mp4 -a
 ```
 
-
 ## Inspired by / Based on
-* [Tensorflow 2 Object Counting](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
-* [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/) 
-* [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)
+
+- [Tensorflow 2 Object Counting](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
+- [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/)
+- [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)

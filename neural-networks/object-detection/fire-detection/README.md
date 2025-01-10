@@ -1,16 +1,15 @@
-Fire detection
-================
+# Fire detection
 
-This example demonstrates the Gen3 Pipeline Builder running [fire detection network](https://github.com/StephanXu/FireDetector/tree/python)  
+This example demonstrates the Gen3 Pipeline Builder running [fire detection network](https://github.com/StephanXu/FireDetector/tree/python)
 
 ## Demo:
 
-![demo](images/fire_demo.gif)
---------------------
+## ![demo](images/fire_demo.gif)
 
 ## Pre-requisites
 
 Install requirements:
+
 ```bash
 python3 -m pip install -r requirements.txt
 ```
@@ -35,6 +34,7 @@ python main.py -vid <path>
 ```
 
 To use with DepthAI 4K RGB camera, use instead
+
 ```bash
 python main.py
 ```

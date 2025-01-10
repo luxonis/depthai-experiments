@@ -35,13 +35,96 @@ class Config:
     """Configuration constants."""
 
     NON_SPEECH_TOKENS = [
-        1, 2, 7, 8, 9, 10, 14, 25, 26, 27, 28, 29, 31, 58, 59, 60, 61, 62, 63, 90, 91,
-        92, 93, 357, 366, 438, 532, 685, 705, 796, 930, 1058, 1220, 1267, 1279, 1303,
-        1343, 1377, 1391, 1635, 1782, 1875, 2162, 2361, 2488, 3467, 4008, 4211, 4600,
-        4808, 5299, 5855, 6329, 7203, 9609, 9959, 10563, 10786, 11420, 11709, 11907,
-        13163, 13697, 13700, 14808, 15306, 16410, 16791, 17992, 19203, 19510, 20724,
-        22305, 22935, 27007, 30109, 30420, 33409, 34949, 40283, 40493, 40549, 47282,
-        49146, 50257, 50357, 50358, 50359, 50360, 50361,
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        14,
+        25,
+        26,
+        27,
+        28,
+        29,
+        31,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        90,
+        91,
+        92,
+        93,
+        357,
+        366,
+        438,
+        532,
+        685,
+        705,
+        796,
+        930,
+        1058,
+        1220,
+        1267,
+        1279,
+        1303,
+        1343,
+        1377,
+        1391,
+        1635,
+        1782,
+        1875,
+        2162,
+        2361,
+        2488,
+        3467,
+        4008,
+        4211,
+        4600,
+        4808,
+        5299,
+        5855,
+        6329,
+        7203,
+        9609,
+        9959,
+        10563,
+        10786,
+        11420,
+        11709,
+        11907,
+        13163,
+        13697,
+        13700,
+        14808,
+        15306,
+        16410,
+        16791,
+        17992,
+        19203,
+        19510,
+        20724,
+        22305,
+        22935,
+        27007,
+        30109,
+        30420,
+        33409,
+        34949,
+        40283,
+        40493,
+        40549,
+        47282,
+        49146,
+        50257,
+        50357,
+        50358,
+        50359,
+        50360,
+        50361,
     ]
     TOKENS = Tokens
     SAMPLE_BEGIN = 1  # first token is TOKEN_SOT
@@ -75,9 +158,11 @@ class AudioProcessor:
         audio = pad_or_trim(audio)
         mel_spectrogram = log_mel_spectrogram(audio)
         mel_spectrogram = mel_spectrogram.unsqueeze(0).numpy().astype(np.float16)
-        assert mel_spectrogram.shape == (1, 80, 3000), (
-            f"Expected shape (1, 80, 3000), got {mel_spectrogram.shape}"
-        )
+        assert mel_spectrogram.shape == (
+            1,
+            80,
+            3000,
+        ), f"Expected shape (1, 80, 3000), got {mel_spectrogram.shape}"
         logging.info(
             f"Processed audio file {file_path}. Spectrogram shape: {mel_spectrogram.shape}"
         )
@@ -281,9 +366,9 @@ class DecoderHostData(dai.node.ThreadedHostNode):
                     encoder_out.getTensor(name)
                     for name in encoder_out.getAllLayerNames()
                 ]
-                assert len(self.encoder_outputs) == 2, (
-                    f"Expected 2 encoder outputs, got {len(self.encoder_outputs)}"
-                )
+                assert (
+                    len(self.encoder_outputs) == 2
+                ), f"Expected 2 encoder outputs, got {len(self.encoder_outputs)}"
 
                 decoder_k_cache = np.zeros(
                     (4, 6, 64, Config.MEAN_DECODE_LEN), dtype=np.float16
@@ -299,9 +384,9 @@ class DecoderHostData(dai.node.ThreadedHostNode):
                     name: decoder_out.getTensor(name)
                     for name in decoder_out.getAllLayerNames()
                 }
-                assert len(decoder_outputs) == 3, (
-                    f"Expected 3 decoder outputs, got {len(decoder_outputs)}"
-                )
+                assert (
+                    len(decoder_outputs) == 3
+                ), f"Expected 3 decoder outputs, got {len(decoder_outputs)}"
 
                 decoder_k_cache = decoder_outputs["k_cache"]
                 decoder_v_cache = decoder_outputs["v_cache"]
@@ -391,20 +476,24 @@ class PipelineManager:
             encoder_nn = pipeline.create(dai.node.NeuralNetwork)
             encoder_nn.setNNArchive(dai.NNArchive(archivePath=encoder_archive_path))
             encoder_nn.setBackend("snpe")
-            encoder_nn.setBackendProperties({
-                "runtime": "dsp",  # "cpu" if using unquantized model, "dsp" if using quantized model
-                "performance_profile": "default",
-            })
+            encoder_nn.setBackendProperties(
+                {
+                    "runtime": "dsp",  # "cpu" if using unquantized model, "dsp" if using quantized model
+                    "performance_profile": "default",
+                }
+            )
 
             # Decoder setup
             dec_host_data = pipeline.create(DecoderHostData, Config.MEAN_DECODE_LEN)
             decoder_nn = pipeline.create(dai.node.NeuralNetwork)
             decoder_nn.setNNArchive(dai.NNArchive(archivePath=decoder_archive_path))
             decoder_nn.setBackend("snpe")
-            decoder_nn.setBackendProperties({
-                "runtime": "dsp",  # "cpu" if using unquantized model, "dsp" if using quantized model
-                "performance_profile": "default",
-            })
+            decoder_nn.setBackendProperties(
+                {
+                    "runtime": "dsp",  # "cpu" if using unquantized model, "dsp" if using quantized model
+                    "performance_profile": "default",
+                }
+            )
 
             # Linking components
             enc_host_data.out.link(encoder_nn.input)

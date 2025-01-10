@@ -1,11 +1,9 @@
-import os
 import logging
 from pathlib import Path
 
 import clip
 import cv2
 import numpy as np
-import pkg_resources
 import torch
 from PIL import Image
 

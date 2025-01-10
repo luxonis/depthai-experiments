@@ -1,6 +1,13 @@
 from typing import List
 
-def generate_script_content(platform: str, resize_width: int = 224, resize_height: int = 224, padding: float = 0.2, valid_labels: List[int] = [56]) -> str:
+
+def generate_script_content(
+    platform: str,
+    resize_width: int = 224,
+    resize_height: int = 224,
+    padding: float = 0.2,
+    valid_labels: List[int] = [56],
+) -> str:
     """The function generates the script content for the dai.Script node. It is used to crop and resize the input image based on the detected object."""
 
     if platform.lower() == "rvc2":

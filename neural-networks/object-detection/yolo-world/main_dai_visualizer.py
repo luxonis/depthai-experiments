@@ -1,7 +1,6 @@
 import numpy as np
 import onnxruntime
 from transformers import AutoTokenizer
-import cv2
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from depthai_nodes.ml.messages import ImgDetectionsExtended
@@ -95,7 +94,6 @@ def extract_text_embeddings(class_names):
 
 
 def main(args):
-
     text_features = extract_text_embeddings(args.class_names)
     device = (
         dai.Device(dai.DeviceInfo(args.device)) if args.device != "" else dai.Device()
@@ -103,7 +101,6 @@ def main(args):
 
     visualizer = dai.RemoteConnection()
     with dai.Pipeline(device) as pipeline:
-
         manip = pipeline.create(dai.node.ImageManipV2)
         manip.setMaxOutputFrameSize(IMAGE_SIZE[0] * IMAGE_SIZE[1] * 3)
         manip.initialConfig.setOutputSize(

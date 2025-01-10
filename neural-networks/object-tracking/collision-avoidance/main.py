@@ -3,7 +3,9 @@ import depthai as dai
 from collision_avoidance_node import CollisionAvoidanceNode
 from fps_counter import FPSCounter
 
-model_description = dai.NNModelDescription(modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="r2-coco-512x288")
+model_description = dai.NNModelDescription(
+    modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="r2-coco-512x288"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
@@ -36,6 +38,8 @@ with dai.Pipeline() as pipeline:
 
     fps_counter = pipeline.create(FPSCounter).build(cam.preview)
 
-    collision_avoidance = pipeline.create(CollisionAvoidanceNode).build(cam.preview, nn.out)
+    collision_avoidance = pipeline.create(CollisionAvoidanceNode).build(
+        cam.preview, nn.out
+    )
 
     pipeline.run()

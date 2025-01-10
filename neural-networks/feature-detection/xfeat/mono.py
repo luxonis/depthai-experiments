@@ -1,17 +1,26 @@
-import time
 import depthai as dai
 from depthai_nodes import ParserGenerator, XFeatMonoParser
 from utils.custom_visualizer import MonoVersionVisualizer
 
-def mono_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.RemoteConnection, fps_limit: int = 30):
+
+def mono_mode(
+    device: dai.Device,
+    nn_archive: dai.NNArchive,
+    visualizer: dai.RemoteConnection,
+    fps_limit: int = 30,
+):
     with dai.Pipeline(device) as pipeline:
         print("Creating pipeline...")
-        
+
         cam = pipeline.create(dai.node.Camera).build()
-        
+
         platform = device.getPlatform().name
         print(f"Platform: {platform}")
-        img_frame_type = dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+        img_frame_type = (
+            dai.ImgFrame.Type.BGR888p
+            if platform == "RVC2"
+            else dai.ImgFrame.Type.BGR888i
+        )
 
         network = pipeline.create(dai.node.NeuralNetwork).build(
             cam.requestOutput(
@@ -19,7 +28,7 @@ def mono_mode(device: dai.Device, nn_archive: dai.NNArchive, visualizer: dai.Rem
             ),
             nn_archive,
         )
-        
+
         parser: XFeatMonoParser = pipeline.create(ParserGenerator).build(nn_archive)[0]
         network.out.link(parser.input)
 

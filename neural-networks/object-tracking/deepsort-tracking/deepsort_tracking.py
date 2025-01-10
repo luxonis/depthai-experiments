@@ -37,60 +37,95 @@ class DeepsortTracking(dai.node.HostNode):
 
     def __init__(self) -> None:
         super().__init__()
-        self._tracker = DeepSort(max_age=1000, nn_budget=None, embedder=None, nms_max_overlap=1.0, max_cosine_distance=0.2)
+        self._tracker = DeepSort(
+            max_age=1000,
+            nn_budget=None,
+            embedder=None,
+            nms_max_overlap=1.0,
+            max_cosine_distance=0.2,
+        )
 
-
-    def build(self, img_frames: dai.Node.Output, detected_recognitions: dai.Node.Output, labels: list[str]) -> "DeepsortTracking":
+    def build(
+        self,
+        img_frames: dai.Node.Output,
+        detected_recognitions: dai.Node.Output,
+        labels: list[str],
+    ) -> "DeepsortTracking":
         self.link_args(img_frames, detected_recognitions)
         self.sendProcessingToPipeline(True)
-        self._colored_labels = [ColoredLabel(label, color) for label, color in zip(labels, self.generate_colors(len(labels)))]
+        self._colored_labels = [
+            ColoredLabel(label, color)
+            for label, color in zip(labels, self.generate_colors(len(labels)))
+        ]
         return self
-    
 
-    def process(self, img_frame: dai.ImgFrame, detected_recognitions: dai.Buffer) -> None:
+    def process(
+        self, img_frame: dai.ImgFrame, detected_recognitions: dai.Buffer
+    ) -> None:
         frame = img_frame.getCvFrame()
-        assert(isinstance(detected_recognitions, DetectedRecognitions))
+        assert isinstance(detected_recognitions, DetectedRecognitions)
         detections = detected_recognitions.detections.detections
         recognitions = detected_recognitions.nn_data
-        
+
         if recognitions:
             object_tracks = self._tracker.iter(detections, recognitions, (640, 352))
 
             for track in object_tracks:
-                if not track.is_confirmed() or \
-                    track.time_since_update > 1 or \
-                    track.detection_id >= len(detections) or \
-                    track.detection_id < 0:
+                if (
+                    not track.is_confirmed()
+                    or track.time_since_update > 1
+                    or track.detection_id >= len(detections)
+                    or track.detection_id < 0
+                ):
                     continue
 
                 det = detections[track.detection_id]
                 colored_label = self._colored_labels[det.label]
                 self._draw_bb(det, frame, colored_label.color)
-                self._draw_text(det, f'{colored_label.label} {det.confidence*100:.2f}%', frame, TextPosition.TOP_LEFT)
-                self._draw_text(det, f'ID: {track.track_id}', frame, TextPosition.MID_MID)
-        
+                self._draw_text(
+                    det,
+                    f"{colored_label.label} {det.confidence*100:.2f}%",
+                    frame,
+                    TextPosition.TOP_LEFT,
+                )
+                self._draw_text(
+                    det, f"ID: {track.track_id}", frame, TextPosition.MID_MID
+                )
+
         cv2.imshow("DeepSort tracker", frame)
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             self.stopPipeline()
-        
-    
-    def _draw_bb(self, detection: dai.ImgDetection, frame: np.ndarray, color: tuple[int, int, int]) -> None:
+
+    def _draw_bb(
+        self,
+        detection: dai.ImgDetection,
+        frame: np.ndarray,
+        color: tuple[int, int, int],
+    ) -> None:
         pt1, pt2 = self._denormalize_bounding_box(detection, frame.shape)
         self._draw_bbox(frame, pt1, pt2, color)
 
-
-    def _denormalize_bounding_box(self, detection: dai.ImgDetection, frame_shape: tuple) -> tuple:
+    def _denormalize_bounding_box(
+        self, detection: dai.ImgDetection, frame_shape: tuple
+    ) -> tuple:
         return (
-                (int(frame_shape[1] * detection.xmin), int(frame_shape[0] * detection.ymin)),
-                (int(frame_shape[1] * detection.xmax), int(frame_shape[0] * detection.ymax))
-            )
-    
+            (
+                int(frame_shape[1] * detection.xmin),
+                int(frame_shape[0] * detection.ymin),
+            ),
+            (
+                int(frame_shape[1] * detection.xmax),
+                int(frame_shape[0] * detection.ymax),
+            ),
+        )
 
-    def _draw_bbox(self, img: np.ndarray,
-              pt1: tuple[int, int],
-              pt2: tuple[int, int],
-              color: tuple[int, int, int]
-              ) -> None:
+    def _draw_bbox(
+        self,
+        img: np.ndarray,
+        pt1: tuple[int, int],
+        pt2: tuple[int, int],
+        color: tuple[int, int, int],
+    ) -> None:
         x1, y1 = pt1
         x2, y2 = pt2
 
@@ -132,49 +167,70 @@ class DeepsortTracking(dai.node.HostNode):
             all_rects = [
                 [top_left_main_rect, bottom_right_main_rect],
                 [top_left_rect_left, bottom_right_rect_left],
-                [top_left_rect_right, bottom_right_rect_right]
+                [top_left_rect_right, bottom_right_rect_right],
             ]
 
-            [cv2.rectangle(overlay, pt1=rect[0], pt2=rect[1], color=color, thickness=thickness) for rect in all_rects]
+            [
+                cv2.rectangle(
+                    overlay, pt1=rect[0], pt2=rect[1], color=color, thickness=thickness
+                )
+                for rect in all_rects
+            ]
 
             cv2.addWeighted(overlay, self.ALPHA, img, 1 - self.ALPHA, 0, img)
 
-
-    def _draw_text(self, bbox: dai.ImgDetection, text: str, frame: np.ndarray, text_position: TextPosition) -> None:
+    def _draw_text(
+        self,
+        bbox: dai.ImgDetection,
+        text: str,
+        frame: np.ndarray,
+        text_position: TextPosition,
+    ) -> None:
         coords = self._get_relative_position(bbox, text, frame.shape, text_position)
 
         font_scale = self._get_text_scale(frame.shape, bbox)
         font_thickness = self._get_font_thickness(font_scale)
 
-        dy = cv2.getTextSize(text, self.FONT_FACE, font_scale, font_thickness)[0][1] + 10
+        dy = (
+            cv2.getTextSize(text, self.FONT_FACE, font_scale, font_thickness)[0][1] + 10
+        )
 
         for line in text.splitlines():
             y = coords[1]
 
             # Shadow text
-            cv2.putText(img=frame,
-                        text=line,
-                        org=coords,
-                        fontFace=self.FONT_FACE,
-                        fontScale=font_scale,
-                        color=self.FONT_SHADOW_COLOR,
-                        thickness=font_thickness + 1,
-                        lineType=self.LINE_TYPE)
+            cv2.putText(
+                img=frame,
+                text=line,
+                org=coords,
+                fontFace=self.FONT_FACE,
+                fontScale=font_scale,
+                color=self.FONT_SHADOW_COLOR,
+                thickness=font_thickness + 1,
+                lineType=self.LINE_TYPE,
+            )
 
             # Front text
-            cv2.putText(img=frame,
-                        text=line,
-                        org=coords,
-                        fontFace=self.FONT_FACE,
-                        fontScale=font_scale,
-                        color=self.FONT_COLOR,
-                        thickness=font_thickness,
-                        lineType=self.LINE_TYPE)
+            cv2.putText(
+                img=frame,
+                text=line,
+                org=coords,
+                fontFace=self.FONT_FACE,
+                fontScale=font_scale,
+                color=self.FONT_COLOR,
+                thickness=font_thickness,
+                lineType=self.LINE_TYPE,
+            )
 
             coords = (coords[0], y + dy)
 
-
-    def _get_relative_position(self, bbox: dai.ImgDetection, text: str, frame_shape: tuple[int, ...], position: TextPosition) -> tuple[int, int]:
+    def _get_relative_position(
+        self,
+        bbox: dai.ImgDetection,
+        text: str,
+        frame_shape: tuple[int, ...],
+        position: TextPosition,
+    ) -> tuple[int, int]:
         bbox_arr = self._to_tuple(bbox, frame_shape)
 
         font_scale = self._get_text_scale(frame_shape, bbox)
@@ -183,10 +239,12 @@ class DeepsortTracking(dai.node.HostNode):
 
         text_width, text_height = 0, 0
         for text in text.splitlines():
-            text_size = cv2.getTextSize(text=text,
-                                        fontFace=font_face,
-                                        fontScale=font_scale,
-                                        thickness=font_thickness)[0]
+            text_size = cv2.getTextSize(
+                text=text,
+                fontFace=font_face,
+                fontScale=font_scale,
+                thickness=font_thickness,
+            )[0]
             text_width = max(text_width, text_size[0])
             text_height += text_size[1]
 
@@ -210,24 +268,25 @@ class DeepsortTracking(dai.node.HostNode):
 
         return x, y
 
-
     def _get_font_thickness(self, font_scale):
         return max(1, int(font_scale * 2))
-    
 
-    def _to_tuple(self, bbox: dai.ImgDetection, frame_shape: tuple) -> tuple[int, int, int, int]:
+    def _to_tuple(
+        self, bbox: dai.ImgDetection, frame_shape: tuple
+    ) -> tuple[int, int, int, int]:
         tl, br = self._denormalize_bounding_box(bbox, frame_shape)
         return *tl, *br
-    
 
-    def _get_text_scale(self,
-                       frame_shape: np.ndarray | tuple[int, ...], 
-                       bbox: dai.ImgDetection | None = None
-                       ) -> float:
+    def _get_text_scale(
+        self,
+        frame_shape: np.ndarray | tuple[int, ...],
+        bbox: dai.ImgDetection | None = None,
+    ) -> float:
         return min(1.0, min(frame_shape[:2]) / (1000 if bbox is None else 200))
-    
 
-    def generate_colors(self, number_of_colors: int, pastel=0.5) -> list[tuple[int, int, int]]:
+    def generate_colors(
+        self, number_of_colors: int, pastel=0.5
+    ) -> list[tuple[int, int, int]]:
         colors = []
 
         steps = math.ceil(math.sqrt(number_of_colors))

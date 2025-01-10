@@ -1,4 +1,3 @@
-import time
 import logging
 
 import cv2
@@ -93,17 +92,22 @@ class DeepSort(object):
         logger.info(f"- max age: {max_age}")
         logger.info(f"- appearance threshold: {max_cosine_distance}")
         logger.info(
-            f'- nms threshold: {"OFF" if self.nms_max_overlap==1.0 else self.nms_max_overlap }'
+            f"- nms threshold: {'OFF' if self.nms_max_overlap == 1.0 else self.nms_max_overlap}"
         )
         logger.info(f"- max num of appearance features: {nn_budget}")
         logger.info(
-            f'- overriding track class : {"No" if override_track_class is None else "Yes"}'
+            f"- overriding track class : {'No' if override_track_class is None else 'Yes'}"
         )
-        logger.info(f'- today given : {"No" if today is None else "Yes"}')
-        logger.info(f'- in-build embedder : {"No" if self.embedder is None else "Yes"}')
-        logger.info(f'- polygon detections : {"No" if polygon is False else "Yes"}')
+        logger.info(f"- today given : {'No' if today is None else 'Yes'}")
+        logger.info(f"- in-build embedder : {'No' if self.embedder is None else 'Yes'}")
+        logger.info(f"- polygon detections : {'No' if polygon is False else 'Yes'}")
 
-    def iter(self, detections: list[dai.ImgDetection], embeddings: list[dai.NNData], resolution: tuple[int, int]):
+    def iter(
+        self,
+        detections: list[dai.ImgDetection],
+        embeddings: list[dai.NNData],
+        resolution: tuple[int, int],
+    ):
         height, width = resolution
         # Decode detections into bounding boxes
         object_bbs = self.decode_dets(detections, (width, height))
@@ -117,13 +121,24 @@ class DeepSort(object):
         bbs = []
         W, H = shape
         for detection in detections:
-            x1, y1, x2, y2 = int(detection.xmin*W), int(detection.ymin*H), int(detection.xmax*W), int(detection.ymax*H)
-            w, h = x2-x1, y2-y1
-            bbs.append(([x1, y1, w, h], detection.confidence, detection.label, [x1/W, y1/H]))
+            x1, y1, x2, y2 = (
+                int(detection.xmin * W),
+                int(detection.ymin * H),
+                int(detection.xmax * W),
+                int(detection.ymax * H),
+            )
+            w, h = x2 - x1, y2 - y1
+            bbs.append(
+                (
+                    [x1, y1, w, h],
+                    detection.confidence,
+                    detection.label,
+                    [x1 / W, y1 / H],
+                )
+            )
         return bbs
 
     def update_tracks(self, raw_detections, embeds=None, frame=None, today=None):
-
         """Run multi-target tracker on a particular sequence.
 
         Parameters
@@ -176,7 +191,7 @@ class DeepSort(object):
         boxes = np.array([d.ltwh for d in detections])
         scores = np.array([d.confidence for d in detections])
         # if self.nms_max_overlap < 1.0:
-            # nms_tic = time.perf_counter()
+        # nms_tic = time.perf_counter()
         indices = non_max_suppression(boxes, self.nms_max_overlap, scores)
         # nms_toc = time.perf_counter()
         # logger.debug(f'nms time: {nms_toc-nms_tic}s')
@@ -184,7 +199,7 @@ class DeepSort(object):
 
         # Update tracker.
         self.tracker.predict()
-        self.tracker.update(detections) # , today=today)
+        self.tracker.update(detections)  # , today=today)
 
         return self.tracker.tracks
 
