@@ -46,7 +46,7 @@ with dai.Pipeline(device) as pipeline:
     input_node.link(resize_node.inputImage)
     
     face_detection_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        resize_node.out, "luxonis/yunet:new-480x640"
+        resize_node.out, "luxonis/yunet:640x480"
     )
 
     detection_process_node = pipeline.create(ProcessDetections)
