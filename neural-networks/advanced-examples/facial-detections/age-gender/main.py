@@ -74,7 +74,7 @@ with dai.Pipeline(device) as pipeline:
     
 
     age_gender_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        crop_node.out, "luxonis/age-gender-recognition:new-62x62"
+        crop_node.out, "luxonis/age-gender-recognition:62x62"
         )
 
     sync_node = pipeline.create(DetectionsAgeGenderSync)
