@@ -1,15 +1,37 @@
+<!-- Styling that keeps all column widths in this README the same -->
+
+<style>
+    table th {
+        width: 10%
+    }
+</style>
+
+<!-- -------- -->
+
 # Overview
 
 This section provides examples to help you get started with **AI model inference** using **DepthAI**.
 The examples utilize publicly available models from the [HubAI Model ZOO](https://hub.luxonis.com/ai/models) and can be ran on a **Luxonis device** of choice.
 The inference is made either on camera inputs or custom media files (image or video) and the results are displayed in the browser.
 
-The examples are organized into two categories:
+The examples are organized by tasks that they solve:
 
-- [Generic example](generic-example/): Generic inference pipeline running a **single model** with a **single-image input** and a **single-head output**;
-- [Advanced examples](advanced-examples/): Custom single- or multiple-model inference pipelines, with inputs that can be a single image, multiple images, or other data, and can have multi-head output.
-
-Below we list all the available **Gen3 examples** (with links to their **Gen2 counterparts**). The generic-examples can be ran using a simple script (see the [README](generic-example/README.md)). The advanced-examples are ran individually (click on the relevant gen3 link for more information).
+- [Generic example](generic-example/)
+  - This is a special case example. It is not task-dependent and can run a generic inference pipeline for a **single model** with a **single-image input** and a **single-head output**. Its purpose is the quick visualization of simpler models without any additional postprocessing logic. It can serve as a starting point for more complex use cases.
+- [Object Detection](#object-detection)
+- [Facial Detection](#facial-detection)
+- [Keypoint Detection](#keypoint-detection)
+- [Pose Estimation](#pose-estimation)
+- [Segmentation](#segmentation)
+- [Object Tracking](#object-tracking)
+- [Counting](#counting)
+- [OCR](#ocr)
+- [ReIdentification](#reidentification)
+- [Depth Estimation](#depth-estimation)
+- [Line Detection](#line-detection)
+- [Image-to-Image Translation](#image-to-image-translation)
+- [Feature Detection](#feature-detection)
+- [Speech Recognition](#speech-recognition)
 
 # Examples
 
