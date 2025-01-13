@@ -9,7 +9,7 @@ def initialize_argparser():
         "--model",
         help="Pose model to run the inference on.",
         required=False,
-        default="luxonis/lite-hrnet:18-coco-256x192",
+        default="luxonis/lite-hrnet:18-coco-192x256",
         type=str,
     )
 
