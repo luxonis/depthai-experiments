@@ -39,7 +39,7 @@ with dai.Pipeline(device) as pipeline:
     
     
     detection_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        input_node, "luxonis/yunet:new-480x640"
+        input_node, "luxonis/yunet:640x480"
         )
     
     blur_node = pipeline.create(BlurBboxes)

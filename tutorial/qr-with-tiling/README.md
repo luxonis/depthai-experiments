@@ -1,6 +1,6 @@
 # QR Code detection
 
-This demo uses [qrdet:nano-288x512](https://hub.luxonis.com/ai/models/d1183a0f-e9a0-4fa2-8437-f2f5b0181739?view=page) neural network to detect QR codes.
+This demo uses [qrdet:nano-512x288](https://hub.luxonis.com/ai/models/d1183a0f-e9a0-4fa2-8437-f2f5b0181739?view=page) neural network to detect QR codes.
 
 
 ## Demo
