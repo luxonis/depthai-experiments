@@ -1,13 +1,3 @@
-<!-- Styling that keeps all column widths in this README the same -->
-
-<style>
-    table th {
-        width: 10%
-    }
-</style>
-
-<!-- -------- -->
-
 # Overview
 
 This section provides examples to help you get started with **AI model inference** using **DepthAI**.
