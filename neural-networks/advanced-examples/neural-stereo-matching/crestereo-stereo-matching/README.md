@@ -23,11 +23,12 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
 ### Peripheral Mode
 
 ```bash
-python3 main.py --model <MODEL> --fps_limit <FPS_LIMIT>
+<DEVICE_FILTER_ENV> python3 main.py --model <MODEL> --fps_limit <FPS_LIMIT>
 ```
 
 - `<MODEL>`: HubAI Model Reference from Luxonis HubAI..
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `2` to `5` depending on the device.
+- `<DEVICE_FILTER_ENV>`: DepthAI environment variable used for filtering the devices. Usable variables are `DEPTHAI_DEVICE_NAME_LIST` and `DEPTHAI_PLATFORM`. For usage examples see the [subsection below](#examples).
 
 #### Examples
 
@@ -42,6 +43,18 @@ python3 main.py --fps_limit 5
 ```
 
 This will run the CREStereo experiment with the default model, but with a `5` FPS limit.
+
+```bash
+DEPTHAI_DEVICE_NAME_LIST=192.168.1.2 python3 main.py
+```
+
+This will run the CREStereo experiment only on device with IP address `192.168.1.2`. 
+
+```bash
+DEPTHAI_PLATFORM=RVC4 python3 main.py
+```
+
+This will run the CREStereo experiment only on device who's platform is `RVC4`.
 
 ### Standalone Mode
 
