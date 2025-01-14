@@ -17,30 +17,13 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.12"] #TODO: add more platforms when HIL allows for it
         platform: [RVC2] #TODO: add RVC4 platform
       fail-fast: false
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Python to Custom Directory
-        run: |
-          add-apt-repository ppa:deadsnakes/ppa -y
-          apt-get update
-          mkdir -p python
-          apt-get download \
-            python3.8 \
-            python3.8-minimal \
-            libpython3.8-minimal \
-            libpython3.8-stdlib \
-            python3.8-venv
-          
-          for deb in *.deb; do
-            dpkg -x "$deb" python
-            rm "$deb"
-          done
 
       - name: Add HIL Tools to Path
         run: |
@@ -59,7 +42,7 @@ jobs:
       - name: Run Test
         run: |
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#${{ matrix.python-version}}-${{ matrix.platform }}"
-          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' '/tmp/python/usr/bin/python${{ matrix.python-version }} gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
+          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' 'python gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
           if [ -n "${{ github.event.inputs.depthai_version }}" ]; then
             CMD="$CMD --depthai-version ${{ github.event.inputs.depthai_version }}"
           fi
