@@ -38,7 +38,7 @@ python3 main.py
 This will run the CREStereo experiment with the default model.
 
 ```bash
-python3 main.py --model luxonis/lite-hrnet:30-coco-256x192 --fps_limit 5
+python3 main.py --fps_limit 5
 ```
 
 This will run the CREStereo experiment with the default model, but with a `5` FPS limit.
