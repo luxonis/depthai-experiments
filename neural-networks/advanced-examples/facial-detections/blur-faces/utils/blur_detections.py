@@ -1,5 +1,3 @@
-from depthai_nodes.ml.messages.img_detections import ImgDetectionsExtended, ImgDetectionExtended
-
 import cv2
 import depthai as dai
 import numpy as np
