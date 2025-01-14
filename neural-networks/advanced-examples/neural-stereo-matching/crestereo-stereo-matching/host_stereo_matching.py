@@ -37,7 +37,7 @@ class StereoMatching(dai.node.HostNode):
         stereo_disp_vis = cv2.applyColorMap(stereo_disp, cv2.COLORMAP_INFERNO)
         stereo_disp_vis = cv2.putText(stereo_disp_vis, f"Stereo Disp", (20, 20), cv2.FONT_HERSHEY_SIMPLEX
                                       , 0.5, (255, 0, 255), 1, cv2.LINE_AA)
-
+        print(f"nn_disp_vis.shape: {nn_disp_vis.shape}, stereo_disp_vis.shape: {stereo_disp_vis.shape}")
         vis = np.concatenate( [nn_disp_vis, stereo_disp_vis], axis=1)
         cv2.imshow("Disparity", vis)
 

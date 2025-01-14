@@ -69,7 +69,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 ### Depth Estimation
 | HubAI Model | Gen2 | Gen3 | RVC2 | RVC4 | Illustration | Notes |
 |-------------|------|------|------|------|--------------|-------|
-| [crestereo](https://hub.luxonis.com/ai/models/4729a8bd-54df-467a-92ca-a8a5e70b52ab?view=page) |  | 🚧 | 🚧 | 🚧 | 🚧 | multi-input |
+| [crestereo](https://hub.luxonis.com/ai/models/4729a8bd-54df-467a-92ca-a8a5e70b52ab?view=page) |  | ✅ | ✅ | ✅ | ✅ | multi-input, not quantized for RVC4 |
 | [midas-v2-1](https://hub.luxonis.com/ai/models/be09b09e-053d-4330-a0fc-0c9d16aac007?view=page) | [gen2-depth-mbnv2](https://github.com/luxonis/depthai-experiments/tree/master/gen2-depth-mbnv2), <br>[gen2-fast-depth](https://github.com/luxonis/depthai-experiments/tree/master/gen2-fast-depth), <br>[gen2-mega-depth](https://github.com/luxonis/depthai-experiments/tree/master/gen2-mega-depth) | [generic-example](generic-example/) | ✅ | ✅ | 🚧 |  |
 | [depth-anything-v2](https://hub.luxonis.com/ai/models/c5bf9763-d29d-4b10-8642-fbd032236383?view=page) |  | [generic-example](generic-example/) | ❌ | ✅ | 🚧 |  |
 
