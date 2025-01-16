@@ -38,6 +38,6 @@ Comprehensive collection of AI model usage, including object detection, classifi
 
 Examples showing different ways to stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
 
-### [📚 Tutorial](tutorial/)
+### [📚 Tutorials](tutorials/)
 
 Step-by-step guides and educational content to help you get started with DepthAI.
