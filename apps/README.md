@@ -4,8 +4,9 @@ This section contains ready-to-use applications that demonstrate the capabilitie
 
 ## Platform Compatibility
 
-| Name                        | Gen2 | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Notes                                                                                                                                      |
-| --------------------------- | ---- | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| [default-app](default-app/) |      | ✅   | ✅                | ✅                | Default application pre-loaded on OAK4 devices showing color stream, depth stream, encoded stream and object detections using YOLO network |
+| Name                                                             | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes                                                                                                                                      |
+| ---------------------------------------------------------------- | ---- | ----------------- | ----------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| [default-app](default-app/)                                      | ✅   | ✅                | ✅                |      | Default application pre-loaded on OAK4 devices showing color stream, depth stream, encoded stream and object detections using YOLO network |
+| [rgb-depth-connections](conference-demos/rgb-depth-connections/) | ✅   | ✅                | 🚧                |      | Demo combining RGB camera feed with depth information and object detection capabilities.                                                   |
 
-✅: available; ❌: not available
+✅: available; ❌: not available; 🚧: work in progress

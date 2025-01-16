@@ -12,19 +12,15 @@ Click on any category below to explore detailed examples for that specific domai
 
 ### [📱 Apps](apps/)
 
-Ready-to-use applications built with DepthAI, demonstrating real-world use cases and implementations.
+Ready-to-use applications built with DepthAI, demonstrating real-world use cases and implementations. Here are also demos that we present at different conferences showing advanced use cases.
 
 ### [🎥 Camera Controls](camera-controls/)
 
 Examples demonstrating various camera control features like focus, exposure, white balance, and other camera parameters.
 
-### [📊 Conference Demos](conference-demos/)
-
-Collection of demos presented at conferences and events, showing advanced use cases.
-
 ### [🔌 Connectivity](connectivity/)
 
-Shows how to integrate DepthAI with different frameworks and tools like [Foxglove](https://docs.foxglove.dev/docs/introduction/) or [Rerun](https://rerun.io/docs/getting-started/what-is-rerun).
+Shows how to integrate DepthAI with different frameworks and tools like [Hub](https://hub.luxonis.com/), [Foxglove](https://docs.foxglove.dev/docs/introduction/) or [Rerun](https://rerun.io/docs/getting-started/what-is-rerun).
 
 ### [📏 Depth Measurement](depth-measurement/)
 
