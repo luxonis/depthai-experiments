@@ -1,90 +1,101 @@
 from pathlib import Path
-import blobconverter
 import depthai as dai
-from host_age_gender import AgeGender
-from detections_recognitions_sync import DetectionsRecognitionsSync
-from host_display import Display
+from depthai_nodes import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.host_process_detections import ProcessDetections
+from utils.host_sync import DetectionsAgeGenderSync
+from utils.annotation_node import AnnotationNode
 
+_, args = initialize_argparser()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+platform = device.getPlatform()
 
-device = dai.Device()
-# detection_model_description = dai.NNModelDescription(modelSlug="yunet", platform=device.getPlatform().name, modelVersionSlug="640x640")
-recognition_model_description = dai.NNModelDescription(
-    modelSlug="age-gender-recognition",
-    platform=device.getPlatform().name,
-    modelVersionSlug="62x62",
-)
-# detection_model_path = dai.getModelFromZoo(detection_model_description)
-recognition_model_path = dai.getModelFromZoo(recognition_model_description)
-
-face_det_model_description = dai.NNModelDescription(
-    modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640"
-)
-face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
-face_det_nn_archive = dai.NNArchive(face_det_archive_path)
+FPS = 20
+frame_type = dai.ImgFrame.Type.BGR888p
+if "RVC4" in str(platform):
+    frame_type = dai.ImgFrame.Type.BGR888i
+    FPS = 30
+else:
+    raise RuntimeError("This demo is currently only supported on RVC4")
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(1080, 1080)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setPreviewNumFramesPool(10)
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    if args.media_path:
+        replay_node = pipeline.create(dai.node.ReplayVideo)
+        replay_node.setReplayVideoFile(Path(args.media_path))
+        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay_node.setLoop(True)
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+        video_resize_node = pipeline.create(dai.node.ImageManipV2)
+        video_resize_node.initialConfig.setOutputSize(1280, 960)
+        video_resize_node.initialConfig.setFrameType(frame_type)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+        replay_node.out.link(video_resize_node.inputImage)
 
-    face_manip = pipeline.create(dai.node.ImageManip)
-    face_manip.initialConfig.setResize(300, 300)
-    face_manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
-    cam.preview.link(face_manip.inputImage)
+        input_node = video_resize_node.out
+    else:
+        camera_node = pipeline.create(dai.node.Camera).build()
+        input_node = camera_node.requestOutput((1280, 960), frame_type, fps=FPS)
 
-    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    face_det_nn.setBlobPath(
-        blobconverter.from_zoo(name="face-detection-retail-0004", shaves=5)
+    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node.initialConfig.setOutputSize(640, 480)
+    resize_node.initialConfig.setReusePreviousImage(False)
+    resize_node.inputImage.setBlocking(True)
+    input_node.link(resize_node.inputImage)
+
+    face_detection_node: ParsingNeuralNetwork = pipeline.create(
+        ParsingNeuralNetwork
+    ).build(resize_node.out, "luxonis/yunet:new-480x640")
+
+    detection_process_node = pipeline.create(ProcessDetections)
+    detection_process_node.set_source_size(1280, 960)
+    detection_process_node.set_target_size(62, 62)
+    face_detection_node.out.link(detection_process_node.detections_input)
+
+    config_sender_node = pipeline.create(dai.node.Script)
+    config_sender_node.setScriptPath(
+        Path(__file__).parent / "utils/config_sender_script.py"
     )
-    # face_det_nn.setNNArchive(face_det_nn_archive)
-    face_det_nn.setBoundingBoxScaleFactor(0.8)
-    face_det_nn.setDepthLowerThreshold(100)
-    face_det_nn.setDepthUpperThreshold(5000)
-    face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.input.setMaxSize(1)
-    face_manip.out.link(face_det_nn.input)
-    stereo.depth.link(face_det_nn.inputDepth)
+    config_sender_node.inputs["frame_input"].setBlocking(True)
+    config_sender_node.inputs["config_input"].setBlocking(True)
+    config_sender_node.inputs["frame_input"].setMaxSize(30)
+    config_sender_node.inputs["config_input"].setMaxSize(30)
 
-    script = pipeline.create(dai.node.Script)
-    face_det_nn.out.link(script.inputs["face_det_in"])
-    cam.preview.link(script.inputs["preview"])
-    script.setScriptPath(Path(__file__).parent / "script.py")
+    input_node.link(config_sender_node.inputs["frame_input"])
+    detection_process_node.config_output.link(config_sender_node.inputs["config_input"])
 
-    recognition_manip = pipeline.create(dai.node.ImageManip)
-    recognition_manip.initialConfig.setResize(62, 62)
-    recognition_manip.inputConfig.setWaitForMessage(True)
-    script.outputs["manip_cfg"].link(recognition_manip.inputConfig)
-    script.outputs["manip_img"].link(recognition_manip.inputImage)
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setReusePreviousImage(False)
+    crop_node.inputConfig.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(False)
 
-    recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setNNArchive(dai.NNArchive(recognition_model_path), 5)
-    recognition_manip.out.link(recognition_nn.input)
+    config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
+    config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
 
-    sync = pipeline.create(DetectionsRecognitionsSync).build()
-    face_det_nn.out.link(sync.input_detections)
-    recognition_nn.out.link(sync.input_recognitions)
-
-    age_gender = pipeline.create(AgeGender).build(
-        preview=cam.preview, detections_recognitions=sync.output
+    age_gender_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        crop_node.out, "luxonis/age-gender-recognition:new-62x62"
     )
 
-    display = pipeline.create(Display).build(age_gender.output)
-    display.setName("Preview")
+    sync_node = pipeline.create(DetectionsAgeGenderSync)
+    input_node.link(sync_node.passthrough_input)
+    face_detection_node.out.link(sync_node.detections_input)
+    age_gender_node.getOutput(0).link(sync_node.age_input)
+    age_gender_node.getOutput(1).link(sync_node.gender_input)
+
+    annotation_node = pipeline.create(AnnotationNode)
+    sync_node.out.link(annotation_node.input)
+
+    visualizer.addTopic("Video", sync_node.out_frame)
+    visualizer.addTopic("Text", annotation_node.output)
 
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
+            break
