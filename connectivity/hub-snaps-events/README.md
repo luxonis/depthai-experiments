@@ -4,9 +4,9 @@ This experiment demonstrates how to create a simple application that sends snaps
 
 ## Demo
 
-Visualizer view             |  Snap on Hub
-:-------------------------:|:-------------------------:
-![visualizer_view](media/visualizer.png)  |  ![hub_view](media/snap.png)
+|             Visualizer view              |         Snap on Hub         |
+| :--------------------------------------: | :-------------------------: |
+| ![visualizer_view](media/visualizer.png) | ![hub_view](media/snap.png) |
 
 ## Installation
 
@@ -27,7 +27,7 @@ python3 main.py --device <DEVICE> --api_key <API_KEY> --media <MEDIA> --fps_limi
 ```
 
 - `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<API_KEY>`: HubAI API key of your team. Not required if 'DEPTHAI_HUB_API_KEY' environment variable is set. Deafault: \`\`. 
+- `<API_KEY>`: HubAI API key of your team. Not required if 'DEPTHAI_HUB_API_KEY' environment variable is set. Deafault: \`\`.
 - `<MEDIA>`: Path to the video file. Default `None` - camera input.
 - `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
 
@@ -45,7 +45,6 @@ python3 main.py --media <PATH_TO_VIDEO>
 
 This will run the snaps&events experiment with the default device and the video file.
 
-
 ### Standalone Mode
 
 Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
@@ -56,6 +55,7 @@ bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
 Then, while you are in the experiment folder, you can run the example with:
+
 ```bash
 oakctl app run .
 ```
