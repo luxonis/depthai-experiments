@@ -28,7 +28,7 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
 python3 main.py --device <DEVICE> --model <MODEL> --media <MEDIA> --fps_limit <FPS_LIMIT>
 ```
 
-- `<MODEL>`: HubAI Model Reference from Luxonis HubAI. Default: `luxonis/lite-hrnet:18-coco-256x192`.
+- `<MODEL>`: HubAI Model Reference from Luxonis HubAI. Default: `luxonis/lite-hrnet:18-coco-192x256`.
 - `<DEVICE>`: Device IP or ID. Default: \`\`.
 - `<MEDIA>`: Path to the video file. Default `None` - camera input.
 - `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
@@ -48,10 +48,10 @@ python3 main.py --media <PATH_TO_VIDEO>
 This will run the human pose estimation experiment with the default device and the video file.
 
 ```bash
-python3 main.py --model luxonis/lite-hrnet:30-coco-256x192 --fps_limit 5
+python3 main.py --model luxonis/lite-hrnet:30-coco-192x256 --fps_limit 5
 ```
 
-This will run the human pose estimation experiment with the default device and camera input, but with the `luxonis/lite-hrnet:30-coco-256x192` model and a `5` FPS limit.
+This will run the human pose estimation experiment with the default device and camera input, but with the `luxonis/lite-hrnet:30-coco-192x256` model and a `5` FPS limit.
 
 ### Standalone Mode
 

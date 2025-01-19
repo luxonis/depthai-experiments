@@ -4,7 +4,9 @@ from host_qr_scanner import QRScanner
 
 from depthai_nodes.ml.helpers import Tiling, TilesPatcher
 
-model_description = dai.NNModelDescription(modelSlug="qrdet", platform="RVC2")
+model_description = dai.NNModelDescription(
+    modelSlug="qrdet", platform="RVC2", modelVersionSlug="nano-512x288"
+)
 archivePath = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archivePath)
 

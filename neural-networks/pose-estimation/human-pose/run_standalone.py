@@ -14,8 +14,8 @@ parser.add_argument("--device", required=True, help="Device to connect to.")
 parser.add_argument(
     "--model",
     required=False,
-    default="luxonis/lite-hrnet:18-coco-256x192",
-    help="Device to connect to.",
+    default="luxonis/lite-hrnet:18-coco-192x256",
+    help="HubAI model reference.",
 )
 parser.add_argument("--fps_limit", help="FPS limit.")
 parser.add_argument("--media", help="Path to the video file.")

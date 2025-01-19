@@ -38,7 +38,7 @@ with dai.Pipeline(device) as pipeline:
         input_node = camera_node.requestOutput((640, 480), frame_type, fps=FPS)
 
     detection_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        input_node, "luxonis/yunet:new-480x640"
+        input_node, "luxonis/yunet:640x480"
     )
 
     blur_node = pipeline.create(BlurBboxes)

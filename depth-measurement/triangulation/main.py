@@ -13,7 +13,7 @@ model_dimension = (320, 240) if rvc2 else (640, 480)
 faceDet_modelDescription = dai.NNModelDescription(
     modelSlug="yunet",
     platform=device.getPlatform().name,
-    modelVersionSlug=f"new-{model_dimension[1]}x{model_dimension[0]}",
+    modelVersionSlug=f"{model_dimension[0]}x{model_dimension[1]}",
 )
 faceDet_archivePath = dai.getModelFromZoo(faceDet_modelDescription)
 faceDet_nnarchive = dai.NNArchive(faceDet_archivePath)

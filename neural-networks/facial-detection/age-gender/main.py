@@ -47,7 +47,7 @@ with dai.Pipeline(device) as pipeline:
 
     face_detection_node: ParsingNeuralNetwork = pipeline.create(
         ParsingNeuralNetwork
-    ).build(resize_node.out, "luxonis/yunet:new-480x640")
+    ).build(resize_node.out, "luxonis/yunet:640x480")
 
     detection_process_node = pipeline.create(ProcessDetections)
     detection_process_node.set_source_size(1280, 960)
@@ -75,7 +75,7 @@ with dai.Pipeline(device) as pipeline:
     config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
 
     age_gender_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        crop_node.out, "luxonis/age-gender-recognition:new-62x62"
+        crop_node.out, "luxonis/age-gender-recognition:62x62"
     )
 
     sync_node = pipeline.create(DetectionsAgeGenderSync)
