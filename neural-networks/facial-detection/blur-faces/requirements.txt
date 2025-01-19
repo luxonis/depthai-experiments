@@ -1,5 +1,4 @@
-depthai~=3.0.0a3
-depthai-nodes==0.0.1
-blobconverter==1.2.9
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
+depthai>=3.0.0a10
+depthai-nodes>=0.1.1
 opencv-python==4.10.0.84
-numpy~=2.0
