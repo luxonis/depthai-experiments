@@ -4,12 +4,20 @@ import depthai as dai
 from box_estimator import BoxEstimator
 from projector_3d import PointCloudFromRGBD
 
+
 class BoxMeasurement(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-    def build(self, color: dai.Node.Output, depth: dai.Node.Output
-              , cam_intrinsics: list, shape: tuple[int, int], max_dist: float, min_box_size: float) -> "BoxMeasurement":
+    def build(
+        self,
+        color: dai.Node.Output,
+        depth: dai.Node.Output,
+        cam_intrinsics: list,
+        shape: tuple[int, int],
+        max_dist: float,
+        min_box_size: float,
+    ) -> "BoxMeasurement":
         self.link_args(color, depth)
         self.sendProcessingToPipeline(True)
 
@@ -24,9 +32,9 @@ class BoxMeasurement(dai.node.HostNode):
         color_frame = color.getCvFrame()
         depth_frame = depth.getFrame()
         pointcloud = self.pcl_converter.rgbd_to_projection(depth_frame, color_frame)
-        
+
         l, w, h = self.box_estimator.process_pcl(pointcloud)
-        if (l * w * h > self.min_box_size):
+        if l * w * h > self.min_box_size:
             self.box_estimator.vizualise_box()
 
             projection_frame = color_frame.copy()
@@ -36,6 +44,6 @@ class BoxMeasurement(dai.node.HostNode):
 
         cv2.imshow("Preview", color_frame)
 
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             print("Pipeline exited.")
             self.stopPipeline()

@@ -13,14 +13,16 @@ model_dimension = (320, 240) if rvc2 else (640, 480)
 faceDet_modelDescription = dai.NNModelDescription(
     modelSlug="yunet",
     platform=device.getPlatform().name,
-    modelVersionSlug=f"{model_dimension[0]}x{model_dimension[1]}"
+    modelVersionSlug=f"{model_dimension[0]}x{model_dimension[1]}",
 )
 faceDet_archivePath = dai.getModelFromZoo(faceDet_modelDescription)
 faceDet_nnarchive = dai.NNArchive(faceDet_archivePath)
 
+
 # Creates and connects nodes, once for the left camera and once for the right camera
-def populate_pipeline(p: dai.Pipeline, left: bool, resolution: tuple[int, int])\
-        -> tuple[dai.Node.Output, dai.Node.Output, dai.Node.Output]:
+def populate_pipeline(
+    p: dai.Pipeline, left: bool, resolution: tuple[int, int]
+) -> tuple[dai.Node.Output, dai.Node.Output, dai.Node.Output]:
     socket = dai.CameraBoardSocket.CAM_B if left else dai.CameraBoardSocket.CAM_C
     cam = p.create(dai.node.Camera).build(socket)
     fps = 25 if rvc2 else 3
@@ -32,7 +34,6 @@ def populate_pipeline(p: dai.Pipeline, left: bool, resolution: tuple[int, int])\
 
 
 with dai.Pipeline(device) as pipeline:
-
     print("Creating pipeline...")
 
     face_left, face_nn_left = populate_pipeline(pipeline, True, model_dimension)
@@ -44,7 +45,7 @@ with dai.Pipeline(device) as pipeline:
         face_nn_left=face_nn_left,
         face_nn_right=face_nn_right,
         device=device,
-        resolution_number=model_dimension
+        resolution_number=model_dimension,
     )
 
     display = pipeline.create(Display).build(triangulation.output)

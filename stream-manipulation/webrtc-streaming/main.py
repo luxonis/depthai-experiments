@@ -17,16 +17,24 @@ import aiohttp_cors
 #  one device can run only one pipeline at a time
 pipeline = None
 
+
 async def test(request):
-    return web.Response(content_type="application/json", text="test", headers={'Access-Control-Allow-Origin': '*'})
+    return web.Response(
+        content_type="application/json",
+        text="test",
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
+
 
 async def index(request):
-    with (Path(__file__).parent / 'client/index.html').open() as f:
+    with (Path(__file__).parent / "client/index.html").open() as f:
         return web.Response(content_type="text/html", text=f.read())
 
+
 async def javascript(request):
-    with (Path(__file__).parent / 'client/build/client.js').open() as f:
+    with (Path(__file__).parent / "client/build/client.js").open() as f:
         return web.Response(content_type="application/javascript", text=f.read())
+
 
 async def on_shutdown(application):
     # Close peer connections
@@ -34,33 +42,42 @@ async def on_shutdown(application):
     await asyncio.gather(*coroutines)
     application.pcs.clear()
 
+
 class OptionsWrapper:
     def __init__(self, raw_options):
         self.raw_options = raw_options
+
     @property
     def camera_type(self):
-        return self.raw_options.get('camera_type', 'rgb')
+        return self.raw_options.get("camera_type", "rgb")
+
     @property
     def width(self):
-        return int(self.raw_options.get('cam_width', 300))
+        return int(self.raw_options.get("cam_width", 300))
+
     @property
     def height(self):
-        return int(self.raw_options.get('cam_height', 300))
+        return int(self.raw_options.get("cam_height", 300))
+
     @property
     def nn(self):
-        return self.raw_options.get('nn_model', '')
+        return self.raw_options.get("nn_model", "")
+
     @property
     def mono_camera_resolution(self):
-        return self.raw_options.get('mono_camera_resolution', 'THE_400_P')
+        return self.raw_options.get("mono_camera_resolution", "THE_400_P")
+
     @property
     def median_filter(self):
-        return self.raw_options.get('median_filter', 'KERNEL_7x7')
+        return self.raw_options.get("median_filter", "KERNEL_7x7")
+
     @property
     def subpixel(self):
-        return bool(self.raw_options.get('subpixel', ''))
+        return bool(self.raw_options.get("subpixel", ""))
+
     @property
     def extended_disparity(self):
-        return bool(self.raw_options.get('extended_disparity', ''))
+        return bool(self.raw_options.get("extended_disparity", ""))
 
 
 async def offer(request):
@@ -97,7 +114,9 @@ async def offer(request):
                 pipeline = dai.Pipeline()
 
                 setup_datachannel(pc, pc_id, request.app)
-                request.app.video_transforms[pc_id] = VideoTransform(pipeline, request.app, pc_id, options)
+                request.app.video_transforms[pc_id] = VideoTransform(
+                    pipeline, request.app, pc_id, options
+                )
                 pc.addTrack(request.app.video_transforms[pc_id])
     else:
         print("Pipeline still running.")
@@ -119,27 +138,30 @@ async def offer(request):
 
     return web.Response(
         content_type="application/json",
-        text=json.dumps({
-            "sdp": pc.localDescription.sdp,
-            "type": pc.localDescription.type
-        }),
+        text=json.dumps(
+            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+        ),
     )
 
+
 app = web.Application()
-setattr(app, 'pcs', set())
-setattr(app, 'pcs_datachannels', {})
-setattr(app, 'video_transforms', {})
+setattr(app, "pcs", set())
+setattr(app, "pcs_datachannels", {})
+setattr(app, "video_transforms", {})
 
 app.on_shutdown.append(on_shutdown)
 app.router.add_get("/", index)
 app.router.add_get("/client.js", javascript)
-cors = aiohttp_cors.setup(app, defaults={
-    "*": aiohttp_cors.ResourceOptions(
+cors = aiohttp_cors.setup(
+    app,
+    defaults={
+        "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
             expose_headers="*",
             allow_headers="*",
         )
-})
+    },
+)
 cors.add(app.router.add_get("/test", test))
 cors.add(app.router.add_post("/offer", offer))
 web.run_app(app, access_log=None, port=8080)

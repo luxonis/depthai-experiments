@@ -1,11 +1,12 @@
 # MJPEG Streaming server
 
 This script allows you to:
+
 - Stream frames via HTTP Server using MJPEG stream
 
 ## Demo
 
-[![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)]
+\[![MJPEG Streaming DepthAI](https://user-images.githubusercontent.com/5244214/90745571-92ab5b80-e2d0-11ea-9052-3f0c8afa9b0b.gif)\]
 
 ## Installation
 

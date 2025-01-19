@@ -5,7 +5,7 @@ from host_node.host_depth_color_transform import DepthColorTransform
 
 
 STEREO_RESOLUTION = (800, 600)
-NN_DIMENSIONS = (512,288)
+NN_DIMENSIONS = (512, 288)
 
 remoteConnector = dai.RemoteConnection()
 
@@ -19,22 +19,29 @@ with dai.Pipeline(device) as pipeline:
         dai.getModelFromZoo(
             dai.NNModelDescription(
                 model=f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}",
-                platform=platform.name)
+                platform=platform.name,
+            )
         )
     )
     if platform == dai.Platform.RVC2:
         detectionNetwork = pipeline.create(dai.node.DetectionNetwork)
-        cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888p).link(detectionNetwork.input)
+        cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888p).link(
+            detectionNetwork.input
+        )
         detectionNetwork.setNNArchive(nnArchive, numShaves=6)
     else:
         detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(
             cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888i),
-            nnArchive
+            nnArchive,
         )
-    
+
     outputToEncode = cameraNode.requestOutput((1440, 1080), type=dai.ImgFrame.Type.NV12)
     h264Encoder = pipeline.create(dai.node.VideoEncoder)
-    encoding = dai.VideoEncoderProperties.Profile.MJPEG if platform == dai.Platform.RVC2 else dai.VideoEncoderProperties.Profile.H264_MAIN
+    encoding = (
+        dai.VideoEncoderProperties.Profile.MJPEG
+        if platform == dai.Platform.RVC2
+        else dai.VideoEncoderProperties.Profile.H264_MAIN
+    )
     h264Encoder.setDefaultProfilePreset(30, encoding)
     outputToEncode.link(h264Encoder.input)
 
@@ -61,12 +68,12 @@ with dai.Pipeline(device) as pipeline:
         stereo = pipeline.create(dai.node.StereoDepth).build(
             left=left_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
             right=right_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
-            presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY
+            presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY,
         )
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
         if platform == dai.Platform.RVC2:
             stereo.setOutputSize(*STEREO_RESOLUTION)
-        
+
         coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
         coloredDepth.setColormap(cv2.COLORMAP_JET)
         remoteConnector.addTopic("Depth", coloredDepth.output)

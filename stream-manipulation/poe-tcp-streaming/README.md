@@ -5,10 +5,10 @@ This example shows how you can stream frames (and other data) with OAK PoE via T
 ## Run this example
 
 1. Run `oak.py`, which will upload the pipeline to the OAK PoE. You will receive a log similar to `[192.168.1.66] [25.797] [Script(2)] [warning] Server up`.
-2. Copy the IP of your OAK PoE camera (in my case `192.168.1.66`).
-3. Edit the `OAK_IP` variable inside `host.py` with the IP of your OAK PoE camera.
-4. Start `host.py` script, which will connect to the OAK PoE. Connection will be initialized and OAK PoE will start streaming encoded frames to the host computer.
-5. Host computer will decode MJPEG encoded frames and show them to the user.
+1. Copy the IP of your OAK PoE camera (in my case `192.168.1.66`).
+1. Edit the `OAK_IP` variable inside `host.py` with the IP of your OAK PoE camera.
+1. Start `host.py` script, which will connect to the OAK PoE. Connection will be initialized and OAK PoE will start streaming encoded frames to the host computer.
+1. Host computer will decode MJPEG encoded frames and show them to the user.
 
 ### OAK PoE as client
 

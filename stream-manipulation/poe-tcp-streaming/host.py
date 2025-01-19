@@ -6,15 +6,17 @@ import numpy as np
 # Enter your own IP!
 OAK_IP = "192.168.1.66"
 
+
 def get_frame(socket, size):
     bytes = socket.recv(4096)
     while True:
         read = 4096
-        if size-len(bytes) < read:
-            read = size-len(bytes)
+        if size - len(bytes) < read:
+            read = size - len(bytes)
         bytes += socket.recv(read)
         if size == len(bytes):
             return bytes
+
 
 sock = socket.socket()
 sock.connect((OAK_IP, 5000))
@@ -22,7 +24,7 @@ sock.connect((OAK_IP, 5000))
 try:
     while True:
         header = str(sock.recv(32), encoding="ascii")
-        chunks = re.split(' +', header)
+        chunks = re.split(" +", header)
         if chunks[0] == "ABCDE":
             # print(f">{header}<")
             ts = float(chunks[1])
@@ -32,7 +34,7 @@ try:
             # print(buf.shape, buf.size)
             frame = cv2.imdecode(buf, cv2.IMREAD_COLOR)
             cv2.imshow("Color", frame)
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(1) == ord("q"):
             break
 except Exception as e:
     print("Error:", e)

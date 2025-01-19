@@ -2,7 +2,7 @@ import depthai as dai
 
 with dai.Pipeline() as pipeline:
     camRgb = pipeline.createColorCamera()
-    camRgb.setIspScale(2,3)
+    camRgb.setIspScale(2, 3)
 
     videoEnc = pipeline.create(dai.node.VideoEncoder)
     videoEnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
@@ -10,7 +10,7 @@ with dai.Pipeline() as pipeline:
 
     script = pipeline.create(dai.node.Script)
     script.setProcessor(dai.ProcessorType.LEON_CSS)
-    videoEnc.bitstream.link(script.inputs['frame'])
+    videoEnc.bitstream.link(script.inputs["frame"])
 
     script.setScript("""
     # Enter your own IP!
