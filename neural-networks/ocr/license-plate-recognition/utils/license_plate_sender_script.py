@@ -1,8 +1,4 @@
-import depthai as dai
-import numpy as np
-
-
-def denormalize_detection(detection: dai.ImgDetection, width: int, height: int):
+def denormalize_detection(detection: ImgDetection, width: int, height: int):
     x_min, y_min, x_max, y_max = (
         detection.xmin,
         detection.ymin,
@@ -58,15 +54,15 @@ try:
             lp_w = lp_x_max - lp_x_min
             lp_h = lp_y_max - lp_y_min
 
-            crop_x_min = np.clip(lp_x_min + x_min, 0, frame_w)
-            crop_y_min = np.clip(lp_y_min + y_min, 0, frame_h)
-            crop_w = np.clip(lp_w, 0, frame_w - crop_x_min)
-            crop_h = np.clip(lp_h, 0, frame_h - crop_y_min)
+            crop_x_min = max(0, min(lp_x_min + x_min, frame_w))
+            crop_y_min = max(0, min(lp_y_min + y_min, frame_h))
+            crop_w = max(0, min(lp_w, frame_w - crop_x_min))
+            crop_h = max(0, min(lp_h, frame_h - crop_y_min))
 
             if crop_w <= 40 or crop_h <= 10:
                 continue
 
-            cfg = dai.ImageManipConfigV2()
+            cfg = ImageManipConfigV2()
             cfg.addCrop(crop_x_min, crop_y_min, crop_w, crop_h)
             cfg.setReusePreviousImage(False)
             cfg.setOutputSize(320, 48)
@@ -77,14 +73,14 @@ try:
             node.outputs["lp_crop_config"].send(cfg)
             node.outputs["lp_crop_frame"].send(frame)
 
-        valid_detections_msg = dai.ImgDetections()
+        valid_detections_msg = ImgDetections()
         valid_detections_msg.detections = valid_detections
         valid_detections_msg.setTimestamp(detections_message.getTimestamp())
 
-        valid_crops_msg = dai.ImgDetections()
+        valid_crops_msg = ImgDetections()
         valid_crops_msg.detections = valid_crops
         valid_crops_msg.setTimestamp(detections_message.getTimestamp())
-
+        node.warn("sending vehicle crop config")
         node.outputs["output_valid_crops"].send(valid_crops_msg)
         node.outputs["output_valid_detections"].send(valid_detections_msg)
 

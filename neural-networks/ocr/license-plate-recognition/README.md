@@ -1,11 +1,13 @@
+## License Plate Recognition
+
 This example demonstrates how to run 3 stage inference on DepthAI
 First, a vehicle is detected on the image, the cropped image is then fed into a license plate detection model. The cropped license plate is sent to a text recognition (OCR) network,
 which tries to decode the license plates texts.
 
-**WARNING:** Due to the high comutational cost, this example only works on OAK4 devices.
+**:exclamation: Due to the high comutational cost, this example only works on OAK4 devices. :exclamation:**
 
 Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis OAK](https://blog.roboflow.com/oak-deploy-license-plate/) tutorial for training a custom detector using the Roboflow platform.
-![Detection Output](output.gif)git
+![Detection Output](visualizations/output.gif)
 
 # Instalation
 
