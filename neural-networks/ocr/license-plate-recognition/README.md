@@ -7,9 +7,11 @@ which tries to decode the license plates texts.
 **:exclamation: Due to the high comutational cost, this example only works on OAK4 devices. :exclamation:**
 
 Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis OAK](https://blog.roboflow.com/oak-deploy-license-plate/) tutorial for training a custom detector using the Roboflow platform.
+
+## Demo
 ![Detection Output](visualizations/output.gif)
 
-# Instalation
+## Instalation
 
 Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
@@ -18,7 +20,7 @@ Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https
 pip install -r requirements.txt
 ```
 
-# Usage
+## Usage
 
 The inference is ran using a simple CLI call:
 
@@ -38,7 +40,7 @@ The relevant arguments:
 
 Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results by **Depthai Visualizer**
 
-## Example
+### Example
 
 To run the example you can simply run the following command:
 
