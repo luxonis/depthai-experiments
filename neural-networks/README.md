@@ -35,7 +35,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                     EfficientNet-lite                                     |                                        Image Quality Assessment                                         |
 | :---------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------: |
-| <img src="media/efficientnet-lite.gif" alt="efficientnet-lite" style="max-height:250px;"> | <img src="media/image-quality-assessment.gif" alt="image-quality-assessment" style="max-height:250px;"> |
+| <img src="media/efficientnet-lite.gif" alt="efficientnet-lite" style="height:250px;"> | <img src="media/image-quality-assessment.gif" alt="image-quality-assessment" style="height:250px;"> |
 
 | Name                                | HubAI Model                                                                                                  | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                            | Notes                                |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -46,7 +46,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                  YoloV6 Nano                                  |
 | :---------------------------------------------------------------------------: |
-| <img src="media/yolov6-nano.gif" alt="yolov6-nano" style="max-height:250px;"> |
+| <img src="media/yolov6-nano.gif" alt="yolov6-nano" style="height:250px;"> |
 
 | Name                                                                 | HubAI Model                                                                                                                                                                                                                                                                                            | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                       | Notes                                 |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- | ----------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
@@ -71,7 +71,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                                  Blur Faces                                                  |                                                      Emotion Recognition                                                       |
 | :----------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
-| <img src="facial-detection/blur-faces/visualizations/output.gif" alt="blur-faces" style="max-height:250px;"> | <img src="facial-detection/emotion-recognition/visualizations/output.gif" alt="emotion-recognition" style="max-height:250px;"> |
+| <img src="facial-detection/blur-faces/visualizations/output.gif" alt="blur-faces" style="height:250px;"> | <img src="facial-detection/emotion-recognition/visualizations/output.gif" alt="emotion-recognition" style="height:250px;"> |
 
 | Name                                                                | HubAI Model                                                                                                                                                                                           | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                  | Notes |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------- | ----- |
@@ -89,7 +89,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                          Objectron                                           |
 | :------------------------------------------------------------------------------------------: |
-| <img src="3D-detection/objectron/media/chair.gif" alt="objectron" style="max-height:250px;"> |
+| <img src="3D-detection/objectron/media/chair.gif" alt="objectron" style="height:250px;"> |
 
 | Model                               | RVC2                                                                                                                                                                                           | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes                                                                                       |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ----------------- | ---- | ------------------------------------------------------------------------------------------- |
@@ -99,7 +99,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                         Mediapipe Face Landmarker                                         |
 | :-------------------------------------------------------------------------------------------------------: |
-| <img src="media/mediapipe-face-landmarker.png" alt="mediapipe-face-landmarker" style="max-height:250px;"> |
+| <img src="media/mediapipe-face-landmarker.png" alt="mediapipe-face-landmarker" style="height:250px;"> |
 
 | Name                                | HubAI Model                                                                                                   | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                      | Notes |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ----------------------------------------------------------------------------------------- | ----- |
@@ -109,7 +109,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                            Human Pose                                             |                                                Animal Pose                                                |
 | :-----------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------: |
-| <img src="pose-estimation/human-pose/media/dance.gif" alt="human-pose" style="max-height:250px;"> | <img src="pose-estimation/animal-pose/media/cow-walking.gif" alt="animal-pose" style="max-height:250px;"> |
+| <img src="pose-estimation/human-pose/media/dance.gif" alt="human-pose" style="height:250px;"> | <img src="pose-estimation/animal-pose/media/cow-walking.gif" alt="animal-pose" style="height:250px;"> |
 
 | Name                                        | HubAI Model                                                                                                                                                                                                                        | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                          | Notes |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------------- | ----- |
@@ -121,7 +121,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                    YoloV8 Instance Segmentation Nano                                    |                                 FastSam S                                 |
 | :-----------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------: |
-| <img src="media/yolov8-instance-seg-nano.gif" alt="yolov8-instance-seg-nano" style="max-height:250px;"> | <img src="media/fastsam-s.gif" alt="fastsam-s" style="max-height:250px;"> |
+| <img src="media/yolov8-instance-seg-nano.gif" alt="yolov8-instance-seg-nano" style="height:250px;"> | <img src="media/fastsam-s.gif" alt="fastsam-s" style="height:250px;"> |
 
 | Name                                  | HubAI Model                                                                                                                                                                                                                                    | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                                           | Notes                             |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- |
@@ -156,7 +156,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                                   License Plate Recognition                                                   |
 | :---------------------------------------------------------------------------------------------------------------------------: |
-| <img src="ocr/license-plate-recognition/visualizations/output.gif" alt="license-plate-recognition" style="max-height:250px;"> |
+| <img src="ocr/license-plate-recognition/visualizations/output.gif" alt="license-plate-recognition" style="height:250px;"> |
 
 | Name                                                        | HubAI Model                                                                                                                                                                                                                                                                                                               | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                         | Notes |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
@@ -174,7 +174,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                             CREStereo Stereo Matching                                             |                                MiDaS v2.1                                 |
 | :---------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------: |
-| <img src="depth-estimation/crestereo-stereo-matching/media/person.gif" alt="crestereo" style="max-height:250px;"> | <img src="media/midas-v21.gif" alt="midas-v21" style="max-height:250px;"> |
+| <img src="depth-estimation/crestereo-stereo-matching/media/person.gif" alt="crestereo" style="height:250px;"> | <img src="media/midas-v21.gif" alt="midas-v21" style="height:250px;"> |
 
 | Name                                                                           | HubAI Model                                                                                           | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                                                                                                          | Notes                             |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
@@ -186,7 +186,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                 M-LSD                                 |                                 Ultra Fast Lane Detection                                 |
 | :-------------------------------------------------------------------: | :---------------------------------------------------------------------------------------: |
-| <img src="media/m-lsd.gif" alt="crestereo" style="max-height:250px;"> | <img src="media/ultra-fast-lane-detection.gif" alt="midas-v21" style="max-height:250px;"> |
+| <img src="media/m-lsd.gif" alt="crestereo" style="height:250px;"> | <img src="media/ultra-fast-lane-detection.gif" alt="midas-v21" style="height:250px;"> |
 
 | Name                                | HubAI Model                                                                                                   | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                    | Notes                             |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------- | --------------------------------- |
@@ -207,7 +207,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                             XFeat                                              |
 | :--------------------------------------------------------------------------------------------: |
-| <img src="feature-detection/xfeat/media/xfeat_demo.gif" alt="xfeat" style="max-height:250px;"> |
+| <img src="feature-detection/xfeat/media/xfeat_demo.gif" alt="xfeat" style="height:250px;"> |
 
 | Name                              | HubAI Model                                                                               | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes |
 | --------------------------------- | ----------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ---- | ----- |
