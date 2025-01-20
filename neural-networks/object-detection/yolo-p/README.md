@@ -1,40 +1,62 @@
-## YOLOP on DepthAI
+# YOLO-P on DepthAI
 
-This example shows an implementation of [YOLOP](https://github.com/hustvl/YOLOP) on DepthAI in the Gen2 API system. ONNX models is taken from the official repository and converted to blob so it can run on OAK devices.
+This experiment shows an implementation of [YOLO-P](https://hub.luxonis.com/ai/models/0a22d194-d525-46e7-a785-a267b7958a39?view=page) from our HubAI. It shows that YOLO-P can be run as a ADAS (advanced driving assistance system) on DepthAI. It can detect vehicles, segment road and lines.
 
-The model performs:
+Input shape of the model is 320 x 320, and we resize the input video to the required shape.
 
-- lane segmentation,
-- line segmentation, and
-- vehicle detection.
+## Demo
 
-Input shape of the model is 320 x 320, and we resize the input video to the required shape. [Letterboxing](https://docs.luxonis.com/projects/api/en/latest/tutorials/maximize_fov/#letterboxing) might be useful for slightly better performance.
-
-![Image example](https://user-images.githubusercontent.com/56075061/144842281-3413133e-7a44-4030-a572-9887fad1bbc6.gif)
+![Image example](media/adas.gif)
 
 Example shows input video with overlay of lane and line segmentation and vehicle detections. Example video is taken from [YOLOP repository](https://github.com/hustvl/YOLOP/tree/main/inference/videos).
 
-## Pre-requisites
+## Installation
 
-Python 3.8.19 is required.
+You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
-1. Install requirements:
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
-1. Download sample videos
-   ```
-   python3 download.py
-   ```
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-```
-python3 main.py [options]
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+### Peripheral Mode
+
+```bash
+python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
 ```
 
-Options:
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
+- `<MEDIA>`: Path to the video file. Default `None` - camera input.
+- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
 
-- -v, --video_path: Path to the video input for inference. Default: *vids/1.mp4*.
-- -conf, --confidence_thresh: Set the confidence threshold. Default: 0.5.
-- -iou, --iou_thresh: Set the NMS IoU threshold. Default: 0.3.
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run the YOLOP experiment with the default device, and camera input.
+
+```bash
+python3 main.py --media <PATH_TO_VIDEO>
+```
+
+This will run the YOLOP experiment with the default device and the video file.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <device-ip>
+oakctl app run .
+```
