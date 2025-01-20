@@ -1,79 +1,130 @@
 import depthai as dai
-from depthai_nodes import MPPalmDetectionParser
-from host_node.depth_merger import DepthMerger
-from host_node.detection_label_filter import DetectionLabelFilter
-from host_node.detection_merger import DetectionMerger
-from host_node.measure_object_distance import MeasureObjectDistance
-from host_node.visualize_detections import VisualizeDetections
-from host_node.visualize_object_distances import VisualizeObjectDistances
-from show_alert import ShowAlert
+from depthai_nodes import ParsingNeuralNetwork, MPPalmDetectionParser
+from utils.arguments import initialize_argparser
+from utils.depth_merger import DepthMerger
+from utils.adapter import ParserBridge
+from utils.annotation_node import AnnotationNode
+from utils.detection_merger import DetectionMerger
+from utils.detection_label_filter import DetectionLabelFilter
+from utils.measure_object_distance import MeasureObjectDistance
+from utils.visualize_object_distances import VisualizeObjectDistances
+from utils.show_alert import ShowAlert
 
-device = dai.Device()
-device.setIrLaserDotProjectorIntensity(1)
-yolo_description = dai.NNModelDescription(
-    modelSlug="yolov6-nano",
-    modelVersionSlug="r2-coco-512x288",
-)
-palm_model_dimension = 128 if device.getPlatform() == dai.Platform.RVC2 else 192
-palm_detection_description = dai.NNModelDescription(
-    modelSlug="mediapipe-palm-detection",
-    modelVersionSlug=f"{palm_model_dimension}x{palm_model_dimension}",
-)
 
-# If dangerous object is too close to the palm, warning will be displayed
+_, args = initialize_argparser()
+
+object_detection_model_slug = "luxonis/yolov6-nano:r2-coco-512x288"
+palm_detection_model_slug = "luxonis/mediapipe-palm-detection:192x192"
+
 DANGEROUS_OBJECTS = ["bottle", "cup"]
+FPS_LIMIT = 30
 
-VIDEO_SIZE = (512, 288)
-FPS = 10
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-visualizer = dai.RemoteConnection()
+# device.setIrLaserDotProjectorIntensity(1)
 
 with dai.Pipeline(device) as pipeline:
-    color_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    color_out = color_cam.requestOutput(VIDEO_SIZE, dai.ImgFrame.Type.NV12, fps=FPS)
+    print("Creating pipeline...")
+
+    object_detection_model_description = dai.NNModelDescription(
+        object_detection_model_slug
+    )
+    platform = device.getPlatform().name
+    print(f"Platform: {platform}")
+    object_detection_model_description.platform = platform
+    object_detection_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(object_detection_model_description)
+    )
+    classes = object_detection_nn_archive.getConfig().model.heads[0].metadata.classes
+
+    palm_detection_model_description = dai.NNModelDescription(palm_detection_model_slug)
+    palm_detection_model_description.platform = platform
+    palm_detection_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(palm_detection_model_description, useCached=False)
+    )
+
+    frame_type = (
+        dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+    )
+    FPS_LIMIT = 10 if platform == "RVC2" else 30
+
+    color_camera = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     left_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left_cam.requestOutput(VIDEO_SIZE, fps=FPS),
-        right=right_cam.requestOutput(VIDEO_SIZE, fps=FPS),
+        left=left_cam.requestOutput(
+            object_detection_nn_archive.getInputSize(), fps=FPS_LIMIT
+        ),
+        right=right_cam.requestOutput(
+            object_detection_nn_archive.getInputSize(), fps=FPS_LIMIT
+        ),
         presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY,
     )
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setOutputSize(*VIDEO_SIZE)
+    if platform == "RVC2":
+        stereo.setOutputSize(*object_detection_nn_archive.getInputSize())
+    # stereo.setLeftRightCheck(True)
+    # stereo.setExtendedDisparity(True)
+    # stereo.setRectification(True)
 
-    yolo_nn = pipeline.create(dai.node.SpatialDetectionNetwork).build(
-        input=color_cam, stereo=stereo, model=yolo_description, fps=FPS
+    camera_output = color_camera.requestOutput(
+        (800, 600), dai.ImgFrame.Type.NV12, fps=FPS_LIMIT
     )
-    yolo_nn.setConfidenceThreshold(0.5)
-    yolo_nn.input.setBlocking(False)
-    yolo_nn.input.setMaxSize(2)
 
-    palm_detection = pipeline.create(dai.node.NeuralNetwork).build(
-        input=color_cam,
-        modelDesc=palm_detection_description,
-        fps=FPS,
+    object_detection_manip = pipeline.create(dai.node.ImageManipV2)
+    object_detection_manip.initialConfig.setOutputSize(
+        512, 288, mode=dai.ImageManipConfigV2.ResizeMode.STRETCH
     )
-    palm_detection.input.setBlocking(False)
-    palm_detection.input.setMaxSize(2)
-    palm_detection_parser = pipeline.create(MPPalmDetectionParser)
-    palm_detection_parser.setScale(palm_model_dimension)
-    palm_detection_parser.setConfidenceThreshold(0.6)
-    palm_detection.out.link(palm_detection_parser.input)
+    object_detection_manip.initialConfig.setFrameType(frame_type)
+    camera_output.link(object_detection_manip.inputImage)
 
+    object_detection_nn: ParsingNeuralNetwork = pipeline.create(
+        ParsingNeuralNetwork
+    ).build(
+        object_detection_manip.out,
+        object_detection_nn_archive,
+    )
+    palm_detection_manip = pipeline.create(dai.node.ImageManipV2)
+    palm_detection_manip.initialConfig.setOutputSize(
+        192, 192, mode=dai.ImageManipConfigV2.ResizeMode.STRETCH
+    )
+    palm_detection_manip.initialConfig.setFrameType(frame_type)
+    camera_output.link(palm_detection_manip.inputImage)
+
+    palm_detection_nn: ParsingNeuralNetwork = pipeline.create(
+        ParsingNeuralNetwork
+    ).build(
+        palm_detection_manip.out,
+        palm_detection_nn_archive,
+    )
+    parser: MPPalmDetectionParser = palm_detection_nn.getParser(0)
+    parser.setConfidenceThreshold(0.7)
+
+    adapter = pipeline.create(ParserBridge)
+    palm_detection_nn.out.link(adapter.palm_detection_input)
+
+    detection_depth_merger = pipeline.create(DepthMerger).build(
+        output_2d=object_detection_nn.out,
+        output_depth=stereo.depth,
+        calib_data=device.readCalibration2(),
+        depth_alignment_socket=dai.CameraBoardSocket.CAM_A,
+    )
     palm_depth_merger = pipeline.create(DepthMerger).build(
-        output_2d=palm_detection_parser.out,
+        output_2d=adapter.out,
         output_depth=stereo.depth,
         calib_data=device.readCalibration2(),
         depth_alignment_socket=dai.CameraBoardSocket.CAM_A,
     )
 
+    # merge both detections into one message
     merge_detections = pipeline.create(DetectionMerger).build(
-        yolo_nn.out, palm_depth_merger.output
+        detection_depth_merger.output, palm_depth_merger.output
     )
-    merge_detections.set_detection_2_label_offset(len(yolo_nn.getClasses()))
+    merge_detections.set_detection_2_label_offset(len(classes))
 
     # Filter out everything except for dangerous objects and palm
-    merged_labels = yolo_nn.getClasses() + ["palm"]
+    merged_labels = classes + ["palm"]
     filter_labels = [merged_labels.index(i) for i in DANGEROUS_OBJECTS]
     filter_labels.append(merged_labels.index("palm"))
     detection_filter = pipeline.create(DetectionLabelFilter).build(
@@ -84,9 +135,6 @@ with dai.Pipeline(device) as pipeline:
         nn=detection_filter.output
     )
 
-    visualize_detections = pipeline.create(VisualizeDetections).build(
-        detection_filter.output, merged_labels
-    )
     visualize_distances = pipeline.create(VisualizeObjectDistances).build(
         measure_object_distance.output
     )
@@ -97,15 +145,22 @@ with dai.Pipeline(device) as pipeline:
         dangerous_objects=[merged_labels.index(i) for i in DANGEROUS_OBJECTS],
     )
 
-    print("Pipeline created.")
-    visualizer.addTopic("Detections", visualize_detections.output)
+    annotation_node = pipeline.create(AnnotationNode)
+    detection_filter.output.link(annotation_node.detections_input)
+    measure_object_distance.output.link(annotation_node.distances_input)
+
+    visualizer.addTopic("Color", camera_output)
+    visualizer.addTopic("Detections", annotation_node.out_detections)
     visualizer.addTopic("Distances", visualize_distances.output)
     visualizer.addTopic("Alert", show_alert.output)
-    visualizer.addTopic("Color", color_out)
+
+    print("Pipeline created.")
+
     pipeline.start()
     visualizer.registerPipeline(pipeline)
+
     while pipeline.isRunning():
-        pipeline.processTasks()
-        key = visualizer.waitKey(1)
-        if key == ord("q"):
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            pipeline.stop()
             break
