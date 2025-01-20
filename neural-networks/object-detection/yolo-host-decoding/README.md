@@ -1,43 +1,70 @@
-## YoloV5 decoding on host
+# YOLOv6 Nano decoding on host
 
-This example shows how to run YoloV5 object detection on DepthAI with decoding on host. We also provide support for on-device decoding. Detailed steps are available in the **YoloV5_training.ipynb** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/master/colab-notebooks/YoloV5_training.ipynb) tutorial.
+This example shows how to run [YOLOv6 Nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page) object detection on DepthAI with decoding on host. The neural network processes the video stream on-device and sends the raw outputs to the host for decoding. The decoding of YOLO's outputs is done in the host node where final bounding boxes in form of a `ImgDetections` message are created.
 
-The following *.blob*s are available:
+Alternatively, you can use fully on-device decoding with `DetectionNetwork`.
 
-- *yolov5s_default_openvino_2021.4_6shave.blob*: pretrained version of YoloV5s on Coco dataset.
-- *yolov5m_default_openvino_2021.4_6shave*: heavier version (YoloV5m) pretrained on Coco dataset.
-- *yolov5s_sku_openvino_2021.4_6shave.blob*: pretrained on YoloV5s on 3 epochs of SKU-110K dataset as can also be seen in the Colab.
+You can find the tutorial for training the custom YOLO model and generation of *.blob* file [here](https://github.com/luxonis/depthai-ml-training/tree/main/training/others/object-detection) - **YoloV6_training.ipynb** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/main/training/others/object-detection/YoloV6_training.ipynb). You can create a copy of the Colab Notebook and try training the model on your own!
 
-For differences between YoloV5s and YoloV5m please refer to the [ultralytics/yolov5](https://github.com/ultralytics/yolov5).
-
-You can find the tutorial for training the model and generation of *.blob* file [here](https://github.com/luxonis/depthai-ml-training/tree/master/colab-notebooks) - **YoloV5_training.ipynb** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/luxonis/depthai-ml-training/blob/master/colab-notebooks/YoloV5_training.ipynb). You can create a copy of the Colab Notebook and try training the model on your own!
-
-See the example of a model pretrained on SKU-110K dataset in action:
+## Demo
 
 ![Example Image](https://user-images.githubusercontent.com/56075061/145186805-38e3115d-94fa-4850-9ec4-c34f90c05d30.gif)
 
-## Pre-requisites
+## Installation
 
-Python 3.8.19 is needed to run this example.
+You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
-1. Install requirements:
-   ```
-   python3 -m pip install -r requirements.txt
-   ```
-1. Download models
-   ```
-   python3 download.py
-   ```
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-```
-python3 main.py [options]
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+### Peripheral Mode
+
+```bash
+python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT> -conf <CONF> -iou <IOU>
 ```
 
-Options:
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
+- `<MEDIA>`: Path to the video file. Default `None` - camera input.
+- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+- `<CONF>`: Set the confidence threshold. Default: 0.3.
+- `<IOU>` : Set the NMS IoU threshold. Default: 0.4.
 
-- -cam, --cam_input: Select camera input source for inference. Available options: left, right, rgb (default).
-- -nn, --nn_model: Select model path for inference. Default: *models/yolov5s_sku_openvino_2021.4_6shave.blob*
-- -conf, --confidence_thresh: Set the confidence threshold. Default: 0.3.
-- -iou, --iou_thresh: Set the NMS IoU threshold. Default: 0.4.
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run the YOLO object detection experiment with the default device and camera input.
+
+```bash
+python3 main.py --media <PATH_TO_VIDEO>
+```
+
+This will run the YOLO object detection experiment with the default device and the video file.
+
+```bash
+python3 main.py --device <DEVICE IP OR MXID>
+```
+
+This will run the YOLO object detection experiment with the specified device.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <device-ip>
+oakctl app run .
+```
