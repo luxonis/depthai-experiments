@@ -1,5 +1,5 @@
 import depthai as dai
-from util.yolo_decode import decode_yolo_output
+from .yolo_decode import decode_yolo_output
 
 
 class HostDecoding(dai.node.HostNode):

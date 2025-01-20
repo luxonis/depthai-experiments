@@ -1,53 +1,61 @@
-import argparse
-
 import depthai as dai
-from host_decoding import HostDecoding
+from pathlib import Path
 
-parser = argparse.ArgumentParser()
+from utils.arguments import initialize_argparser
+from utils.host_decoding import HostDecoding
 
-parser.add_argument(
-    "-conf",
-    "--confidence_thresh",
-    help="set the confidence threshold",
-    default=0.5,
-    type=float,
-)
-parser.add_argument(
-    "-iou", "--iou_thresh", help="set the NMS IoU threshold", default=0.45, type=float
-)
+_, args = initialize_argparser()
 
-
-args = parser.parse_args()
+CAM_SIZE = (1280, 720)
 
 conf_thresh = args.confidence_thresh
 iou_thresh = args.iou_thresh
 
+model_reference = "luxonis/yolov6-nano:r2-coco-512x288"
 
-model_description = dai.NNModelDescription(
-    modelSlug="yolov6-nano", platform="RVC2", modelVersionSlug="r2-coco-512x288"
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
+platform = device.getPlatform().name
+print(f"Platform: {platform}")
+
+model_description = dai.NNModelDescription(model_reference)
+model_description.platform = platform
+nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
 )
-archive_path = dai.getModelFromZoo(model_description, useCached=True)
-nn_archive = dai.NNArchive(archive_path)
 
-CAM_SIZE = (1280, 720)
-NN_SIZE = (512, 288)
+with dai.Pipeline(device) as pipeline:
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        replay.setFps(30)
 
-visualizer = dai.RemoteConnection()
+    else:
+        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        cam_out = cam.requestOutput(
+            CAM_SIZE, dai.ImgFrame.Type.NV12, fps=args.fps_limit
+        )
 
-with dai.Pipeline() as pipeline:
-    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    color_out = cam.requestOutput(CAM_SIZE, dai.ImgFrame.Type.BGR888p, fps=10)
+    input_node = replay.out if args.media_path else cam_out
+
     manip = pipeline.create(dai.node.ImageManipV2)
-    manip.initialConfig.setOutputSize(*NN_SIZE)
-    color_out.link(manip.inputImage)
+    manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
+    manip.initialConfig.setFrameType(frame_type)
+    input_node.link(manip.inputImage)
+
     nn = pipeline.create(dai.node.NeuralNetwork).build(manip.out, nn_archive)
 
     host_decoding = pipeline.create(HostDecoding).build(nn=nn.out)
-    host_decoding.set_nn_size(NN_SIZE)
+    host_decoding.set_nn_size(nn_archive.getInputSize())
     host_decoding.set_conf_thresh(conf_thresh)
     host_decoding.set_iou_thresh(iou_thresh)
 
-    visualizer.addTopic("Camera", color_out)
+    visualizer.addTopic("Camera", input_node)
     visualizer.addTopic("Detections", host_decoding.output)
     print("Pipeline created.")
     pipeline.start()
