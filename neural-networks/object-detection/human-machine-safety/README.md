@@ -4,7 +4,9 @@ This example demonstrates how to detect dangerous objects and calculates distanc
 
 ## Demo:
 
-[![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4)
+![Demo](media/hms.gif)
+
+<!-- [![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4) -->
 
 ## Installation
 
