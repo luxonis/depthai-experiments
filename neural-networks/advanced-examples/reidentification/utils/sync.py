@@ -1,9 +1,7 @@
 import numpy as np
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionsExtended
 
-
-class AnnotationSyncNode(dai.node.ThreadedHostNode):
+class AnnotationSyncNode2(dai.node.ThreadedHostNode):
     """A host node for syncing annotations in a two-stage pipeline.
     The node receives detections and recognitions from two different stages of the pipeline,
     merges them, and sends the merged annotations to the next stage of the pipeline.
@@ -33,32 +31,20 @@ class AnnotationSyncNode(dai.node.ThreadedHostNode):
         self._embeddings_dict = {}
 
     def run(self) -> None:
-        seqs = set()
-        labels = []
 
         while self.isRunning():
-            if len(seqs) <= 1:  # at most one sequence stored
+
+            dets = self.input_detections.get()
+            print("det_seq", dets.getSequenceNum())
+
+            for detection in dets.detections:
                 rec = self.input_recognitions.get()
-                seqs.add(rec.getSequenceNum())
-                print("rec", seqs)
+                print("rec", rec.getSequenceNum())
+                detection.label_name = self._get_label(rec, self._label_basename)
 
-            if len(seqs) > 1:  # multiple sequences stored
-                dets = self.input_detections.get()
-                det_seq = dets.getSequenceNum()
-                print("det_seq", det_seq)
-                if det_seq < min(seqs):
-                    self._send_output(dets, [])
-                elif det_seq == min(seqs):
-                    self._send_output(dets, labels)
-                    seqs.remove(min(seqs))  # remove sequence
-                    labels = []  # remove sequence labels
-                else:
-                    raise ValueError("Detections ahead of recognitions.")
+            self.output_detections.send(dets)
 
-            if len(seqs) <= 1:  # store labels of at most one sequence
-                labels.append(self._get_label(rec, self._label_basename))
-
-    def _get_label(self, rec, basename="person") -> str:
+    def _get_label(self, rec, basename) -> str:
         embedding = rec.getTensor("output", dequantize=True)
         sim = [
             self._cos_sim(embedding, self._embeddings_dict[key])
@@ -82,11 +68,4 @@ class AnnotationSyncNode(dai.node.ThreadedHostNode):
         result = np.dot(X, Y) / (np.linalg.norm(X) * np.linalg.norm(Y, axis=0))
         return result.item()
 
-    def _send_output(self, dets: ImgDetectionsExtended, labels: list[str]) -> None:
-        if len(labels) != len(dets.detections):
-            raise ValueError("Detections and labels do not match.")
-
-        for i, detection in enumerate(dets.detections):
-            detection.label_name = labels[i]
-
-        self.output_detections.send(dets)
+        

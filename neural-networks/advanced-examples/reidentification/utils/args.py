@@ -8,8 +8,7 @@ def initialize_argparser():
         "-det",
         "--det_model",
         help="Detection model HubAI reference.",
-        required=False,
-        default="luxonis/scrfd-person-detection:25g-640x640",
+        required=True,
         type=str,
     )
 
@@ -17,8 +16,7 @@ def initialize_argparser():
         "-rec",
         "--rec_model",
         help="Recognition model HubAI reference.",
-        required=False,
-        default="luxonis/osnet:imagenet-128x256",
+        required=True,
         type=str,
     )
 
@@ -27,7 +25,7 @@ def initialize_argparser():
         "--cos_similarity_threshold",
         help="Cosine similarity above which detections are considered as belonging to the same object.",
         required=False,
-        default=0.7,
+        default=0.5,
         type=float,
     )
 

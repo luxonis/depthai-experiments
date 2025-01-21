@@ -6,14 +6,11 @@ from utils.args import initialize_argparser
 from utils.process import ProcessDetections
 from utils.sync import AnnotationSyncNode
 
-
 _, args = initialize_argparser()
 
-PADDING = 0.05  # how much padding to add to the detections in order to not loose information when detections are imperfect
-
 if args.fps_limit and args.media_path:
+    media_fps = args.fps_limit.copy()
     args.fps_limit = None
-    print("WARNING: FPS limit ignored because media path is provided.")
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
@@ -25,21 +22,23 @@ frame_type = (
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
+    # Detection Model NN Archive
     det_model_description = dai.NNModelDescription(args.det_model)
     det_model_description.platform = platform
     det_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
 
+    # Recognition Model NN Archive
     rec_model_description = dai.NNModelDescription(args.rec_model)
     rec_model_description.platform = platform
     rec_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
 
+    # Video/Camera Input Node
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        # replay.setFps(6 if platform == "RVC2" else 20)
-        replay.setFps(3)  # 10 is too much
+        replay.setFps(media_fps)
         imageManip = pipeline.create(dai.node.ImageManipV2)
         imageManip.setMaxOutputFrameSize(
             det_nn_archive.getInputWidth() * det_nn_archive.getInputHeight() * 3
@@ -53,16 +52,19 @@ with dai.Pipeline(device) as pipeline:
         cam = pipeline.create(dai.node.Camera).build()
     input_node = imageManip.out if args.media_path else cam
 
+    # Detection Model Node
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, det_nn_archive, fps=args.fps_limit
     )
 
+    # Detections Processing Node
     det_process_node = pipeline.create(ProcessDetections)
     det_process_node.set_target_size(
         rec_nn_archive.getInputWidth(), rec_nn_archive.getInputHeight()
     )
     det_nn.out.link(det_process_node.detections_input)
 
+    # Crop Configuration Sender Node
     config_sender_node = pipeline.create(dai.node.Script)
     config_sender_node.setScriptPath(
         str(Path(__file__).parent / "utils/config_sender_script.py")
@@ -77,9 +79,9 @@ with dai.Pipeline(device) as pipeline:
         config_sender_node.inputs["num_configs_input"]
     )
 
+    # Crop Node
     if platform == "RVC2":
         crop_node = pipeline.create(dai.node.ImageManip)
-        ##crop_node.initialConfig.setResize(rec_nn_archive.getInputWidth(), rec_nn_archive.getInputHeight())
     elif platform == "RVC4":
         crop_node = pipeline.create(dai.node.ImageManipV2)
         crop_node.initialConfig.setReusePreviousImage(False)
@@ -88,30 +90,31 @@ with dai.Pipeline(device) as pipeline:
         crop_node.inputConfig.setMaxSize(30)
         crop_node.inputImage.setMaxSize(30)
         crop_node.setNumFramesPool(30)
-        ##crop_node.initialConfig.setOutputSize(rec_nn_archive.getInputWidth(), rec_nn_archive.getInputHeight())
     crop_node.inputConfig.setWaitForMessage(True)
 
     config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
     config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
 
+    # Recognition Model Node
     rec_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, rec_nn_archive
     )
 
+    # Annotation Sync Node
     annotation_sync_node = pipeline.create(
         AnnotationSyncNode, csim=args.cos_similarity_threshold
     )
     det_nn.out.link(annotation_sync_node.input_detections)
     rec_nn.out.link(annotation_sync_node.input_recognitions)
 
+    # Visualizer
     visualizer.addTopic("Video", det_nn.passthrough, "images")
     visualizer.addTopic("Objects", annotation_sync_node.output_detections, "images")
-    # visualizer.addTopic("Manip", crop_node.out)
 
     print("Pipeline created.")
 
+    # Start Pipeline
     pipeline.start()
-    visualizer.registerPipeline(pipeline)
 
     while pipeline.isRunning():
 
