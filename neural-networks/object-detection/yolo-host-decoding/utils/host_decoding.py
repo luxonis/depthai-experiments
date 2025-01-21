@@ -1,5 +1,5 @@
 import depthai as dai
-from util.yolo_decode import decode_yolo_output
+from .yolo_decode import decode_yolo_output
 
 
 class HostDecoding(dai.node.HostNode):
@@ -30,7 +30,12 @@ class HostDecoding(dai.node.HostNode):
 
     def process(self, nn_data: dai.NNData) -> None:
         tensor_names = ["output1_yolov6r2", "output2_yolov6r2", "output3_yolov6r2"]
-        tensors = [nn_data.getTensor(tn) for tn in tensor_names]
+        tensors = [
+            nn_data.getTensor(
+                tn, dequantize=True, storageOrder=dai.TensorInfo.StorageOrder.NCHW
+            )
+            for tn in tensor_names
+        ]
         strides = [8, 16, 32]
         decoded = decode_yolo_output(tensors, strides, 0.5, 0.45, 80)
         dets = []
