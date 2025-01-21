@@ -32,7 +32,7 @@ with dai.Pipeline(device) as pipeline:
         imageManip.setMaxOutputFrameSize(
             nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
         )
-        imageManip.initialConfig.addResize(
+        imageManip.initialConfig.setOutputSize(
             nn_archive.getInputWidth(), nn_archive.getInputHeight()
         )
         imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
@@ -53,7 +53,7 @@ with dai.Pipeline(device) as pipeline:
         nn_with_parser.passthrough.link(annotation_node.input_frame)
         nn_with_parser.out.link(annotation_node.input_segmentation)
         visualizer.addTopic("Video", annotation_node.out, "images")
-    if args.annotation_mode == "segmentation_with_annotation":
+    elif args.annotation_mode == "segmentation_with_annotation":
         annotation_node = pipeline.create(DetSegAnntotationNode)
         nn_with_parser.passthrough.link(annotation_node.input_frame)
         nn_with_parser.out.link(annotation_node.input_detections)
