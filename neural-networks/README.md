@@ -33,12 +33,20 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## Classification
 
+|                                   EfficientNet-lite                                   |                                      Image Quality Assessment                                       |
+| :-----------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------: |
+| <img src="media/efficientnet-lite.gif" alt="efficientnet-lite" style="height:250px;"> | <img src="media/image-quality-assessment.gif" alt="image-quality-assessment" style="height:250px;"> |
+
 | Name                                | HubAI Model                                                                                                  | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                            | Notes                                |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | [generic-example](generic-example/) | [efficientnet-lite](https://hub.luxonis.com/ai/models/fdacd30d-97f4-4c55-843f-8b7e872d8acb?view=page)        | ✅   | ✅                | ✅                | [gen2-efficientnet-classification](https://github.com/luxonis/depthai-experiments/tree/master/gen2-efficientnet-classification) |                                      |
 | [generic-example](generic-example/) | [image-quality-assessment](https://hub.luxonis.com/ai/models/1c43753e-5e4d-4d32-b08a-584098290d72?view=page) | ✅   | ❌                | ❌                | [gen2-image-quality-assessment](https://github.com/luxonis/depthai-experiments/tree/master/gen2-image-quality-assessment)       | Model for RVC4 is not yet available. |
 
 ## Object Detection
+
+|                                YoloV6 Nano                                |
+| :-----------------------------------------------------------------------: |
+| <img src="media/yolov6-nano.gif" alt="yolov6-nano" style="height:250px;"> |
 
 | Name                                                                 | HubAI Model                                                                                                                                                                                                                                                                                            | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                       | Notes                                 |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- | ----------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
@@ -61,6 +69,10 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## Facial Detection
 
+|                                                Blur Faces                                                |                                                    Emotion Recognition                                                     |
+| :------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------: |
+| <img src="facial-detection/blur-faces/visualizations/output.gif" alt="blur-faces" style="height:250px;"> | <img src="facial-detection/emotion-recognition/visualizations/output.gif" alt="emotion-recognition" style="height:250px;"> |
+
 | Name                                                                | HubAI Model                                                                                                                                                                                           | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                  | Notes |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------- | ----- |
 | [generic-example](generic-example/)                                 | [yunet](https://hub.luxonis.com/ai/models/5d635f3c-45c0-41d2-8800-7ca3681b1915?view=page)                                                                                                             | ✅   | ✅                | ✅                | [gen2-face-detection](https://github.com/luxonis/depthai-experiments/tree/master/gen2-face-detection)                 |       |
@@ -75,17 +87,29 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## 3D Detection
 
+|                                        Objectron                                         |
+| :--------------------------------------------------------------------------------------: |
+| <img src="3D-detection/objectron/media/chair.gif" alt="objectron" style="height:250px;"> |
+
 | Model                               | RVC2                                                                                                                                                                                           | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes                                                                                       |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ----------------- | ---- | ------------------------------------------------------------------------------------------- |
 | [objectron](3D-detection/objectron) | [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page), [objectron](https://hub.luxonis.com/ai/models/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11?view=page) | ✅                | ✅                | ✅   | [gen2-objectron](https://github.com/luxonis/depthai-experiments/tree/master/gen2-objectron) |
 
 ## Keypoint Detection
 
+|                                       Mediapipe Face Landmarker                                       |
+| :---------------------------------------------------------------------------------------------------: |
+| <img src="media/mediapipe-face-landmarker.png" alt="mediapipe-face-landmarker" style="height:250px;"> |
+
 | Name                                | HubAI Model                                                                                                   | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                      | Notes |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ----------------------------------------------------------------------------------------- | ----- |
 | [generic-example](generic-example/) | [mediapipe-face-landmarker](https://hub.luxonis.com/ai/models/4632304b-91cb-4fcb-b4cc-c8c414e13f56?view=page) | ✅   | ✅                | ✅                | [gen2-facemesh](https://github.com/luxonis/depthai-experiments/tree/master/gen2-facemesh) |       |
 
 ## Pose Estimation
+
+|                                          Human Pose                                           |                                              Animal Pose                                              |
+| :-------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------: |
+| <img src="pose-estimation/human-pose/media/dance.gif" alt="human-pose" style="height:250px;"> | <img src="pose-estimation/animal-pose/media/cow-walking.gif" alt="animal-pose" style="height:250px;"> |
 
 | Name                                        | HubAI Model                                                                                                                                                                                                                        | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                          | Notes |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------------- | ----- |
@@ -94,6 +118,10 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | [animal-pose](pose-estimation/animal-pose/) | [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page), [superanimal-landmarker](https://hub.luxonis.com/ai/models/894cf1a2-23fb-4c96-8944-a0d1be38a7c7?view=page)                        | ✅   | ✅                | ✅                |                                                                                               |       |
 
 ## Segmentation
+
+|                                  YoloV8 Instance Segmentation Nano                                  |                               FastSam S                               |
+| :-------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------: |
+| <img src="media/yolov8-instance-seg-nano.gif" alt="yolov8-instance-seg-nano" style="height:250px;"> | <img src="media/fastsam-s.gif" alt="fastsam-s" style="height:250px;"> |
 
 | Name                                  | HubAI Model                                                                                                                                                                                                                                    | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                                           | Notes                             |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- |
@@ -126,6 +154,10 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## OCR
 
+|                                                 License Plate Recognition                                                 |
+| :-----------------------------------------------------------------------------------------------------------------------: |
+| <img src="ocr/license-plate-recognition/visualizations/output.gif" alt="license-plate-recognition" style="height:250px;"> |
+
 | Name                                                        | HubAI Model                                                                                                                                                                                                                                                                                                               | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                         | Notes |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
 | [license-plate-recognition](ocr/license-plate-recognition/) | [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page), [license-plate-detection](https://hub.luxonis.com/ai/models/7ded2dab-25b4-4998-9462-cba2fcc6c5ef?view=page), [paddle-text-recognition](https://hub.luxonis.com/ai/models/9ae12b58-3551-49b1-af22-721ba4bcf269?view=page) | 🚧   | ✅                | ✅                | [gen2-license-plate-recognition](https://github.com/luxonis/depthai-experiments/tree/master/gen2-license-plate-recognition)                                                                                  |       |
@@ -140,6 +172,10 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## Depth Estimation
 
+|                                           CREStereo Stereo Matching                                           |                              MiDaS v2.1                               |
+| :-----------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------: |
+| <img src="depth-estimation/crestereo-stereo-matching/media/person.gif" alt="crestereo" style="height:250px;"> | <img src="media/midas-v21.gif" alt="midas-v21" style="height:250px;"> |
+
 | Name                                                                           | HubAI Model                                                                                           | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                                                                                                                                                                          | Notes                             |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | [crestereo-stereo-matching](neural-stereo-matching/crestereo-stereo-matching/) | [crestereo](https://hub.luxonis.com/ai/models/4729a8bd-54df-467a-92ca-a8a5e70b52ab?view=page)         | 🚧   | 🚧                | 🚧                | [gen2-crestereo-stereo-matching](https://github.com/luxonis/depthai-experiments/tree/master/gen2-crestereo-stereo-matching)                                                                                                                                                                   |                                   |
@@ -147,6 +183,10 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | [generic-example](generic-example/)                                            | [depth-anything-v2](https://hub.luxonis.com/ai/models/c5bf9763-d29d-4b10-8642-fbd032236383?view=page) | ❌   | ✅                | ✅                |                                                                                                                                                                                                                                                                                               | Model is only available for RVC4. |
 
 ## Line Detection
+
+|                               M-LSD                               |                               Ultra Fast Lane Detection                               |
+| :---------------------------------------------------------------: | :-----------------------------------------------------------------------------------: |
+| <img src="media/m-lsd.gif" alt="crestereo" style="height:250px;"> | <img src="media/ultra-fast-lane-detection.gif" alt="midas-v21" style="height:250px;"> |
 
 | Name                                | HubAI Model                                                                                                   | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                    | Notes                             |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | --------------------------------------------------------------------------------------- | --------------------------------- |
@@ -164,6 +204,10 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | [generic-example](generic-example/) | [dncnn3](https://hub.luxonis.com/ai/models/89c61463-1074-4f31-907f-751a83a9643a?view=page)              | ✅   | ✅                | ✅                |      | Missing visualization, model needs grayscale input. |
 
 ## Feature Detection
+
+|                                           XFeat                                            |
+| :----------------------------------------------------------------------------------------: |
+| <img src="feature-detection/xfeat/media/xfeat_demo.gif" alt="xfeat" style="height:250px;"> |
 
 | Name                              | HubAI Model                                                                               | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes |
 | --------------------------------- | ----------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ---- | ----- |

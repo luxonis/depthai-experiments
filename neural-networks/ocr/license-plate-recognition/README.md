@@ -9,6 +9,7 @@ which tries to decode the license plates texts.
 Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis OAK](https://blog.roboflow.com/oak-deploy-license-plate/) tutorial for training a custom detector using the Roboflow platform.
 
 ## Demo
+
 ![Detection Output](visualizations/output.gif)
 
 ## Instalation
