@@ -6,12 +6,6 @@ from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
 
-if args.fps_limit and args.media_path:
-    args.fps_limit = None
-    print(
-        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
-    )
-
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
@@ -28,11 +22,14 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
         imageManip = pipeline.create(dai.node.ImageManipV2)
         imageManip.setMaxOutputFrameSize(
             nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
         )
-        imageManip.initialConfig.addResize(
+        imageManip.initialConfig.setOutputSize(
             nn_archive.getInputWidth(), nn_archive.getInputHeight()
         )
         imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
@@ -53,7 +50,7 @@ with dai.Pipeline(device) as pipeline:
         nn_with_parser.passthrough.link(annotation_node.input_frame)
         nn_with_parser.out.link(annotation_node.input_segmentation)
         visualizer.addTopic("Video", annotation_node.out, "images")
-    if args.annotation_mode == "segmentation_with_annotation":
+    elif args.annotation_mode == "segmentation_with_annotation":
         annotation_node = pipeline.create(DetSegAnntotationNode)
         nn_with_parser.passthrough.link(annotation_node.input_frame)
         nn_with_parser.out.link(annotation_node.input_detections)

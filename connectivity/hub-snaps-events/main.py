@@ -39,7 +39,7 @@ with dai.Pipeline(device) as pipeline:
         imageManip.setMaxOutputFrameSize(
             nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
         )
-        imageManip.initialConfig.addResize(
+        imageManip.initialConfig.setOutputSize(
             nn_archive.getInputWidth(), nn_archive.getInputHeight()
         )
         imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
