@@ -6,7 +6,7 @@ Input shape of the model is 320 x 320, and we resize the input video to the requ
 
 ## Demo
 
-![Image example](media/adas.gif)
+![Image example](media/yolop.gif)
 
 Example shows input video with overlay of lane and line segmentation and vehicle detections. Example video is taken from [YOLOP repository](https://github.com/hustvl/YOLOP/tree/main/inference/videos).
 
