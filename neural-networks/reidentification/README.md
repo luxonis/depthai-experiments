@@ -84,4 +84,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the human pose re-identification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
+This will run the human pose re-identification with the specified device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
