@@ -8,10 +8,6 @@ from utils.sync import AnnotationSyncNode
 
 _, args = initialize_argparser()
 
-if args.fps_limit and args.media_path:
-    media_fps = args.fps_limit.copy()
-    args.fps_limit = None
-
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device_id)) if args.device_id else dai.Device()
 platform = device.getPlatform().name
@@ -38,7 +34,9 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        replay.setFps(media_fps)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
         imageManip = pipeline.create(dai.node.ImageManipV2)
         imageManip.setMaxOutputFrameSize(
             det_nn_archive.getInputWidth() * det_nn_archive.getInputHeight() * 3
