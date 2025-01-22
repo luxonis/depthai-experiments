@@ -18,7 +18,7 @@ Object re-identification is achieved by calculating cosine similarity between th
 [![human pose re-identification](media/human_pose_reidentification.gif)](media/human_pose_reidentification.gif)
 [![human face re-identification](media/human_face_reidentification.gif)](media/human_face_reidentification.gif)
 
-[SOURCE](https://www.pexels.com/video/happy-people-walking-on-green-grass-7551577/)
+<sup>[Source](https://www.pexels.com/video/happy-people-walking-on-green-grass-7551577/)</sup>
 
 ## Installation
 
