@@ -2,7 +2,7 @@
 
 This example shows an implementation of [YuNet face detection](https://hub.luxonis.com/ai/models/5d635f3c-45c0-41d2-8800-7ca3681b1915?view=page) on DepthAI v3 with additional blurring.
 
-![Image example](visualizations/output.gif)
+![Image example](media/blur-faces.gif)
 
 # Instalation
 

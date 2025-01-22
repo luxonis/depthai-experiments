@@ -6,6 +6,8 @@ This experiment demonstrates how to build a 2-stage DepthAI pipeline for detecti
 
 [![Animal detection and pose estimation](media/cow-walking.gif)](media/cow-walking.gif)
 
+<sup>[Source](https://www.youtube.com/shorts/LGof_auMHuc)</sup>
+
 ## Installation
 
 You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:

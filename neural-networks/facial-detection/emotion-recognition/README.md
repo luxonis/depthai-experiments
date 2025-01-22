@@ -7,7 +7,7 @@ It recognizes all people in the frame and determines their emotions. There are 8
 
 ## Demo
 
-![Demo](visualizations/output.gif)
+![Demo](media/emotion-recognition.gif)
 
 # Instalation
 
