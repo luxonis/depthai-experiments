@@ -2,7 +2,7 @@ import numpy as np
 import depthai as dai
 
 
-class AnnotationSyncNode2(dai.node.ThreadedHostNode):
+class AnnotationSyncNode(dai.node.ThreadedHostNode):
     """A host node for syncing annotations in a two-stage pipeline.
     The node receives detections and recognitions from two different stages of the pipeline,
     merges them, and sends the merged annotations to the next stage of the pipeline.
