@@ -52,10 +52,11 @@ python3 main.py -det <DET_MODEL> -rec <REC_MODEL> -cos <CSIM> -media <MEDIA> -fp
 python3 main.py \
     -det luxonis/scrfd-person-detection:25g-640x640 \
     -rec luxonis/osnet:imagenet-128x256 \
-    -fps 10
+    -cos 0.8 \
+    -fps 5
 ```
 
-This will run the human pose re-identification with the default device and camera input at 10 FPS.
+This will run the human pose re-identification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
 
 ```bash
 python3 main.py \
@@ -66,3 +67,22 @@ python3 main.py \
 ```
 
 This will run the human face re-identification with the default device and video input at 5 FPS.
+
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the human pose re-identification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
