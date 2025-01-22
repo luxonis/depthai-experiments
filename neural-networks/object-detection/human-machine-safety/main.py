@@ -22,7 +22,6 @@ FPS_LIMIT = 30
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-# device.setIrLaserDotProjectorIntensity(1)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -64,9 +63,8 @@ with dai.Pipeline(device) as pipeline:
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     if platform == "RVC2":
         stereo.setOutputSize(*object_detection_nn_archive.getInputSize())
-    # stereo.setLeftRightCheck(True)
-    # stereo.setExtendedDisparity(True)
-    # stereo.setRectification(True)
+    stereo.setLeftRightCheck(True)
+    stereo.setRectification(True)
 
     camera_output = color_camera.requestOutput(
         (800, 600), dai.ImgFrame.Type.NV12, fps=FPS_LIMIT
@@ -147,12 +145,13 @@ with dai.Pipeline(device) as pipeline:
 
     annotation_node = pipeline.create(AnnotationNode)
     detection_filter.output.link(annotation_node.detections_input)
-    measure_object_distance.output.link(annotation_node.distances_input)
+    stereo.depth.link(annotation_node.depth_input)
 
     visualizer.addTopic("Color", camera_output)
     visualizer.addTopic("Detections", annotation_node.out_detections)
     visualizer.addTopic("Distances", visualize_distances.output)
     visualizer.addTopic("Alert", show_alert.output)
+    # visualizer.addTopic("Depth", annotation_node.out_depth)
 
     print("Pipeline created.")
 
