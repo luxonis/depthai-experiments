@@ -22,22 +22,11 @@ Object re-identification is achieved by calculating cosine similarity between th
 
 ## Installation
 
-You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. This experiment uses some features that are not yet included in the PiPy versions of the libraries. Therefore, packages need to be installed manually from GitHub:
-
-DepthAI (`v3 dev` branch):
-
-```bash
-git clone -b v3_develop git@github.com:luxonis/depthai-core.git
-cd depthai-core
-python examples/python/install_requirements.py
-```
-
-DepthAI Nodes (`main` branch):
+Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
 ```bash
-git clone git@github.com:luxonis/depthai-nodes.git
-cd depthai-nodes
-pip install -e .
+pip install -r requirements.txt
 ```
 
 ## Usage
