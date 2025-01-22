@@ -10,6 +10,8 @@ There are 4 models available for the Lite-HRNet model, check them on [HubAI](htt
 
 [![Human pose estimation](media/dance.gif)](media/dance.gif)
 
+<sup>[Source](https://www.youtube.com/watch?v=91sd4Jnwgjs)</sup>
+
 ## Installation
 
 You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
