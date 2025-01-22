@@ -10,7 +10,9 @@ Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis 
 
 ## Demo
 
-![Detection Output](visualizations/output.gif)
+![Detection Output](media/lpr.gif)
+
+<sup>[Source](https://www.pexels.com/video/speeding-multicolored-cars-trucks-and-suv-motor-vehicles-exit-a-dark-new-york-city-underground-tunnel-which-is-wrapped-in-the-lush-green-embrace-of-trees-and-bushes-17108719/)</sup>
 
 ## Instalation
 
