@@ -68,7 +68,6 @@ python3 main.py \
 
 This will run the human face re-identification with the default device and video input at 5 FPS.
 
-
 ### Standalone Mode
 
 Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
