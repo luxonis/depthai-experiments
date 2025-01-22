@@ -1,6 +1,6 @@
 # Overview
 
-This experiment demonstrates how to build a 2-stage DepthAI pipeline for human pose / human face re-identification.
+This experiment demonstrates how to build a 2-stage DepthAI pipeline for human pose / human face reidentification.
 The pipeline consists of a detection model (
 [SCRFD Pose](https://hub.luxonis.com/ai/models/c3830468-3178-4de6-bc09-0543bbe28b1c?view=page),
 [SCRFD Face](https://hub.luxonis.com/ai/models/1f3d7546-66e4-43a8-8724-2fa27df1096f?view=page), or
@@ -9,14 +9,14 @@ The pipeline consists of a detection model (
 [OSNet](https://hub.luxonis.com/ai/models/6d853621-818b-4fa4-bd9a-d9bdcb5616e6?view=page) or
 [ArcFace](https://hub.luxonis.com/ai/models/e24a577e-e2ff-4e4f-96b7-4afb63155eac?view=page)
 ) providing embeddings for each of the detected objects.
-Object re-identification is achieved by calculating cosine similarity between the embeddings.
+Object reidentification is achieved by calculating cosine similarity between the embeddings.
 
 **WARNING:** The experiment currently works only on RVC4 devices.
 
 ## Demo
 
-[![human pose re-identification](media/human_pose_reidentification.gif)](media/human_pose_reidentification.gif)
-[![human face re-identification](media/human_face_reidentification.gif)](media/human_face_reidentification.gif)
+[![human pose reidentification](media/human_pose_reidentification.gif)](media/human_pose_reidentification.gif)
+[![human face reidentification](media/human_face_reidentification.gif)](media/human_face_reidentification.gif)
 
 <sup>[Source](https://www.pexels.com/video/happy-people-walking-on-green-grass-7551577/)</sup>
 
@@ -56,7 +56,7 @@ python3 main.py \
     -fps 5
 ```
 
-This will run the human pose re-identification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
+This will run the human pose reidentification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
 
 ```bash
 python3 main.py \
@@ -66,7 +66,7 @@ python3 main.py \
     -fps 5
 ```
 
-This will run the human face re-identification with the default device and video input at 5 FPS.
+This will run the human face reidentification with the default device and video input at 5 FPS.
 
 ### Standalone Mode
 
@@ -84,4 +84,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the human pose re-identification with the specified device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
+This will run the human pose reidentification with the specified device and camera input at 5 FPS and a cosine similarity threshold of 0.8.

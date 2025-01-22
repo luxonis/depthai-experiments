@@ -20,7 +20,7 @@ If not explicitly marked or specified examples can run both on RVC2 and RVC4 dev
 - [Object Tracking](#object-tracking)
 - [Counting](#counting)
 - [OCR](#ocr)
-- [ReIdentification](#reidentification)
+- [Reidentification](#reidentification)
 - [Depth Estimation](#depth-estimation)
 - [Line Detection](#line-detection)
 - [Image-to-Image Translation](#image-to-image-translation)
@@ -163,9 +163,9 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | [license-plate-recognition](ocr/license-plate-recognition/) | [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page), [license-plate-detection](https://hub.luxonis.com/ai/models/7ded2dab-25b4-4998-9462-cba2fcc6c5ef?view=page), [paddle-text-recognition](https://hub.luxonis.com/ai/models/9ae12b58-3551-49b1-af22-721ba4bcf269?view=page) | 🚧   | ✅                | ✅                | [gen2-license-plate-recognition](https://github.com/luxonis/depthai-experiments/tree/master/gen2-license-plate-recognition)                                                                                  |       |
 | [general-ocr](ocr/general-ocr/)                             | [paddle-text-detection](https://hub.luxonis.com/ai/models/131d855c-60b1-4634-a14d-1269bb35dcd2?view=page), [paddle-text-recognition](https://hub.luxonis.com/ai/models/9ae12b58-3551-49b1-af22-721ba4bcf269?view=page)                                                                                                    | 🚧   | 🚧                | 🚧                | [gen2-ocr](https://github.com/luxonis/depthai-experiments/tree/master/gen2-ocr), [gen2-seven-segment-recognition](https://github.com/luxonis/depthai-experiments/tree/master/gen2-seven-segment-recognition) |       |
 
-## Re-Identification
+## Reidentification
 
-|                                          Human Pose                                           |                                              Human Face                                              |
+|                                          Human Reidentification (Pose)                                           |                                              Human Reidentification (Face)                                              |
 | :-------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------: |
 | <img src="reidentification/human-reidentification/media/human_pose_reidentification.gif" alt="human-pose" style="height:250px;"> | <img src="reidentification/human-reidentification/media/human_face_reidentification.gif" alt="human-face" style="height:250px;"> |
 
