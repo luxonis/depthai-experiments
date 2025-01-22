@@ -33,7 +33,6 @@ class AnnotationSyncNode2(dai.node.ThreadedHostNode):
         self._embeddings_dict = {}
 
     def run(self) -> None:
-
         while self.isRunning():
             dets = self.input_detections.get()
 

@@ -27,7 +27,6 @@ class ProcessDetections(dai.node.ThreadedHostNode):
 
     def run(self) -> None:
         while self.isRunning():
-
             img_detections = self.detections_input.get()
             detections = img_detections.detections
 

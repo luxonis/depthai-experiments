@@ -117,7 +117,6 @@ with dai.Pipeline(device) as pipeline:
     pipeline.start()
 
     while pipeline.isRunning():
-
         key_pressed = visualizer.waitKey(1)
         if key_pressed == ord("q"):
             pipeline.stop()
