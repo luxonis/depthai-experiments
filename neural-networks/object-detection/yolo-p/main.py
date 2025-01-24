@@ -1,77 +1,83 @@
-#!/usr/bin/env python3
-
 from pathlib import Path
 import depthai as dai
-import argparse
-import errno
-import os
-from yolop import YoloP
+from depthai_nodes import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.annotation_node import AnnotationNode
 
-"""
-YOLOP demo running on device with video input from host.
-Run as:
-python3 -m pip install -r requirements.txt
-python3 main.py -v path/to/video
-"""
+_, args = initialize_argparser()
 
-model_description = dai.NNModelDescription(
-    model="luxonis/yolo-p:bdd100k-320x320", platform="RVC2"
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
+model_reference = "luxonis/yolo-p:bdd100k-320x320"
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-v", "--video_path", help="Path to video frame", default="vids/1.mp4"
-)
-parser.add_argument(
-    "-conf",
-    "--confidence_thresh",
-    help="set the confidence threshold",
-    default=0.5,
-    type=float,
-)
-parser.add_argument(
-    "-iou", "--iou_thresh", help="set the NMS IoU threshold", default=0.3, type=float
-)
-
-args = parser.parse_args()
-
-VIDEO_SOURCE = args.video_path
-CONFIDENCE_THRESHOLD = args.confidence_thresh
-IOU_THRESHOLD = args.iou_thresh
-
-NN_WIDTH = 320
-NN_HEIGHT = 320
-
-IR_WIDTH = 640
-IR_HEIGHT = 360
-
-vid_path = Path(VIDEO_SOURCE)
-if not vid_path.is_file():
-    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), VIDEO_SOURCE)
-
-with dai.Pipeline() as pipeline:
-    replay = pipeline.create(dai.node.ReplayVideo)
-    replay.setReplayVideoFile(vid_path)
-    replay.setLoop(False)
-    replay.setSize(NN_WIDTH, NN_HEIGHT)
-    replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-
-    detection_nn = pipeline.create(dai.node.NeuralNetwork)
-    detection_nn.setNNArchive(nn_archive)
-    detection_nn.setNumPoolFrames(4)
-    detection_nn.input.setBlocking(False)
-    detection_nn.setNumInferenceThreads(2)
-    replay.out.link(detection_nn.input)
-
-    yolop = pipeline.create(YoloP).build(
-        img_frames=replay.out,
-        nn_data=detection_nn.out,
-        nn_height=NN_HEIGHT,
-        nn_width=NN_WIDTH,
+if args.fps_limit and args.media_path:
+    args.fps_limit = None
+    print(
+        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
     )
-    yolop.set_confidence_threshold(CONFIDENCE_THRESHOLD)
-    yolop.set_iou_threshold(IOU_THRESHOLD)
 
-    pipeline.run()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
+with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
+
+    model_description = dai.NNModelDescription(model_reference)
+
+    platform = device.getPlatform().name
+    print(f"Platform: {platform}")
+
+    model_description.platform = platform
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+
+    frame_type = (
+        dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+    )
+
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        replay.setFps(10 if platform == "RVC2" else 20)
+
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+        cam_out = cam.requestOutput(
+            (1280, 720), dai.ImgFrame.Type.NV12, fps=args.fps_limit
+        )
+    input_node = replay.out if args.media_path else cam_out
+
+    imageManip = pipeline.create(dai.node.ImageManipV2)
+    imageManip.setMaxOutputFrameSize(
+        nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
+    )
+    imageManip.initialConfig.setOutputSize(
+        nn_archive.getInputWidth(), nn_archive.getInputHeight()
+    )
+    imageManip.initialConfig.setFrameType(frame_type)
+    input_node.link(imageManip.inputImage)
+
+    detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        imageManip.out, nn_archive
+    )
+
+    annotation_node = pipeline.create(AnnotationNode)
+    detection_nn.getOutput(0).link(annotation_node.input_detections)
+    detection_nn.getOutput(1).link(annotation_node.input_road_segmentations)
+    detection_nn.getOutput(2).link(annotation_node.input_lane_segmentations)
+    input_node.link(annotation_node.input_frame)
+
+    visualizer.addTopic(
+        "Road Segmentation", annotation_node.out_segmentations, "images"
+    )
+    visualizer.addTopic("Detections", annotation_node.out_detections, "images")
+
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            pipeline.stop()
+            break
