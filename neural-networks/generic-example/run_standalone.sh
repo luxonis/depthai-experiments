@@ -6,8 +6,8 @@ OAKAPP=oakapp.toml
 
 # Ensure the oakapp file exists
 if [ ! -f "$OAKAPP_TEMP" ]; then
-  echo "File not found: $OAKAPP_TEMP"
-  exit 1
+    echo "File not found: $OAKAPP_TEMP"
+    exit 1
 fi
 
 # Create a temporary oakapp file
@@ -16,11 +16,30 @@ cp $OAKAPP_TEMP $OAKAPP
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --model) MODEL="$2"; shift ;;
-        --device) DEVICE="$2"; shift ;;
-        --annotation_mode) ANNOTATION_MODE="$2"; shift ;;
-        --fps_limit) FPS_LIMIT="$2"; shift ;;
-        --media) MEDIA="$2"; shift ;;
+    --model)
+        MODEL="$2"
+        shift
+        ;;
+    --device)
+        DEVICE="$2"
+        shift
+        ;;
+    --annotation_mode)
+        ANNOTATION_MODE="$2"
+        shift
+        ;;
+    --fps_limit)
+        FPS_LIMIT="$2"
+        shift
+        ;;
+    --media)
+        MEDIA="$2"
+        shift
+        ;;
+    --api_key)
+        API_KEY="$2"
+        shift
+        ;;
     esac
     shift
 done
@@ -50,6 +69,12 @@ if [ -n "$MEDIA" ]; then
     sed -i "s|<Media>|--media /app/$MEDIA|g" "$OAKAPP"
 else
     sed -i "s|<Media>||g" "$OAKAPP"
+fi
+
+if [ -n "$API_KEY" ]; then
+    sed -i "s|<API_KEY>|--api_key /app/$API_KEY|g" "$OAKAPP"
+else
+    sed -i "s|<API_KEY>||g" "$OAKAPP"
 fi
 
 # Connect to the device

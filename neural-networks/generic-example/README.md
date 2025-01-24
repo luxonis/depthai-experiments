@@ -30,7 +30,8 @@ python3 main.py \
     --device <Device> \
     --annotation_mode <Mode> \
     --fps_limit <FPS> \
-    --media <Media>
+    --media <Media> \
+    --api_key <API KEY>
 ```
 
 Relevant arguments:
@@ -46,6 +47,7 @@ Relevant arguments:
 - `<Media>` \[OPTIONAL\]: Path to the media file to be used as input.
   Currently, only video files are supported but we plan to add support for more formats (e.g. images) in the future.
   By default, camera input is used;
+- `<API>` \[OPTIONAL\]: HubAI API key to access private model;
 
 Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results by **DepthAI visualizer**
 The latter runs in the browser at `http://localhost:8082`.
@@ -77,7 +79,8 @@ bash run_standalone.sh \
     --device <Device> \
     --annotation_mode <Mode> \
     --fps_limit <FPS> \
-    --media <Media>
+    --media <Media> \
+    --api_key <API_KEY>
 ```
 
 The arguments are the same as in the Peripheral mode.

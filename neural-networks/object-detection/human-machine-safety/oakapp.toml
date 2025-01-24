@@ -1,6 +1,6 @@
-identifier = "com.luxonis.generic-example"
+identifier = "com.luxonis.human-machine-safety"
 
-entrypoint = ["bash", "-c", "python3 /app/main.py <Model> <Mode> <FPS> <Media> <API_KEY>"]
+entrypoint = ["bash", "-c", "python3 /app/main.py"]
 
 prepare_container = [
     { type = "RUN", command = "apt-get update" },
