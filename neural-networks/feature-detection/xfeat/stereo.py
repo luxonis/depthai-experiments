@@ -62,14 +62,15 @@ def stereo_mode(
         left_network.out.link(parser.reference_input)
         right_network.out.link(parser.target_input)
 
-        custom_visualizer = pipeline.create(StereoVersionVisualizer)
-        parser.out.link(custom_visualizer.tracked_features)
-        left_network.passthrough.link(custom_visualizer.left_frame_input)
-        right_network.passthrough.link(custom_visualizer.right_frame_input)
+        custom_visualizer = pipeline.create(StereoVersionVisualizer).build(
+            left_frame_input=left_network.passthrough,
+            right_frame_input=right_network.passthrough,
+            tracked_features=parser.out,
+        )
 
         visualizer.addTopic("Left Camera", left_network.passthrough, "images")
         visualizer.addTopic("Right Camera", right_network.passthrough, "images")
-        visualizer.addTopic("Matches", custom_visualizer.out, "images")
+        visualizer.addTopic("Matches", custom_visualizer.output, "images")
 
         print("Pipeline created.")
 

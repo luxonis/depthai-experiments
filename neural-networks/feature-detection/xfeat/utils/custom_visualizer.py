@@ -2,7 +2,7 @@ import depthai as dai
 from .visualizer_utils import xfeat_visualizer
 
 
-class StereoVersionVisualizer(dai.node.ThreadedHostNode):
+class StereoVersionVisualizer(dai.node.HostNode):
     """
     Custom node for creating visualizations for stereo mode.
     It visualizes both frame and draw lines between matched features and returns the dai.ImgFrame.
@@ -10,36 +10,47 @@ class StereoVersionVisualizer(dai.node.ThreadedHostNode):
 
     def __init__(self) -> None:
         super().__init__()
-        self.left_frame_input = self.createInput()
-        self.right_frame_input = self.createInput()
-        self.tracked_features = self.createInput()
-        self.out = self.createOutput()
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
 
-    def run(self):
-        while self.isRunning():
-            try:
-                left_frame: dai.ImgFrame = self.left_frame_input.get()
-                right_frame: dai.ImgFrame = self.right_frame_input.get()
-                tracked_features: dai.TrackedFeatures = self.tracked_features.get()
-            except dai.MessageQueue.QueueException:
-                break
+    def build(
+        self,
+        left_frame_input: dai.Node.Output,
+        right_frame_input: dai.Node.Output,
+        tracked_features: dai.Node.Output,
+    ) -> "StereoVersionVisualizer":
+        self.link_args(left_frame_input, right_frame_input, tracked_features)
+        return self
 
-            left_frame = left_frame.getCvFrame()
-            right_frame = right_frame.getCvFrame()
+    def process(
+        self,
+        left_frame: dai.Buffer,
+        right_frame: dai.Buffer,
+        tracked_features: dai.Buffer,
+    ) -> None:
+        assert isinstance(left_frame, dai.ImgFrame)
+        assert isinstance(right_frame, dai.ImgFrame)
+        assert isinstance(tracked_features, dai.TrackedFeatures)
 
-            resulting_frame = xfeat_visualizer(
-                left_frame,
-                right_frame,
-                tracked_features.trackedFeatures,
-                draw_warp_corners=False,
-            )
+        left_frame = left_frame.getCvFrame()
+        right_frame = right_frame.getCvFrame()
 
-            output_frame = dai.ImgFrame()
-            output_frame.setCvFrame(resulting_frame, dai.ImgFrame.Type.BGR888i)
-            self.out.send(output_frame)
+        resulting_frame = xfeat_visualizer(
+            left_frame,
+            right_frame,
+            tracked_features.trackedFeatures,
+            draw_warp_corners=False,
+        )
+
+        output_frame = dai.ImgFrame()
+        output_frame.setCvFrame(resulting_frame, dai.ImgFrame.Type.BGR888i)
+        self.output.send(output_frame)
 
 
-class MonoVersionVisualizer(dai.node.ThreadedHostNode):
+class MonoVersionVisualizer(dai.node.HostNode):
     """
     Custom node for creating visualizations for mono mode.
     It visualizes both frame and draw lines between matched features and returns the dai.ImgFrame.
@@ -49,35 +60,39 @@ class MonoVersionVisualizer(dai.node.ThreadedHostNode):
         super().__init__()
         self.referece_frame = None
         self.set_reference_frame = False
-        self.target_frame = self.createInput()
-        self.tracked_features = self.createInput()
-        self.out = self.createOutput()
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
 
     def setReferenceFrame(self) -> None:
         self.set_reference_frame = True
 
-    def run(self):
-        while self.isRunning():
-            try:
-                target_frame: dai.ImgFrame = self.target_frame.get()
-                tracked_features: dai.TrackedFeatures = self.tracked_features.get()
-            except dai.MessageQueue.QueueException:
-                break
+    def build(
+        self, target_frame_input: dai.Node.Output, tracked_features: dai.Node.Output
+    ) -> "MonoVersionVisualizer":
+        self.link_args(target_frame_input, tracked_features)
+        return self
 
-            target_frame = target_frame.getCvFrame()
+    def process(self, target_frame: dai.Buffer, tracked_features: dai.Buffer) -> None:
+        assert isinstance(target_frame, dai.ImgFrame)
+        assert isinstance(tracked_features, dai.TrackedFeatures)
 
-            if self.set_reference_frame:
-                self.referece_frame = target_frame
-                self.set_reference_frame = False
+        target_frame = target_frame.getCvFrame()
 
-            if self.referece_frame is not None:
-                resulting_frame = xfeat_visualizer(
-                    self.referece_frame, target_frame, tracked_features.trackedFeatures
-                )
+        if self.set_reference_frame:
+            self.referece_frame = target_frame
+            self.set_reference_frame = False
 
-            else:
-                resulting_frame = target_frame
+        if self.referece_frame is not None:
+            resulting_frame = xfeat_visualizer(
+                self.referece_frame, target_frame, tracked_features.trackedFeatures
+            )
 
-            output_frame = dai.ImgFrame()
-            output_frame.setCvFrame(resulting_frame, dai.ImgFrame.Type.BGR888i)
-            self.out.send(output_frame)
+        else:
+            resulting_frame = target_frame
+
+        output_frame = dai.ImgFrame()
+        output_frame.setCvFrame(resulting_frame, dai.ImgFrame.Type.BGR888i)
+        self.output.send(output_frame)
