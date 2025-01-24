@@ -58,7 +58,7 @@ with dai.Pipeline(device) as pipeline:
         right=right_cam.requestOutput(
             object_detection_nn_archive.getInputSize(), fps=FPS_LIMIT
         ),
-        presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY,
+        presetMode=dai.node.StereoDepth.PresetMode.HIGH_DETAIL,
     )
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     if platform == "RVC2":
