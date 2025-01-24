@@ -1,15 +1,7 @@
 import depthai as dai
-
-full_size = (3840, 2160)  # 4K
-zoom_size = (1920, 1080)  # 1080P
-
-size = dai.Size2f(zoom_size[0], zoom_size[1])
+from depthai_nodes.ml.messages import ImgDetectionsExtended
 
 AVG_MAX_NUM = 3
-
-limits = [zoom_size[0] // 2, zoom_size[1] // 2]  # xmin and ymin limits
-limits.append(full_size[0] - limits[0])  # xmax limit
-limits.append(full_size[1] - limits[1])  # ymax limit
 
 
 class CropFace(dai.node.HostNode):
@@ -17,35 +9,39 @@ class CropFace(dai.node.HostNode):
         super().__init__()
         self.output = self.createOutput(
             possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfigV2, True)
             ]
         )
 
         self.x = []
         self.y = []
 
-    def build(self, detections):
+    def build(self, detections: dai.Node.Output):
         self.link_args(detections)
         return self
 
-    def process(self, detections):
+    def process(self, detections: dai.Buffer):
+        assert isinstance(detections, ImgDetectionsExtended)
+
         dets = detections.detections
         if len(dets) == 0:
             return
 
         coords = dets[0]  # Take first
+        xmin, ymin, xmax, ymax = coords.rotated_rect.getOuterRect()
+
         # Get detection center
-        x = (coords.xmin + coords.xmax) / 2 * full_size[0]
-        y = (coords.ymin + coords.ymax) / 2 * full_size[1] + 100
+        x = (xmin + xmax) / 2
+        y = (ymin + ymax) / 2
 
         x_avg, y_avg = self.average_filter(x, y)
 
         rect = dai.RotatedRect()
-        rect.size = size
+        rect.size = dai.Size2f(0.4, 0.4)
         rect.center = dai.Point2f(x_avg, y_avg)
 
-        cfg = dai.ImageManipConfig()
-        cfg.setCropRotatedRect(rect, False)
+        cfg = dai.ImageManipConfigV2()
+        cfg.addCropRotatedRect(rect, True)
         cfg.setTimestamp(detections.getTimestamp())
         self.output.send(cfg)
 
@@ -60,10 +56,5 @@ class CropFace(dai.node.HostNode):
 
         x_avg = sum(self.x) / len(self.x)
         y_avg = sum(self.y) / len(self.y)
-
-        x_avg = limits[0] if x_avg < limits[0] else x_avg
-        y_avg = limits[1] if y_avg < limits[1] else y_avg
-        x_avg = limits[2] if limits[2] < x_avg else x_avg
-        y_avg = limits[3] if limits[3] < y_avg else y_avg
 
         return x_avg, y_avg

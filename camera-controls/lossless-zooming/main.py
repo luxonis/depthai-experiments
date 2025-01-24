@@ -1,51 +1,73 @@
+from pathlib import Path
+
 import depthai as dai
+from depthai_nodes import ParsingNeuralNetwork
+from util.arguments import initialize_argparser
+from util.crop_face import CropFace
 
-from depthai_nodes import YuNetParser
-from host_crop_face import CropFace
-from host_fps_drawer import FPSDrawer
-from host_display import Display
+_, args = initialize_argparser()
 
-full_shape = (3840, 2160)
-hd_shape = (1920, 1080)
-nn_shape = (320, 320)
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-model_description = dai.NNModelDescription(
-    modelSlug="yunet", platform="RVC2", modelVersionSlug="320x320"
-)
-archive_path = dai.getModelFromZoo(model_description, useCached=True)
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    cam.initialControl.setManualFocus(130)
-    cam_output = cam.requestOutput(full_shape, dai.ImgFrame.Type.YUV420p)
 
-    nn = pipeline.create(dai.node.NeuralNetwork).build(
-        input=cam.requestOutput(
-            nn_shape, dai.ImgFrame.Type.BGR888p, dai.ImgResizeMode.STRETCH
-        ),
-        nnArchive=dai.NNArchive(archive_path),
+    model_description = dai.NNModelDescription("luxonis/yunet:320x240")
+    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    model_description.platform = platform
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        cam_out = replay.out
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+        cam_out = cam.requestOutput(
+            (1920, 1080), dai.ImgFrame.Type.NV12, fps=args.fps_limit
+        )
+
+    image_manip = pipeline.create(dai.node.ImageManipV2)
+    image_manip.setMaxOutputFrameSize(
+        nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
     )
-    nn.input.setBlocking(False)
+    image_manip.initialConfig.setOutputSize(
+        nn_archive.getInputWidth(), nn_archive.getInputHeight()
+    )
+    image_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    if platform == "RVC4":
+        image_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+    cam_out.link(image_manip.inputImage)
 
-    parser = pipeline.create(YuNetParser)
-    nn.out.link(parser.input)
+    nn_with_parser: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        image_manip.out, nn_archive
+    )
 
-    crop_face = pipeline.create(CropFace).build(parser.out)
-
-    crop_manip = pipeline.create(dai.node.ImageManip)
-    crop_manip.initialConfig.setResize(*hd_shape)
-    crop_manip.setMaxOutputFrameSize(hd_shape[0] * hd_shape[1] * 3)
+    crop_face = pipeline.create(CropFace).build(nn_with_parser.out)
+    crop_manip = pipeline.create(dai.node.ImageManipV2)
+    crop_manip.inputConfig.setWaitForMessage(False)
+    crop_manip.setMaxOutputFrameSize(1920 * 1080 * 3)
     crop_face.output.link(crop_manip.inputConfig)
-    cam_output.link(crop_manip.inputImage)
-    crop_manip.inputImage.setBlocking(False)
+    cam_out.link(crop_manip.inputImage)
 
-    fps_drawer = pipeline.create(FPSDrawer).build(nn.passthrough)
-
-    display_zoom = pipeline.create(Display).build(crop_manip.out)
-    display_full = pipeline.create(Display).build(fps_drawer.output)
-    display_zoom.setName("Zoom")
-    display_full.setName("Full")
+    visualizer.addTopic("Video", cam_out, "images")
+    visualizer.addTopic("Visualizations", nn_with_parser.out, "images")
+    visualizer.addTopic("Cropped Face", crop_manip.out, "crop")
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
