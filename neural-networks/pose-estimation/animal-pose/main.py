@@ -108,13 +108,12 @@ with dai.Pipeline(device) as pipeline:
         pose_manip.out, pose_nn_archive
     )
 
-    annotation_node = pipeline.create(
-        AnnotationNode,
+    annotation_node = pipeline.create(AnnotationNode).build(
+        input_detections=detection_nn.out,
         connection_pairs=connection_pairs,
-        valid_labels=valid_labels,
         padding=padding,
+        valid_labels=valid_labels,
     )
-    detection_nn.out.link(annotation_node.input_detections)
     pose_nn.out.link(annotation_node.input_keypoints)
 
     visualizer.addTopic("Video", detection_nn.passthrough, "images")
