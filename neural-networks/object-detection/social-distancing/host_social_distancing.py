@@ -1,11 +1,11 @@
 import cv2
 import depthai as dai
 import numpy as np
-from host_node.measure_object_distance import DetectionDistance, ObjectDistances
+from utils.measure_object_distance import DetectionDistance, ObjectDistances
 
 ALERT_THRESHOLD = 0.5
 STATE_QUEUE_LENGTH = 30
-ALERT_DISTANCE = 2000  # mm
+ALERT_DISTANCE = 1000  # mm
 
 
 class SocialDistancing(dai.node.HostNode):
@@ -152,9 +152,9 @@ class SocialDistancing(dai.node.HostNode):
         text = str(round(distance.distance / 1000, 1))
         color = (255, 0, 0)
         x_start = (det1.xmin + det1.xmax) / 2
-        y_start = det1.ymax
+        y_start = (det1.ymin + det1.ymax) / 2
         x_end = (det2.xmin + det2.xmax) / 2
-        y_end = det2.ymax
+        y_end = (det2.ymin + det2.ymax) / 2
         start = self._get_abs_coordinates((x_start, y_start), img.shape)
         end = self._get_abs_coordinates((x_end, y_end), img.shape)
         img = cv2.line(img, start, end, color, 2)
