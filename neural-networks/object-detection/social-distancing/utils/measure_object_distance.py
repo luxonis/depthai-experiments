@@ -2,6 +2,8 @@ import itertools
 
 import depthai as dai
 
+from typing import List
+
 
 class DetectionDistance:
     def __init__(
@@ -42,14 +44,14 @@ class DetectionDistance:
 class ObjectDistances(dai.Buffer):
     def __init__(self) -> None:
         super().__init__(0)
-        self._distances: list[DetectionDistance] = []
+        self._distances: List[DetectionDistance] = []
 
     @property
-    def distances(self) -> list[DetectionDistance]:
+    def distances(self) -> List[DetectionDistance]:
         return self._distances
 
     @distances.setter
-    def distances(self, value: list[DetectionDistance]) -> None:
+    def distances(self, value: List[DetectionDistance]) -> None:
         self._distances = value
 
 
