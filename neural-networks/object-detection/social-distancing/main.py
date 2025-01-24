@@ -81,14 +81,14 @@ with dai.Pipeline(device) as pipeline:
     draw_bboxes = pipeline.create(DrawDetections).build(
         frame=rgb, nn=normalize_bboxes.output, label_map=["person"]
     )
-    social_distancing_new = pipeline.create(SocialDistancing).build(
+    social_distancing = pipeline.create(SocialDistancing).build(
         frame=draw_bboxes.output, distances=measure_obj_dist.output
     )
     frame_stacker = pipeline.create(FrameStacker).build(
-        frame_1=social_distancing_new.output, frame_2=bird_eye_view.output
+        frame_1=social_distancing.output, frame_2=bird_eye_view.output
     )
 
-    visualizer.addTopic("Video", frame_stacker.output)
+    visualizer.addTopic("Video", frame_stacker.output, "images")
 
     print("Pipeline created.")
 
