@@ -1,6 +1,6 @@
 identifier = "com.luxonis.generic-example"
 
-entrypoint = ["bash", "-c", "python3 /app/main.py <Model> <Mode> <FPS> <Media>"]
+entrypoint = ["bash", "-c", "python3 /app/main.py <Model> <Mode> <FPS> <Media> <API_KEY>"]
 
 prepare_container = [
     { type = "RUN", command = "apt-get update" },

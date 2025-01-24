@@ -15,7 +15,12 @@ with dai.Pipeline(device) as pipeline:
     model_description = dai.NNModelDescription(args.model)
     platform = pipeline.getDefaultDevice().getPlatformAsString()
     model_description.platform = platform
-    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(
+            model_description,
+            apiKey=args.api_key,
+        )
+    )
 
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
