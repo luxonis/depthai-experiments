@@ -1,27 +1,53 @@
 # Gen2 Human-Machine safety
 
-This example demonstrates how to detect dangerous objects and calculates distance to a human hand (palm).
-It uses mobilenet spatial detection netork node to get spatial coordinates of dangerous objects and palm
-detection network to detect human palm. Script `palm_detection.py` handles decoding of the [palm detection network](https://google.github.io/mediapipe/solutions/hands#palm-detection-model) and returns the bounding box of a detected palm.
-Instead of sending the bounding box of the detected palm back to device to the`SpatialLocationCalculator`, this example
-uses function `def calc_spatials(self, bbox, depth):` to calculate spatial coordinates on the host (using bbox and depth map). After we have spatial coordiantes of both the dangerous object and the palm, we calculate the spatial distance of the two and if it's blow the threshold `WARNING_DIST`, it will output a warning.
+This example demonstrates how to detect dangerous objects and calculates distance to a human hand (palm). In our case the dangerous objects are cups and bottles. The experiment uses 2 detection models: [YOLOv6 Nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page) for dangerous objects detection and [MediaPipe Palm Detection](https://hub.luxonis.com/ai/models/9531aba9-ef45-4ad3-ae03-808387d61bf3?view=page) for palm detection. It also uses depth information from our OAK cameras and combines that information with the detections to get the spatial coordinates of the objects and the palm. This way we can calculate the distance between the detected objects and the palm and warn the user if the distance is too close.
 
 ## Demo:
 
-[![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4)
+![Demo](media/hms.gif)
 
-## Pre-requisites
+<!-- [![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4) -->
 
-Install requirements:
+## Installation
+
+You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
 ```bash
-python3 -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Usage
 
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+### Peripheral Mode
+
 ```bash
-   python3 main.py
+python3 main.py --device <DEVICE>
 ```
 
-> Press 'q' to exit the program.
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
+
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run the human-machine safety experiment with the default device.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
