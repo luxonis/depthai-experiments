@@ -1,12 +1,8 @@
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.depth_merger import DepthMerger
-from utils.draw_detections import DrawDetections
-from utils.frame_stacker import FrameStacker
 from utils.host_bird_eye_view import BirdsEyeView
 from utils.measure_object_distance import MeasureObjectDistance
-from utils.normalize_bbox import NormalizeBbox
-from utils.parser_bridge import ParserBridge
 from host_social_distancing import SocialDistancing
 from utils.arguments import initialize_argparser
 
@@ -64,7 +60,6 @@ with dai.Pipeline(device) as pipeline:
         input=rgb,
         nn_source=nnArchive,
     )
-    parser_bridge = pipeline.create(ParserBridge).build(nn_parser.out)
 
     depth_merger = pipeline.create(DepthMerger).build(
         output_2d=nn_parser.out,
@@ -74,21 +69,17 @@ with dai.Pipeline(device) as pipeline:
     )
 
     bird_eye_view = pipeline.create(BirdsEyeView).build(depth_merger.output)
-    normalize_bboxes = pipeline.create(NormalizeBbox).build(
-        frame=rgb, nn=parser_bridge.output
-    )
+
     measure_obj_dist = pipeline.create(MeasureObjectDistance).build(depth_merger.output)
-    draw_bboxes = pipeline.create(DrawDetections).build(
-        frame=rgb, nn=normalize_bboxes.output, label_map=["person"]
-    )
+
     social_distancing = pipeline.create(SocialDistancing).build(
-        frame=draw_bboxes.output, distances=measure_obj_dist.output
-    )
-    frame_stacker = pipeline.create(FrameStacker).build(
-        frame_1=social_distancing.output, frame_2=bird_eye_view.output
+        distances=measure_obj_dist.output
     )
 
-    visualizer.addTopic("Video", frame_stacker.output, "images")
+    visualizer.addTopic("Video", rgb, "images")
+    visualizer.addTopic("Detections", nn_parser.out, "images")
+    visualizer.addTopic("Distances", social_distancing.output, "images")
+    visualizer.addTopic("Bird-eye view", bird_eye_view.output, "bird-eye")
 
     print("Pipeline created.")
 
