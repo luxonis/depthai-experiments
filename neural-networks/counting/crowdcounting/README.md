@@ -5,7 +5,7 @@ We use [DM-Count](https://hub.luxonis.com/ai/models/16d01eab-dc2b-4422-907d-2634
 
 ## Demo
 
-[![crowd counting](media/crowdcounting.gif)](media/crowdcounting.gif)
+[![crowd counting](media/crowd-counting.gif)](media/crowd-counting.gif)
 
 <sup>[Source](hhttps://www.pexels.com/video/time-lapse-video-of-people-at-subway-station-855749/)</sup>
 
