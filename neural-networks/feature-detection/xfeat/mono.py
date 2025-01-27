@@ -32,11 +32,14 @@ def mono_mode(
         parser: XFeatMonoParser = pipeline.create(ParserGenerator).build(nn_archive)[0]
         network.out.link(parser.input)
 
-        custom_visualizer = pipeline.create(MonoVersionVisualizer)
-        parser.out.link(custom_visualizer.tracked_features)
-        network.passthrough.link(custom_visualizer.target_frame)
+        custom_visualizer: MonoVersionVisualizer = pipeline.create(
+            MonoVersionVisualizer
+        ).build(
+            target_frame_input=network.passthrough,
+            tracked_features=parser.out,
+        )
 
-        visualizer.addTopic("Matches", custom_visualizer.out, "images")
+        visualizer.addTopic("Matches", custom_visualizer.output, "images")
 
         print("Pipeline created.")
         print("\nPress 's' to set the reference frame.\n")

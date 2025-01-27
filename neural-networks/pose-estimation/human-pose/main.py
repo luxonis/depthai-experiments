@@ -113,14 +113,13 @@ with dai.Pipeline(device) as pipeline:
         0.0
     )  # to get all keypoints so we can draw skeleton. We will filter them later.
 
-    annotation_node = pipeline.create(
-        AnnotationNode,
+    annotation_node = pipeline.create(AnnotationNode).build(
+        input_detections=detection_nn.out,
         connection_pairs=connection_pairs,
         valid_labels=valid_labels,
         padding=padding,
         confidence_threshold=confidence_threshold,
     )
-    detection_nn.out.link(annotation_node.input_detections)
     pose_nn.out.link(annotation_node.input_keypoints)
 
     visualizer.addTopic("Video", detection_nn.passthrough, "images")

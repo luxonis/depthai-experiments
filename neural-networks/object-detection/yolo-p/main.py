@@ -60,11 +60,12 @@ with dai.Pipeline(device) as pipeline:
         imageManip.out, nn_archive
     )
 
-    annotation_node = pipeline.create(AnnotationNode)
-    detection_nn.getOutput(0).link(annotation_node.input_detections)
-    detection_nn.getOutput(1).link(annotation_node.input_road_segmentations)
-    detection_nn.getOutput(2).link(annotation_node.input_lane_segmentations)
-    input_node.link(annotation_node.input_frame)
+    annotation_node = pipeline.create(AnnotationNode).build(
+        frame=input_node,
+        detections=detection_nn.getOutput(0),
+        road_segmentations=detection_nn.getOutput(1),
+        lane_segmentations=detection_nn.getOutput(2),
+    )
 
     visualizer.addTopic(
         "Road Segmentation", annotation_node.out_segmentations, "images"
