@@ -63,8 +63,6 @@ with dai.Pipeline(device) as pipeline:
             detection_nn_archive.getInputWidth(), detection_nn_archive.getInputHeight()
         )
         imageManip.initialConfig.setFrameType(frame_type)
-        if platform == "RVC4":
-            imageManip.initialConfig.setFrameType(frame_type)
         replay.out.link(imageManip.inputImage)
 
     else:
