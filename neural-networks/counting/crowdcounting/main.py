@@ -1,137 +1,82 @@
-import argparse
-from os.path import isfile
 from pathlib import Path
-
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
-from download import download_vids
-from host_node.host_depth_color_transform import DepthColorTransform
-from host_node.overlay_frames import OverlayFrames
-from host_node.visualize_detections_v2 import VisualizeDetectionsV2
-from nn_configs import NN_CONFIGS
-from visualize_crowd_count import VisualizeCrowdCount
 
-device = dai.Device()
+from utils.arguments import initialize_argparser
+from utils.counter import CrowdCounter
+from utils.density_map_transform import DensityMapToFrame
+from utils.overlay import OverlayFrames
 
+_, args = initialize_argparser()
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-nn",
-    "--neural-network",
-    type=str,
-    choices=[
-        "sha_small",
-        "sha_medium",
-        "sha_large",
-        "sha_xlarge",
-        "shb_small",
-        "shb_medium",
-        "shb_large",
-        "shb_xlarge",
-        "qnrf_small",
-        "qnrf_medium",
-        "qnrf_large",
-        "qnrf_xlarge",
-    ],
-    default="sha_medium",
-    help="Choose the neural network model used for crowd counting. Default: sha_medium",
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device_id)) if args.device_id else dai.Device()
+platform = device.getPlatform().name
+frame_type = (
+    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
 )
-parser.add_argument(
-    "-fps",
-    "--frames-per-second",
-    type=float,
-    help="Set the frames per second for the video. Default: 1",
-    default=1,
-)
-parser.add_argument(
-    "-v",
-    "--video-path",
-    type=str,
-    help="Path to the video input for inference. Default: vids/virat.mp4",
-    default="vids/vid4.mp4",
-)
-parser.add_argument(
-    "-cam",
-    "--camera",
-    action="store_true",
-    help="Use the camera for inference instead of video. Default: False",
-)
-args = parser.parse_args()
-
-# Download test videos
-if (
-    not isfile(Path("vids/virat.mp4").resolve().absolute())
-    or not isfile(Path("vids/vid1.mp4").resolve().absolute())
-    or not isfile(Path("vids/vid2.mp4").resolve().absolute())
-    or not isfile(Path("vids/vid3.mp4").resolve().absolute())
-    or not isfile(Path("vids/vid4.mp4").resolve().absolute())
-):
-    download_vids()
-video_source = Path(args.video_path).resolve().absolute()
-
-
-nn_config = NN_CONFIGS[args.neural_network]
-
-NN_SIZE = nn_config["nn_size"]
-VIDEO_SIZE = (1280, 720)
-FPS = args.frames_per_second
-
-model_description = dai.NNModelDescription(
-    modelSlug=nn_config["model_slug"],
-    platform=device.getPlatform().name,
-    modelVersionSlug=nn_config["version_slug"],
-)
-archive_path = dai.getModelFromZoo(model_description, useCached=True)
-nn_archive = dai.NNArchive(archive_path)
-
-visualizer = dai.RemoteConnection()
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    if args.camera:
-        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        color_out = cam.requestOutput(VIDEO_SIZE, dai.ImgFrame.Type.BGR888p, fps=FPS)
-    else:
+
+    # Model NN Archive
+    cc_model_description = dai.NNModelDescription(args.crowd_counting_model)
+    cc_model_description.platform = platform
+    cc_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(cc_model_description))
+    INPUT_WIDTH = cc_model_nn_archive.getInputWidth()
+    INPUT_HEIGHT = cc_model_nn_archive.getInputHeight()
+
+    # Video/Camera Input Node
+    if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
-        replay.setReplayVideoFile(video_source)
-        replay.setSize(VIDEO_SIZE)
-        replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-        replay.setFps(FPS)
-        color_out = replay.out
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        imageManip = pipeline.create(dai.node.ImageManipV2)
+        imageManip.setMaxOutputFrameSize(INPUT_WIDTH * INPUT_HEIGHT * 3)
+        imageManip.initialConfig.setOutputSize(INPUT_WIDTH, INPUT_HEIGHT)
+        imageManip.initialConfig.setFrameType(frame_type)
+        replay.out.link(imageManip.inputImage)
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+    input_node = imageManip.out if args.media_path else cam
 
-    manip = pipeline.create(dai.node.ImageManip)
-    manip.initialConfig.setResizeThumbnail(NN_SIZE)
-    manip.setMaxOutputFrameSize(NN_SIZE[0] * NN_SIZE[1] * 3)
-    manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    manip.inputImage.setBlocking(True)
-    color_out.link(manip.inputImage)
-
-    nn = pipeline.create(ParsingNeuralNetwork).build(manip.out, nn_archive)
-
-    visualize_crowd_count = pipeline.create(VisualizeCrowdCount).build(nn.out)
-
-    visualize_detections = pipeline.create(VisualizeDetectionsV2).build(nn.out)
-
-    color_transform = pipeline.create(DepthColorTransform).build(
-        visualize_detections.output_mask
+    # Model Node
+    nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, cc_model_nn_archive, fps=args.fps_limit
     )
 
-    map_resize = pipeline.create(dai.node.ImageManipV2)
-    map_resize.initialConfig.addResize(*VIDEO_SIZE)
-    map_resize.setMaxOutputFrameSize(VIDEO_SIZE[0] * VIDEO_SIZE[1] * 3)
-    color_transform.output.link(map_resize.inputImage)
+    # Counter Node
+    crowd_counter_node = pipeline.create(CrowdCounter).build(nn.out)
 
-    overlay_frames = pipeline.create(OverlayFrames).build(color_out, map_resize.out)
+    # Density Map Transform and Resize Nodes
+    density_map_transform_node = pipeline.create(DensityMapToFrame).build(nn.out)
+    density_map_resize_node = pipeline.create(dai.node.ImageManipV2)
+    density_map_resize_node.setMaxOutputFrameSize(INPUT_WIDTH * INPUT_HEIGHT * 3)
+    density_map_resize_node.initialConfig.setOutputSize(INPUT_WIDTH, INPUT_HEIGHT)
+    density_map_resize_node.initialConfig.setFrameType(frame_type)
+    density_map_transform_node.output.link(density_map_resize_node.inputImage)
 
-    visualizer.addTopic("Camera", color_out)
-    visualizer.addTopic("Segmentation", overlay_frames.output)
-    visualizer.addTopic("Predicted count", visualize_crowd_count.output)
+    # Overlay Frames Node
+    overlay_frames = pipeline.create(OverlayFrames).build(
+        nn.passthrough, density_map_resize_node.out
+    )
+
+    # Visualizer
+    visualizer.addTopic("VideoOverlay", overlay_frames.output)
+    visualizer.addTopic("Count", crowd_counter_node.output)
+
     print("Pipeline created.")
+
     pipeline.start()
+
     visualizer.registerPipeline(pipeline)
+
     while pipeline.isRunning():
-        pipeline.processTasks()
-        key = visualizer.waitKey(1)
-        if key == ord("q"):
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            pipeline.stop()
             break
-    print("Pipeline finished.")
