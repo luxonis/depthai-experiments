@@ -1,9 +1,9 @@
 from pathlib import Path
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork, HRNetParser
+from depthai_nodes.nodes.utils import generate_script_content
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
-from utils.script import generate_script_content
 
 _, args = initialize_argparser()
 
