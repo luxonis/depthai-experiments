@@ -1,6 +1,6 @@
 # Overview
 
-This experiment demonstrates how to build a DepthAI pipeline for crowd counting. 
+This experiment demonstrates how to build a DepthAI pipeline for crowd counting.
 We use [DM-Count](https://hub.luxonis.com/ai/models/16d01eab-dc2b-4422-907d-2634a940b52e?view=page) model to produce a crowd density map from which the count is computed.
 
 ## Demo
@@ -42,7 +42,6 @@ python main.py \
 ```
 
 This will run the experiment using the SHB variant of the model with input size 426x240 on the default device and camera input at 5 FPS.
-
 
 ### Standalone Mode
 

@@ -10,6 +10,7 @@ class OverlayFrames(dai.node.HostNode):
     output : dai.ImgFrame
         The output message for the overlayed frame.
     """
+
     def __init__(self) -> None:
         super().__init__()
 
