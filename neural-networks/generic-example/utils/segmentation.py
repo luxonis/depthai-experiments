@@ -5,83 +5,82 @@ from depthai_nodes.ml.messages import SegmentationMask
 from depthai_nodes.ml.messages import ImgDetectionsExtended
 
 
-class SegAnnotationNode(dai.node.ThreadedHostNode):
+class SegAnnotationNode(dai.node.HostNode):
     def __init__(self):
         super().__init__()
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
 
-        self.input_segmentation = self.createInput()
-        self.input_frame = self.createInput()
+    def build(
+        self, image_frame_msg: dai.Node.Output, segmentation_msg: dai.Node.Output
+    ):
+        self.link_args(image_frame_msg, segmentation_msg)
+        return self
 
-        self.out = self.createOutput()
+    def process(self, image_frame_msg: dai.Buffer, segmentation_msg: dai.Buffer):
+        assert isinstance(image_frame_msg, dai.ImgFrame)
+        assert isinstance(segmentation_msg, SegmentationMask)
 
-    def run(self):
-        while self.isRunning():
-            mask = self.input_segmentation.get()
-            frame = self.input_frame.get().getCvFrame()
-            output_frame = dai.ImgFrame()
+        frame = image_frame_msg.getCvFrame()
+        output_frame = dai.ImgFrame()
 
-            if not isinstance(mask, SegmentationMask):
-                raise ValueError(
-                    f"Invalid input type. Expected SegmentationMask, got {type(mask)}"
+        mask = segmentation_msg.mask
+        unique_values = np.unique(mask[mask >= 0])
+        scaled_mask = np.zeros_like(mask, dtype=np.uint8)
+
+        if unique_values.size != 0:
+            min_val, max_val = unique_values.min(), unique_values.max()
+
+            if min_val == max_val:
+                scaled_mask = np.ones_like(mask, dtype=np.uint8) * 255
+            else:
+                scaled_mask = ((mask - min_val) / (max_val - min_val) * 255).astype(
+                    np.uint8
                 )
+            scaled_mask[mask == -1] = 0
+        colored_mask = cv2.applyColorMap(scaled_mask, cv2.COLORMAP_RAINBOW)
+        colored_mask[mask == -1] = [0, 0, 0]
 
-            mask = mask.mask
-            unique_values = np.unique(mask[mask >= 0])
-            scaled_mask = np.zeros_like(mask, dtype=np.uint8)
+        frame_height, frame_width, _ = frame.shape
+        colored_mask = cv2.resize(
+            colored_mask, (frame_width, frame_height), interpolation=cv2.INTER_AREA
+        )
 
-            if unique_values.size != 0:
-                min_val, max_val = unique_values.min(), unique_values.max()
+        colored_frame = cv2.addWeighted(frame, 0.5, colored_mask, 0.5, 0)
 
-                if min_val == max_val:
-                    scaled_mask = np.ones_like(mask, dtype=np.uint8) * 255
-                else:
-                    scaled_mask = ((mask - min_val) / (max_val - min_val) * 255).astype(
-                        np.uint8
-                    )
-                scaled_mask[mask == -1] = 0
-            colored_mask = cv2.applyColorMap(scaled_mask, cv2.COLORMAP_RAINBOW)
-            colored_mask[mask == -1] = [0, 0, 0]
-
-            frame_height, frame_width, _ = frame.shape
-            colored_mask = cv2.resize(
-                colored_mask, (frame_width, frame_height), interpolation=cv2.INTER_AREA
-            )
-
-            colored_frame = cv2.addWeighted(frame, 0.5, colored_mask, 0.5, 0)
-
-            self.out.send(
-                output_frame.setCvFrame(colored_frame, dai.ImgFrame.Type.BGR888i)
-            )
+        self.output.send(output_frame.setCvFrame(colored_frame, dai.ImgFrame.Type.BGR888i))
 
 
-class DetSegAnntotationNode(dai.node.ThreadedHostNode):
+class DetSegAnntotationNode(dai.node.HostNode):
     def __init__(self):
         super().__init__()
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
 
-        self.input_detections = self.createInput()
-        self.input_frame = self.createInput()
+    def build(self, image_frame_msg: dai.Node.Output, detections_msg: dai.Node.Output):
+        self.link_args(image_frame_msg, detections_msg)
+        return self
 
-        self.out = self.createOutput()
+    def process(self, image_frame_msg: dai.Buffer, detections_msg: dai.Buffer):
+        assert isinstance(image_frame_msg, dai.ImgFrame)
+        assert isinstance(detections_msg, ImgDetectionsExtended)
+        
 
-    def run(self):
-        while self.isRunning():
-            extended_detections = self.input_detections.get()
-            frame = self.input_frame.get()
-            time_stamp = frame.getTimestamp()
-            frame = frame.getCvFrame()
-            output_frame = dai.ImgFrame()
+        time_stamp = image_frame_msg.getTimestamp()
+        frame = image_frame_msg.getCvFrame()
+        output_frame = dai.ImgFrame()
 
-            if not isinstance(extended_detections, ImgDetectionsExtended):
-                raise ValueError(
-                    f"Invalid input type. Expected ImgDetectionsExtended, got {type(extended_detections)}"
-                )
-
-            label_mask = extended_detections.masks
-            detections = extended_detections.detections
-            if len(label_mask.shape) < 2:
-                self.out.send(output_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888i))
-                continue
-
+        label_mask = detections_msg.masks
+        detections = detections_msg.detections
+        if len(label_mask.shape) < 2:
+            self.out.send(output_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888i))
+        else:
             detection_labels = {
                 idx: detection.label for idx, detection in enumerate(detections)
             }
@@ -101,6 +100,6 @@ class DetSegAnntotationNode(dai.node.ThreadedHostNode):
             colored_frame = cv2.addWeighted(frame, 0.5, color_mask, 0.5, 0)
 
             output_frame.setTimestamp(time_stamp)
-            self.out.send(
+            self.output.send(
                 output_frame.setCvFrame(colored_frame, dai.ImgFrame.Type.BGR888i)
             )

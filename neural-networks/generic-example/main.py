@@ -51,15 +51,15 @@ with dai.Pipeline(device) as pipeline:
     )
 
     if args.annotation_mode == "segmentation":
-        annotation_node = pipeline.create(SegAnnotationNode)
-        nn_with_parser.passthrough.link(annotation_node.input_frame)
-        nn_with_parser.out.link(annotation_node.input_segmentation)
-        visualizer.addTopic("Video", annotation_node.out, "images")
+        annotation_node = pipeline.create(SegAnnotationNode).build(
+            nn_with_parser.passthrough, nn_with_parser.out
+        )
+        visualizer.addTopic("Video", annotation_node.output, "images")
     elif args.annotation_mode == "segmentation_with_annotation":
-        annotation_node = pipeline.create(DetSegAnntotationNode)
-        nn_with_parser.passthrough.link(annotation_node.input_frame)
-        nn_with_parser.out.link(annotation_node.input_detections)
-        visualizer.addTopic("Video", annotation_node.out, "images")
+        annotation_node = pipeline.create(DetSegAnntotationNode).build(
+            nn_with_parser.passthrough, nn_with_parser.out
+        )
+        visualizer.addTopic("Video", annotation_node.output, "images")
         visualizer.addTopic("Detections", nn_with_parser.out, "detections")
     else:
         visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
