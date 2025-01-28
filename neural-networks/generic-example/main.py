@@ -8,12 +8,15 @@ _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+frame_type = (
+    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     model_description = dai.NNModelDescription(args.model)
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
     model_description.platform = platform
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(
@@ -21,6 +24,9 @@ with dai.Pipeline(device) as pipeline:
             apiKey=args.api_key,
         )
     )
+    nn_width = nn_archive.getInputWidth()
+    nn_height = nn_archive.getInputHeight()
+    nn_stride = (nn_width + 7) // 8 * 8  # Align width up to the nearest multiple of 8
 
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
@@ -31,15 +37,9 @@ with dai.Pipeline(device) as pipeline:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
         imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            nn_archive.getInputWidth(), nn_archive.getInputHeight()
-        )
-        imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-        if platform == "RVC4":
-            imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+        imageManip.setMaxOutputFrameSize(nn_stride * nn_height * 3)
+        imageManip.initialConfig.setOutputSize(nn_width, nn_height)
+        imageManip.initialConfig.setFrameType(frame_type)
         replay.out.link(imageManip.inputImage)
 
     input_node = (
