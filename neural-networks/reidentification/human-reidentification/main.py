@@ -35,6 +35,8 @@ with dai.Pipeline(device) as pipeline:
     rec_model_description = dai.NNModelDescription(args.rec_model)
     rec_model_description.platform = platform
     rec_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
+    rec_nn_width = rec_nn_archive.getInputWidth()
+    rec_nn_height = rec_nn_archive.getInputHeight()
 
     # Video/Camera Input Node
     if args.media_path:
@@ -60,11 +62,8 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # Detections Processing Node
-    det_process_node = pipeline.create(ProcessDetections)
-    det_process_node.set_target_size(
-        rec_nn_archive.getInputWidth(), rec_nn_archive.getInputHeight()
-    )
-    det_nn.out.link(det_process_node.detections_input)
+    det_process_node = pipeline.create(ProcessDetections).build(det_nn.out)
+    det_process_node.set_target_size(rec_nn_width, rec_nn_height)
 
     # Crop Configuration Sender Node
     config_sender_node = pipeline.create(dai.node.Script)
