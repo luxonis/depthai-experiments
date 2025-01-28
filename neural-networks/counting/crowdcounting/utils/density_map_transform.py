@@ -32,7 +32,9 @@ class DensityMapToFrame(dai.node.HostNode):
 
     def process(self, map_msg: dai.Buffer) -> None:
         density_map = map_msg.map
-        density_map_normalized = density_map / density_map.max() if density_map.max() > 0 else density_map
+        density_map_normalized = (
+            density_map / density_map.max() if density_map.max() > 0 else density_map
+        )
         density_map_image = cv2.applyColorMap(
             (density_map_normalized * 255).astype(np.uint8), self._colormap
         )
