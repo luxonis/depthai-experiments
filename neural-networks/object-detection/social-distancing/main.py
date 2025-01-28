@@ -1,24 +1,23 @@
 import depthai as dai
-from depthai_nodes.ml.parsers import SCRFDParser
-from host_node.depth_merger import DepthMerger
-from host_node.draw_detections import DrawDetections
-from host_node.frame_stacker import FrameStacker
-from host_node.host_bird_eye_view import BirdsEyeView
-from host_node.host_display import Display
-from host_node.measure_object_distance import MeasureObjectDistance
-from host_node.normalize_bbox import NormalizeBbox
-from host_node.parser_bridge import ParserBridge
+from depthai_nodes import ParsingNeuralNetwork
+from utils.depth_merger import DepthMerger
+from utils.host_bird_eye_view import BirdsEyeView
+from utils.measure_object_distance import MeasureObjectDistance
 from host_social_distancing import SocialDistancing
+from utils.arguments import initialize_argparser
 
-FPS = 10
+_, args = initialize_argparser()
 
-device = dai.Device()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
 
-modelDescription = dai.NNModelDescription(
-    modelSlug="scrfd-person-detection",
-    platform=device.getPlatform().name,
-    modelVersionSlug="2-5g-640x640",
-)
+platform = device.getPlatform().name
+print(f"Platform: {platform}")
+
+FPS = 10 if platform == "RVC2" else 20
+
+modelDescription = dai.NNModelDescription("luxonis/scrfd-person-detection:25g-640x640")
+modelDescription.platform = platform
 archivePath = dai.getModelFromZoo(modelDescription, useCached=True)
 nnArchive = dai.NNArchive(archivePath)
 
@@ -29,8 +28,10 @@ with dai.Pipeline(device) as pipeline:
         boardSocket=dai.CameraBoardSocket.CAM_A
     )
     rgb = cam.requestOutput(
-        size=(640, 640),
-        type=dai.ImgFrame.Type.BGR888p,
+        size=nnArchive.getInputSize(),
+        type=dai.ImgFrame.Type.BGR888p
+        if platform == "RVC2"
+        else dai.ImgFrame.Type.BGR888i,
         fps=FPS,
     )
 
@@ -42,26 +43,23 @@ with dai.Pipeline(device) as pipeline:
     )
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left.requestOutput((640, 640), fps=FPS),
-        right=right.requestOutput((640, 640), fps=FPS),
+        left=left.requestOutput(nnArchive.getInputSize(), fps=FPS),
+        right=right.requestOutput(nnArchive.getInputSize(), fps=FPS),
     )
     stereo.initialConfig.setConfidenceThreshold(255)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
     stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(True)
     stereo.setSubpixel(False)
-    stereo.setOutputSize(640, 640)
+    if platform == "RVC2":
+        stereo.setOutputSize(*nnArchive.getInputSize())
 
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setNNArchive(nnArchive)
-    nn.input.setBlocking(False)
-    nn_parser = pipeline.create(SCRFDParser)
-    nn_parser.setFeatStrideFPN((8, 16, 32, 64, 128))
-    nn_parser.setNumAnchors(1)
-    nn.out.link(nn_parser.input)
-    parser_bridge = pipeline.create(ParserBridge).build(nn_parser.out)
+    nn_parser: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        input=rgb,
+        nn_source=nnArchive,
+    )
 
     depth_merger = pipeline.create(DepthMerger).build(
         output_2d=nn_parser.out,
@@ -70,26 +68,27 @@ with dai.Pipeline(device) as pipeline:
         depth_alignment_socket=dai.CameraBoardSocket.CAM_A,
     )
 
-    rgb.link(nn.input)
-
     bird_eye_view = pipeline.create(BirdsEyeView).build(depth_merger.output)
-    normalize_bboxes = pipeline.create(NormalizeBbox).build(
-        frame=rgb, nn=parser_bridge.output
-    )
+
     measure_obj_dist = pipeline.create(MeasureObjectDistance).build(depth_merger.output)
-    draw_bboxes = pipeline.create(DrawDetections).build(
-        frame=rgb, nn=normalize_bboxes.output, label_map=["person"]
-    )
-    social_distancing_new = pipeline.create(SocialDistancing).build(
-        frame=draw_bboxes.output, distances=measure_obj_dist.output
-    )
-    frame_stacker = pipeline.create(FrameStacker).build(
-        frame_1=social_distancing_new.output, frame_2=bird_eye_view.output
+
+    social_distancing = pipeline.create(SocialDistancing).build(
+        distances=measure_obj_dist.output
     )
 
-    display = pipeline.create(Display).build(frames=frame_stacker.output)
-    display.setName("Social distancing")
+    visualizer.addTopic("Video", rgb, "images")
+    visualizer.addTopic("Detections", nn_parser.out, "images")
+    visualizer.addTopic("Distances", social_distancing.output, "images")
+    visualizer.addTopic("Bird-eye view", bird_eye_view.output, "bird-eye")
 
     print("Pipeline created.")
-    pipeline.run()
-    print("Pipeline exited.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            pipeline.stop()
+            break
+print("Pipeline stopped.")
