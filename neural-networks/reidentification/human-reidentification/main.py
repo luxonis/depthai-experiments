@@ -15,6 +15,9 @@ frame_type = (
     dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
 )
 
+if platform == "RVC2":
+    raise NotImplementedError("RVC2 is not supported yet.")
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
@@ -22,6 +25,11 @@ with dai.Pipeline(device) as pipeline:
     det_model_description = dai.NNModelDescription(args.det_model)
     det_model_description.platform = platform
     det_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_nn_width = det_nn_archive.getInputWidth()
+    det_nn_height = det_nn_archive.getInputHeight()
+    det_nn_stride = (
+        (det_nn_width + 7) // 8 * 8
+    )  # Align width up to the nearest multiple of 8
 
     # Recognition Model NN Archive
     rec_model_description = dai.NNModelDescription(args.rec_model)
@@ -38,12 +46,8 @@ with dai.Pipeline(device) as pipeline:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
         imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            det_nn_archive.getInputWidth() * det_nn_archive.getInputHeight() * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            det_nn_archive.getInputWidth(), det_nn_archive.getInputHeight()
-        )
+        imageManip.setMaxOutputFrameSize(det_nn_stride * det_nn_height * 3)
+        imageManip.initialConfig.setOutputSize(det_nn_width, det_nn_height)
         imageManip.initialConfig.setFrameType(frame_type)
         replay.out.link(imageManip.inputImage)
     else:
@@ -78,16 +82,13 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # Crop Node
-    if platform == "RVC2":
-        crop_node = pipeline.create(dai.node.ImageManip)
-    elif platform == "RVC4":
-        crop_node = pipeline.create(dai.node.ImageManipV2)
-        crop_node.initialConfig.setReusePreviousImage(False)
-        crop_node.inputConfig.setReusePreviousMessage(False)
-        crop_node.inputImage.setReusePreviousMessage(False)
-        crop_node.inputConfig.setMaxSize(30)
-        crop_node.inputImage.setMaxSize(30)
-        crop_node.setNumFramesPool(30)
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setReusePreviousImage(False)
+    crop_node.inputConfig.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(False)
+    crop_node.inputConfig.setMaxSize(30)
+    crop_node.inputImage.setMaxSize(30)
+    crop_node.setNumFramesPool(30)
     crop_node.inputConfig.setWaitForMessage(True)
 
     config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
