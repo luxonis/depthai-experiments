@@ -25,6 +25,7 @@ with dai.Pipeline(device) as pipeline:
     cc_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(cc_model_description))
     INPUT_WIDTH = cc_model_nn_archive.getInputWidth()
     INPUT_HEIGHT = cc_model_nn_archive.getInputHeight()
+    STRIDE = (INPUT_WIDTH + 7) // 8 * 8  # Align width up to the nearest multiple of 8
 
     # Video/Camera Input Node
     if args.media_path:
@@ -36,7 +37,7 @@ with dai.Pipeline(device) as pipeline:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
         imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(INPUT_WIDTH * INPUT_HEIGHT * 3)
+        imageManip.setMaxOutputFrameSize(STRIDE * INPUT_HEIGHT * 3)
         imageManip.initialConfig.setOutputSize(INPUT_WIDTH, INPUT_HEIGHT)
         imageManip.initialConfig.setFrameType(frame_type)
         replay.out.link(imageManip.inputImage)
@@ -55,7 +56,7 @@ with dai.Pipeline(device) as pipeline:
     # Density Map Transform and Resize Nodes
     density_map_transform_node = pipeline.create(DensityMapToFrame).build(nn.out)
     density_map_resize_node = pipeline.create(dai.node.ImageManipV2)
-    density_map_resize_node.setMaxOutputFrameSize(INPUT_WIDTH * INPUT_HEIGHT * 3)
+    density_map_resize_node.setMaxOutputFrameSize(STRIDE * INPUT_HEIGHT * 3)
     density_map_resize_node.initialConfig.setOutputSize(INPUT_WIDTH, INPUT_HEIGHT)
     density_map_resize_node.initialConfig.setFrameType(frame_type)
     density_map_transform_node.output.link(density_map_resize_node.inputImage)
