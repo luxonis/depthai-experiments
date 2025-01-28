@@ -51,7 +51,9 @@ class SegAnnotationNode(dai.node.HostNode):
 
         colored_frame = cv2.addWeighted(frame, 0.5, colored_mask, 0.5, 0)
 
-        self.output.send(output_frame.setCvFrame(colored_frame, dai.ImgFrame.Type.BGR888i))
+        self.output.send(
+            output_frame.setCvFrame(colored_frame, dai.ImgFrame.Type.BGR888i)
+        )
 
 
 class DetSegAnntotationNode(dai.node.HostNode):
@@ -70,7 +72,6 @@ class DetSegAnntotationNode(dai.node.HostNode):
     def process(self, image_frame_msg: dai.Buffer, detections_msg: dai.Buffer):
         assert isinstance(image_frame_msg, dai.ImgFrame)
         assert isinstance(detections_msg, ImgDetectionsExtended)
-        
 
         time_stamp = image_frame_msg.getTimestamp()
         frame = image_frame_msg.getCvFrame()
