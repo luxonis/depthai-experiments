@@ -152,7 +152,7 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 |                                             Crowd Counting                                             |
 | :----------------------------------------------------------------------------------------------------: |
-| <img src="counting/crowdcounting/media/crowd-counting.gif" alt="crowd-counting" style="height:250px;"> |
+| <img src="counting/crowdcounting/media/crowdcounting.gif" alt="crowd-counting" style="height:250px;"> |
 
 | Name                                                               | HubAI Model                                                                                                | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                          | Notes                                |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
