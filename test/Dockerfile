@@ -14,4 +14,3 @@ ENV DISPLAY=:99
 
 # Setup Test Command
 WORKDIR /tmp/depthai-experiments
-ENTRYPOINT ["bash"]
