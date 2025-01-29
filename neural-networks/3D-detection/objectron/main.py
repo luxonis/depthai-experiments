@@ -63,8 +63,6 @@ with dai.Pipeline(device) as pipeline:
             detection_nn_archive.getInputWidth(), detection_nn_archive.getInputHeight()
         )
         imageManip.initialConfig.setFrameType(frame_type)
-        if platform == "RVC4":
-            imageManip.initialConfig.setFrameType(frame_type)
         replay.out.link(imageManip.inputImage)
 
     else:
@@ -108,11 +106,12 @@ with dai.Pipeline(device) as pipeline:
 
     annotation_node = pipeline.create(
         AnnotationNode,
+    ).build(
+        detections=detection_nn.out,
         connection_pairs=connection_pairs,
         padding=padding,
         valid_labels=valid_labels,
     )
-    detection_nn.out.link(annotation_node.input_detections)
     pose_nn.getOutput(0).link(annotation_node.input_keypoints)
 
     visualizer.addTopic("Video", detection_nn.passthrough, "images")

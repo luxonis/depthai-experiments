@@ -1,6 +1,8 @@
 import depthai as dai
 from .yolo_decode import decode_yolo_output
 
+from typing import Tuple
+
 
 class HostDecoding(dai.node.HostNode):
     def __init__(self) -> None:
@@ -25,7 +27,7 @@ class HostDecoding(dai.node.HostNode):
     def set_iou_thresh(self, iou_thresh: float) -> None:
         self._iou_thresh = iou_thresh
 
-    def set_nn_size(self, nn_size: tuple[int, int]) -> None:
+    def set_nn_size(self, nn_size: Tuple[int, int]) -> None:
         self._nn_size = nn_size
 
     def process(self, nn_data: dai.NNData) -> None:

@@ -34,7 +34,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 model = dai.NNArchive(
-    dai.getModelFromZoo(dai.NNModelDescription(args.nn_choice, platform.name))
+    dai.getModelFromZoo(dai.NNModelDescription(args.model, platform.name))
 )
 visualizer = dai.RemoteConnection()
 with dai.Pipeline(device) as pipeline:
