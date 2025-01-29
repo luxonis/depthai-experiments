@@ -30,7 +30,7 @@ jobs:
           cd /home/$USER/hil_framework
           git pull https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git
           git fetch
-          git checkout origin/main
+          git checkout debug
 
       - name: Add HIL Tools to Path
         run: |
