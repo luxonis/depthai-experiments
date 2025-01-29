@@ -51,3 +51,4 @@ jobs:
               --dockerfile ./test/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
               --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }}" \
+              -C "python test/gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${PLATFORM} --virtual-display --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer"
