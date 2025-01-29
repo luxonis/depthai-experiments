@@ -52,5 +52,5 @@ jobs:
           hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./test/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
-              --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }}"
+              --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }}" \
               -C "echo 'test'"
