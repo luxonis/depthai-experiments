@@ -19,7 +19,7 @@ class DensityMapToFrame(dai.node.HostNode):
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-        self.setColormap(cv2.COLORMAP_HOT)
+        self.setColormap(cv2.COLORMAP_WINTER)
 
     def setColormap(self, colormap_value: int) -> None:
         color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), colormap_value)
