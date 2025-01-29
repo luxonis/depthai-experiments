@@ -14,7 +14,7 @@ ENV DISPLAY=:99
 
 # Setup Test Command
 WORKDIR /tmp/depthai-experiments
-CMD ["sh", "-c", "\
+ENTRYPOINT ["sh", "-c", "\
     if [ -z \"$PLATFORM\" ]; then \
         echo 'Error: PLATFORM environment variable is required' && \
         exit 1; \
