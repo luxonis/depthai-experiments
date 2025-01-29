@@ -19,7 +19,7 @@ ENTRYPOINT ["sh", "-c", "\
         echo 'Error: PLATFORM environment variable is required' && \
         exit 1; \
     fi && \
-    python test/gen3_script_tester.py \
+    python -u test/gen3_script_tester.py \
     --environment-variables DEPTHAI_PLATFORM=${PLATFORM} \
     --virtual-display \
     --path ./neural-networks/advanced-examples/object-detection/mobile-object-localizer \
