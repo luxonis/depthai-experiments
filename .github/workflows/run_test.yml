@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [ "3.10", "3.12"]
+        python-version: ["3.12"]
         platform: [RVC2] #TODO: add RVC4 platform
       fail-fast: false
 
@@ -27,7 +27,7 @@ jobs:
           cd /home/$USER/hil_framework
           git pull https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git
           git fetch
-          git checkout debug
+          git checkout main
           git pull
 
       - name: Add HIL Tools to Path
