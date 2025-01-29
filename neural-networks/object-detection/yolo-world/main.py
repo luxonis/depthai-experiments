@@ -83,7 +83,7 @@ def main(args):
             camOut.link(manip.inputImage)
 
         model_description = dai.NNModelDescription(
-            model="yolo-world-l", platform="RVC4"
+            modelSlug="yolo-world-l", modelVersionSlug="640x640", platform="RVC4"
         )
         archive_path = dai.getModelFromZoo(model_description, useCached=True)
         nn_archive = dai.NNArchive(archive_path)
