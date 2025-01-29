@@ -50,4 +50,4 @@ jobs:
               --dockerfile ./test/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
               --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }}" \
-              -C "python -c 'print(\"hello from docker\")'"
+              -C "echo 'hello from docker'"
