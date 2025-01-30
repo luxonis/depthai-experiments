@@ -6,6 +6,7 @@ import shutil
 import datetime
 import time
 import argparse
+from pathlib import Path
 
 """
 USAGE: gen3_script_tester.py [-p PATH] [-t TIMEOUT] [-s] [-dv DEPTHAI_VERSION] [-e ENVIRONMENT_VARIABLES]
@@ -208,11 +209,12 @@ if args.virtual_display:
         )
 print("Starting test...")
 
+experiments_folder = Path(__file__).parent.parent
 success = True
 if args.save:
     log_file = "test_" + datetime.datetime.now().strftime("%H:%M:%S") + ".txt"
     with open(log_file, "w") as f:
-        for dirpath, dirnames, filenames in os.walk(os.path.dirname(__file__)):
+        for dirpath, dirnames, filenames in os.walk(experiments_folder):
             success &= test_directory(dirpath, f)
         else:
             success &= test_directory(args.path, f)
@@ -220,7 +222,7 @@ if args.save:
         print("Test finished, results in: " + log_file)
 else:
     if args.path is None:
-        for dirpath, dirnames, filenames in os.walk(os.path.dirname(__file__)):
+        for dirpath, dirnames, filenames in os.walk(experiments_folder):
             success &= test_directory(dirpath)
     else:
         success &= test_directory(args.path)

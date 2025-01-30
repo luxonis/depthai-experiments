@@ -17,13 +17,20 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.12"] #TODO: add more platforms when HIL allows for it
+        python-version: ["3.8", "3.10", "3.12"]
         platform: [RVC2] #TODO: add RVC4 platform
       fail-fast: false
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Update HIL
+        run: |
+          cd /home/$USER/hil_framework
+          git pull https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git
+          git fetch
+          git checkout main
 
       - name: Add HIL Tools to Path
         run: |
@@ -42,9 +49,7 @@ jobs:
       - name: Run Test
         run: |
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#${{ matrix.python-version}}-${{ matrix.platform }}"
-          CMD="hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace --commands 'cd /tmp/depthai-experiments' 'python gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display"
-          if [ -n "${{ github.event.inputs.depthai_version }}" ]; then
-            CMD="$CMD --depthai-version ${{ github.event.inputs.depthai_version }}"
-          fi
-          CMD="$CMD'"
-          eval $CMD
+          hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
+              --dockerfile ./test/Dockerfile \
+              --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
+              --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }}"
