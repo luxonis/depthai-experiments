@@ -7,15 +7,19 @@ size = dai.Size2f(zoom_size[0], zoom_size[1])
 
 AVG_MAX_NUM = 3
 
-limits = [zoom_size[0] // 2, zoom_size[1] // 2]     # xmin and ymin limits
-limits.append(full_size[0] - limits[0])             # xmax limit
-limits.append(full_size[1] - limits[1])             # ymax limit
+limits = [zoom_size[0] // 2, zoom_size[1] // 2]  # xmin and ymin limits
+limits.append(full_size[0] - limits[0])  # xmax limit
+limits.append(full_size[1] - limits[1])  # ymax limit
 
 
 class CropFace(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self.output = self.createOutput(possibleDatatypes=[dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)])
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)
+            ]
+        )
 
         self.x = []
         self.y = []
@@ -63,4 +67,3 @@ class CropFace(dai.node.HostNode):
         y_avg = limits[3] if limits[3] < y_avg else y_avg
 
         return x_avg, y_avg
-

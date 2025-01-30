@@ -18,12 +18,10 @@ class KeyboardReader(dai.node.HostNode):
         self.input = self.createInput()
         self.output = self.createOutput()
 
-
     def build(self, output: dai.Node.Output) -> "KeyboardReader":
         self.link_args(output)
         self.sendProcessingToPipeline(True)
         return self
-
 
     def process(self, _) -> None:
         key = cv2.waitKey(1)

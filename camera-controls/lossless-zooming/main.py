@@ -9,7 +9,9 @@ full_shape = (3840, 2160)
 hd_shape = (1920, 1080)
 nn_shape = (320, 320)
 
-model_description = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="320x320")
+model_description = dai.NNModelDescription(
+    modelSlug="yunet", platform="RVC2", modelVersionSlug="320x320"
+)
 archive_path = dai.getModelFromZoo(model_description, useCached=True)
 
 with dai.Pipeline() as pipeline:
@@ -19,8 +21,10 @@ with dai.Pipeline() as pipeline:
     cam_output = cam.requestOutput(full_shape, dai.ImgFrame.Type.YUV420p)
 
     nn = pipeline.create(dai.node.NeuralNetwork).build(
-        input=cam.requestOutput(nn_shape, dai.ImgFrame.Type.BGR888p, dai.ImgResizeMode.STRETCH),
-        nnArchive=dai.NNArchive(archive_path)
+        input=cam.requestOutput(
+            nn_shape, dai.ImgFrame.Type.BGR888p, dai.ImgResizeMode.STRETCH
+        ),
+        nnArchive=dai.NNArchive(archive_path),
     )
     nn.input.setBlocking(False)
 

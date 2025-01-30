@@ -28,44 +28,51 @@ parser.add_argument(
     help="The path to a single directory to be tested (otherwise searches for all valid experiments in gen3)",
 )
 parser.add_argument(
-    "-t", "--timeout",
+    "-t",
+    "--timeout",
     type=int,
-    default=30, 
-    help="The time it takes to evaluate a running program as working (in seconds)"
+    default=30,
+    help="The time it takes to evaluate a running program as working (in seconds)",
 )
 parser.add_argument(
-    "-s", "--save", 
-    action="store_true", 
-    help="Saves the output log to a file (otherwise just prints it)"
-)
-parser.add_argument(
-    "-dv", "--depthai-version",
-    type=str,
-    help="Installs specified depthai version for each experiment"
-)
-parser.add_argument(
-    "-e", "--environment-variables",
-    type=str,
-    help="Environment variables to be passed to the script"
-)
-parser.add_argument(
-    "-vd", "--virtual-display",
+    "-s",
+    "--save",
     action="store_true",
-    help="Starts a virtual display for the script to run in"
+    help="Saves the output log to a file (otherwise just prints it)",
+)
+parser.add_argument(
+    "-dv",
+    "--depthai-version",
+    type=str,
+    help="Installs specified depthai version for each experiment",
+)
+parser.add_argument(
+    "-e",
+    "--environment-variables",
+    type=str,
+    help="Environment variables to be passed to the script",
+)
+parser.add_argument(
+    "-vd",
+    "--virtual-display",
+    action="store_true",
+    help="Starts a virtual display for the script to run in",
 )
 args = parser.parse_args()
 
+
 def output(text, f):
     if args.save:
-        f.write(text+"\n")
+        f.write(text + "\n")
     print(text)
+
 
 def setup_venv_exe(dir, requirements_path, f=None):
     env_dir = os.path.join(dir, ".test-venv")
     env_builder = EnvBuilder(clear=True, with_pip=True, system_site_packages=False)
     env_builder.create(env_dir)
-    env_bin = os.path.join(env_dir, 'bin')
-    env_exe = os.path.join(env_bin, 'python3')
+    env_bin = os.path.join(env_dir, "bin")
+    env_exe = os.path.join(env_bin, "python3")
 
     with open(requirements_path, "r") as f:
         requirements = f.readlines()
@@ -74,13 +81,22 @@ def setup_venv_exe(dir, requirements_path, f=None):
                 if "depthai==" in requirement:
                     requirements[i] = "depthai==" + args.depthai_version + "\n"
     try:
-        script = env_exe + " -m pip install --pre " +\
-            "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/ " +\
-            "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/ " +\
-            "".join(requirements)
+        script = (
+            env_exe
+            + " -m pip install --pre "
+            + "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/ "
+            + "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/ "
+            + "".join(requirements)
+        )
         script = script.replace("\n", " ")
-        subprocess.run(script, shell=True, check=True, text=True,
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.run(
+            script,
+            shell=True,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
     except subprocess.CalledProcessError as e:
         output("Requirements could not be downloaded", f)
         lines = e.stdout.split("\n")
@@ -96,6 +112,7 @@ def setup_venv_exe(dir, requirements_path, f=None):
     else:
         output("Requirements installed", f)
         return env_exe
+
 
 def test_directory(dir, f=None):
     main = os.path.join(dir, "main.py")
@@ -114,10 +131,14 @@ def test_directory(dir, f=None):
         if args.virtual_display:
             env["DISPLAY"] = ":99"
         if args.environment_variables:
-            env_vars = dict(var.split('=') for var in args.environment_variables.split())
+            env_vars = dict(
+                var.split("=") for var in args.environment_variables.split()
+            )
             env.update(env_vars)
 
-        process = subprocess.Popen(script, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+        process = subprocess.Popen(
+            script, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env
+        )
         try:
             process.wait(timeout=args.timeout)
         except subprocess.TimeoutExpired:
@@ -138,7 +159,12 @@ def test_directory(dir, f=None):
                     output("Error message:\n" + process_output, f)
                 success = False
             else:
-                output("Main finished successfully under " + str(args.timeout) + " seconds", f)
+                output(
+                    "Main finished successfully under "
+                    + str(args.timeout)
+                    + " seconds",
+                    f,
+                )
                 success = True
         finally:
             process.kill()  # Ensure the process is killed in the finally block
@@ -156,20 +182,32 @@ def test_directory(dir, f=None):
         output("Folder has requirements but not main", f)
         output("----------------------------", f)
         success = False
-    else: # Folder without requirements or main -> continue
+    else:  # Folder without requirements or main -> continue
         success = True
     return success
 
+
 if args.virtual_display:
     print("Ensuring virtual display is set up...")
-    result = subprocess.run(['pgrep', '-f', f'Xvfb :99'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(
+        ["pgrep", "-f", "Xvfb :99"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     if result.returncode != 0:
         print("Starting virtual display...")
-        result = subprocess.run(['which', 'Xvfb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            ["which", "Xvfb"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         if result.returncode != 0:
-            print("Xvfb is not installed on this machine. Please install it and try again.")
+            print(
+                "Xvfb is not installed on this machine. Please install it and try again."
+            )
             sys.exit(1)
-        subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1920x1080x24'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.Popen(
+            ["Xvfb", ":99", "-screen", "0", "1920x1080x24"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+print("Starting test...")
 
 experiments_folder = Path(__file__).parent.parent
 success = True

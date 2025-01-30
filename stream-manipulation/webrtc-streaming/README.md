@@ -13,11 +13,12 @@ python3 -m pip install -r requirements.txt
 ```
 
 [Enable insecure origins to be treated as secure (Chrome)](https://stackoverflow.com/a/58449078/5494277)
-   > To ignore Chrome’s secure origin policy, follow these steps. Navigate to chrome://flags/#unsafely-treat-insecure-origin-as-secure in Chrome.  
-   > Find and enable the Insecure origins treated as secure section (see below). Add any addresses you want to ignore the secure origin policy for. Remember to include the port number too (if required). 
-   ![example](https://i.stack.imgur.com/8HpYF.png)
-   > Save and restart Chrome. 
-   > Remember this is for dev purposes only. The live working app will need to be hosted on https.
+
+> To ignore Chrome’s secure origin policy, follow these steps. Navigate to chrome://flags/#unsafely-treat-insecure-origin-as-secure in Chrome.\
+> Find and enable the Insecure origins treated as secure section (see below). Add any addresses you want to ignore the secure origin policy for. Remember to include the port number too (if required).
+> ![example](https://i.stack.imgur.com/8HpYF.png)
+> Save and restart Chrome.
+> Remember this is for dev purposes only. The live working app will need to be hosted on https.
 
 ## Usage
 

@@ -1,6 +1,6 @@
 # GenE QT GUI
 
-This demo uses [PyQt5](https://pypi.org/project/PyQt5/) to create an interactive GUI displaying frames from DepthAI camera. 
+This demo uses [PyQt5](https://pypi.org/project/PyQt5/) to create an interactive GUI displaying frames from DepthAI camera.
 Application allows switching between RGB and Depth previews and adjusting depth properties dynamically, like enabling Left-Right Check or changing median filtering.
 Additionally, layout is built using [QML](https://doc.qt.io/qt-5/qtqml-index.html)
 

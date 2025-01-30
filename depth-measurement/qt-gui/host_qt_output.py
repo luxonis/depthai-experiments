@@ -2,6 +2,7 @@ import depthai as dai
 from typing import Callable
 import numpy as np
 
+
 class QTOutput(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
@@ -10,9 +11,12 @@ class QTOutput(dai.node.HostNode):
     def terminate(self):
         self.stop = True
 
-    def build(self, preview: dai.Node.Output, disparity: dai.Node.Output, 
-              show_callback: Callable[[np.ndarray, str], None]) -> "QTOutput":
-        
+    def build(
+        self,
+        preview: dai.Node.Output,
+        disparity: dai.Node.Output,
+        show_callback: Callable[[np.ndarray, str], None],
+    ) -> "QTOutput":
         self.link_args(preview, disparity)
         self.sendProcessingToPipeline(True)
         self.show_callback = show_callback

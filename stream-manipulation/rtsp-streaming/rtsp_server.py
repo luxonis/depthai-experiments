@@ -1,15 +1,17 @@
 import gi
-gi.require_version('Gst', '1.0')
-gi.require_version('GstRtspServer', '1.0')
-from gi.repository import Gst, GstRtspServer, GLib
 
-import threading
+gi.require_version("Gst", "1.0")
+gi.require_version("GstRtspServer", "1.0")
+from gi.repository import Gst, GstRtspServer, GLib  # noqa: E402
+
+import threading  # noqa: E402
+
 
 class RtspSystem(GstRtspServer.RTSPMediaFactory):
     def __init__(self, **properties):
         super(RtspSystem, self).__init__(**properties)
         self.data = None
-        self.launch_string = 'appsrc name=source is-live=true block=true format=GST_FORMAT_TIME ! h265parse ! rtph265pay name=pay0 config-interval=1 name=pay0 pt=96'
+        self.launch_string = "appsrc name=source is-live=true block=true format=GST_FORMAT_TIME ! h265parse ! rtph265pay name=pay0 config-interval=1 name=pay0 pt=96"
 
     def send_data(self, data):
         self.data = data
@@ -24,7 +26,9 @@ class RtspSystem(GstRtspServer.RTSPMediaFactory):
 
     def on_need_data(self, src, length):
         if self.data is not None:
-            retval = src.emit('push-buffer', Gst.Buffer.new_wrapped(self.data.tobytes()))
+            retval = src.emit(
+                "push-buffer", Gst.Buffer.new_wrapped(self.data.tobytes())
+            )
             if retval != Gst.FlowReturn.OK:
                 print(retval)
 
@@ -33,8 +37,8 @@ class RtspSystem(GstRtspServer.RTSPMediaFactory):
 
     def do_configure(self, rtsp_media):
         self.number_frames = 0
-        appsrc = rtsp_media.get_element().get_child_by_name('source')
-        appsrc.connect('need-data', self.on_need_data)
+        appsrc = rtsp_media.get_element().get_child_by_name("source")
+        appsrc.connect("need-data", self.on_need_data)
 
 
 class RTSPServer(GstRtspServer.RTSPServer):

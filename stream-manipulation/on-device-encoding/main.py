@@ -4,8 +4,14 @@ import depthai as dai
 from host_encoder import Encoder
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--codec", choices=["h264", "h265", "mjpeg"], default="h264", type=str
-                    , help="Choose video encoding (h264 is default)")
+parser.add_argument(
+    "-c",
+    "--codec",
+    choices=["h264", "h265", "mjpeg"],
+    default="h264",
+    type=str,
+    help="Choose video encoding (h264 is default)",
+)
 args = parser.parse_args()
 
 if args.codec == "h264":
@@ -17,7 +23,6 @@ elif args.codec == "mjpeg":
     encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
 
 with dai.Pipeline() as pipeline:
-
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.ColorCamera)
     cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
@@ -32,12 +37,14 @@ with dai.Pipeline() as pipeline:
         preview=cam.preview,
         stream=video_enc.bitstream,
         codec=args.codec,
-        output_shape=(3840, 2160)
+        output_shape=(3840, 2160),
     )
     encoder.inputs["preview"].setBlocking(False)
     encoder.inputs["preview"].setMaxSize(4)
     encoder.inputs["video_data"].setBlocking(True)
     encoder.inputs["video_data"].setMaxSize(30)
 
-    print(f"Pipeline created. App starting streaming {encoder_profile.name} encoded frames into file video.mp4")
+    print(
+        f"Pipeline created. App starting streaming {encoder_profile.name} encoded frames into file video.mp4"
+    )
     pipeline.run()

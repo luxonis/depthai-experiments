@@ -2,7 +2,7 @@
 
 [Click here](https://docs.luxonis.com/en/latest/pages/tutorials/device-pointcloud) for the **tutorial/blog about this demo**.
 
-This demo uses [custom NN model](file:///home/erik/Luxonis/depthai-docs-website/build/html/pages/tutorials/creating-custom-nn-models.html#run-your-own-cv-functions-on-device) approach to run custom logic - depth to pointcloud conversion - on the OAK camera itself.
+This demo uses \[custom NN model\](file:///home/erik/Luxonis/depthai-docs-website/build/html/pages/tutorials/creating-custom-nn-models.html#run-your-own-cv-functions-on-device) approach to run custom logic - depth to pointcloud conversion - on the OAK camera itself.
 
 The model was inspired by Kornia's [depth_to_3d](https://kornia.readthedocs.io/en/latest/geometry.depth.html?highlight=depth_to_3d#kornia.geometry.depth.depth_to_3d) function, but due to the slow performance, it was then built with pytorch.
 
@@ -15,6 +15,7 @@ The model was inspired by Kornia's [depth_to_3d](https://kornia.readthedocs.io/e
 ```
 python3 -m pip install -r requirements.txt
 ```
+
 Running the command above also tries to install open3D which is required for this example.
 open3D is not supported by all platforms, but is required for pointcloud visualization. Installing open3D on [Python 3.12 is not yet supported](https://stackoverflow.com/questions/62352767/cant-install-open3d-libraries-errorcould-not-find-a-version-that-satisfies-th).
 

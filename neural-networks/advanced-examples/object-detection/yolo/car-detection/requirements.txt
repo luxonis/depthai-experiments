@@ -1,5 +1,0 @@
-depthai~=3.0a1
-depthai-nodes~=0.1.1
-gdown>=4.4
-xmltodict==0.13.0
-numpy~=2.0

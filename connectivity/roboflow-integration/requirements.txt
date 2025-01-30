@@ -1,4 +1,4 @@
-depthai~=3.0a1
+depthai==3.0a11
 numpy~=2.0
 opencv-python==4.10.0.84
 Pillow==9.3.0

@@ -1,13 +1,14 @@
 from pathlib import Path
 import depthai as dai
-import blobconverter
 
 # Change the IP to your MQTT broker!
 MQTT_BROKER = "test.mosquitto.org"
 MQTT_BROKER_PORT = 1883
 MQTT_TOPIC = "test_topic/detections"
 
-model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300")
+model_description = dai.NNModelDescription(
+    modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300"
+)
 archive_path = dai.getModelFromZoo(model_description)
 nn_archive = dai.NNArchive(archive_path)
 
@@ -22,11 +23,11 @@ with dai.Pipeline() as pipeline:
     # nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
     nn.setNNArchive(nn_archive)
     camRgb.preview.link(nn.input)
-    
+
     script = pipeline.create(dai.node.Script)
     script.setProcessor(dai.ProcessorType.LEON_CSS)
 
-    nn.out.link(script.inputs['detections'])
+    nn.out.link(script.inputs["detections"])
     script_text = f"""
     import time
 
@@ -53,5 +54,5 @@ with dai.Pipeline() as pipeline:
     with open(Path(__file__).parent / "paho-mqtt.py", "r") as f:
         paho_script = f.read()
         script.setScript(f"{paho_script}\n{script_text}")
-    print('Connected to OAK')
+    print("Connected to OAK")
     pipeline.run()
