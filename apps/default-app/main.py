@@ -73,11 +73,13 @@ with dai.Pipeline(device) as pipeline:
                 cam_mono_2 = feature.socket
                 break
     if cam_mono_1 and cam_mono_2:
+        device.setIrLaserDotProjectorIntensity(1)
         left_cam = pipeline.create(dai.node.Camera).build(cam_mono_1)
         right_cam = pipeline.create(dai.node.Camera).build(cam_mono_2)
         stereo = pipeline.create(dai.node.StereoDepth).build(
             left=left_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
             right=right_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
+            presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
             presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
         )
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
