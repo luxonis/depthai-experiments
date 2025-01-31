@@ -1,4 +1,5 @@
 import cv2
+import cv2
 import depthai as dai
 from utils.arguments import initialize_argparser
 from utils.depth_color_transform import DepthColorTransform
