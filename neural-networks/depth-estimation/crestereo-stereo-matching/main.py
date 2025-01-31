@@ -89,7 +89,7 @@ with dai.Pipeline(device) as pipeline:
     disparity_coloring = pipeline.create(DepthColorTransform).build(stereo.disparity)
     disparity_coloring.setColormap(cv2.COLORMAP_PLASMA)
 
-    visualizer.addTopic("Stereo Disparity", disparity_coloring.output)
+    visualizer.addTopic("Stereo Disparity", disparity_coloring.out)
     visualizer.addTopic("NN", nn.out)
 
     print("Pipeline created.")
