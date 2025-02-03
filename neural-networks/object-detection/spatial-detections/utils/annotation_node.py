@@ -31,9 +31,9 @@ class AnnotationNode(dai.node.HostNode):
         annotations = (
             dai.ImgAnnotations()
         )  # custom annotations for drawing bbox and displaying label + spatial info
+        annotation = dai.ImgAnnotation()
 
         for ix, detection in enumerate(detections_list):
-            annotation = dai.ImgAnnotation()
             xmin, ymin, xmax, ymax = (
                 detection.xmin,
                 detection.ymin,
@@ -61,7 +61,7 @@ class AnnotationNode(dai.node.HostNode):
             text.textColor = TEXT_COLOR
             annotation.texts.append(text)
 
-            annotations.annotations.append(annotation)
+        annotations.annotations.append(annotation)
         annotations.setTimestamp(detections_message.getTimestamp())
         annotations.setSequenceNum(detections_message.getSequenceNum())
 
