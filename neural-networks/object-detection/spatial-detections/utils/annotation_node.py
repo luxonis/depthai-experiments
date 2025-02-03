@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.helpers.constants import OUTLINE_COLOR, TEXT_COLOR
+from depthai_nodes.ml.helpers.constants import OUTLINE_COLOR
 from typing import List
 
 
@@ -58,7 +58,7 @@ class AnnotationNode(dai.node.HostNode):
             text.position = dai.Point2f(x=xmin + 0.01, y=ymin + 0.2, normalized=True)
             text.text = f"{self.labels[detection.label]} {int(detection.confidence * 100)}% \nx: {detection.spatialCoordinates.x:.2f}mm \ny: {detection.spatialCoordinates.y:.2f}mm \nz:{detection.spatialCoordinates.z:.2f}mm"
             text.fontSize = 12
-            text.textColor = TEXT_COLOR
+            text.textColor = dai.Color(1, 1, 1, 1)
             annotation.texts.append(text)
 
         annotations.annotations.append(annotation)
