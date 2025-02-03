@@ -4,7 +4,7 @@ This experiment demonstrates how to manually control different camera parameters
 
 ## Demo
 
-TODO
+![example](media/example.gif)
 
 ## Installation
 
