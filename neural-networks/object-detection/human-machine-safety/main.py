@@ -1,7 +1,7 @@
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork, MPPalmDetectionParser
+from depthai_nodes.nodes import DepthMerger
 from utils.arguments import initialize_argparser
-from utils.depth_merger import DepthMerger
 from utils.adapter import ParserBridge
 from utils.annotation_node import AnnotationNode
 from utils.detection_merger import DetectionMerger
@@ -107,12 +107,14 @@ with dai.Pipeline(device) as pipeline:
         output_depth=stereo.depth,
         calib_data=device.readCalibration2(),
         depth_alignment_socket=dai.CameraBoardSocket.CAM_A,
+        shrinking_factor=0.1,
     )
     palm_depth_merger = pipeline.create(DepthMerger).build(
         output_2d=adapter.out,
         output_depth=stereo.depth,
         calib_data=device.readCalibration2(),
         depth_alignment_socket=dai.CameraBoardSocket.CAM_A,
+        shrinking_factor=0.1,
     )
 
     # merge both detections into one message

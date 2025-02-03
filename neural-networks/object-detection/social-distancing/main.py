@@ -1,6 +1,6 @@
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
-from utils.depth_merger import DepthMerger
+from depthai_nodes.nodes import DepthMerger
 from utils.host_bird_eye_view import BirdsEyeView
 from utils.measure_object_distance import MeasureObjectDistance
 from host_social_distancing import SocialDistancing
@@ -66,6 +66,7 @@ with dai.Pipeline(device) as pipeline:
         output_depth=stereo.depth,
         calib_data=device.readCalibration2(),
         depth_alignment_socket=dai.CameraBoardSocket.CAM_A,
+        shrinking_factor=0.1,
     )
 
     bird_eye_view = pipeline.create(BirdsEyeView).build(depth_merger.output)
