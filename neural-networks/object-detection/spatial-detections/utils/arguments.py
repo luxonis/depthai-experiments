@@ -23,6 +23,15 @@ def initialize_argparser():
         type=float,
     )
 
+    parser.add_argument(
+        "-m",
+        "--model",
+        help="Model reference to use for object detection.",
+        required=False,
+        default="luxonis/yolov6-nano:r2-coco-512x288",
+        type=str,
+    )
+
     args = parser.parse_args()
 
     return parser, args

@@ -5,7 +5,7 @@ from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
 
-model_reference = "luxonis/yolov6-nano:r2-coco-512x288"
+model_reference: str = args.model
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
@@ -58,5 +58,6 @@ with dai.Pipeline(device) as pipeline:
     while pipeline.isRunning():
         key = visualizer.waitKey(1)
         if key == ord("q"):
+            pipeline.stop()
             break
     print("Pipeline finished.")
