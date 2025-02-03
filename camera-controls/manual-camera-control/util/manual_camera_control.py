@@ -21,6 +21,8 @@ WB_MAX = 12000
 
 
 class OtherControls(Enum):
+    EXPOSURE_TIME = "1"
+    SENSITIVITY_ISO = "2"
     AWB_MODE = "3"
     AE_COMPENSATION = "4"
     ANTI_BANDING_MODE = "5"
@@ -31,6 +33,8 @@ class OtherControls(Enum):
     SHARPNESS = "0"
     LUMA_DENOISE = "]"
     CHROMA_DENOISE = "["
+    WHITE_BALANCE = "o"
+    LENS_POSITION = "p"
 
 
 def clamp(num, v0, v1):
@@ -111,56 +115,15 @@ class ManualCameraControl(dai.node.HostNode):
                 ctrl.setAutoExposureEnable()
                 print("Autoexposure enable")
                 self._ae_enabled = True
-            case "i" | "o" | "k" | "l":
-                if key_str == "i":
-                    self._exp_time -= EXP_STEP
-                elif key_str == "o":
-                    self._exp_time += EXP_STEP
-                elif key_str == "k":
-                    self._sens_iso -= ISO_STEP
-                elif key_str == "l":
-                    self._sens_iso += ISO_STEP
-                self._exp_time = clamp(self._exp_time, EXP_MIN, self._exp_max)
-                self._sens_iso = clamp(self._sens_iso, SENS_MIN, SENS_MAX)
-                ctrl.setManualExposure(self._exp_time, self._sens_iso)
-                self._ae_enabled = False
-                print(
-                    "Setting manual exposure, time:",
-                    self._exp_time,
-                    "iso:",
-                    self._sens_iso,
-                )
-            case "n" | "m":
-                if key_str == "n":
-                    self._wb_manual -= WB_STEP
-                elif key_str == "m":
-                    self._wb_manual += WB_STEP
-                self._wb_manual = clamp(self._wb_manual, WB_MIN, WB_MAX)
-                ctrl.setManualWhiteBalance(self._wb_manual)
-
-                if self._awb_lock:
-                    self._awb_lock = False
-                    ctrl.setAutoWhiteBalanceLock(False)
-                print(
-                    "Setting manual white balance, temperature: ", self._wb_manual, "K"
-                )
-            case "," | ".":
-                if key == ord(","):
-                    self._lens_pos -= LENS_STEP
-                elif key == ord("."):
-                    self._lens_pos += LENS_STEP
-                self._lens_pos = clamp(self._lens_pos, LENS_MIN, LENS_MAX)
-                ctrl.setManualFocus(self._lens_pos)
-                print("Setting manual focus, lens position:", self._lens_pos)
-            case "1":
+            case "w":
                 self._awb_lock = not self._awb_lock
                 ctrl.setAutoWhiteBalanceLock(self._awb_lock)
                 print("Auto white balance lock:", self._awb_lock)
-            case "2":
+            case "r":
                 self._ae_lock = not self._ae_lock
                 ctrl.setAutoExposureLock(self._ae_lock)
                 print("Auto exposure lock:", self._ae_lock)
-            case key_str if key_str in "34567890[]":
+            case key_str if key_str in [i.value for i in OtherControls]:
                 self._selected_control = OtherControls(key_str)
                 print("Selected control:", self._selected_control.name)
             case "-" | "_":
@@ -175,6 +138,30 @@ class ManualCameraControl(dai.node.HostNode):
             case None:
                 print("Please select a control first using keys 3..9, 0, [ ]")
                 return ctrl
+            case OtherControls.EXPOSURE_TIME:
+                self._ae_enabled = False
+                self._exp_time = clamp(
+                    self._exp_time + change * EXP_STEP, EXP_MIN, self._exp_max
+                )
+                ctrl.setManualExposure(self._exp_time, self._sens_iso)
+                print(
+                    "Setting manual exposure, time:",
+                    self._exp_time,
+                    "iso:",
+                    self._sens_iso,
+                )
+            case OtherControls.SENSITIVITY_ISO:
+                self._ae_enabled = False
+                self._sens_iso = clamp(
+                    self._sens_iso + change * ISO_STEP, SENS_MIN, SENS_MAX
+                )
+                ctrl.setManualExposure(self._exp_time, self._sens_iso)
+                print(
+                    "Setting manual exposure, time:",
+                    self._exp_time,
+                    "iso:",
+                    self._sens_iso,
+                )
             case OtherControls.AWB_MODE:
                 count = len(list(dai.CameraControl.AutoWhiteBalanceMode.__members__))
                 self._awb_mode_idx = (self._awb_mode_idx + change) % count
@@ -217,6 +204,24 @@ class ManualCameraControl(dai.node.HostNode):
                 self._sharpness = clamp(self._sharpness + change, 0, 4)
                 ctrl.setSharpness(self._sharpness)
                 print("Sharpness:", self._sharpness)
+            case OtherControls.WHITE_BALANCE:
+                self._wb_manual = clamp(
+                    self._wb_manual + change * WB_STEP, WB_MIN, WB_MAX
+                )
+                ctrl.setManualWhiteBalance(self._wb_manual)
+
+                if self._awb_lock:
+                    self._awb_lock = False
+                    ctrl.setAutoWhiteBalanceLock(False)
+                print(
+                    "Setting manual white balance, temperature: ", self._wb_manual, "K"
+                )
+            case OtherControls.LENS_POSITION:
+                self._lens_pos = clamp(
+                    self._lens_pos + change * LENS_STEP, LENS_MIN, LENS_MAX
+                )
+                ctrl.setManualFocus(self._lens_pos)
+                print("Setting manual focus, lens position:", self._lens_pos)
             case OtherControls.LUMA_DENOISE:
                 self._luma_denoise = clamp(self._luma_denoise + change, 0, 4)
                 ctrl.setLumaDenoise(self._luma_denoise)
@@ -234,11 +239,18 @@ class ManualCameraControl(dai.node.HostNode):
             ("Camera Configuration (Keyboard controls)", False),
             (f"Autoexposure (e): {self._ae_enabled}", False),
             (f"Autofocus (t, f): {self._af_mode.name}", False),
-            (f"Exposure time (i, o): {self._exp_time}", False),
-            (f"Sensitivity ISO (k, l): {self._sens_iso}", False),
-            (f"White balance (n, m): {self._wb_manual}", False),
-            (f"AWB lock (1): {self._awb_lock}", False),
-            (f"AE lock (2): {self._ae_lock}", False),
+            (f"AWB lock (w): {self._awb_lock}", False),
+            (f"AE lock (r): {self._ae_lock}", False),
+            ("", False),
+            ("Manual controls:", False),
+            (
+                f"Exposure time (1): {self._exp_time}",
+                self._selected_control == OtherControls.EXPOSURE_TIME,
+            ),
+            (
+                f"Sensitivity ISO (2): {self._sens_iso}",
+                self._selected_control == OtherControls.SENSITIVITY_ISO,
+            ),
             (
                 f"AWB mode (3): {dai.CameraControl.AutoWhiteBalanceMode(self._awb_mode_idx).name}",
                 self._selected_control == OtherControls.AWB_MODE,
@@ -270,6 +282,14 @@ class ManualCameraControl(dai.node.HostNode):
             (
                 f"Sharpness (0): {self._sharpness}",
                 self._selected_control == OtherControls.SHARPNESS,
+            ),
+            (
+                f"White balance (o): {self._wb_manual}",
+                self._selected_control == OtherControls.WHITE_BALANCE,
+            ),
+            (
+                f"Lens position (p): {self._lens_pos}",
+                self._selected_control == OtherControls.LENS_POSITION,
             ),
             (
                 f"Chroma denoise ([): {self._chroma_denoise}",
