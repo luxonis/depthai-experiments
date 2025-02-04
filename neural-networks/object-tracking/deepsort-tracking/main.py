@@ -1,10 +1,10 @@
 from pathlib import Path
 
-# import blobconverter
 import depthai as dai
 from deepsort_tracking import DeepsortTracking
 from depthai_nodes import ParsingNeuralNetwork
 from detections_recognitions_sync import DetectionsRecognitionsSync
+from utils.arguments import initialize_argparser
 
 LABELS = [
     "Person",
@@ -89,10 +89,16 @@ LABELS = [
     "Toothbrush",
 ]
 
-device = dai.Device()
+
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
 
 with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
+
     detection_model_description = dai.NNModelDescription(
         "luxonis/yolov6-nano:r2-coco-512x288", platform=device.getPlatform().name
     )
@@ -106,30 +112,57 @@ with dai.Pipeline(device) as pipeline:
     recognition_model_archive = dai.NNArchive(
         dai.getModelFromZoo(recognition_model_description)
     )
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(512, 288)
-    cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam.setFps(15)
-    cam.setInterleaved(False)
+
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        imageManip = pipeline.create(dai.node.ImageManipV2)
+        imageManip.setMaxOutputFrameSize(
+            detection_model_archive.getInputWidth()
+            * detection_model_archive.getInputHeight()
+            * 3
+        )
+        imageManip.initialConfig.setOutputSize(
+            detection_model_archive.getInputWidth(),
+            detection_model_archive.getInputHeight(),
+        )
+        imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+        if device.getPlatform().name == "RVC4":
+            imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+        replay.out.link(imageManip.inputImage)
+        cam_out = imageManip.out
+    else:
+        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        cam_out = cam.requestOutput(
+            size=(
+                detection_model_archive.getInputWidth(),
+                detection_model_archive.getInputHeight(),
+            ),
+            type=dai.ImgFrame.Type.BGR888p,
+            fps=args.fps_limit,
+        )
 
     detection_nn = pipeline.create(ParsingNeuralNetwork).build(
-        cam.preview, detection_model_archive
+        cam_out, detection_model_archive
     )
 
     script = pipeline.create(dai.node.Script)
     detection_nn.out.link(script.inputs["detections"])
-    cam.preview.link(script.inputs["preview"])
+    cam_out.link(script.inputs["preview"])
     script.setScriptPath(Path(__file__).parent / "script.py")
 
     recognition_manip = pipeline.create(dai.node.ImageManip)
     recognition_manip.initialConfig.setResize(256, 128)
     recognition_manip.inputConfig.setWaitForMessage(True)
-    # recognition_manip.setMaxOutputFrameSize(256*256*3)
     script.outputs["manip_cfg"].link(recognition_manip.inputConfig)
     script.outputs["manip_img"].link(recognition_manip.inputImage)
 
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    # recognition_nn.setBlob(blobconverter.from_zoo("mobilenetv2_imagenet_embedder_224x224", zoo_type="depthai", shaves=6))
     recognition_nn.setNNArchive(recognition_model_archive)
     recognition_manip.out.link(recognition_nn.input)
     recognition_nn.input.setBlocking(False)
@@ -140,7 +173,7 @@ with dai.Pipeline(device) as pipeline:
     recognition_nn.out.link(detection_recognitions_sync.input_recognitions)
 
     deepsort_tracking = pipeline.create(DeepsortTracking).build(
-        cam.video, detection_recognitions_sync.output, LABELS
+        cam_out, detection_recognitions_sync.output, LABELS
     )
 
     pipeline.run()
