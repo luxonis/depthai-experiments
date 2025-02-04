@@ -3,9 +3,8 @@ from pathlib import Path
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
-
-from host_node.object_counter import ObjectCounter
-from host_node.parser_bridge import ParserBridge
+from utils.object_counter import ObjectCounter
+from utils.parser_bridge import ParserBridge
 
 _, args = initialize_argparser()
 
