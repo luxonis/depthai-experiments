@@ -4,6 +4,7 @@ import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.deepsort_tracking import DeepsortTracking
+from utils.detection_crop_maker import DetectionCropMaker
 from utils.detections_recognitions_sync import DetectionsRecognitionsSync
 
 LABELS = [
@@ -147,26 +148,25 @@ with dai.Pipeline(device) as pipeline:
             fps=args.fps_limit,
         )
 
-    detection_nn = pipeline.create(ParsingNeuralNetwork).build(
+    detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         cam_out, detection_model_archive
     )
 
-    script = pipeline.create(dai.node.Script)
-    detection_nn.out.link(script.inputs["detections"])
-    cam_out.link(script.inputs["preview"])
-    script.setScriptPath(Path(__file__).parent / "utils/script.py")
-
-    recognition_manip = pipeline.create(dai.node.ImageManip)
-    recognition_manip.initialConfig.setResize(256, 128)
+    crop_maker = pipeline.create(DetectionCropMaker).build(
+        detection_nn.out, cam_out, recognition_model_archive.getInputSize()
+    )
+    crop_maker.set_confidence_threshold(0.5)
+    recognition_manip = pipeline.create(dai.node.ImageManipV2)
+    recognition_manip.initialConfig.setOutputSize(
+        *recognition_model_archive.getInputSize()
+    )
     recognition_manip.inputConfig.setWaitForMessage(True)
-    script.outputs["manip_cfg"].link(recognition_manip.inputConfig)
-    script.outputs["manip_img"].link(recognition_manip.inputImage)
+    crop_maker.out_cfg.link(recognition_manip.inputConfig)
+    crop_maker.out_img.link(recognition_manip.inputImage)
 
-    recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setNNArchive(recognition_model_archive)
-    recognition_manip.out.link(recognition_nn.input)
-    recognition_nn.input.setBlocking(False)
-    recognition_nn.input.setMaxSize(2)
+    recognition_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        recognition_manip.out, recognition_model_archive
+    )
 
     detection_recognitions_sync = pipeline.create(DetectionsRecognitionsSync).build()
     detection_nn.out.link(detection_recognitions_sync.input_detections)
