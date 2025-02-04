@@ -35,7 +35,29 @@ This will run the manual camera control experiment with the default device and c
 
 ### Standalone Mode
 
-TODO
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+and run the example using the `run_standalone.py` script:
+
+```bash
+python3 run_standalone.py \
+    --device <DEVICE IP> \
+    --fps_limit <FPS>
+```
+
+The arguments are the same as in the Peripheral mode.
+
+#### Example
+
+```bash
+python3 run_standalone.py \
+    --fps_limit 20 \
+```
 
 ### Keyboard Controls
 
