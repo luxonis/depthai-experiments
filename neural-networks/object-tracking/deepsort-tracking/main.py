@@ -89,22 +89,22 @@ LABELS = [
 ]
 
 device = dai.Device()
-detection_model_description = dai.NNModelDescription(
-    modelSlug="luxonis/yolov6-nano",
-    platform=device.getPlatform().name,
-    modelVersionSlug="r2-coco-512x288",
-)
-detection_archive_path = dai.getModelFromZoo(detection_model_description)
 
-recognition_model_description = dai.NNModelDescription(
-    modelSlug="luxonis/osnet",
-    platform="RVC2",
-    modelVersionSlug="imagenet-128x256",
-)
-recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
-recognition_nn_archive = dai.NNArchive(recognition_archive_path)
 
 with dai.Pipeline(device) as pipeline:
+    detection_model_description = dai.NNModelDescription(
+        "luxonis/yolov6-nano:r2-coco-512x288", platform=device.getPlatform().name
+    )
+    detection_model_archive = dai.NNArchive(
+        dai.getModelFromZoo(detection_model_description)
+    )
+
+    recognition_model_description = dai.NNModelDescription(
+        "luxonis/osnet:imagenet-128x256", platform=device.getPlatform().name
+    )
+    recognition_model_archive = dai.NNArchive(
+        dai.getModelFromZoo(recognition_model_description)
+    )
     cam = pipeline.create(dai.node.ColorCamera)
     cam.setPreviewSize(512, 288)
     cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
@@ -112,7 +112,7 @@ with dai.Pipeline(device) as pipeline:
     cam.setInterleaved(False)
 
     detection_nn = pipeline.create(dai.node.DetectionNetwork).build(
-        cam.preview, dai.NNArchive(detection_archive_path)
+        cam.preview, detection_model_archive
     )
     detection_nn.setConfidenceThreshold(0.5)
 
@@ -130,7 +130,7 @@ with dai.Pipeline(device) as pipeline:
 
     recognition_nn = pipeline.create(dai.node.NeuralNetwork)
     # recognition_nn.setBlob(blobconverter.from_zoo("mobilenetv2_imagenet_embedder_224x224", zoo_type="depthai", shaves=6))
-    recognition_nn.setNNArchive(recognition_nn_archive)
+    recognition_nn.setNNArchive(recognition_model_archive)
     recognition_manip.out.link(recognition_nn.input)
     recognition_nn.input.setBlocking(False)
     recognition_nn.input.setMaxSize(2)
