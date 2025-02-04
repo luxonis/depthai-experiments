@@ -2,7 +2,6 @@ from pathlib import Path
 
 # import blobconverter
 import depthai as dai
-
 from deepsort_tracking import DeepsortTracking
 from detections_recognitions_sync import DetectionsRecognitionsSync
 
@@ -91,16 +90,16 @@ LABELS = [
 
 device = dai.Device()
 detection_model_description = dai.NNModelDescription(
-    modelSlug="yolov6-nano",
+    modelSlug="luxonis/yolov6-nano",
     platform=device.getPlatform().name,
     modelVersionSlug="r2-coco-512x288",
 )
 detection_archive_path = dai.getModelFromZoo(detection_model_description)
 
 recognition_model_description = dai.NNModelDescription(
-    modelSlug="mobilenetv2-imagenet-embedder",
+    modelSlug="luxonis/osnet",
     platform="RVC2",
-    modelVersionSlug="224x224",
+    modelVersionSlug="imagenet-128x256",
 )
 recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
 recognition_nn_archive = dai.NNArchive(recognition_archive_path)
@@ -123,7 +122,7 @@ with dai.Pipeline(device) as pipeline:
     script.setScriptPath(Path(__file__).parent / "script.py")
 
     recognition_manip = pipeline.create(dai.node.ImageManip)
-    recognition_manip.initialConfig.setResize(224, 224)
+    recognition_manip.initialConfig.setResize(256, 128)
     recognition_manip.inputConfig.setWaitForMessage(True)
     # recognition_manip.setMaxOutputFrameSize(256*256*3)
     script.outputs["manip_cfg"].link(recognition_manip.inputConfig)

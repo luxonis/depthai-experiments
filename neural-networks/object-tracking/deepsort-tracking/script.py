@@ -55,7 +55,7 @@ while True:
             cfg = ImageManipConfig()
             correct_bb(det)
             cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
-            cfg.setResize(224, 224)
+            cfg.setResize(128, 256)
             cfg.setKeepAspectRatio(False)
             node.io["manip_cfg"].send(cfg)
             node.io["manip_img"].send(img)
