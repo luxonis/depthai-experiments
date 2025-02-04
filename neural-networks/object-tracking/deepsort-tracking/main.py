@@ -3,6 +3,7 @@ from pathlib import Path
 # import blobconverter
 import depthai as dai
 from deepsort_tracking import DeepsortTracking
+from depthai_nodes import ParsingNeuralNetwork
 from detections_recognitions_sync import DetectionsRecognitionsSync
 
 LABELS = [
@@ -111,10 +112,9 @@ with dai.Pipeline(device) as pipeline:
     cam.setFps(15)
     cam.setInterleaved(False)
 
-    detection_nn = pipeline.create(dai.node.DetectionNetwork).build(
+    detection_nn = pipeline.create(ParsingNeuralNetwork).build(
         cam.preview, detection_model_archive
     )
-    detection_nn.setConfidenceThreshold(0.5)
 
     script = pipeline.create(dai.node.Script)
     detection_nn.out.link(script.inputs["detections"])
