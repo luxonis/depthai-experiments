@@ -21,16 +21,16 @@ with dai.Pipeline(device) as pipeline:
 
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_out = cam.requestOutput(
-        nn_archive.getInputSize(), type=dai.ImgFrame.Type.BGR888p, fps=args.fps_limit
+        nn_archive.getInputSize(), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     left_out = left.requestOutput(
-        nn_archive.getInputSize(), type=dai.ImgFrame.Type.BGR888p, fps=args.fps_limit
+        nn_archive.getInputSize(), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
     right_out = right.requestOutput(
-        nn_archive.getInputSize(), type=dai.ImgFrame.Type.BGR888p, fps=args.fps_limit
+        nn_archive.getInputSize(), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
 
     stereo = pipeline.create(dai.node.StereoDepth).build(left=left_out, right=right_out)
@@ -40,8 +40,8 @@ with dai.Pipeline(device) as pipeline:
     stereo.setRectification(True)
     stereo.setExtendedDisparity(True)
 
-    face_det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        color_out, nn_archive
+    face_det_nn = pipeline.create(ParsingNeuralNetwork).build(
+        cam, nn_archive
     )
     depth_merger = pipeline.create(DepthMerger).build(
         face_det_nn.out, stereo.depth, device.readCalibration2()
