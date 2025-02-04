@@ -6,7 +6,7 @@ class DetectedRecognitions(dai.Buffer):
         self, detections: dai.ImgDetections, nn_data: list[dai.NNData]
     ) -> None:
         super().__init__(0)
-        self.detections: dai.ImgDetections = detections
+        self.img_detections: dai.ImgDetections = detections
         self.nn_data: list[dai.NNData] = nn_data
 
         self.setTimestampDevice(detections.getTimestampDevice())

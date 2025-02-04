@@ -1,12 +1,14 @@
 import colorsys
-from enum import Enum
 import math
+from dataclasses import dataclass
+from enum import Enum
+
 import cv2
 import depthai as dai
 import numpy as np
-from dataclasses import dataclass
-from detected_recognitions import DetectedRecognitions
 from deep_sort_realtime.deepsort_tracker import DeepSort
+
+from .detected_recognitions import DetectedRecognitions
 
 
 @dataclass
@@ -64,7 +66,7 @@ class DeepsortTracking(dai.node.HostNode):
     ) -> None:
         frame = img_frame.getCvFrame()
         assert isinstance(detected_recognitions, DetectedRecognitions)
-        detections = detected_recognitions.detections.detections
+        detections = detected_recognitions.img_detections.detections
         recognitions = detected_recognitions.nn_data
 
         if recognitions:
@@ -84,7 +86,7 @@ class DeepsortTracking(dai.node.HostNode):
                 self._draw_bb(det, frame, colored_label.color)
                 self._draw_text(
                     det,
-                    f"{colored_label.label} {det.confidence*100:.2f}%",
+                    f"{colored_label.label} {det.confidence * 100:.2f}%",
                     frame,
                     TextPosition.TOP_LEFT,
                 )

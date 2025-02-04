@@ -1,10 +1,10 @@
 from pathlib import Path
 
 import depthai as dai
-from deepsort_tracking import DeepsortTracking
 from depthai_nodes import ParsingNeuralNetwork
-from detections_recognitions_sync import DetectionsRecognitionsSync
 from utils.arguments import initialize_argparser
+from utils.deepsort_tracking import DeepsortTracking
+from utils.detections_recognitions_sync import DetectionsRecognitionsSync
 
 LABELS = [
     "Person",
@@ -154,7 +154,7 @@ with dai.Pipeline(device) as pipeline:
     script = pipeline.create(dai.node.Script)
     detection_nn.out.link(script.inputs["detections"])
     cam_out.link(script.inputs["preview"])
-    script.setScriptPath(Path(__file__).parent / "script.py")
+    script.setScriptPath(Path(__file__).parent / "utils/script.py")
 
     recognition_manip = pipeline.create(dai.node.ImageManip)
     recognition_manip.initialConfig.setResize(256, 128)

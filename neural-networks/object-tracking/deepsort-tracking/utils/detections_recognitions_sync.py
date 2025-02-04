@@ -1,7 +1,9 @@
-from queue import PriorityQueue
 import time
+from queue import PriorityQueue
+
 import depthai as dai
-from detected_recognitions import DetectedRecognitions
+
+from .detected_recognitions import DetectedRecognitions
 
 
 class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
@@ -31,17 +33,20 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
             input_recognitions = self.input_recognitions.tryGet()
             if input_recognitions:
                 self._add_recognition(input_recognitions)
+                self._send_ready_data()
 
             input_detections = self.input_detections.tryGet()
             if input_detections:
                 self._add_detection(input_detections)
+                self._send_ready_data()
 
-            if input_recognitions or input_detections:
-                ready_data = self._pop_ready_data()
-                if ready_data:
-                    self._clear_old_data(ready_data)
-                    self.output.send(ready_data)
             time.sleep(1 / self.INPUT_CHECKS_PER_FPS / self._camera_fps)
+
+    def _send_ready_data(self) -> None:
+        ready_data = self._pop_ready_data()
+        if ready_data:
+            self._clear_old_data(ready_data)
+            self.output.send(ready_data)
 
     def _add_recognition(self, recognition: dai.NNData) -> None:
         recognition_ts = self._get_total_seconds_ts(recognition)
