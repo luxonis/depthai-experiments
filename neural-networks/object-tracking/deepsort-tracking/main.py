@@ -7,90 +7,6 @@ from utils.deepsort_tracking import DeepsortTracking
 from utils.detection_crop_maker import DetectionCropMaker
 from utils.detections_recognitions_sync import DetectionsRecognitionsSync
 
-LABELS = [
-    "Person",
-    "Bicycle",
-    "Car",
-    "Motorbike",
-    "Aeroplane",
-    "Bus",
-    "Train",
-    "Truck",
-    "Boat",
-    "Traffic Light",
-    "Fire Hydrant",
-    "Stop Sign",
-    "Parking Meter",
-    "Bench",
-    "Bird",
-    "Cat",
-    "Dog",
-    "Horse",
-    "Sheep",
-    "Cow",
-    "Elephant",
-    "Bear",
-    "Zebra",
-    "Giraffe",
-    "Backpack",
-    "Umbrella",
-    "Handbag",
-    "Tie",
-    "Suitcase",
-    "Frisbee",
-    "Skis",
-    "Snowboard",
-    "Sports Ball",
-    "Kite",
-    "Baseball Bat",
-    "Baseball Glove",
-    "Skateboard",
-    "Surfboard",
-    "Tennis Racket",
-    "Bottle",
-    "Wine Glass",
-    "Cup",
-    "Fork",
-    "Knife",
-    "Spoon",
-    "Bowl",
-    "Banana",
-    "Apple",
-    "Sandwich",
-    "Orange",
-    "Broccoli",
-    "Carrot",
-    "Hot Dog",
-    "Pizza",
-    "Donut",
-    "Cake",
-    "Chair",
-    "Sofa",
-    "Pottedplant",
-    "Bed",
-    "Diningtable",
-    "Toilet",
-    "Tvmonitor",
-    "Laptop",
-    "Mouse",
-    "Remote",
-    "Keyboard",
-    "Cell Phone",
-    "Microwave",
-    "Oven",
-    "Toaster",
-    "Sink",
-    "Refrigerator",
-    "Book",
-    "Clock",
-    "Vase",
-    "Scissors",
-    "Teddy Bear",
-    "Hair Drier",
-    "Toothbrush",
-]
-
-
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
@@ -122,38 +38,36 @@ with dai.Pipeline(device) as pipeline:
         if args.fps_limit:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
-        imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            detection_model_archive.getInputWidth()
-            * detection_model_archive.getInputHeight()
-            * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            detection_model_archive.getInputWidth(),
-            detection_model_archive.getInputHeight(),
-        )
-        imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-        if device.getPlatform().name == "RVC4":
-            imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
-        replay.out.link(imageManip.inputImage)
-        cam_out = imageManip.out
+        cam_out = replay.out
     else:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
         cam_out = cam.requestOutput(
-            size=(
-                detection_model_archive.getInputWidth(),
-                detection_model_archive.getInputHeight(),
-            ),
-            type=dai.ImgFrame.Type.BGR888p,
+            size=(1920, 1080),
+            type=dai.ImgFrame.Type.NV12,
             fps=args.fps_limit,
         )
+    detection_resize = pipeline.create(dai.node.ImageManipV2)
+    detection_resize.setMaxOutputFrameSize(
+        detection_model_archive.getInputWidth()
+        * detection_model_archive.getInputHeight()
+        * 3
+    )
+    detection_resize.initialConfig.setOutputSize(
+        detection_model_archive.getInputWidth(),
+        detection_model_archive.getInputHeight(),
+        dai.ImageManipConfigV2.ResizeMode.STRETCH,
+    )
+    detection_resize.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    if device.getPlatform().name == "RVC4":
+        detection_resize.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+    cam_out.link(detection_resize.inputImage)
 
     detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        cam_out, detection_model_archive
+        detection_resize.out, detection_model_archive
     )
 
     crop_maker = pipeline.create(DetectionCropMaker).build(
-        detection_nn.out, cam_out, recognition_model_archive.getInputSize()
+        detection_nn.out, detection_resize.out, recognition_model_archive.getInputSize()
     )
     crop_maker.set_confidence_threshold(0.5)
     recognition_manip = pipeline.create(dai.node.ImageManipV2)
@@ -173,7 +87,19 @@ with dai.Pipeline(device) as pipeline:
     recognition_nn.out.link(detection_recognitions_sync.input_recognitions)
 
     deepsort_tracking = pipeline.create(DeepsortTracking).build(
-        cam_out, detection_recognitions_sync.output, LABELS
+        detection_resize.out, detection_recognitions_sync.output
     )
 
-    pipeline.run()
+    visualizer.addTopic("Video", cam_out, "images")
+    visualizer.addTopic("Detections", deepsort_tracking.out, "images")
+
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            pipeline.stop()
+            break
