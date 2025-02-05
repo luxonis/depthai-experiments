@@ -87,7 +87,7 @@ with dai.Pipeline(device) as pipeline:
     recognition_nn.out.link(detection_recognitions_sync.input_recognitions)
 
     deepsort_tracking = pipeline.create(DeepsortTracking).build(
-        detection_resize.out, detection_recognitions_sync.output
+        detection_resize.out, detection_recognitions_sync.out
     )
 
     visualizer.addTopic("Video", cam_out, "images")

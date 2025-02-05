@@ -20,7 +20,7 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
 
         self.input_recognitions = dai.Node.Input(self)
         self.input_detections = dai.Node.Input(self)
-        self.output = dai.Node.Output(self)
+        self._out = dai.Node.Output(self)
 
     def build(self) -> "DetectionsRecognitionsSync":
         return self
@@ -46,7 +46,7 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
         ready_data = self._pop_ready_data()
         if ready_data:
             self._clear_old_data(ready_data)
-            self.output.send(ready_data)
+            self._out.send(ready_data)
 
     def _add_recognition(self, recognition: dai.NNData) -> None:
         recognition_ts = self._get_total_seconds_ts(recognition)
@@ -152,3 +152,11 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
         for detection_ts in detection_keys_to_pop:
             self._detections.pop(detection_ts)
             self._recognitions_by_detection_ts.pop(detection_ts, None)
+
+    @property
+    def out(self) -> dai.Node.Output:
+        return self._out
+
+    @property
+    def output(self) -> dai.Node.Output:
+        return self._out
