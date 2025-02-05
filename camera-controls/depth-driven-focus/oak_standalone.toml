@@ -1,6 +1,6 @@
-identifier = "com.luxonis.objectron-example"
+identifier = "com.luxonis.depth-driven-focus"
 
-entrypoint = ["bash", "-c", "python3 /app/main.py <FPS>"]
+entrypoint = ["bash", "-c", "python3 -u /app/main.py <FPS>"]
 
 prepare_container = [
     { type = "RUN", command = "apt-get update" },

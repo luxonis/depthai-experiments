@@ -1,6 +1,6 @@
-identifier = "com.luxonis.objectron-example"
+identifier = "com.luxonis.lossless-zooming"
 
-entrypoint = ["bash", "-c", "python3 /app/main.py <FPS> <MEDIA>"]
+entrypoint = ["bash", "-c", "python3 -u /app/main.py <FPS> <MEDIA>"]
 
 prepare_container = [
     { type = "RUN", command = "apt-get update" },
