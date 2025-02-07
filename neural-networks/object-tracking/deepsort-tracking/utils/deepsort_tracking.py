@@ -20,13 +20,16 @@ class DeepsortTracking(dai.node.HostNode):
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Tracklets, True)
             ]
         )
+        self._labels = None
 
     def build(
         self,
         img_frames: dai.Node.Output,
         detected_recognitions: dai.Node.Output,
+        labels: list[str] = None,
     ) -> "DeepsortTracking":
         self.link_args(img_frames, detected_recognitions)
+        self._labels = labels
         return self
 
     def process(
@@ -41,6 +44,7 @@ class DeepsortTracking(dai.node.HostNode):
         recognitions = detected_recognitions.nn_data
 
         tracklets = VisualizedTracklets()
+        tracklets.setLabels(self._labels)
 
         if recognitions:
             object_tracks = self._tracker.iter(
