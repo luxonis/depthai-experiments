@@ -4,27 +4,27 @@ import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.deepsort_tracking import DeepsortTracking
-from utils.detection_crop_maker import DetectionCropMaker
+from utils.detection_config_generator import generate_script_content
 from utils.detections_recognitions_sync import DetectionsRecognitionsSync
 
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-
+platform = device.getPlatform().name
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     detection_model_description = dai.NNModelDescription(
-        "luxonis/yolov6-nano:r2-coco-512x288", platform=device.getPlatform().name
+        "luxonis/yolov6-nano:r2-coco-512x288", platform=platform
     )
     detection_model_archive = dai.NNArchive(
         dai.getModelFromZoo(detection_model_description)
     )
 
     recognition_model_description = dai.NNModelDescription(
-        "luxonis/osnet:imagenet-128x256", platform=device.getPlatform().name
+        "luxonis/osnet:imagenet-128x256", platform=platform
     )
     recognition_model_archive = dai.NNArchive(
         dai.getModelFromZoo(recognition_model_description)
@@ -58,7 +58,7 @@ with dai.Pipeline(device) as pipeline:
         dai.ImageManipConfigV2.ResizeMode.STRETCH,
     )
     detection_resize.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    if device.getPlatform().name == "RVC4":
+    if platform == "RVC4":
         detection_resize.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
     cam_out.link(detection_resize.inputImage)
 
@@ -66,20 +66,33 @@ with dai.Pipeline(device) as pipeline:
         detection_resize.out, detection_model_archive
     )
 
-    crop_maker = pipeline.create(DetectionCropMaker).build(
-        detection_nn.out, detection_resize.out, recognition_model_archive.getInputSize()
+    script = pipeline.create(dai.node.Script)
+    detection_nn.out.link(script.inputs["det_in"])
+    detection_nn.passthrough.link(script.inputs["preview"])
+    script_content = generate_script_content(
+        platform=platform.lower(),
+        resize_width=recognition_model_archive.getInputWidth(),
+        resize_height=recognition_model_archive.getInputHeight(),
+        padding=0,
     )
-    crop_maker.set_confidence_threshold(0.5)
-    recognition_manip = pipeline.create(dai.node.ImageManipV2)
-    recognition_manip.initialConfig.setOutputSize(
-        *recognition_model_archive.getInputSize()
-    )
-    recognition_manip.inputConfig.setWaitForMessage(True)
-    crop_maker.out_cfg.link(recognition_manip.inputConfig)
-    crop_maker.out_img.link(recognition_manip.inputImage)
+    script.setScript(script_content)
+
+    if platform == "RVC2":
+        pose_manip = pipeline.create(dai.node.ImageManip)
+        pose_manip.initialConfig.setResize(*recognition_model_archive.getInputSize())
+        pose_manip.inputConfig.setWaitForMessage(True)
+    elif platform == "RVC4":
+        pose_manip = pipeline.create(dai.node.ImageManipV2)
+        pose_manip.initialConfig.setOutputSize(
+            *recognition_model_archive.getInputSize()
+        )
+        pose_manip.inputConfig.setWaitForMessage(True)
+
+    script.outputs["manip_cfg"].link(pose_manip.inputConfig)
+    script.outputs["manip_img"].link(pose_manip.inputImage)
 
     recognition_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        recognition_manip.out, recognition_model_archive
+        pose_manip.out, recognition_model_archive
     )
 
     detection_recognitions_sync = pipeline.create(DetectionsRecognitionsSync).build()
