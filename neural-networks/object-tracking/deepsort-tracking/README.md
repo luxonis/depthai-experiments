@@ -1,39 +1,54 @@
-# Object tracking using DeepSORT
+# DeepSORT Tracking
 
-This example demonstrates how to run 2 stage object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) with DepthAI SDK.
-It tracks detected objects in the frames. Demo uses [YoloV6n](https://github.com/meituan/YOLOv6) model to detect objects, crops them on the device using Script node, and then sends object frames to [MobileNetV2](https://pytorch.org/hub/pytorch_vision_mobilenet_v2/) feature extraction model which computes the embedding of the object.
+This experiment demonstrates how to perform object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime). For general object detection we use [YOLOv6](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034) model. Each detected object is cropped on the device and then sent to [OSNet](https://hub.luxonis.com/ai/models/6d853621-818b-4fa4-bd9a-d9bdcb5616e6) feature extraction model which computes its' embedding. The embeddings and detections are then passed to the [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) tracker.
 
 ## Demo
 
-[![Alt text for the image](https://github.com/luxonis/depthai-experiments/assets/18037362/f59a3ac2-8657-4faf-acad-c1f7a5787ac0)](https://tinyurl.com/yjy99z6v)
+![example](media/example.gif)
 
-(Click on the gif for the high-res video)
+## Installation
 
-### How it works
+You need to prepare a Python 3.10 environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
-1. Color camera produces high-res frames, sends them to host, Script node and downscale ImageManip node
-1. Downscale ImageManip will downscale from high-res frame to 640x352, required by 1st NN in this pipeline; object detection model
-1. 640x352 frames are sent from downscale ImageManip node to the object detection model (YoloSpatialDetectionNetwork/YoloDetectionNetwork)
-1. Object detections are sent to the Script node
-1. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected object. These configs then get sent to ImageManip together with synced high-res frame
-1. ImageManip will crop only the object out of the original frame. It will also resize the object frame to required size (224,224) by the feature extraction NN model
-1. Object frames get send to the 2nd NN - feature extraction NN model. NN embedding results are sent back to the host
-1. Frames, object detections, and embedding results are all **synced on the host** side, the detections and embeddings are passed to the [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) tracker to update its state and then the tracked objects are displayed to the user
-
-## 2-stage NN pipeline graph
-
-![image](https://github.com/luxonis/depthai-experiments/assets/18037362/e90008b5-0ff0-4f59-ad8a-1a65e3e17ab0)
-
-## Pre-requisites
-
-```
-python3 -m pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run `python3 main.py`
+You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-## Credits
+### Peripheral Mode
 
-In this project we have used [YoloV6n](https://github.com/meituan/YOLOv6) for object detection, [MobileNetV2](https://pytorch.org/hub/pytorch_vision_mobilenet_v2/) as a feature extractor, and [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) for tracking.
+```bash
+python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
+```
+
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
+- `<MEDIA>`: Path to the video file. Default `None` - camera input.
+- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run the DeepSORT Tracking experiment with the default device and camera input.
+
+```
+python3 main.py --media <PATH_TO_VIDEO>
+```
+
+This will run the DeepSORT Tracking experiment with the default device and the video file.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+# TODO: add instructions for standalone mode once oakctl supports CLI arguments

@@ -8,6 +8,7 @@ from deep_sort_realtime.deep_sort import nn_matching
 from deep_sort_realtime.deep_sort.detection import Detection
 from deep_sort_realtime.deep_sort.tracker import Tracker
 from deep_sort_realtime.utils.nms import non_max_suppression
+
 # from deep_sort_realtime.embedder.embedder_pytorch import MobileNetv2_Embedder
 
 logger = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ class DeepSort(object):
         embeddings: list[dai.NNData],
         resolution: tuple[int, int],
     ):
-        height, width = resolution
+        width, height = resolution
         # Decode detections into bounding boxes
         object_bbs = self.decode_dets(detections, (width, height))
         # Calculate embeddings for each crop
