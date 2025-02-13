@@ -20,15 +20,20 @@ pip install -r requirements.txt
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
+```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30.0)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```
 
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<MEDIA>`: Path to the video file. Default `None` - camera input.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -59,21 +64,11 @@ To run the example in this mode, first install the [oakctl](https://rvc4.docs.lu
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-and run the example using the `run_standalone.py` script:
+The app can then be run with:
 
 ```bash
-python3 run_standalone.py \
-    --device <Device> \
-    --fps_limit <FPS> \
-    --media <MEDIA>
+oakctl connect <DEVICE_IP>
+oakctl app run .
 ```
 
-The arguments are the same as in the Peripheral mode.
-
-#### Example
-
-```bash
-python3 run_standalone.py \
-    --device <DEVICE IP> \
-    --fps_limit 28 \
-```
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

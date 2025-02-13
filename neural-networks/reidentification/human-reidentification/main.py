@@ -9,7 +9,7 @@ from utils.sync import AnnotationSyncNode
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device_id)) if args.device_id else dai.Device()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
 frame_type = (
     dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i

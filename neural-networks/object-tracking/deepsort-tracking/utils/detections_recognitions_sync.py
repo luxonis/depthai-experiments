@@ -1,4 +1,5 @@
 import time
+from typing import Optional, Union, List, Dict
 from queue import PriorityQueue
 
 import depthai as dai
@@ -13,9 +14,11 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._camera_fps = 30
-        self._unmatched_recognitions: list[dai.NNData] = []
-        self._recognitions_by_detection_ts: dict[float, list[dai.NNData]] = {}
-        self._detections: dict[float, dai.ImgDetections | dai.SpatialImgDetections] = {}
+        self._unmatched_recognitions: List[dai.NNData] = []
+        self._recognitions_by_detection_ts: Dict[float, List[dai.NNData]] = {}
+        self._detections: Dict[
+            float, Union[dai.ImgDetections, dai.SpatialImgDetections]
+        ] = {}
         self._ready_timestamps = PriorityQueue()
 
         self.input_recognitions = dai.Node.Input(self)
@@ -60,14 +63,14 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
         else:
             self._unmatched_recognitions.append(recognition)
 
-    def _get_matching_detection_ts(self, recognition_ts: float) -> float | None:
+    def _get_matching_detection_ts(self, recognition_ts: float) -> Optional[float]:
         for detection_ts in self._detections.keys():
             if self._timestamps_in_tolerance(detection_ts, recognition_ts):
                 return detection_ts
         return None
 
     def _add_detection(
-        self, detection: dai.ImgDetections | dai.SpatialImgDetections
+        self, detection: Union[dai.ImgDetections, dai.SpatialImgDetections]
     ) -> None:
         detection_ts = self._get_total_seconds_ts(detection)
         self._detections[detection_ts] = detection
@@ -116,7 +119,7 @@ class DetectionsRecognitionsSync(dai.node.ThreadedHostNode):
 
         return len(detections.detections) == len(recognitions)
 
-    def _pop_ready_data(self) -> DetectedRecognitions | None:
+    def _pop_ready_data(self) -> Optional[DetectedRecognitions]:
         if self._ready_timestamps.empty():
             return None
 

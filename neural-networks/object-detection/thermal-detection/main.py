@@ -58,7 +58,7 @@ with dai.Pipeline(device) as pipeline:
     )
 
     parser = nn_with_parser.getParser()
-    parser.setConfidenceThreshold(0.5)  # NOTE: Adjust if needed
+    parser.setConfidenceThreshold(0.6)  # NOTE: Adjust if needed
 
     visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
     visualizer.addTopic("Visualizations", nn_with_parser.out, "images")

@@ -1,7 +1,5 @@
 # XFeat: Accelerated Features for Lightweight Image Matching
 
-## Overview
-
 This example demonstrates how to use the XFeat model from Luxonis HubAI with the DepthAI platform. XFeat has compact descriptors (64D) and simple architecture components that facilitate deployment on embedded devices. Performance is comparable to known deep local features such as SuperPoint while being significantly faster and more lightweight.
 
 The model used in the example is available in our HubAI Model ZOO [here](https://hub.luxonis.com/ai/models/6c2790a1-bf68-4e89-a4b3-5c9ae68183b5?view=page).
@@ -25,19 +23,25 @@ pip install -r requirements.txt
 
 You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --model <MODEL> --device <DEVICE> --fps_limit <FPS_LIMIT>
+```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30)
+-m MODEL, --model MODEL
+                    The HubAI model reference for XFeat model. Get it from the Luxonis HubAI. (default: luxonis/xfeat:mono-320x240)
 ```
 
-- `<MODEL>`: HubAI Model Reference from Luxonis HubAI. Default: `luxonis/xfeat:mono-320x240`.
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+**NOTE**:
 
-If you use model with mono mode (e.g. `luxonis/xfeat:mono-320x240`), you can set reference frame by pressing `s` key in the visualizer.
+- Stereo mode will run only with 2-camera devices.
+- If you use model with mono mode (e.g. `luxonis/xfeat:mono-320x240`), you can set reference frame by pressing `s` key in the visualizer.
 
-**NOTE**: Stereo mode will run only with 2-camera devices.
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -47,13 +51,13 @@ python3 main.py
 
 This will run the XFeat model in mono mode with the default model and device. Default model: `luxonis/xfeat:mono-320x240`.
 
-```
+```bash
 python3 main.py --model luxonis/xfeat:mono-640x480
 ```
 
 This will run the XFeat model in mono mode with the `luxonis/xfeat:mono-640x480` model. This model is more accurate but slower than the default model.
 
-```
+```bash
 python3 main.py --model luxonis/xfeat:stereo-320x240
 ```
 
@@ -68,28 +72,11 @@ To run the example in this mode, first install the [oakctl](https://rvc4.docs.lu
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-and run the example using the `run_standalone.py` script:
+The app can then be run with:
 
 ```bash
-python3 run_standalone.py \
-    --model <Model> \
-    --device <Device> \
-    --fps_limit <FPS>
+oakctl connect <DEVICE_IP>
+oakctl app run .
 ```
 
-The arguments are the same as in the Peripheral mode.
-
-#### Example
-
-```bash
-python3 run_standalone.py \
-<<<<<<< HEAD:neural-networks/feature-detection/xfeat/README.md
-    --model xfeat:stereo-240x320 \
-```
-
-\=======
---model xfeat:stereo-320x240 \\
-
-```
->>>>>>> 13c599b622448304afd8185cdcadc20d7e1108e5:neural-networks/advanced-examples/image-matching/xfeat/README.md
-```
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

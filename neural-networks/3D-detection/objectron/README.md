@@ -4,8 +4,6 @@ This experiment demonstrates how to perform 3D object detection using the [Objec
 
 ## Demo
 
-<!-- ![chair](https://user-images.githubusercontent.com/60359299/153616321-83f9d7ae-100a-4317-afd4-72bb3d1011d4.gif) -->
-
 ![chair](media/chair.gif)
 
 ## Installation
@@ -20,19 +18,22 @@ pip install -r requirements.txt
 
 The provided experiment detects chairs, but you can change the object class by changing the valid labels in `script_*.py` file and in constructing the `AnnotationNode` in `main.py`: `annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs, valid_labels=[41])` where `41` is the label for cups.
 
-You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30.0)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+```
 
 **NOTE**: Camera and shoes can not be detected with general YOLOv6 detector. So, you need to provide your own detector for these objects.
 
 ### Peripheral Mode
 
-```bash
-python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
-```
-
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<MEDIA>`: Path to the video file. Default `None` - camera input.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -57,20 +58,11 @@ To run the example in this mode, first install the [oakctl](https://rvc4.docs.lu
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-and run the example using the `run_standalone.py` script:
+The app can then be run with:
 
 ```bash
-python3 run_standalone.py \
-    --device <DEVICE IP> \
-    --media <MEDIA> \
-    --fps_limit <FPS>
+oakctl connect <device-ip>
+oakctl app run .
 ```
 
-The arguments are the same as in the Peripheral mode.
-
-#### Example
-
-```bash
-python3 run_standalone.py \
-    --fps_limit 20 \
-```
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
