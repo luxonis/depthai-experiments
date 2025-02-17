@@ -1,5 +1,5 @@
 import depthai as dai
-from rtsp_server import RTSPServer
+from utils.rtsp_server import RTSPServer
 
 
 class StreamOutput(dai.node.HostNode):

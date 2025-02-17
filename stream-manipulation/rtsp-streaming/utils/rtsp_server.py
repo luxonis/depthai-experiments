@@ -2,9 +2,9 @@ import gi
 
 gi.require_version("Gst", "1.0")
 gi.require_version("GstRtspServer", "1.0")
-from gi.repository import Gst, GstRtspServer, GLib  # noqa: E402
-
 import threading  # noqa: E402
+
+from gi.repository import GLib, Gst, GstRtspServer  # noqa: E402
 
 
 class RtspSystem(GstRtspServer.RTSPMediaFactory):
@@ -17,7 +17,7 @@ class RtspSystem(GstRtspServer.RTSPMediaFactory):
         self.data = data
 
     def start(self):
-        t = threading.Thread(target=self._thread_rtsp)
+        t = threading.Thread(target=self._thread_rtsp, daemon=True)
         t.start()
 
     def _thread_rtsp(self):
