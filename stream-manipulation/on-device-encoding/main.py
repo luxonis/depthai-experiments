@@ -1,50 +1,53 @@
-import argparse
 import depthai as dai
+from utils.arguments import initialize_argparser
+from utils.video_saver import VideoSaver
 
-from host_encoder import Encoder
+_, args = initialize_argparser()
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-c",
-    "--codec",
-    choices=["h264", "h265", "mjpeg"],
-    default="h264",
-    type=str,
-    help="Choose video encoding (h264 is default)",
-)
-args = parser.parse_args()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
 
-if args.codec == "h264":
-    encoder_profile = dai.VideoEncoderProperties.Profile.H264_MAIN
-elif args.codec == "h265":
-    args.codec = "hevc"
-    encoder_profile = dai.VideoEncoderProperties.Profile.H265_MAIN
-elif args.codec == "mjpeg":
-    encoder_profile = dai.VideoEncoderProperties.Profile.MJPEG
+encoder_profiles = {
+    "h264": dai.VideoEncoderProperties.Profile.H264_MAIN,
+    "h265": dai.VideoEncoderProperties.Profile.H265_MAIN,
+    "mjpeg": dai.VideoEncoderProperties.Profile.MJPEG,
+}
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-    cam.setPreviewSize(1280, 720)
-    cam.setFps(30)
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cam_out = cam.requestOutput(
+        size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+    )
 
     video_enc = pipeline.create(dai.node.VideoEncoder)
-    video_enc.setDefaultProfilePreset(fps=30, profile=encoder_profile)
-    cam.video.link(video_enc.input)
+    video_enc.setDefaultProfilePreset(
+        fps=args.fps_limit, profile=encoder_profiles[args.codec]
+    )
+    cam_out.link(video_enc.input)
 
-    encoder = pipeline.create(Encoder).build(
-        preview=cam.preview,
-        stream=video_enc.bitstream,
+    video_saver = pipeline.create(VideoSaver).build(
+        encoded_stream=video_enc.out,
         codec=args.codec,
-        output_shape=(3840, 2160),
+        output_shape=(1280, 720),
+        fps=args.fps_limit,
+        output_path=args.output,
     )
-    encoder.inputs["preview"].setBlocking(False)
-    encoder.inputs["preview"].setMaxSize(4)
-    encoder.inputs["video_data"].setBlocking(True)
-    encoder.inputs["video_data"].setMaxSize(30)
 
-    print(
-        f"Pipeline created. App starting streaming {encoder_profile.name} encoded frames into file video.mp4"
-    )
-    pipeline.run()
+    # Visualizer doesn't support H265, so we need to use camera stream for H265 videos
+    if args.codec == "h265":
+        visualizer.addTopic("Video", cam_out, "images")
+    else:
+        visualizer.addTopic("Video", video_enc.out, "images")
+
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
