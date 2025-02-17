@@ -7,7 +7,7 @@ from host_node.host_depth_color_transform import DepthColorTransform
 
 device = dai.Device()
 platform = device.getPlatform()
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 if platform == dai.Platform.RVC2:
     choices = ["luxonis/crestereo:iter2-160x120", "luxonis/crestereo:iter2-320x240"]

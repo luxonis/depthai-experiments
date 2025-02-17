@@ -20,15 +20,20 @@ pip install -r requirements.txt
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-<DEVICE_FILTER_ENV> python3 main.py --model <MODEL> --fps_limit <FPS_LIMIT>
+```
+-m {luxonis/crestereo:iter2-160x120,luxonis/crestereo:iter2-320x240}, --model {luxonis/crestereo:iter2-160x120,luxonis/crestereo:iter2-320x240}
+                    Crestereo model to be used for inference. By default the bigger model is chosen. (default: luxonis/crestereo:iter2-320x240)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit of the video. Default for the device is 2 (default: 2)
 ```
 
-- `<MODEL>`: HubAI Model Reference from Luxonis HubAI..
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `2` to `5` depending on the device.
 - `<DEVICE_FILTER_ENV>`: DepthAI environment variable used for filtering the devices. Usable variables are `DEPTHAI_DEVICE_NAME_LIST` and `DEPTHAI_PLATFORM`. For usage examples see the [subsection below](#examples).
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -67,6 +72,11 @@ bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 
 Then, while you are in the experiment folder, you can run the example with:
 
+The app can then be run with:
+
 ```bash
+oakctl connect <device-ip>
 oakctl app run .
 ```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

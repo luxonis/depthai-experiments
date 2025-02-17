@@ -3,13 +3,15 @@ import argparse
 
 def initialize_argparser():
     """Initialize the argument parser for the script."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     parser.add_argument(
         "-m",
         "--model",
         help="HubAI model reference.",
-        required=True,
+        default="luxonis/thermal-person-detection:256x192",
         type=str,
     )
 

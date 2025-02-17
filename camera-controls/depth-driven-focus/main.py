@@ -40,9 +40,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.setRectification(True)
     stereo.setExtendedDisparity(True)
 
-    face_det_nn = pipeline.create(ParsingNeuralNetwork).build(
-        cam, nn_archive
-    )
+    face_det_nn = pipeline.create(ParsingNeuralNetwork).build(cam, nn_archive)
     depth_merger = pipeline.create(DepthMerger).build(
         face_det_nn.out, stereo.depth, device.readCalibration2()
     )

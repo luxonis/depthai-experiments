@@ -9,7 +9,7 @@ It recognizes all people in the frame and determines their emotions. There are 8
 
 ![Demo](media/emotion-recognition.gif)
 
-# Instalation
+## Instalation
 
 Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).You need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
@@ -17,31 +17,30 @@ Running this example requires a **Luxonis OAK4 device** connected to your comput
 pip install -r requirements.txt
 ```
 
-# Usage
+## Usage
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
+```
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                      Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```
 
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<MEDIA>`: Path to the video file. Default `None` - camera input.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+### Peripheral Mode
 
-The relevant arguments:
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
-- **--device** \[OPTIONAL\]: DeviceID or IP of the camera to connect to.
-  By default, the first locally available device is used;
-- **--media** \[OPTIONAL\]: Path to the media file to be used as input.
-  Currently, only video files are supported but we plan to add support for more formats (e.g. images) in the future.
-  By default, camera input is used;
+#### Examples
 
-Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results by **DepthAI visualizer**
-The latter runs in the browser at `http://localhost:8082`.
-In case of a different client, replace `localhost` with the correct hostname.
+```bash
+python3 main.py
+```
+
+This will run the experiment with default arguments.
 
 ### Standalone Mode
 
@@ -57,3 +56,5 @@ The app can then be run with:
 oakctl connect <device-ip>
 oakctl app run .
 ```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

@@ -25,29 +25,44 @@ pip install -r requirements.txt
 
 ## Usage
 
-The inference is ran using a simple CLI call:
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-```bash
-python3 main.py \
-    --device ... \
-    --media ...
+Here is a list of all available parameters:
+
+```
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                      Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```
 
-The relevant arguments:
+### Peripheral Mode
 
-- **--device** \[OPTIONAL\]: DeviceID or IP of the camera to connect to.
-  By default, the first locally available device is used;
-- **--media** \[OPTIONAL\]: Path to the media file to be used as input.
-  Currently, only video files are supported but we plan to add support for more formats (e.g. images) in the future.
-  By default, camera input is used;
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
-Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results by **Depthai Visualizer**
-
-### Example
-
-To run the example you can simply run the following command:
+#### Example
 
 ```bash
 python3 main.py \ 
-        -d <<device ip / mxid>>
+        -d <device ip / mxid>
 ```
+
+This will run the experiment on the specifid device.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

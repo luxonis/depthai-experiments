@@ -1,4 +1,4 @@
-# Overview
+# Human Re-Identification
 
 This experiment demonstrates how to build a 2-stage DepthAI pipeline for human pose / human face reidentification.
 The pipeline consists of a detection model (
@@ -33,18 +33,26 @@ pip install -r requirements.txt
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py -det <DET_MODEL> -rec <REC_MODEL> -cos <CSIM> -media <MEDIA> -fps <FPS_LIMIT> --device <DEVICE>
+```
+-det DET_MODEL, --det_model DET_MODEL
+                    Detection model HubAI reference. (default: None)
+-rec REC_MODEL, --rec_model REC_MODEL
+                    Recognition model HubAI reference. (default: None)
+-cos COS_SIMILARITY_THRESHOLD, --cos_similarity_threshold COS_SIMILARITY_THRESHOLD
+                    Cosine similarity between object embeddings above which detections are considered as belonging to the same object. (default: 0.5)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30.0)
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
 ```
 
-- `<DET_MODEL>`: Detection model reference from Luxonis HubAI.
-- `<REC_MODEL>`: Recognition model reference from Luxonis HubAI.
-- `<CSIM>` \[OPTIONAL\]: Cosine similarity between object embeddings above which detections are considered as belonging to the same object. Default: `0.5`.
-- `<DEVICE>` \[OPTIONAL\]: Device IP or ID. Default: `None` - use the first identified device connected to the host.
-- `<MEDIA>` \[OPTIONAL\]: Path to the video file. Default: `None` - use camera input.
-- `<FPS_LIMIT>` \[OPTIONAL\]: Limit of the video/camera FPS. Beware that if providing a video file with higher FPS, a slowed-down video will be shown (and vice-versa if providing a video file with higher FPS). Default: `30`.
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -62,7 +70,6 @@ This will run the human pose reidentification with the default device and camera
 python3 main.py \
     -det luxonis/scrfd-face-detection:10g-640x640 \
     -rec luxonis/arcface:lfw-112x112 \
-    -media <path/to/video.mp4> \
     -fps 5
 ```
 
@@ -84,4 +91,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the human pose reidentification with the specified device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

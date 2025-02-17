@@ -6,8 +6,6 @@ This example demonstrates how to detect dangerous objects and calculates distanc
 
 ![Demo](media/hms.gif)
 
-<!-- [![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4) -->
-
 ## Installation
 
 You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
@@ -20,13 +18,16 @@ pip install -r requirements.txt
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE>
+```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
 ```
 
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -51,3 +52,5 @@ The app can then be run with:
 oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

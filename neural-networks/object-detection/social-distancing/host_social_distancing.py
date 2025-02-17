@@ -1,4 +1,5 @@
 import depthai as dai
+from typing import List, Tuple
 from utils.measure_object_distance import ObjectDistances, DetectionDistance
 
 ALERT_THRESHOLD = 0.5
@@ -117,9 +118,9 @@ class SocialDistancing(dai.node.HostNode):
 
     def _get_all_close_detections(
         self, distances: ObjectDistances
-    ) -> list[dai.SpatialImgDetection]:
-        close_detections: list[dai.SpatialImgDetection] = []
-        close_bboxes: list[tuple[float, float, float, float]] = []
+    ) -> List[dai.SpatialImgDetection]:
+        close_detections: List[dai.SpatialImgDetection] = []
+        close_bboxes: List[Tuple[float, float, float, float]] = []
         for distance in distances.distances:
             if distance.distance < self.alert_distance:
                 det1_bbox = (

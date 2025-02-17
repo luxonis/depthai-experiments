@@ -1,4 +1,5 @@
 import logging
+from typing import List, Tuple
 
 import cv2
 import depthai as dai
@@ -105,9 +106,9 @@ class DeepSort(object):
 
     def iter(
         self,
-        detections: list[dai.ImgDetection],
-        embeddings: list[dai.NNData],
-        resolution: tuple[int, int],
+        detections: List[dai.ImgDetection],
+        embeddings: List[dai.NNData],
+        resolution: Tuple[int, int],
     ):
         width, height = resolution
         # Decode detections into bounding boxes
