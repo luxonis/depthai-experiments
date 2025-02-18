@@ -1,4 +1,5 @@
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
-depthai>=3.0.0a10
-depthai-nodes>=0.1.1
+depthai>=3.0.0a12
+# depthai-nodes>=0.1.1
+git+https://github.com/luxonis/depthai-nodes.git@fix/restructure # TODO: REMOVE
 opencv-python==4.10.0.84

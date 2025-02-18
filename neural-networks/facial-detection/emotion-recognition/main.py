@@ -1,6 +1,6 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
 from utils.host_sync import DetectionSyncNode

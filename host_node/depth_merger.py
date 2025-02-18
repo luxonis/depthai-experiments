@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionExtended, ImgDetectionsExtended
+from depthai_nodes import ImgDetectionExtended, ImgDetectionsExtended
 
 from .host_spatials_calc import HostSpatialsCalc
 

@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionsExtended
+from depthai_nodes import ImgDetectionsExtended
 from typing import List
 
 

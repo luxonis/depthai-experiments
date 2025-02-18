@@ -1,7 +1,7 @@
 from datetime import timedelta
 import depthai as dai
-from depthai_nodes.ml.parsers import YOLOExtendedParser
-from depthai_nodes.ml.messages import ImgDetectionsExtended
+from depthai_nodes.node import YOLOExtendedParser
+from depthai_nodes import ImgDetectionsExtended
 import depthai_viewer as viewer
 import numpy as np
 import cv2

@@ -1,6 +1,5 @@
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork, MPPalmDetectionParser
-from depthai_nodes.nodes import DepthMerger
+from depthai_nodes.node import ParsingNeuralNetwork, MPPalmDetectionParser, DepthMerger
 from utils.arguments import initialize_argparser
 from utils.adapter import ParserBridge
 from utils.annotation_node import AnnotationNode
