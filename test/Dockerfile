@@ -23,4 +23,4 @@ ENTRYPOINT ["sh", "-c", "\
     --environment-variables DEPTHAI_PLATFORM=${PLATFORM} \
     --virtual-display \
     ${DAI_VERSION:+--depthai-version ${DAI_VERSION}} \
-    --path ./neural-networks/object-detection/human-machine-safety"]
+    --path ./neural-networks"]
