@@ -22,5 +22,4 @@ ENTRYPOINT ["sh", "-c", "\
     python -u test/gen3_script_tester.py \
     --environment-variables DEPTHAI_PLATFORM=${PLATFORM} \
     --virtual-display \
-    ${DAI_VERSION:+--depthai-version ${DAI_VERSION}} \
-    --path ./neural-networks"]
+    ${DAI_VERSION:+--depthai-version ${DAI_VERSION}}"]
