@@ -89,7 +89,7 @@ def setup_venv_exe(dir, requirements_path, f=None):
             + "".join(requirements)
         )
         script = script.replace("\n", " ")
-        subprocess.run(
+        result = subprocess.run(
             script,
             shell=True,
             check=True,
@@ -97,6 +97,7 @@ def setup_venv_exe(dir, requirements_path, f=None):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
+        output(f"Pip install output: {result.stdout}", f)
     except subprocess.CalledProcessError as e:
         output("Requirements could not be downloaded", f)
         lines = e.stdout.split("\n")
@@ -111,6 +112,8 @@ def setup_venv_exe(dir, requirements_path, f=None):
         return None
     else:
         output("Requirements installed", f)
+        requirements = subprocess.check_output([env_exe, '-m', 'pip', 'freeze']).decode('utf-8')
+        output(f"Installed requirements: {requirements}", f)
         return env_exe
 
 
