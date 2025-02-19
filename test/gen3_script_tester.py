@@ -112,7 +112,9 @@ def setup_venv_exe(dir, requirements_path, f=None):
         return None
     else:
         output("Requirements installed", f)
-        requirements = subprocess.check_output([env_exe, '-m', 'pip', 'freeze']).decode('utf-8')
+        requirements = subprocess.check_output([env_exe, "-m", "pip", "freeze"]).decode(
+            "utf-8"
+        )
         output(f"Installed requirements: {requirements}", f)
         return env_exe
 
