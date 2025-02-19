@@ -16,10 +16,11 @@ ENV DISPLAY=:99
 WORKDIR /tmp/depthai-experiments
 ENTRYPOINT ["sh", "-c", "\
     if [ -z \"$PLATFORM\" ]; then \
-        echo 'Error: PLATFORM environment variable is required' && \
-        exit 1; \
+    echo 'Error: PLATFORM environment variable is required' && \
+    exit 1; \
     fi && \
     python -u test/gen3_script_tester.py \
     --environment-variables DEPTHAI_PLATFORM=${PLATFORM} \
     --virtual-display \
-    ${DAI_VERSION:+--depthai-version ${DAI_VERSION}}"]
+    ${DAI_VERSION:+--depthai-version ${DAI_VERSION}} \
+    --path ./neural-networks/object-detection/human-machine-safety"]
