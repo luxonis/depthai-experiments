@@ -17,9 +17,7 @@ class VideoTransform(VideoStreamTrack):
         self.depth_flag = options.camera_type == "depth"
 
         self.pipeline = pipeline
-        self.preview, self.nn, self.max_disparity, self.label_map = start_pipeline(
-            self.pipeline, options
-        )
+        self.preview, self.nn, self.label_map = start_pipeline(self.pipeline, options)
         self.pipeline.start()
 
     async def recv(self):
@@ -41,7 +39,7 @@ class VideoTransform(VideoStreamTrack):
         dets = self.nn.get().detections if self.nn is not None else []
 
         if self.depth_flag:
-            frame = (frame * (255 / self.max_disparity)).astype(np.uint8)
+            frame = (frame * (255 / frame.max())).astype(np.uint8)
             frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -109,7 +107,6 @@ def start_pipeline(pipeline: dai.Pipeline, options):
     #  we only want to get from the queues when pinged from the server in this experiment
     nn_q = None
     label_map = None
-    max_disparity = None
     if depth_flag:
         left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
         right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
@@ -124,7 +121,6 @@ def start_pipeline(pipeline: dai.Pipeline, options):
             presetMode=preset_mode,
         )
 
-        max_disparity = stereo.getMaxDisparity()
         preview_q = stereo.disparity.createOutputQueue(blocking=False, maxSize=4)
 
     else:
@@ -159,7 +155,7 @@ def start_pipeline(pipeline: dai.Pipeline, options):
         preview_q = cam_out.createOutputQueue(blocking=False, maxSize=4)
 
     print("Pipeline created.")
-    return preview_q, nn_q, max_disparity, label_map
+    return preview_q, nn_q, label_map
 
 
 def frameNorm(frame, bbox):
