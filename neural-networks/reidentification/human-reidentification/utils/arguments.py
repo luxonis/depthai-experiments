@@ -11,7 +11,8 @@ def initialize_argparser():
         "-det",
         "--det_model",
         help="Detection model HubAI reference.",
-        required=True,
+        default="luxonis/scrfd-person-detection:25g-640x640",
+        required=False,
         type=str,
     )
 
@@ -19,7 +20,8 @@ def initialize_argparser():
         "-rec",
         "--rec_model",
         help="Recognition model HubAI reference.",
-        required=True,
+        default="luxonis/osnet:imagenet-128x256",
+        required=False,
         type=str,
     )
 
