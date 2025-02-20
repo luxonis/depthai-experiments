@@ -10,7 +10,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.Camera).build()
     cam_out = cam.requestOutput(
-        size=(1920, 1080), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+        size=(1920, 1440), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
 
     vid_enc = pipeline.create(dai.node.VideoEncoder)
