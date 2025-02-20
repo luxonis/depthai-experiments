@@ -19,9 +19,5 @@ class OptionsWrapper:
         return self.raw_options.get("nn_model", "")
 
     @property
-    def mono_camera_resolution(self):
-        return self.raw_options.get("mono_camera_resolution", "THE_400_P")
-
-    @property
     def preset_mode(self):
         return self.raw_options.get("preset_mode", "HIGH_ACCURACY")

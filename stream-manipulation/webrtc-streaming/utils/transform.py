@@ -114,13 +114,6 @@ def start_pipeline(pipeline: dai.Pipeline, options):
         left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
         right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-        if options.mono_camera_resolution == "THE_400_P":
-            size = (640, 400)
-        elif options.mono_camera_resolution == "THE_720_P":
-            size = (1280, 720)
-        elif options.mono_camera_resolution == "THE_800_P":
-            size = (1280, 800)
-
         left_out = left.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12)
         right_out = right.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12)
         preset_mode = dai.node.StereoDepth.PresetMode.__entries[options.preset_mode][0]
