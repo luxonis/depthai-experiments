@@ -18,7 +18,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     cam_out = cam.requestOutput(
-        size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+        size=(640, 480), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
 
     video_enc = pipeline.create(dai.node.VideoEncoder)
@@ -30,7 +30,7 @@ with dai.Pipeline(device) as pipeline:
     video_saver = pipeline.create(VideoSaver).build(
         encoded_stream=video_enc.out,
         codec=args.codec,
-        output_shape=(1280, 720),
+        output_shape=(640, 480),
         fps=args.fps_limit,
         output_path=args.output,
     )
