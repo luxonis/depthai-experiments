@@ -71,16 +71,13 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # Crop Node
-    if platform == "RVC2":
-        crop_node = pipeline.create(dai.node.ImageManip)
-    elif platform == "RVC4":
-        crop_node = pipeline.create(dai.node.ImageManipV2)
-        crop_node.initialConfig.setReusePreviousImage(False)
-        crop_node.inputConfig.setReusePreviousMessage(False)
-        crop_node.inputImage.setReusePreviousMessage(False)
-        crop_node.inputConfig.setMaxSize(30)
-        crop_node.inputImage.setMaxSize(30)
-        crop_node.setNumFramesPool(30)
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setReusePreviousImage(False)
+    crop_node.inputConfig.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(False)
+    crop_node.inputConfig.setMaxSize(30)
+    crop_node.inputImage.setMaxSize(30)
+    crop_node.setNumFramesPool(30)
     crop_node.inputConfig.setWaitForMessage(True)
 
     config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
