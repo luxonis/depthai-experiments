@@ -11,9 +11,6 @@ _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
-frame_type = (
-    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
-)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -32,23 +29,19 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
-        imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            det_nn_archive.getInputWidth() * det_nn_archive.getInputHeight() * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            det_nn_archive.getInputWidth(), det_nn_archive.getInputHeight()
-        )
-        imageManip.initialConfig.setFrameType(frame_type)
-        replay.out.link(imageManip.inputImage)
+        replay.setSize(det_nn_archive.getInputWidth(), det_nn_archive.getInputHeight())
     else:
         cam = pipeline.create(dai.node.Camera).build()
-    input_node = imageManip.out if args.media_path else cam
+    input_node = replay.out if args.media_path else cam
 
     # Detection Model Node
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
