@@ -25,25 +25,19 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
-        imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            nn_archive.getInputWidth(), nn_archive.getInputHeight()
-        )
-        imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-        if platform == "RVC4":
-            imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
-        replay.out.link(imageManip.inputImage)
+        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
 
     input_node = (
-        imageManip.out if args.media_path else pipeline.create(dai.node.Camera).build()
+        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
     )
 
     nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
@@ -51,19 +45,18 @@ with dai.Pipeline(device) as pipeline:
     )
 
     if args.annotation_mode == "segmentation":
-        annotation_node = pipeline.create(SegAnnotationNode)
-        nn_with_parser.passthrough.link(annotation_node.input_frame)
-        nn_with_parser.out.link(annotation_node.input_segmentation)
-        visualizer.addTopic("Video", annotation_node.out, "images")
+        annotation_node = pipeline.create(SegAnnotationNode).build(
+            nn_with_parser.passthrough, nn_with_parser.out
+        )
+        visualizer.addTopic("Video", annotation_node.output, "images")
     elif args.annotation_mode == "segmentation_with_annotation":
-        annotation_node = pipeline.create(DetSegAnntotationNode)
-        nn_with_parser.passthrough.link(annotation_node.input_frame)
-        nn_with_parser.out.link(annotation_node.input_detections)
-        visualizer.addTopic("Video", annotation_node.out, "images")
+        annotation_node = pipeline.create(DetSegAnntotationNode).build(
+            nn_with_parser.passthrough, nn_with_parser.out
+        )
+        visualizer.addTopic("Video", annotation_node.output, "images")
         visualizer.addTopic("Detections", nn_with_parser.out, "detections")
     else:
         visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
-        visualizer.addTopic("Visualizations", nn_with_parser.out, "images")
 
     print("Pipeline created.")
 
