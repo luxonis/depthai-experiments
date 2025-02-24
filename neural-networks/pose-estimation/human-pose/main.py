@@ -81,6 +81,7 @@ with dai.Pipeline(device) as pipeline:
         pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight()
     )
     pose_manip.inputConfig.setWaitForMessage(True)
+
     script.outputs["manip_cfg"].link(pose_manip.inputConfig)
     script.outputs["manip_img"].link(pose_manip.inputImage)
 
