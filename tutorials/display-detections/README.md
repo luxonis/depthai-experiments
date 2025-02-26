@@ -1,43 +1,73 @@
 # Display detections on higher resolution frames
 
-If you are running object detection model eg. MobileNet or Yolo, they usually require smaller frame for inferencing (eg. `300x300` or `416x416`). Instead of displaying bounding boxes on such small frames, you could also stream higher resolution frames (eg. `video` output from [ColorCamera](https://docs.luxonis.com/projects/api/en/latest/components/nodes/color_camera/#inputs-and-outputs)) and display bounding boxes on these frames. There are several approaches to achieving that, and in this demo we will go through them.
+Object detection models usually require smaller frame for inferencing (eg. `512x288`). Instead of displaying bounding boxes on such small frames, you could also stream higher resolution frames and display bounding boxes on these frames. There are several approaches to achieving that, and this experiment will go over some of them. It uses [YoloV6](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034) model for object detection.
 
 ### 1. Passthrough
 
-Just using the small inferencing frame. Here we used `passthrough` frame of [DetectionNetwork's output](https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/#inputs-and-outputs) so bounding boxes are in sync with the frame. Other option would be to stream `preview` frames from `ColorCamera` and sync on the host (or don't sync at all). `300x300` frame, for reference:
+Simplest approach is to just stream the small inferencing frame. This example uses `passthrough` frame of `ParsingNeuralNetwork`'s output so bounding boxes are in sync with the frame.
 
-![passthrough](https://user-images.githubusercontent.com/18037362/141348065-3b531aa0-eed9-4364-b5b8-b55424cf306d.png)
+![passthrough](media/passthrough_example.png)
 
 ### 2. Crop high resolution frame
 
-A simple solution to low resolution frame is to stream high resolution frames (eg. `video` output from `ColorCamera`) to the host, and draw bounding boxes to it. For bounding boxes to match the frame, `preview` and `video` sizes should have the same aspect ratio, so `1:1`. In the example, we downscale 4k resolution to `720P`, so maximum resolution is `720x720`. We could also use `1080P` resolution and stream `1080x1080` frames back to the host.
+A simple solution to low resolution frame is to use higher resolution frames and crop them to the correct size of the NN input. This example crops `640x480` frame to `512x288`.
 
-![crop_highres](https://user-images.githubusercontent.com/18037362/141347876-25b60d3c-9942-4193-99b8-79dfacc2bdd1.png)
+![crop_highres](media/crop_highres_example.png)
 
 ### 3. Stretch or crop the frame before inferencing but keep the high resolution frame
 
-A problem that we often encounter with models is that their aspect ratio is `1:1`, not eg. `16x9` as our camera resolution. This means that some of the FOV will be lost. In our [How to maximize FOV](https://docs.luxonis.com/projects/api/en/latest/tutorials/maximize_fov/) tutorial we showcased how to display detections while retaining the original aspect ratio. This example crops the frame before inferencing.
+Another solution is to stretch the frame to the correct aspect ratio and size of the NN. For more information, see [Resolution Techniques for NNs](https://docs.luxonis.com/software/depthai/resolution-techniques). This example stretches `1920x1440` frame to `512x288` before inferencing.
 
-![crop_before_inferencing](https://user-images.githubusercontent.com/18037362/141347900-8a9d8269-4eb3-4df9-8bb3-434a24cea68f.png)
+![stretch_before_inferencing](media/stretch_before_inferencing_example.png)
 
 ## Installation
 
-```
-python3 -m pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run the application
+This experiment contains 3 scripts. One for each approach mentioned above.
+
+You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+Here is a list of all available parameters:
 
 ```
-python3 main.py
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30)
 ```
 
-Run the simple tutorials
+#### Examples
 
-```
+```bash
 python3 passthrough.py
-python3 crop_highres.py
-python3 crop_before_inferencing.py
 ```
+
+This will run the Display Detections experiment with the default device and camera input and use passthrough frame.
+
+```bash
+python3 crop_highres.py
+```
+
+This will run the Display Detections experiment with the default device and camera input and crop `640x480` frame to `512x288`.
+
+```bash
+python3 stretch_before_inferencing.py -fps 10
+```
+
+This will run the Display Detections experiment with the default device at 10 FPS and stretch `1920x1440` frame to `512x288`.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+# TODO: add instructions for standalone mode once oakctl supports CLI arguments
