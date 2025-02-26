@@ -42,18 +42,27 @@ with dai.Pipeline(device) as pipeline:
 
     cam = pipeline.create(dai.node.Camera).build()
     cam_out = cam.requestOutput(
-        (512, 288),
+        (1920, 1440),
         fps=args.fps_limit,
         type=dai.ImgFrame.Type.BGR888i
         if platform == dai.Platform.RVC4
         else dai.ImgFrame.Type.BGR888p,
     )
 
-    nn = pipeline.create(ParsingNeuralNetwork).build(cam_out, nn_archive)
+    stretch_manip = pipeline.create(dai.node.ImageManipV2)
+    stretch_manip.initialConfig.setOutputSize(
+        512, 288, dai.ImageManipConfigV2.ResizeMode.STRETCH
+    )
+    cam_out.link(stretch_manip.inputImage)
+
+    nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        stretch_manip.out, nn_archive
+    )
 
     filter_dets = pipeline.create(FilterDets).build(nn.out)
 
-    visualizer.addTopic("Passthrough", nn.passthrough)
+    visualizer.addTopic("Full cam FOV (4:3)", cam_out)
+    visualizer.addTopic("Stretched (16:9)", stretch_manip.out)
     visualizer.addTopic("Detections", filter_dets.output)
 
     print("Pipeline created.")
