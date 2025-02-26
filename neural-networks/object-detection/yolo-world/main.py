@@ -1,19 +1,57 @@
 import numpy as np
 import onnxruntime
 from transformers import AutoTokenizer
-import cv2
 import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.ml.messages import ImgDetectionsExtended
 import argparse
 import os
 
 
-from utils import draw_detections, download_model
+from utils import download_model
 
 MAX_NUM_CLASSES = 80
 QUANT_ZERO_POINT = 89.0
 QUANT_SCALE = 0.003838143777
 IMAGE_SIZE = (640, 640)
+
+
+class DetectionLabelCustomizer(dai.node.HostNode):
+    def __init__(self):
+        super().__init__()
+        self._accepted_labels = []
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)
+            ]
+        )
+
+    def build(
+        self, nn: dai.Node.Output, accepted_labels: list, class_names: list
+    ) -> "DetectionLabelCustomizer":
+        self._accepted_labels = accepted_labels
+        self._class_names = class_names
+        self.link_args(nn)
+        return self
+
+    def process(self, detections: dai.Buffer) -> None:
+        assert isinstance(
+            detections,
+            (dai.ImgDetections, dai.SpatialImgDetections, ImgDetectionsExtended),
+        )
+
+        filtered_detections = [
+            i for i in detections.detections if i.label in self._accepted_labels
+        ]
+
+        for det in filtered_detections:
+            det.label_name = self._class_names[det.label]
+
+        img_detections = type(detections)()
+        img_detections.detections = filtered_detections
+        img_detections.setTimestamp(detections.getTimestamp())
+        img_detections.setSequenceNum(detections.getSequenceNum())
+        self.output.send(img_detections)
 
 
 def extract_text_embeddings(class_names):
@@ -61,6 +99,7 @@ def main(args):
         dai.Device(dai.DeviceInfo(args.device)) if args.device != "" else dai.Device()
     )
 
+    visualizer = dai.RemoteConnection()
     with dai.Pipeline(device) as pipeline:
         manip = pipeline.create(dai.node.ImageManipV2)
         manip.setMaxOutputFrameSize(IMAGE_SIZE[0] * IMAGE_SIZE[1] * 3)
@@ -83,9 +122,12 @@ def main(args):
             camOut.link(manip.inputImage)
 
         model_description = dai.NNModelDescription(
-            modelSlug="yolo-world-l", modelVersionSlug="640x640", platform="RVC4"
+            modelSlug="yolo-world-l",
+            modelVersionSlug="640x640-host-decoding",
+            platform="RVC4",
         )
         archive_path = dai.getModelFromZoo(model_description, useCached=True)
+        #archive_path = "yolo_world_l_multi_input_wordnet_flickr8k.tar.xz"
         nn_archive = dai.NNArchive(archive_path)
 
         nn_with_parser = pipeline.create(ParsingNeuralNetwork)
@@ -95,16 +137,20 @@ def main(args):
             {"runtime": "dsp", "performance_profile": "default"}
         )
         nn_with_parser.setNumInferenceThreads(1)
-
         nn_with_parser.getParser(0).setConfidenceThreshold(args.confidence_threshold)
-        nn_with_parser.getParser(0).setInputImageSize(IMAGE_SIZE[0], IMAGE_SIZE[1])
 
         manip.out.link(nn_with_parser.inputs["images"])
-        qDet = nn_with_parser.out.createOutputQueue()
-        qImg = nn_with_parser.passthroughs["images"].createOutputQueue()
 
         textInputQueue = nn_with_parser.inputs["texts"].createInputQueue()
         nn_with_parser.inputs["texts"].setReusePreviousMessage(True)
+
+        detection_label_filter = pipeline.create(DetectionLabelCustomizer)
+        detection_label_filter.build(
+            nn_with_parser.out, list(range(len(args.class_names))), args.class_names
+        )
+
+        visualizer.addTopic("Detections", detection_label_filter.output)
+        visualizer.addTopic("Color", nn_with_parser.passthroughs["images"])
 
         pipeline.start()
 
@@ -116,12 +162,8 @@ def main(args):
 
         print("Press 'q' to stop")
         while pipeline.isRunning():
-            inDet: dai.ImgDetections = qDet.get()
-            inImage: dai.ImgFrame = qImg.get()
-            cvFrame = inImage.getCvFrame()
-            visFrame = draw_detections(cvFrame, inDet.detections, args.class_names)
-            cv2.imshow("Inference result", visFrame)
-            key = cv2.waitKey(1)
+            pipeline.processTasks()
+            key = visualizer.waitKey(1)
             if key == ord("q"):
                 break
 
