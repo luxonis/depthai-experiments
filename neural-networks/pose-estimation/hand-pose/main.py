@@ -13,20 +13,17 @@ pose_model_slug: str = "luxonis/mediapipe-hand-landmarker:224x224"
 PADDING = 0.1
 CONFIDENCE_THRESHOLD = 0.5
 
-if args.fps_limit and args.media_path:
-    args.fps_limit = None
-    print(
-        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
-    )
-
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+
+if not args.fps_limit:
+    args.fps_limit = 30.0 if platform == "RVC4" else 6.0
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     detection_model_description = dai.NNModelDescription(detection_model_slug)
-    platform = device.getPlatform().name
     print(f"Platform: {platform}")
     detection_model_description.platform = platform
     detection_nn_archive = dai.NNArchive(
@@ -35,9 +32,7 @@ with dai.Pipeline(device) as pipeline:
 
     pose_model_description = dai.NNModelDescription(pose_model_slug)
     pose_model_description.platform = platform
-    pose_nn_archive = dai.NNArchive(
-        dai.getModelFromZoo(pose_model_description, useCached=False)
-    )
+    pose_nn_archive = dai.NNArchive(dai.getModelFromZoo(pose_model_description))
     frame_type = (
         dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
     )
@@ -50,7 +45,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        replay.setFps(6 if platform == "RVC2" else 20)
+        replay.setFps(args.fps_limit)
 
     else:
         cam = pipeline.create(dai.node.Camera).build()
