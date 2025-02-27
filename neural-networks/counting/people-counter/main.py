@@ -32,22 +32,22 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
+        image_manip = pipeline.create(dai.node.ImageManipV2)
+        image_manip.setMaxOutputFrameSize(
             nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
         )
-        imageManip.initialConfig.setOutputSize(
+        image_manip.initialConfig.setOutputSize(
             nn_archive.getInputWidth(),
             nn_archive.getInputHeight(),
             dai.ImageManipConfigV2.ResizeMode.STRETCH,
         )
-        imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+        image_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
         if platform == "RVC4":
-            imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
-        replay.out.link(imageManip.inputImage)
+            image_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+        replay.out.link(image_manip.inputImage)
 
     input_node = (
-        imageManip.out if args.media_path else pipeline.create(dai.node.Camera).build()
+        image_manip.out if args.media_path else pipeline.create(dai.node.Camera).build()
     )
 
     nn_with_parser: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(

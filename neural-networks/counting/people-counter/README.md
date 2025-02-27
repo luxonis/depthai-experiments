@@ -6,7 +6,7 @@ To use a different NN model (eg. `MobileNet SSD` or `pedestrian_detection_adas_0
 
 ## Demo
 
-\[![image](https://user-images.githubusercontent.com/18037362/119807472-11c26580-bedb-11eb-907a-196b8bb92f28.png)\]
+[![image](https://user-images.githubusercontent.com/18037362/119807472-11c26580-bedb-11eb-907a-196b8bb92f28.png)]
 
 ## Installation
 
