@@ -4,13 +4,17 @@ import depthai as dai
 from host_display_pointcloud import DisplayPointCloud
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--mono', default=False, action="store_true"
-                    , help="use mono frame for pointcloud coloring instead of color frame")
+parser.add_argument(
+    "-m",
+    "--mono",
+    default=False,
+    action="store_true",
+    help="use mono frame for pointcloud coloring instead of color frame",
+)
 args = parser.parse_args()
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
-
     print("Creating pipeline...")
     calib_data = device.readCalibration()
     device.setIrLaserDotProjectorIntensity(1)
@@ -46,7 +50,9 @@ with dai.Pipeline(device) as pipeline:
 
     if args.mono:
         width, height = right.getResolutionSize()
-        intrinsics = calib_data.getCameraIntrinsics(dai.CameraBoardSocket.CAM_C, dai.Size2f(width, height))
+        intrinsics = calib_data.getCameraIntrinsics(
+            dai.CameraBoardSocket.CAM_C, dai.Size2f(width, height)
+        )
     else:
         cam = pipeline.create(dai.node.ColorCamera)
         cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
@@ -56,7 +62,9 @@ with dai.Pipeline(device) as pipeline:
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
         width, height = cam.getIspSize()
-        intrinsics = calib_data.getCameraIntrinsics(dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height))
+        intrinsics = calib_data.getCameraIntrinsics(
+            dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
+        )
 
     pointcloud = pipeline.create(dai.node.PointCloud)
     stereo.depth.link(pointcloud.inputDepth)

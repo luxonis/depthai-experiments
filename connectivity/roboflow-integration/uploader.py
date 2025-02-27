@@ -3,10 +3,13 @@ import roboflow
 import tempfile
 import io
 
+
 class RoboflowUploader:
     # Thin wrapper over Roboflow's upload API
 
-    def __init__(self, workspace_name: str, dataset_name: str, api_key: str) -> "RoboflowUploader":
+    def __init__(
+        self, workspace_name: str, dataset_name: str, api_key: str
+    ) -> "RoboflowUploader":
         rf = roboflow.Roboflow(api_key=api_key)
         self.project = rf.workspace(workspace_name).project(dataset_name)
 
@@ -22,15 +25,14 @@ class RoboflowUploader:
         img.save(img_file, format="JPEG")
         img_file.flush()
 
-        annotation = make_voc_annotations(class_names, bboxes, frame.shape[1], frame.shape[0])
+        annotation = make_voc_annotations(
+            class_names, bboxes, frame.shape[1], frame.shape[0]
+        )
         ann_file = tempfile.NamedTemporaryFile(suffix=".xml", delete=False)
         with open(ann_file.name, "w") as f:
             f.write(annotation)
 
-        self.project.upload(
-            image_path=img_file.name,
-            annotation_path=ann_file.name
-        )
+        self.project.upload(image_path=img_file.name, annotation_path=ann_file.name)
 
 
 def make_voc_annotations(cls_names, bboxes, width, height):
@@ -60,7 +62,10 @@ def make_voc_annotations(cls_names, bboxes, width, height):
 
     return voc_xml_str
 
-def make_obj_xml_string(cls_name: str, xmin: int, ymin: int, xmax: int, ymax: int) -> str:
+
+def make_obj_xml_string(
+    cls_name: str, xmin: int, ymin: int, xmax: int, ymax: int
+) -> str:
     xml_str = f"""
 	<object>
 		<name>{cls_name}</name>

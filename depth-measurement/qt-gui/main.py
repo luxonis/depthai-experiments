@@ -15,6 +15,7 @@ from host_node.host_depth_color_transform import DepthColorTransform
 
 instance = None
 
+
 def resizeLetterbox(frame: np.ndarray, size: tuple[int]):
     # Transforms the frame to meet the desired size, preserving the aspect ratio and adding black borders (letterboxing)
     border_v = 0
@@ -23,7 +24,9 @@ def resizeLetterbox(frame: np.ndarray, size: tuple[int]):
         border_v = int((((size[1] / size[0]) * frame.shape[1]) - frame.shape[0]) / 2)
     else:
         border_h = int((((size[0] / size[1]) * frame.shape[0]) - frame.shape[1]) / 2)
-    frame = cv2.copyMakeBorder(frame, border_v, border_v, border_h, border_h, cv2.BORDER_CONSTANT, 0)
+    frame = cv2.copyMakeBorder(
+        frame, border_v, border_v, border_h, border_h, cv2.BORDER_CONSTANT, 0
+    )
     return cv2.resize(frame, size)
 
 
@@ -86,18 +89,23 @@ class Worker(QRunnable):
         self.running = True
 
         with dai.Pipeline() as pipeline:
-
             print("Creating pipeline...")
             cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
             preview = cam.requestOutput(size=(848, 480), type=dai.ImgFrame.Type.BGR888p)
 
             left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-            left_out = left.requestOutput(size=(848, 480), type=dai.ImgFrame.Type.BGR888p)
-            
-            right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-            right_out = right.requestOutput(size=(848, 480), type=dai.ImgFrame.Type.BGR888p)
+            left_out = left.requestOutput(
+                size=(848, 480), type=dai.ImgFrame.Type.BGR888p
+            )
 
-            stereo = pipeline.create(dai.node.StereoDepth).build(left=left_out, right=right_out)
+            right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+            right_out = right.requestOutput(
+                size=(848, 480), type=dai.ImgFrame.Type.BGR888p
+            )
+
+            stereo = pipeline.create(dai.node.StereoDepth).build(
+                left=left_out, right=right_out
+            )
             stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
             stereo.initialConfig.setLeftRightCheck(False)
             stereo.initialConfig.setConfidenceThreshold(255)
@@ -109,7 +117,7 @@ class Worker(QRunnable):
             self.stereo_config.setConfidenceThreshold(255)
             self.stereo_config.setSubpixelFractionalBits(3)
             self.config_queue = stereo.inputConfig.createInputQueue()
-            
+
             disparity = pipeline.create(DepthColorTransform).build(
                 disparity_frames=stereo.disparity
             )
@@ -118,7 +126,7 @@ class Worker(QRunnable):
             self.output = pipeline.create(QTOutput).build(
                 preview=preview,
                 disparity=disparity.output,
-                show_callback=self.onShowFrame
+                show_callback=self.onShowFrame,
             )
 
             print("Pipeline created.")
@@ -135,6 +143,7 @@ class Worker(QRunnable):
         if self.signals and self.running and source == self.selectedPreview:
             self.signals.updatePreviewSignal.emit(frame)
 
+
 class GuiApp:
     window = None
     threadpool = QThreadPool()
@@ -146,14 +155,19 @@ class GuiApp:
         self.engine.quit.connect(self.app.quit)
 
         instance = self
-        qmlRegisterType(ImageWriter, 'dai.gui', 1, 0, 'ImageWriter')
-        qmlRegisterType(AppBridge, 'dai.gui', 1, 0, 'AppBridge')
+        qmlRegisterType(ImageWriter, "dai.gui", 1, 0, "ImageWriter")
+        qmlRegisterType(AppBridge, "dai.gui", 1, 0, "AppBridge")
         self.engine.load(str(Path(__file__).parent / "root.qml"))
         self.window = self.engine.rootObjects()[0]
         if not self.engine.rootObjects():
             raise RuntimeError("Unable to start GUI - no root objects!")
 
-        medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
+        medianChoices = list(
+            filter(
+                lambda name: name.startswith("KERNEL_") or name.startswith("MEDIAN_"),
+                vars(dai.MedianFilter).keys(),
+            )
+        )[::-1]
         self.window.setProperty("medianChoices", medianChoices)
         self.window.setProperty("previewChoices", Worker.previews)
 
@@ -163,9 +177,16 @@ class GuiApp:
     def updatePreview(self, frame):
         scaledFrame = resizeLetterbox(frame, self.previewSize)
         if len(frame.shape) == 3:
-            img = QImage(scaledFrame.data, *self.previewSize, frame.shape[2] * self.previewSize[0], 29)  # 29 - QImage.Format_BGR888
+            img = QImage(
+                scaledFrame.data,
+                *self.previewSize,
+                frame.shape[2] * self.previewSize[0],
+                29,
+            )  # 29 - QImage.Format_BGR888
         else:
-            img = QImage(scaledFrame.data, *self.previewSize, self.previewSize[0], 24)  # 24 - QImage.Format_Grayscale8
+            img = QImage(
+                scaledFrame.data, *self.previewSize, self.previewSize[0], 24
+            )  # 24 - QImage.Format_Grayscale8
         self.writer.update_frame(img)
 
     def start(self):
@@ -196,6 +217,7 @@ class GuiApp:
         if self.worker.running:
             self.worker.selectedPreview = selected
             self.selectedPreview = selected
+
 
 if __name__ == "__main__":
     GuiApp().start()

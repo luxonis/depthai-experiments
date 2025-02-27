@@ -3,7 +3,9 @@ import argparse
 
 def initialize_argparser():
     """Initialize the argument parser for the script."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.description = (
         "General example script to run any model available in HubAI on DepthAI device. \
         All you need is a model slug of the model and the script will download the model from HubAI and create \
@@ -54,6 +56,16 @@ def initialize_argparser():
         default=None,
         type=str,
     )
+
+    parser.add_argument(
+        "-api",
+        "--api_key",
+        help="HubAI API key to access private model.",
+        required=False,
+        default="",
+        type=str,
+    )
+
     args = parser.parse_args()
 
     return parser, args

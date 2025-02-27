@@ -11,23 +11,37 @@ from host_node.keyboard_reader import KeyboardReader
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
-    monoLeft = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B).requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
-    monoRight = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C).requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
-    
-    stereo = pipeline.create(dai.node.StereoDepth).build(monoLeft, monoRight, presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
-    
+    monoLeft = (
+        pipeline.create(dai.node.Camera)
+        .build(dai.CameraBoardSocket.CAM_B)
+        .requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
+    )
+    monoRight = (
+        pipeline.create(dai.node.Camera)
+        .build(dai.CameraBoardSocket.CAM_C)
+        .requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
+    )
+
+    stereo = pipeline.create(dai.node.StereoDepth).build(
+        monoLeft, monoRight, presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY
+    )
+
     depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity)
     depth_color_transform.setColormap(cv2.COLORMAP_JET)
 
-    keyboard_reader = pipeline.create(KeyboardReader).build(depth_color_transform.output)
+    keyboard_reader = pipeline.create(KeyboardReader).build(
+        depth_color_transform.output
+    )
 
-    measure_distance = pipeline.create(MeasureDistance).build(stereo.depth, device.readCalibration(), HostSpatialsCalc.INITIAL_ROI)
+    measure_distance = pipeline.create(MeasureDistance).build(
+        stereo.depth, device.readCalibration(), HostSpatialsCalc.INITIAL_ROI
+    )
 
     calibdata = device.readCalibration()
     spatials = pipeline.create(HostSpatialsCalc).build(
         disparity_frames=depth_color_transform.output,
         measured_depth=measure_distance.output,
-        keyboard_input=keyboard_reader.output
+        keyboard_input=keyboard_reader.output,
     )
     spatials.output_roi.link(measure_distance.roi_input)
 

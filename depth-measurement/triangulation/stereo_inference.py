@@ -15,10 +15,8 @@ class StereoInference:
         focalLength = self.get_focal_length_pixels(self.width, self.hfov)
         self.dispScaleFactor = baseline * focalLength
 
-
     def get_focal_length_pixels(self, pixel_width, hfov):
-        return pixel_width * 0.5 / math.tan(hfov * 0.5 * math.pi/180)
-
+        return pixel_width * 0.5 / math.tan(hfov * 0.5 * math.pi / 180)
 
     def calculate_depth(self, disparity_pixels: float):
         try:
@@ -26,19 +24,16 @@ class StereoInference:
         except ZeroDivisionError:
             return 0
 
-
     def calculate_distance(self, c1, c2):
         c1 = np.array(c1)
         c2 = np.array(c2)
 
         x_delta = c1[0] - c2[0]
         y_delta = c1[1] - c2[1]
-        return math.sqrt(x_delta ** 2 + y_delta ** 2)
-
+        return math.sqrt(x_delta**2 + y_delta**2)
 
     def calc_angle(self, offset):
-            return math.atan(math.tan(self.hfov / 2.0) * offset / (self.width / 2.0))
-
+        return math.atan(math.tan(self.hfov / 2.0) * offset / (self.width / 2.0))
 
     def calc_spatials(self, coords, depth):
         x, y = coords
@@ -51,5 +46,4 @@ class StereoInference:
         z = depth
         x = z * math.tan(angle_x)
         y = -z * math.tan(angle_y)
-        return [x,y,z]
-    
+        return [x, y, z]

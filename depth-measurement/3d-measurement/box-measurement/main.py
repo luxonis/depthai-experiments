@@ -4,10 +4,20 @@ import argparse
 from host_box_measurement import BoxMeasurement
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-maxd', '--max-dist', type=float, default=2
-                    , help="maximum distance between camera and object in space in meters")
-parser.add_argument('-mins', '--min-box-size', type=float, default=0.003
-                    , help="minimum box size in cubic meters")
+parser.add_argument(
+    "-maxd",
+    "--max-dist",
+    type=float,
+    default=2,
+    help="maximum distance between camera and object in space in meters",
+)
+parser.add_argument(
+    "-mins",
+    "--min-box-size",
+    type=float,
+    default=0.003,
+    help="minimum box size in cubic meters",
+)
 args = parser.parse_args()
 
 # Higher resolution for example THE_720_P makes better results but drastically lowers FPS
@@ -15,7 +25,6 @@ RESOLUTION = dai.MonoCameraProperties.SensorResolution.THE_400_P
 
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
-
     print("Creating pipeline...")
     calib_data = device.readCalibration()
     device.setIrLaserDotProjectorIntensity(1)
@@ -57,7 +66,9 @@ with dai.Pipeline(device) as pipeline:
     stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
 
     width, height = cam.getIspSize()
-    intrinsics = calib_data.getCameraIntrinsics(dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height))
+    intrinsics = calib_data.getCameraIntrinsics(
+        dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
+    )
 
     box_measurement = pipeline.create(BoxMeasurement).build(
         color=cam.isp,
@@ -65,7 +76,7 @@ with dai.Pipeline(device) as pipeline:
         cam_intrinsics=intrinsics,
         shape=(width, height),
         max_dist=args.max_dist,
-        min_box_size=args.min_box_size
+        min_box_size=args.min_box_size,
     )
     box_measurement.inputs["color"].setBlocking(False)
     box_measurement.inputs["color"].setMaxSize(4)

@@ -1,60 +1,91 @@
-#TODO vobec to nesedi k projektu zatial
+# Manual Camera Control
 
-# Lossless Zooming
-
-This demo shows how you can achieve lossless zooming on the device. Demo will zoom into the first face it detects. It will crop 4K frames into 1080P, centered around the face. Demo uses [face-detection-retail-0004](https://docs.openvino.ai/latest/omz_models_model_face_detection_retail_0004.html) NN model.
+This experiment demonstrates how to manually control different camera parameters. Use keyboard to modify different settings.
 
 ## Demo
 
-[![Lossless Zooming](https://user-images.githubusercontent.com/18037362/144095838-d082040a-9716-4f8e-90e5-15bcb23115f9.gif)](https://youtu.be/8X0IcnkeIf8)
-
-### MJPEG
-
-You can turn `MJPEG` on or off. It's set to `True` by default, so cropped 1080P stream will get encoded into MJPEG on the device. On the host, it will just get decoded and shown to the user, but you could also save the MJPEG stream or stream it elsewhere.
-
+![example](media/example.gif)
 
 ## Installation
 
-```
+```bash
 python3 -m pip install -r requirements.txt
 ```
 
 ## Usage
 
-```
-User controls
-'c' - to capture a set of images (from isp and/or raw streams)
-'t' - to trigger autofocus
-'ioklnm,.' for manual exposure/focus:
-  Control:      key[dec/inc]  min..max
-  exposure time:     i   o      1..33000 [us]
-  sensitivity iso:   k   l    100..1600
-  focus:             ,   .      0..255 [far..near]
-  white balance:     n   m   1000..12000 (light color temperature K)
-To go back to auto controls:
-  'e' - autoexposure
-  'f' - autofocus (continuous)
-Other controls:
-'1' - AWB lock (true / false)
-'2' - AE lock (true / false)
-'3' - Select control: AWB mode
-'4' - Select control: AE compensation
-'5' - Select control: anti-banding/flicker mode
-'6' - Select control: effect mode
-'7' - Select control: brightness
-'8' - Select control: contrast
-'9' - Select control: saturation
-'0' - Select control: sharpness
-'[' - Select control: luma denoise
-']' - Select control: chroma denoise
+You can run the experiment in fully on device (`STANDALONE` mode) or using your computer as host (`PERIPHERAL` mode).
 
-For the 'Select control: ...' options, use these keys to modify the value:
-  '-' or '_' to decrease
-  '+' or '=' to increase
+### Peripheral Mode
+
+```bash
+python3 main.py --device <DEVICE> --fps_limit <FPS_LIMIT>
 ```
 
-Run the application
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
+- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
 
-```
+#### Examples
+
+```bash
 python3 main.py
 ```
+
+This will run the manual camera control experiment with the default device and camera input.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+and run the example using the `run_standalone.py` script:
+
+```bash
+python3 run_standalone.py \
+    --device <DEVICE IP> \
+    --fps_limit <FPS>
+```
+
+The arguments are the same as in the Peripheral mode.
+
+#### Example
+
+```bash
+python3 run_standalone.py \
+    --fps_limit 20 \
+```
+
+### Keyboard Controls
+
+| Key      | Description                          |
+| -------- | ------------------------------------ |
+| `c`      | Capture an image                     |
+| `e`      | Autoexposure                         |
+| `t`      | Trigger autofocus                    |
+| `f`      | Autofocus (continuous)               |
+| `w`      | Auto white balance lock (true/false) |
+| `r`      | Auto exposure lock (true/false)      |
+| `+`, `-` | Increase/decrease selected control   |
+
+The following controls can be selected and modified with `+` and `-` keys:
+
+| Key | Description                |
+| --- | -------------------------- |
+| `1` | Manual exposure time       |
+| `2` | Manual sensitivity ISO     |
+| `3` | Auto white balance mode    |
+| `4` | Auto exposure compensation |
+| `5` | Anti-banding/flicker mode  |
+| `6` | Effect mode                |
+| `7` | Brightness                 |
+| `8` | Contrast                   |
+| `9` | Saturation                 |
+| `0` | Sharpness                  |
+| `o` | Manual white balance       |
+| `p` | Manual focus               |
+| `[` | Luma denoise               |
+| `]` | Chroma denoise             |

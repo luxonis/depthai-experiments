@@ -1,6 +1,5 @@
 # DepthAI Experiments
 
-[![Discord](https://img.shields.io/discord/790680891252932659?label=Discord)](https://discord.gg/luxonis)
 [![Forum](https://img.shields.io/badge/Forum-discuss-orange)](https://discuss.luxonis.com/)
 [![Docs](https://img.shields.io/badge/Docs-DepthAI-yellow)](https://docs.luxonis.com)
 
@@ -10,26 +9,30 @@ Click on any category below to explore detailed examples for that specific domai
 
 ## Categories
 
-### [📱 Apps](apps/)
-Ready-to-use applications built with DepthAI, demonstrating real-world use cases and implementations.
+### [📱 Apps](apps/) (🚧 In progress)
 
-### [🎥 Camera Controls](camera-controls/)
+Ready-to-use applications built with DepthAI, demonstrating real-world use cases and implementations. Here are also demos that we present at different conferences showing advanced use cases.
+
+### [🎥 Camera Controls](camera-controls/) (✅ Complete)
+
 Examples demonstrating various camera control features like focus, exposure, white balance, and other camera parameters.
 
-### [📊 Conference Demos](conference-demos/)
-Collection of demos presented at conferences and events, showing advanced use cases.
+### [🔌 Connectivity](connectivity/) (🚧 In progress)
 
-### [🔌 Connectivity](connectivity/)
-Shows how to integrate DepthAI with different frameworks and tools like [Foxglove](https://docs.foxglove.dev/docs/introduction/) or [Rerun](https://rerun.io/docs/getting-started/what-is-rerun).
+Shows how to integrate DepthAI with different frameworks and tools like [Hub](https://hub.luxonis.com/), [Foxglove](https://docs.foxglove.dev/docs/introduction/) or [Rerun](https://rerun.io/docs/getting-started/what-is-rerun).
 
-### [📏 Depth Measurement](depth-measurement/)
+### [📏 Depth Measurement](depth-measurement/) (🚧 In progress)
+
 Demonstrations of depth perception capabilities, including spatial calculations, depth visualization, and 3D measurements including pointcloud.
 
-### [🧠 Neural Networks](neural-networks/)
+### [🧠 Neural Networks](neural-networks/) (🚧 In progress)
+
 Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
 
-### [🔄 Stream Manipulation](stream-manipulation/)
+### [🔄 Stream Manipulation](stream-manipulation/) (🚧 In progress)
+
 Examples showing different ways to stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
 
-### [📚 Tutorial](tutorial/)
+### [📚 Tutorials](tutorials/) (🚧 In progress)
+
 Step-by-step guides and educational content to help you get started with DepthAI.

@@ -1,6 +1,6 @@
 # Rerun
 
-This example streams a pointcloud to [Rerun Viewer](https://www.rerun.io/)  
+This example streams a pointcloud to [Rerun Viewer](https://www.rerun.io/)
 
 # Installation
 

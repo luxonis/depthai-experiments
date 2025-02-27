@@ -1,11 +1,14 @@
 import numpy as np
 import open3d as o3d
 
-class PointCloudVisualizer():
+
+class PointCloudVisualizer:
     def __init__(self):
         self.pcl = None
         # Transform from camera to world orientation (Note the absolute position won't be correct)
-        self.R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(np.float64)
+        self.R_camera_to_world = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]).astype(
+            np.float64
+        )
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window("[DepthAI] Open3D integration demo", 960, 540)
         self.isstarted = False
@@ -22,11 +25,15 @@ class PointCloudVisualizer():
         else:
             self.pcl.points = pcd.points
         # Rotate the pointcloud such that it is in the world coordinate frame (easier to visualize)
-        self.pcl.rotate(self.R_camera_to_world, center=np.array([0,0,0],dtype=np.float64))
+        self.pcl.rotate(
+            self.R_camera_to_world, center=np.array([0, 0, 0], dtype=np.float64)
+        )
 
         if not self.isstarted:
             self.vis.add_geometry(self.pcl)
-            origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1, origin=[0, 0, 0])
+            origin = o3d.geometry.TriangleMesh.create_coordinate_frame(
+                size=0.1, origin=[0, 0, 0]
+            )
             self.vis.add_geometry(origin)
             ctr = self.vis.get_view_control()
             ctr.set_zoom(0.3)

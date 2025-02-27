@@ -60,7 +60,7 @@ def readInt32(buf):
 
 def writeUTF(data):
     # data could be a string, or bytes.  If string, encode into bytes with utf-8
-    data = data if type(data) == type(b"") else bytes(data, "utf-8")
+    data = data if isinstance(data, str) else bytes(data, "utf-8")
     return writeInt16(len(data)) + data
 
 
@@ -335,23 +335,20 @@ class Properties(object):
                 )
 
             # Check for forbidden values
-            if type(value) != type([]):
+            if isinstance(value, list):
                 if name in ["ReceiveMaximum", "TopicAlias"] and (
                     value < 1 or value > 65535
                 ):
-
                     raise MQTTException(
                         "%s property value must be in the range 1-65535" % (name)
                     )
                 elif name in ["TopicAliasMaximum"] and (value < 0 or value > 65535):
-
                     raise MQTTException(
                         "%s property value must be in the range 0-65535" % (name)
                     )
                 elif name in ["MaximumPacketSize", "SubscriptionIdentifier"] and (
                     value < 1 or value > 268435455
                 ):
-
                     raise MQTTException(
                         "%s property value must be in the range 1-268435455" % (name)
                     )
@@ -360,11 +357,10 @@ class Properties(object):
                     "RequestProblemInformation",
                     "PayloadFormatIndicator",
                 ] and (value != 0 and value != 1):
-
                     raise MQTTException("%s property value must be 0 or 1" % (name))
 
             if self.allowsMultiple(name):
-                if type(value) != type([]):
+                if isinstance(value, list):
                     value = [value]
                 if hasattr(self, name):
                     value = object.__getattribute__(self, name) + value
@@ -506,7 +502,6 @@ class Properties(object):
 
 
 class PacketTypes:
-
     """
     Packet types class.  Includes the AUTH packet for MQTT v5.0.
     Holds constants for each packet type such as PacketTypes.PUBLISH
@@ -1640,7 +1635,7 @@ class Client(object):
             sock.close()
 
     def _reset_sockets(self, sockpair_only=False):
-        if sockpair_only == False:
+        if not sockpair_only:
             self._sock_close()
 
         if self._sockpairR:
@@ -1895,7 +1890,7 @@ class Client(object):
         else:
             if clean_start != MQTT_CLEAN_START_FIRST_ONLY:
                 raise ValueError("Clean start only applies to MQTT V5")
-            if properties != None:
+            if properties is not None:
                 raise ValueError("Properties only apply to MQTT V5")
 
         self.connect_async(
@@ -2713,7 +2708,7 @@ class Client(object):
         if qos < 0 or qos > 2:
             raise ValueError("Invalid QoS level.")
 
-        if properties != None and not isinstance(properties, Properties):
+        if properties is not None and not isinstance(properties, Properties):
             raise ValueError(
                 "The properties argument must be an instance of the Properties class."
             )
@@ -3824,7 +3819,7 @@ class Client(object):
 
         connect_flags = 0
         if self._protocol == MQTTv5:
-            if self._clean_start == True:
+            if self._clean_start:
                 connect_flags |= 0x02
             elif (
                 self._clean_start == MQTT_CLEAN_START_FIRST_ONLY
@@ -3959,9 +3954,9 @@ class Client(object):
         self._pack_remaining_length(packet, remaining_length)
 
         if self._protocol == MQTTv5:
-            if reasoncode != None:
+            if reasoncode is not None:
                 packet += reasoncode.pack()
-                if properties != None:
+                if properties is not None:
                     packet += packed_props
 
         return self._packet_queue(command, packet, 0, 0)
@@ -4275,7 +4270,9 @@ class Client(object):
                         return MQTT_ERR_SUCCESS
 
                     if m.qos == 0:
-                        with self._in_callback_mutex:  # Don't call loop_write after _send_publish()
+                        with (
+                            self._in_callback_mutex
+                        ):  # Don't call loop_write after _send_publish()
                             rc = self._send_publish(
                                 m.mid,
                                 m.topic.encode("utf-8"),
@@ -4291,7 +4288,9 @@ class Client(object):
                         if m.state == mqtt_ms_publish:
                             self._inflight_messages += 1
                             m.state = mqtt_ms_wait_for_puback
-                            with self._in_callback_mutex:  # Don't call loop_write after _send_publish()
+                            with (
+                                self._in_callback_mutex
+                            ):  # Don't call loop_write after _send_publish()
                                 rc = self._send_publish(
                                     m.mid,
                                     m.topic.encode("utf-8"),
@@ -4307,7 +4306,9 @@ class Client(object):
                         if m.state == mqtt_ms_publish:
                             self._inflight_messages += 1
                             m.state = mqtt_ms_wait_for_pubrec
-                            with self._in_callback_mutex:  # Don't call loop_write after _send_publish()
+                            with (
+                                self._in_callback_mutex
+                            ):  # Don't call loop_write after _send_publish()
                                 rc = self._send_publish(
                                     m.mid,
                                     m.topic.encode("utf-8"),
@@ -4322,7 +4323,9 @@ class Client(object):
                         elif m.state == mqtt_ms_resend_pubrel:
                             self._inflight_messages += 1
                             m.state = mqtt_ms_wait_for_pubcomp
-                            with self._in_callback_mutex:  # Don't call loop_write after _send_publish()
+                            with (
+                                self._in_callback_mutex
+                            ):  # Don't call loop_write after _send_publish()
                                 rc = self._send_pubrel(m.mid)
                             if rc != 0:
                                 return rc
@@ -4736,7 +4739,6 @@ class Client(object):
             and not self._thread_terminate
             and remaining > 0
         ):
-
             time.sleep(min(remaining, 1))
             remaining = target_time - time_func()
 
@@ -4836,7 +4838,6 @@ class WebsocketWrapper(object):
     OPCODE_PONG = 0xA
 
     def __init__(self, socket, host, port, is_ssl, path, extra_headers):
-
         self.connected = False
 
         self._ssl = is_ssl
@@ -4855,7 +4856,6 @@ class WebsocketWrapper(object):
         self._do_handshake(extra_headers)
 
     def __del__(self):
-
         self._sendbuffer = None
         self._readbuffer = None
 
@@ -4863,7 +4863,7 @@ class WebsocketWrapper(object):
         try:
             sec_websocket_key = uuid.uuid4().bytes  # type: ignore
             sec_websocket_key = base64.b64encode(sec_websocket_key)
-        except:
+        except Exception as _:
             raise ValueError("Unable to generate Sec-WebSocket-Key")
 
         websocket_headers = {
@@ -4955,7 +4955,6 @@ class WebsocketWrapper(object):
         self.connected = True
 
     def _create_frame(self, opcode, data, do_masking=1):
-
         header = bytearray()
         length = len(data)
 
@@ -4987,11 +4986,9 @@ class WebsocketWrapper(object):
         return header + data
 
     def _buffered_read(self, length):
-
         # try to recv and store needed bytes
         wanted_bytes = length - (len(self._readbuffer) - self._readbuffer_head)
         if wanted_bytes > 0:
-
             data = self._socket.recv(wanted_bytes)
 
             if not data:
@@ -5006,10 +5003,8 @@ class WebsocketWrapper(object):
         return self._readbuffer[self._readbuffer_head - length : self._readbuffer_head]
 
     def _recv_impl(self, length):
-
         # try to decode websocket payload part from data
         try:
-
             self._readbuffer_head = 0
 
             result = None
@@ -5028,12 +5023,10 @@ class WebsocketWrapper(object):
 
             # read length
             if lengthbits == 0x7E:
-
                 value = self._buffered_read(2)
                 (payload_length,) = struct.unpack("!H", value)
 
             elif lengthbits == 0x7F:
-
                 value = self._buffered_read(8)
                 (payload_length,) = struct.unpack("!Q", value)
 
@@ -5091,7 +5084,6 @@ class WebsocketWrapper(object):
             return b""
 
     def _send_impl(self, data):
-
         # if previous frame was sent successfully
         if len(self._sendbuffer) == 0:
             # create websocket frame

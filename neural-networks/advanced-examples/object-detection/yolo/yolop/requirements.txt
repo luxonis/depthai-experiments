@@ -1,7 +1,0 @@
-opencv-python==4.10.0.84
-depthai==3.0.0a11
-torch>=1.7.0
-torchvision>=0.8.1
-numpy~=2.0
-blobconverter
-gdown>=4.4

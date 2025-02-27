@@ -1,51 +1,69 @@
 import depthai as dai
-import blobconverter
+from depthai_nodes import ParsingNeuralNetwork
+from util.arguments import initialize_argparser
+from util.depth_color_transform import DepthColorTransform
+from util.depth_driven_focus import DepthDrivenFocus
+from util.depth_merger import DepthMerger
 
-from host_depth_driven_focus import DepthDrivenFocus
+_, args = initialize_argparser()
 
-modelDescription = dai.NNModelDescription(modelSlug="yunet", platform="RVC2", modelVersionSlug="640x640")
-archivePath = dai.getModelFromZoo(modelDescription)
-nn_archive = dai.NNArchive(archivePath)
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-with dai.Pipeline() as pipeline:
 
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(300, 300)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setVideoSize(1080, 1080)
-    cam.setInterleaved(False)
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    model_description = dai.NNModelDescription("luxonis/yunet:640x480")
+    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    model_description.platform = platform
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.initialConfig.setConfidenceThreshold(240)
-    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setExtendedDisparity(True)
-
-    face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    face_det_nn.setBlobPath(blobconverter.from_zoo(name="face-detection-retail-0004", shaves=6))
-    face_det_nn.setConfidenceThreshold(0.4)
-    #face_det_nn.setNNArchive(nn_archive) # TODO: swap in, when parsers can work with depth
-    face_det_nn.setBoundingBoxScaleFactor(0.5)
-    face_det_nn.setDepthLowerThreshold(200)
-    face_det_nn.setDepthUpperThreshold(3000)
-
-    cam.preview.link(face_det_nn.input)
-    stereo.depth.link(face_det_nn.inputDepth)
-
-    depth_driven_focus = pipeline.create(DepthDrivenFocus).build(
-        preview=cam.video,
-        control_queue=cam.inputControl.createInputQueue(),
-        face_detection=face_det_nn.out,
-        face_detection_depth=face_det_nn.passthroughDepth
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    color_out = cam.requestOutput(
+        nn_archive.getInputSize(), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
 
+    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    left_out = left.requestOutput(
+        nn_archive.getInputSize(), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+    )
+    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+    right_out = right.requestOutput(
+        nn_archive.getInputSize(), type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+    )
+
+    stereo = pipeline.create(dai.node.StereoDepth).build(left=left_out, right=right_out)
+    # print(stereo.initialConfig.getConfidenceThreshold())
+    stereo.initialConfig.setConfidenceThreshold(240)
+    stereo.setLeftRightCheck(True)
+    stereo.setRectification(True)
+    stereo.setExtendedDisparity(True)
+
+    face_det_nn = pipeline.create(ParsingNeuralNetwork).build(cam, nn_archive)
+    depth_merger = pipeline.create(DepthMerger).build(
+        face_det_nn.out, stereo.depth, device.readCalibration2()
+    )
+    depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity)
+    depth_color_transform.setMaxDisparity(stereo.initialConfig.getMaxDisparity())
+
+    depth_driven_focus = pipeline.create(DepthDrivenFocus).build(
+        control_queue=cam.inputControl.createInputQueue(),
+        face_detection=depth_merger.output,
+    )
+
+    visualizer.addTopic("Video", color_out, "images")
+    visualizer.addTopic("Visualizations", face_det_nn.out, "images")
+    visualizer.addTopic("Depth", depth_color_transform.output, "images")
+    visualizer.addTopic("Focus distance", depth_driven_focus.output, "images")
+
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

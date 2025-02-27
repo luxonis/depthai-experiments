@@ -28,7 +28,9 @@ class CropDetections(dai.node.HostNode):
             ]
         )
 
-    def build(self, passthrough: dai.Node.Output, detections: dai.Node.Output) -> "CropDetections":
+    def build(
+        self, passthrough: dai.Node.Output, detections: dai.Node.Output
+    ) -> "CropDetections":
         self.link_args(passthrough, detections)
         return self
 
@@ -46,7 +48,10 @@ class CropDetections(dai.node.HostNode):
         self._bbox_padding = padding
 
     def process(self, img_passthrough: dai.Buffer, dets_msg: dai.Buffer) -> None:
-        assert isinstance(dets_msg, (dai.ImgDetections, dai.SpatialImgDetections, ImgDetectionsExtended))
+        assert isinstance(
+            dets_msg,
+            (dai.ImgDetections, dai.SpatialImgDetections, ImgDetectionsExtended),
+        )
         dets = dets_msg.detections
         if len(dets) == 0:
             # No detections, there is nothing to crop
@@ -54,7 +59,7 @@ class CropDetections(dai.node.HostNode):
             self.detection_passthrough.send(dets_msg)
             self.output_config.send(self._last_config)
             return
-        
+
         for detection in dets:
             cfg = dai.ImageManipConfigV2()
             rect = self._get_rect(detection)
@@ -70,9 +75,9 @@ class CropDetections(dai.node.HostNode):
             try:
                 self.img_passthrough.send(img_passthrough)
                 self.output_config.send(cfg)
-            except dai.MessageQueue.QueueException as e:
+            except dai.MessageQueue.QueueException:
                 return
-            
+
         self.detection_passthrough.send(dets_msg)
 
     def _get_rect(self, detection: dai.ImgDetection) -> dai.Rect:
