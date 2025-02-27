@@ -1,23 +1,54 @@
-# Gen3 People counting
+# People Counter
 
-This demo uses [person_detection_retail_0013](https://docs.openvino.ai/2024/omz_models_model_person_detection_retail_0013.html) neural network to detect people. The demo also displays the number of people detected on the frame.
-
-To use a different NN model (eg. `MobileNet SSD` or `pedestrian_detection_adas_0002`), you would also have to change the `size` (input size of the NN) variable.
+This experiments demonstrate how to count people in the frame. It uses [SCRFD Person detection](https://hub.luxonis.com/ai/models/c3830468-3178-4de6-bc09-0543bbe28b1c) model.
 
 ## Demo
 
-[![image](https://user-images.githubusercontent.com/18037362/119807472-11c26580-bedb-11eb-907a-196b8bb92f28.png)]
+![example](media/example.gif)
 
 ## Installation
 
-```
-python3 -m pip install -r requirements.txt
+You need to prepare a Python 3.10 environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run the application
+You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode). To see the streamed frames, open [http://localhost:8082](http://localhost:8082).
 
+### Peripheral Mode
+
+```bash
+python3 main.py --device <DEVICE> --media <MEDIA> --fps_limit <FPS_LIMIT>
 ```
+
+- `<DEVICE>`: Device IP or ID. Default: \`\`.
+- `<MEDIA>`: Path to the video file. Default `None` - camera input.
+- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+
+#### Examples
+
+```bash
 python3 main.py
 ```
+
+This will run the People Counter experiment with the default device and camera input.
+
+```
+python3 main.py --media <PATH_TO_VIDEO>
+```
+
+This will run the People Counter experiment with the default device and the video file.
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+# TODO: add instructions for standalone mode once oakctl supports CLI arguments
