@@ -39,7 +39,7 @@ def initialize_argparser():
         "--threshold",
         default=0.25,
         type=float,
-        help="Minimum distance the person has to move (across the x/y axis) to be considered a real movement. Default: 0.25",
+        help="Minimum distance the person has to move (across the x/y axis) to be considered a real movement.",
     )
 
     args = parser.parse_args()
