@@ -1,6 +1,6 @@
-import cv2
+from datetime import timedelta
+
 import depthai as dai
-import numpy as np
 
 
 class PeopleCounter(dai.node.HostNode):
@@ -15,25 +15,16 @@ class PeopleCounter(dai.node.HostNode):
             ]
         )
 
-    def build(
-        self, preview: dai.Node.Output, tracklets: dai.Node.Output, threshold: float
-    ) -> "PeopleCounter":
-        self.link_args(preview, tracklets)
+    def build(self, tracklets: dai.Node.Output, threshold: float) -> "PeopleCounter":
+        self.link_args(tracklets)
 
         self._threshold = threshold
         return self
 
-    def process(self, preview: dai.ImgFrame, tracklets: dai.Tracklets) -> None:
-        img = preview.getCvFrame().copy()
+    def process(self, tracklets: dai.Tracklets) -> None:
         self.update(tracklets)
-        img = self.draw_counter_text(img)
-
-        img_frame = dai.ImgFrame()
-        img_frame.setCvFrame(img, dai.ImgFrame.Type.BGR888p)
-        img_frame.setTimestamp(preview.getTimestamp())
-        img_frame.setSequenceNum(preview.getSequenceNum())
-
-        self.output.send(img_frame)
+        annots = self.get_img_annotations(tracklets.getTimestamp())
+        self.out.send(annots)
 
     def update(self, tracklets: dai.Tracklets) -> None:
         for t in tracklets.tracklets:
@@ -64,12 +55,20 @@ class PeopleCounter(dai.node.HostNode):
             ) and "lost" not in self.tracking_data[id]:
                 self.terminate_tracklet(id, centroid)
 
-    def draw_counter_text(self, frame: np.ndarray):
-        counter_text = f"Up: {self.counter['up']}, Down: {self.counter['down']}, Left: {self.counter['left']}, Right: {self.counter['right']}"
-        cv2.putText(
-            frame, counter_text, (30, 30), cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 0, 255)
-        )
-        return frame
+    def get_img_annotations(self, timestamp: timedelta):
+        img_annotations = dai.ImgAnnotations()
+        img_annotations.setTimestamp(timestamp)
+
+        img_annot = dai.ImgAnnotation()
+        txt_annot = dai.TextAnnotation()
+        txt_annot.fontSize = 25
+        txt_annot.text = f"Up: {self.counter['up']}, Down: {self.counter['down']}, Left: {self.counter['left']}, Right: {self.counter['right']}"
+        txt_annot.position = dai.Point2f(0.05, 0.05)
+        txt_annot.textColor = dai.Color(0.0, 0.0, 0.0)
+        txt_annot.backgroundColor = dai.Color(0.0, 1.0, 0.0)
+        img_annot.texts.append(txt_annot)
+        img_annotations.annotations.append(img_annot)
+        return img_annotations
 
     def terminate_tracklet(self, id, coords_end):
         coords_start = self.tracking_data[id]["coords"]
