@@ -138,9 +138,9 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## Object Tracking
 
-|                                               DeepSORT Tracking                                               |
-| :-----------------------------------------------------------------------------------------------------------: |
-| <img src="object-tracking/deepsort-tracking/media/example.gif" alt="deepsort tracking" style="height:250px;"> |
+|                                               DeepSORT Tracking                                               |                                             People Tracker                                              |
+| :-----------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------: |
+| <img src="object-tracking/deepsort-tracking/media/example.gif" alt="deepsort tracking" style="height:250px;"> | <img src="object-tracking/people-tracker/media/example.gif" alt="people tracker" style="height:250px;"> |
 
 | Name                                                        | HubAI Model                                                                                                                                                                     | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                | Notes |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----- |
