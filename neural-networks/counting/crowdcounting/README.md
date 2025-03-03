@@ -22,26 +22,30 @@ pip install -r requirements.txt
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py -model <MODEL> -media <MEDIA> -fps <FPS_LIMIT> --device <DEVICE>
+```
+-m MODEL, --model MODEL
+                    Crowd counting model HubAI reference. (default: luxonis/dm-count:shb-426x240)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 5)
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
 ```
 
-- `<MODEL>`: DM-Count model variant reference from Luxonis HubAI.
-- `<MEDIA>` \[OPTIONAL\]: Path to the video file. Default: `None` - use camera input.
-- `<FPS_LIMIT>` \[OPTIONAL\]: Limit of the video/camera FPS. Beware that if providing a video file with higher FPS, a slowed-down video will be shown (and vice-versa if providing a video file with higher FPS). Default: `1`.
-- `<DEVICE>` \[OPTIONAL\]: Device IP or ID. Default: `None` - use the first identified device connected to the host.
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
 ```bash
-python main.py \
-    -model luxonis/dm-count:shb-426x240 \
-    -fps 5
+python3 main.py
 ```
 
-This will run the experiment using the SHB variant of the model with input size 426x240 on the default device and camera input at 5 FPS.
+This will run the experiment with default arguments.
 
 ### Standalone Mode
 
@@ -59,4 +63,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment using the SHB variant of the model with input size 426x240 on the specified device and camera input at 5 FPS.
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

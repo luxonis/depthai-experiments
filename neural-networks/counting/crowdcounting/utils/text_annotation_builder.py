@@ -1,9 +1,9 @@
 from datetime import timedelta
-
+from typing import Tuple, Optional, List
 import depthai as dai
 
-Point = tuple[float, float]
-ColorRGBA = tuple[float, float, float, float]
+Point = Tuple[float, float]
+ColorRGBA = Tuple[float, float, float, float]
 
 
 class TextAnnotationBuilder:
@@ -15,7 +15,7 @@ class TextAnnotationBuilder:
         text: str,
         position: Point,
         color: ColorRGBA,
-        background_color: ColorRGBA | None = None,
+        background_color: Optional[ColorRGBA] = None,
         size: float = 32,
     ):
         text_annot = dai.TextAnnotation()
@@ -43,5 +43,5 @@ class TextAnnotationBuilder:
         c.b = color[2]
         return c
 
-    def _create_points_vector(self, points: list[Point]) -> dai.VectorPoint2f:
+    def _create_points_vector(self, points: List[Point]) -> dai.VectorPoint2f:
         return dai.VectorPoint2f([dai.Point2f(pt[0], pt[1]) for pt in points])
