@@ -1,6 +1,6 @@
 # People tracker
 
-> [!IMPORTANT]
+> \[!IMPORTANT\]
 > `ObjectTracker` node is not yet supported on RVC4. This example will not work on RVC4 devices.
 
 This experiment counts how many people went up / down / left / right in the video stream, allowing you to
