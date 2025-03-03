@@ -1,6 +1,7 @@
 import numpy as np
 import depthai as dai
 from enum import Enum
+from typing import List
 
 
 class MANIP_MODE(Enum):
@@ -57,7 +58,7 @@ class NormalizeBbox(dai.node.HostNode):
         self.output.send(normalized_dets)
 
     def _frame_norm(
-        self, frame: np.ndarray, bbox: list[dai.ImgDetection]
+        self, frame: np.ndarray, bbox: List[dai.ImgDetection]
     ) -> np.ndarray:
         # moves the bounding box to equalize the crop
         if self.manip_mode == dai.ImgResizeMode.CROP:
