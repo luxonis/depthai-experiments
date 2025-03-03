@@ -49,6 +49,7 @@ jobs:
       - name: Run Test
         run: |
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#${{ matrix.python-version}}-${{ matrix.platform }}"
+          export INFLUXDB_TOKEN=${{ secrets.INFLUXDB_TOKEN }}
           hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./test/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \

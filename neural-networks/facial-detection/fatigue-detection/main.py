@@ -1,90 +1,86 @@
 import depthai as dai
-import blobconverter
+from utils.host_fatigue_detection import FatigueDetection
+from depthai_nodes import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.host_process_detections import ProcessDetections
+from pathlib import Path
 
-from host_fatigue_detection import FatigueDetection
+_, args = initialize_argparser()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+platform = device.getPlatform()
 
-with dai.Pipeline() as pipeline:
+FPS = 20
+frame_type = dai.ImgFrame.Type.BGR888p
+if "RVC4" in str(platform):
+    frame_type = dai.ImgFrame.Type.BGR888i
+    FPS = 30
+else:
+    raise RuntimeError("This demo is currently only supported on RVC4")
+
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setIspScale(2, 3)
-    cam.setInterleaved(False)
-    cam.setPreviewSize(720, 720)
 
-    face_det_manip = pipeline.create(dai.node.ImageManip)
-    face_det_manip.initialConfig.setResize(300, 300)
-    cam.preview.link(face_det_manip.inputImage)
+    if args.media_path:
+        replay_node = pipeline.create(dai.node.ReplayVideo)
+        replay_node.setReplayVideoFile(Path(args.media_path))
+        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay_node.setLoop(True)
 
-    face_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    face_nn.setConfidenceThreshold(0.3)
-    face_nn.setBlobPath(blobconverter.from_zoo("face-detection-retail-0004", shaves=6))
-    face_det_manip.out.link(face_nn.input)
+        video_resize_node = pipeline.create(dai.node.ImageManipV2)
+        video_resize_node.initialConfig.setOutputSize(1280, 960)
+        video_resize_node.initialConfig.setFrameType(frame_type)
 
-    # Script node will take the output from the NN as an input, get the first bounding box
-    # and send ImageManipConfig to the manip_crop
-    script = pipeline.create(dai.node.Script)
-    script.inputs["nn_in"].setBlocking(False)
-    script.inputs["nn_in"].setMaxSize(1)
-    face_nn.out.link(script.inputs["nn_in"])
-    script.setScript("""
-import time
-def enlrage_roi(det): # For better face landmarks NN results
-    det.xmin -= 0.05
-    det.ymin -= 0.02
-    det.xmax += 0.05
-    det.ymax += 0.02
-    
-def limit_roi(det):
-    if det.xmin <= 0: det.xmin = 0.001
-    if det.ymin <= 0: det.ymin = 0.001
-    if det.xmax >= 1: det.xmax = 0.999
-    if det.ymax >= 1: det.ymax = 0.999
+        replay_node.out.link(video_resize_node.inputImage)
 
-while True:
-    nn_out = node.io['nn_in'].tryGet()
+        input_node = video_resize_node.out
+    else:
+        camera_node = pipeline.create(dai.node.Camera).build()
+        input_node = camera_node.requestOutput((1280, 960), frame_type, fps=FPS)
 
-    if nn_out is not None:
-        face_dets = nn_out.detections
-    
-        # No faces found
-        if len(face_dets) == 0: continue
-    
-        det = face_dets[0] # Take first
-        enlrage_roi(det)
-        limit_roi(det)
-    
-        cfg = ImageManipConfig()
-        cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
-        cfg.setResize(160, 160)
-        cfg.setKeepAspectRatio(False)
-        node.io['manip_cfg'].send(cfg)
-    """)
+    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node.initialConfig.setOutputSize(640, 480)
+    resize_node.initialConfig.setReusePreviousImage(False)
+    resize_node.inputImage.setBlocking(True)
+    input_node.link(resize_node.inputImage)
 
-    crop_manip = pipeline.create(dai.node.ImageManip)
-    script.outputs["manip_cfg"].link(crop_manip.inputConfig)
-    face_det_manip.out.link(crop_manip.inputImage)
-    crop_manip.initialConfig.setResize(160, 160)
-    crop_manip.inputConfig.setWaitForMessage(False)
+    face_detection_node: ParsingNeuralNetwork = pipeline.create(
+        ParsingNeuralNetwork
+    ).build(resize_node.out, "luxonis/yunet:640x480")
 
-    landmarks_nn = pipeline.create(dai.node.NeuralNetwork)
-    landmarks_nn.setBlobPath(
-        blobconverter.from_zoo(
-            name="facial_landmarks_68_160x160",
-            shaves=6,
-            zoo_type="depthai",
-            version="2021.4",
-        )
+    detection_process_node = pipeline.create(ProcessDetections)
+    detection_process_node.set_source_size(1280, 960)
+    detection_process_node.set_target_size(192, 192)
+    face_detection_node.out.link(detection_process_node.detections_input)
+
+    config_sender_node = pipeline.create(dai.node.Script)
+    config_sender_node.setScriptPath(
+        Path(__file__).parent / "utils/config_sender_script.py"
     )
-    crop_manip.out.link(landmarks_nn.input)
 
-    fatigue_detection = pipeline.create(FatigueDetection).build(
-        preview=cam.preview, face_nn=face_nn.out, landmarks_nn=landmarks_nn.out
+    input_node.link(config_sender_node.inputs["frame_input"])
+    detection_process_node.config_output.link(config_sender_node.inputs["config_input"])
+
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setReusePreviousImage(False)
+    crop_node.inputConfig.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(False)
+
+    config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
+    config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
+
+    landmark_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        crop_node.out, "luxonis/mediapipe-face-landmarker:192x192"
     )
-    fatigue_detection.inputs["preview"].setBlocking(False)
-    fatigue_detection.inputs["preview"].setMaxSize(1)
-    fatigue_detection.inputs["face_dets"].setBlocking(False)
-    fatigue_detection.inputs["face_dets"].setMaxSize(1)
-    fatigue_detection.inputs["landmarks"].setBlocking(False)
-    fatigue_detection.inputs["landmarks"].setMaxSize(4)
+
+    fatigue_detection = pipeline.create(FatigueDetection)
+    face_detection_node.out.link(fatigue_detection.face_nn)
+    face_detection_node.passthrough.link(fatigue_detection.preview)
+    landmark_node.out.link(fatigue_detection.landmarks_nn)
+    landmark_node.passthrough.link(fatigue_detection.crop_face)
+
+    visualizer.addTopic("Video", face_detection_node.passthrough, "images")
+    visualizer.addTopic("Text", fatigue_detection.out, "images")
 
     print("Pipeline created.")
     pipeline.run()
