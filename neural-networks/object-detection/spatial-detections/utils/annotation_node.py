@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_node import OUTLINE_COLOR
+from depthai_nodes import OUTLINE_COLOR
 from typing import List
 
 

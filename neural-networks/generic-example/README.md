@@ -25,7 +25,7 @@ Here is a list of all available parameters:
 
 ```
 -m MODEL, --model MODEL
-                      HubAI model reference. (default: None)
+                      HubAI model reference. (default: luxonis/yolov6-nano:r2-coco-512x288)
 -d DEVICE, --device DEVICE
                       Optional name, DeviceID or IP of the camera to connect to. (default: None)
 -ann ANNOTATION_MODE, --annotation_mode ANNOTATION_MODE
@@ -49,11 +49,10 @@ Running in peripheral mode requires a host computer and there will be communicat
 #### Examples
 
 ```bash
-python3 main.py \
-    --model luxonis/yolov6-nano:r2-coco-512x288
+python3 main.py
 ```
 
-This will run a simple YOLOv6 object detection model on your camera input.
+This will run a simple YOLOv6 object detection model (`luxonis/yolov6-nano:r2-coco-512x288`) on your camera input.
 
 ```bash
 python3 main.py \

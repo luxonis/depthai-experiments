@@ -144,9 +144,8 @@ with dai.Pipeline() as pipeline:
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(
             dai.NNModelDescription(
-                # Download model from https://hub.luxonis.com/ai/models/698b881d-2e98-45d0-bc72-1121d2eb2319
-                "luxonis/yolov8-instance-segmentation-large:coco-640x480",
-                "RVC4",
+                model="luxonis/yolov8-instance-segmentation-large:coco-640x480",
+                platform="RVC4",
             )
         )
     )

@@ -1,6 +1,6 @@
 import depthai as dai
 from utils.host_fatigue_detection import FatigueDetection
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
 from pathlib import Path
