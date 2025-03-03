@@ -15,11 +15,11 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    model_description = dai.NNModelDescription(
-        "luxonis/scrfd-person-detection:25g-640x640"
-    )
     platform = pipeline.getDefaultDevice().getPlatformAsString()
-    model_description.platform = platform
+
+    model_description = dai.NNModelDescription(
+        "luxonis/scrfd-person-detection:25g-640x640", platform=platform
+    )
     nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
     if args.media_path:
@@ -34,11 +34,8 @@ with dai.Pipeline(device) as pipeline:
         if args.fps_limit:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
-        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
 
-    input_node = (
-        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
-    )
+    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
 
     nn = pipeline.create(ParsingNeuralNetwork).build(
         input_node, nn_archive, fps=args.fps_limit
