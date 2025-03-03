@@ -2,6 +2,10 @@
 
 This experiments demonstrate how to count people in the frame. It uses [SCRFD Person detection](https://hub.luxonis.com/ai/models/c3830468-3178-4de6-bc09-0543bbe28b1c) model.
 
+## Demo
+
+![people counter](media/example.gif)
+
 ## Installation
 
 Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
