@@ -138,16 +138,16 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## Object Tracking
 
-|                                               DeepSORT Tracking                                               |
-| :-----------------------------------------------------------------------------------------------------------: |
-| <img src="object-tracking/deepsort-tracking/media/example.gif" alt="deepsort tracking" style="height:250px;"> |
+|                                               DeepSORT Tracking                                               |                                             People Tracker                                              |
+| :-----------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------: |
+| <img src="object-tracking/deepsort-tracking/media/example.gif" alt="deepsort tracking" style="height:250px;"> | <img src="object-tracking/people-tracker/media/example.gif" alt="people tracker" style="height:250px;"> |
 
 | Name                                                        | HubAI Model                                                                                                                                                                     | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                                                | Notes |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | [kalman](object-tracking/kalman/)                           | [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page)                                                                                 | 🚧   | 🚧                | 🚧                | [gen2-bounding-box-filtering/kalman](https://github.com/luxonis/depthai-experiments/tree/master/gen2-bounding-box-filtering/kalman) |       |
 | [collision-avoidance](object-tracking/collision-avoidance/) | [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page)                                                                                 | 🚧   | 🚧                | 🚧                | [gen2-collision-avoidance](https://github.com/luxonis/depthai-experiments/tree/master/collision-avoidance)                          |       |
 | [deepsort-tracking](object-tracking/deepsort-tracking/)     | [yolov6-nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page), [OSNet](https://hub.luxonis.com/ai/models/6d853621-818b-4fa4-bd9a-d9bdcb5616e) | ✅   | ✅                | ✅                | [gen2-deepsort-tracking](https://github.com/luxonis/depthai-experiments/tree/master/gen2-deepsort-tracking)                         |       |
-| [people-tracker](object-tracking/people-tracker/)           | [scrfd-person-detection](https://hub.luxonis.com/ai/models/c3830468-3178-4de6-bc09-0543bbe28b1c?view=page)                                                                      | 🚧   | 🚧                | 🚧                | [gen2-people-tracker](https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker)                               |       |
+| [people-tracker](object-tracking/people-tracker/)           | [scrfd-person-detection](https://hub.luxonis.com/ai/models/c3830468-3178-4de6-bc09-0543bbe28b1c?view=page)                                                                      | ✅   | 🚧                | 🚧                | [gen2-people-tracker](https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker)                               |       |
 
 ## Counting
 
