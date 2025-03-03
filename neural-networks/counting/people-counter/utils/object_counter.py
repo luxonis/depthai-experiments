@@ -1,4 +1,5 @@
 import depthai as dai
+from depthai_nodes.ml.messages import ImgDetectionsExtended
 
 
 class ObjectCount(dai.Buffer):
@@ -62,7 +63,7 @@ class ObjectCounter(dai.node.HostNode):
         )
         self._detection_out = self.createOutput(
             possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgDetections, True)
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)
             ]
         )
 
@@ -73,10 +74,12 @@ class ObjectCounter(dai.node.HostNode):
         self._label_map = label_map
         return self
 
-    def process(self, detections: dai.ImgDetections) -> None:
+    def process(self, detections: dai.Buffer) -> None:
+        assert isinstance(detections, (dai.ImgDetections, ImgDetectionsExtended))
+
         label_counts = dict()
 
-        filtered_detections: list[dai.ImgDetection] = []
+        filtered_detections = []
 
         for i in detections.detections:
             if i.confidence > self._confidence_threshold:
@@ -92,7 +95,7 @@ class ObjectCounter(dai.node.HostNode):
 
         self._out.send(object_count)
 
-        new_detections = dai.ImgDetections()
+        new_detections = type(detections)()
         new_detections.detections = filtered_detections
         new_detections.setTimestamp(detections.getTimestamp())
         new_detections.setSequenceNum(detections.getSequenceNum())

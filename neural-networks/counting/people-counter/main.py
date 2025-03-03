@@ -4,7 +4,6 @@ import depthai as dai
 from depthai_nodes import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.object_counter import ObjectCounter
-from utils.parser_bridge import ParserBridge
 
 _, args = initialize_argparser()
 
@@ -47,9 +46,8 @@ with dai.Pipeline(device) as pipeline:
     nn_with_parser: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, nn_archive, fps=args.fps_limit
     )
-    parser_bridge = pipeline.create(ParserBridge).build(nn_with_parser.out)
     object_counter = pipeline.create(ObjectCounter).build(
-        nn=parser_bridge.out, label_map=["People"]
+        nn=nn_with_parser.out, label_map=["People"]
     )
 
     visualizer.addTopic("Video", nn_with_parser.passthrough)
