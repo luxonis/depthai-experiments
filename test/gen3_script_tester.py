@@ -75,11 +75,14 @@ def setup_venv_exe(dir, requirements_path, f=None):
     env_exe = os.path.join(env_bin, "python3")
 
     with open(requirements_path, "r") as f:
-        requirements = f.readlines()
-        if args.depthai_version:
-            for i, requirement in enumerate(requirements):
-                if "depthai==" in requirement:
-                    requirements[i] = "depthai==" + args.depthai_version + "\n"
+        requirements= ""
+        requirement_lines = f.readlines()
+        for i, requirement_line in enumerate(requirement_lines):
+            if args.depthai_version and "depthai==" in requirement_line:
+                requirements[i] = "depthai==" + args.depthai_version + "\n"
+            requirement = requirement_line.split("#")[0].strip()
+            requirements += requirement + " "
+        
     try:
         script = (
             env_exe
