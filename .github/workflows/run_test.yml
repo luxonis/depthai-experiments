@@ -51,6 +51,6 @@ jobs:
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#${{ matrix.python-version}}-${{ matrix.platform }}"
           export INFLUXDB_TOKEN=${{ secrets.INFLUXDB_TOKEN }}
           hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
-              --dockerfile ./test/Dockerfile \
+              --dockerfile ./tests/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
-              --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }}"
+              --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }} --env PYTHON_VERSION_ENV=${{ matrix.python-version }}"

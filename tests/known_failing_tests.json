@@ -1,0 +1,30 @@
+{
+    "RVC2": {
+        "3.8": [],
+        "3.10": [],
+        "3.12": [],
+        "all": [
+            "neural-networks/facial-detection/age-gender",
+            "neural-networks/facial-detection/fatigue-detection",
+            "neural-networks/facial-detection/head-posture-detection",
+            "neural-networks/speech-recognition/whisper-tiny-en",
+            "neural-networks/object-detection/yolo-world",
+            "neural-networks/object-detection/thermal-detection",
+            "neural-networks/facial-detection/mask-detection",
+            "neural-networks/segmentation/yolov8-instance-segmentation"
+        ]
+    },
+    "RVC4": {
+        "3.8": [],
+        "3.10": [],
+        "3.12": [],
+        "all": [
+            "neural-networks/facial-detection/head-posture-detection",
+            "neural-networks/speech-recognition/whisper-tiny-en",
+            "neural-networks/object-detection/yolo-world",
+            "neural-networks/object-detection/thermal-detection",
+            "neural-networks/facial-detection/mask-detection",
+            "neural-networks/segmentation/yolov8-instance-segmentation"
+        ]
+    }
+}
