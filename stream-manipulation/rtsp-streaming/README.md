@@ -26,16 +26,16 @@ We'd suggest using WSL2 and installing Ubuntu on there. You can use the command 
 
 ## Usage
 
-You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE> --fps_limit <FPS_LIMIT>
 ```
-
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30)
+```
 
 #### Examples
 

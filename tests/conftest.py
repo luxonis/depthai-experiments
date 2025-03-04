@@ -90,7 +90,7 @@ def filter_experiments(all_exp_dirs, curr_platform, curr_python_version):
     filtered_exp_dirs = []
 
     script_dir = Path(__file__).parent
-    file_path = script_dir / "known_failing_tests.json"
+    file_path = script_dir / "known_failing_examples.json"
 
     with open(file_path) as f:
         data = json.load(f)

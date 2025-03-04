@@ -1,5 +1,5 @@
 from fractions import Fraction
-
+from typing import Tuple
 import av
 import depthai as dai
 
@@ -12,7 +12,7 @@ class VideoSaver(dai.node.HostNode):
         self,
         encoded_stream: dai.Node.Output,
         codec: str,
-        output_shape: tuple[int, int],
+        output_shape: Tuple[int, int],
         fps: int,
         output_path: str,
     ) -> "VideoSaver":

@@ -1,4 +1,4 @@
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
-av==12.3.0
 depthai==3.0.0a12
-numpy
+av==12.3.0
+numpy>=1.22
