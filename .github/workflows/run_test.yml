@@ -6,6 +6,15 @@ on:
       depthai_version:
         description: 'Version of DepthAI to install for the test run. If specified the version will override version specified in requirements.txt'
         required: false
+      log_level:
+        description: 'Log level used. By defualt we use INFO.'
+        type: choice
+        options:
+          - ERROR
+          - INFO
+          - DEBUG
+        default: INFO
+        required: false
   
   # push:
   #   branches:
@@ -50,7 +59,14 @@ jobs:
         run: |
           export RESERVATION_NAME="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#${{ matrix.python-version}}-${{ matrix.platform }}"
           export INFLUXDB_TOKEN=${{ secrets.INFLUXDB_TOKEN }}
+          
+          ENV_VARS="\
+            --env PLATFORM=${{ matrix.platform }} \
+            --env DAI_VERSION=${{ github.event.inputs.depthai_version }} \
+            --env PYTHON_VERSION_ENV=${{ matrix.python-version }} \
+            --env LOG_LEVEL=${{ github.event.inputs.log_level }}"
+
           hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./tests/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
-              --docker-run-args "--env PLATFORM=${{ matrix.platform }} --env DAI_VERSION=${{ github.event.inputs.depthai_version }} --env PYTHON_VERSION_ENV=${{ matrix.python-version }}"
+              --docker-run-args "$ENV_VARS"

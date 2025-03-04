@@ -4,12 +4,14 @@ FROM python:${PYTHON_VERSION}
 ENV PLATFORM=""
 ENV DAI_VERSION=""
 ENV PYTHON_VERSION_ENV=""
+ENV LOG_LEVEL="INFO"
 
 # Install Virtual Display
 RUN apt-get update && apt-get install -y \
     xvfb \
     x11-utils \
     xorg \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 ENV DISPLAY=:99
 
@@ -28,7 +30,7 @@ ENTRYPOINT ["sh", "-c", "\
     echo 'Installing dependencies...' && \
     pip install -r tests/requirements.txt && \
     echo 'Running tests...' && \
-    pytest -v -r a --log-cli-level=INFO --log-file=out.log --color=yes \
+    pytest -v -r a --log-cli-level=${LOG_LEVEL}} --log-file=out.log --color=yes \
     --root-dir=. \
     --depthai-version=${DAI_VERSION} \
     --environment-variables=DEPTHAI_PLATFORM=${PLATFORM} \
