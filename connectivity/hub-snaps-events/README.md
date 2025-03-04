@@ -20,16 +20,18 @@ pip install -r requirements.txt
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE> --api_key <API_KEY> --media <MEDIA> --fps_limit <FPS_LIMIT>
 ```
-
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<API_KEY>`: HubAI API key of your team. Not required if 'DEPTHAI_HUB_API_KEY' environment variable is set. Deafault: \`\`.
-- `<MEDIA>`: Path to the video file. Default `None` - camera input.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-api API_KEY, --api_key API_KEY
+                    HubAI API key of your team. Not required if 'DEPTHAI_HUB_API_KEY' environment variable is set. (default: )
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: None)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+```
 
 #### Examples
 
@@ -47,15 +49,18 @@ This will run the snaps&events experiment with the default device and the video 
 
 ### Standalone Mode
 
-Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
 
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-Then, while you are in the experiment folder, you can run the example with:
+The app can then be run with:
 
 ```bash
+oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

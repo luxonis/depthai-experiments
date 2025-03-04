@@ -11,7 +11,8 @@
             "neural-networks/object-detection/yolo-world",
             "neural-networks/object-detection/thermal-detection",
             "neural-networks/facial-detection/mask-detection",
-            "neural-networks/segmentation/yolov8-instance-segmentation"
+            "neural-networks/segmentation/yolov8-instance-segmentation",
+            "connectivity/roboflow-integration"
         ]
     },
     "RVC4": {
@@ -24,7 +25,8 @@
             "neural-networks/object-detection/yolo-world",
             "neural-networks/object-detection/thermal-detection",
             "neural-networks/facial-detection/mask-detection",
-            "neural-networks/segmentation/yolov8-instance-segmentation"
+            "neural-networks/segmentation/yolov8-instance-segmentation",
+            "connectivity/roboflow-integration"
         ]
     }
 }
