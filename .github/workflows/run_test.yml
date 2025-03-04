@@ -69,4 +69,5 @@ jobs:
           hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./tests/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
-              --docker-run-args "$ENV_VARS"
+              --docker-run-args "$ENV_VARS" \
+              | grep -v "rsync: [generator]"
