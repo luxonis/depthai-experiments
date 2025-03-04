@@ -14,8 +14,6 @@ platform = dai.Platform.__members__[args.platform.upper()]
 class Model(nn.Module):
     def forward(self, img1, img2):
         sum1 = torch.sum(img1, dim=0)
-        print(sum1)
-        print(sum1.shape)
         sum2 = torch.sum(img2, dim=0)
         return torch.sub(sum1, sum2)
 
