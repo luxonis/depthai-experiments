@@ -30,7 +30,7 @@ ENTRYPOINT ["sh", "-c", "\
     echo 'Installing dependencies...' && \
     pip install -r tests/requirements.txt && \
     echo 'Running tests...' && \
-    pytest -v -r a --log-cli-level=${LOG_LEVEL}} --log-file=out.log --color=yes \
+    pytest -v -r a --log-cli-level=${LOG_LEVEL} --log-file=out.log --color=yes \
     --root-dir=. \
     --depthai-version=${DAI_VERSION} \
     --environment-variables=DEPTHAI_PLATFORM=${PLATFORM} \
