@@ -7,7 +7,7 @@ on:
         description: 'Version of DepthAI to install for the test run. If specified the version will override version specified in requirements.txt'
         required: false
       log_level:
-        description: 'Log level used. By defualt we use INFO.'
+        description: 'Log level to use for pytest.'
         type: choice
         options:
           - ERROR
@@ -69,5 +69,4 @@ jobs:
           hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./tests/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
-              --docker-run-args "$ENV_VARS" \
-              | grep -v "rsync: [generator]"
+              --docker-run-args "$ENV_VARS"
