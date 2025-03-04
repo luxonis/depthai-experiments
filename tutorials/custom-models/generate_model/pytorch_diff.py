@@ -1,9 +1,14 @@
-#! /usr/bin/env python3
+import os
 
-from pathlib import Path
+import depthai as dai
 import torch
+from generate_utils import generate_model, parse_arguments
+from luxonis_ml.nn_archive.config import CONFIG_VERSION
 from torch import nn
-import blobconverter
+
+args = parse_arguments()
+
+platform = dai.Platform.__members__[args.platform.upper()]
 
 
 class Model(nn.Module):
@@ -15,33 +20,56 @@ class Model(nn.Module):
         return torch.sub(sum1, sum2)
 
 
-# Define the expected input shape (dummy input)
-shape = (3, 720, 720)
-X = torch.ones(shape, dtype=torch.float32)
+model = Model()
 
-path = Path("out/")
-path.mkdir(parents=True, exist_ok=True)
-onnx_file = "out/diff.onnx"
+input_shape = (3, 720, 720)
 
-print(f"Writing to {onnx_file}")
-torch.onnx.export(
-    Model(),
-    (X, X),
-    onnx_file,
-    opset_version=12,
-    do_constant_folding=True,
-    input_names=["img1", "img2"],  # Optional
-    output_names=["output"],  # Optional
-)
+cfg_dict = {
+    "config_version": CONFIG_VERSION,
+    "model": {
+        "metadata": {
+            "name": "diff",
+            "path": "diff.onnx",
+            "precision": "float32",
+        },
+        "inputs": [
+            {
+                "name": "img1",
+                "dtype": "float32",
+                "input_type": "image",
+                "shape": input_shape,
+                "layout": "CHW",
+                "preprocessing": {
+                    "mean": [0.0, 0.0, 0.0],
+                    "scale": [1.0, 1.0, 1.0],
+                    "reverse_channels": False,
+                    "interleaved_to_planar": None,
+                },
+            },
+            {
+                "name": "img2",
+                "dtype": "float32",
+                "input_type": "image",
+                "shape": input_shape,
+                "layout": "CHW",
+                "preprocessing": {
+                    "mean": [0.0, 0.0, 0.0],
+                    "scale": [1.0, 1.0, 1.0],
+                    "reverse_channels": False,
+                    "interleaved_to_planar": None,
+                },
+            },
+        ],
+        "outputs": [{"name": "output", "dtype": "float32"}],
+        "heads": [],
+    },
+}
 
-# No need for onnx-simplifier here
-
-# Use blobconverter to convert onnx->IR->blob
-blobconverter.from_onnx(
-    model=onnx_file,
-    data_type="FP16",
-    shaves=6,
-    use_cache=False,
-    output_dir="../models",
-    optimizer_params=[],
+os.makedirs(str("out/models"), exist_ok=True)
+generate_model(
+    model=model,
+    cfg_dict=cfg_dict,
+    output_path=f"out/models/diff.{args.platform.lower()}.tar.xz",
+    simplify_model=False,
+    platform=platform,
 )

@@ -1,6 +1,6 @@
+import cv2
 import depthai as dai
 import numpy as np
-import cv2
 
 DIFF_SHAPE = (720, 720)
 
@@ -9,26 +9,31 @@ class ColorizeDiff(dai.node.HostNode):
     def __init__(self):
         super().__init__()
 
-        self.output = self.createOutput(
+        self._out = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
 
-    def build(self, nnOut: dai.Node.Output) -> "ColorizeDiff":
-        self.link_args(nnOut)
-        self.sendProcessingToPipeline(True)
+    def build(self, nn: dai.Node.Output) -> "ColorizeDiff":
+        self.link_args(nn)
         return self
 
-    def process(self, nnData: dai.NNData) -> None:
-        frame = self.get_frame(nnData, DIFF_SHAPE)
+    def process(self, nn_data: dai.NNData) -> None:
+        frame = self.get_frame(nn_data, DIFF_SHAPE)
 
         img = dai.ImgFrame()
         img.setCvFrame(frame, dai.ImgFrame.Type.BGR888p)
+        img.setTimestamp(nn_data.getTimestamp())
+        img.setSequenceNum(nn_data.getSequenceNum())
 
-        self.output.send(img)
+        self._out.send(img)
 
     def get_frame(self, data: dai.NNData, shape):
         diff = data.getFirstTensor().astype(np.float16).flatten().reshape(shape)
         colorize = cv2.normalize(diff, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         return cv2.applyColorMap(colorize, cv2.COLORMAP_JET)
+
+    @property
+    def out(self):
+        return self._out
