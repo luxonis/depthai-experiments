@@ -11,7 +11,6 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-
     model_description = dai.NNModelDescription(args.model)
     platform = pipeline.getDefaultDevice().getPlatformAsString()
     model_description.platform = platform

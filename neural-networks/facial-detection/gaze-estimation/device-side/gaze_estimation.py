@@ -2,6 +2,7 @@ import cv2
 import depthai as dai
 import numpy as np
 from detected_recognitions import DetectedRecognitions
+from typing import Tuple
 
 
 class GazeEstimation(dai.node.HostNode):
@@ -66,8 +67,8 @@ class GazeEstimation(dai.node.HostNode):
             self.stopPipeline()
 
     def _denormalize_bounding_box(
-        self, detection: dai.ImgDetection, frame_shape: tuple
-    ) -> tuple:
+        self, detection: dai.ImgDetection, frame_shape: Tuple
+    ) -> Tuple:
         return (
             (
                 int(frame_shape[1] * detection.xmin),
@@ -80,8 +81,8 @@ class GazeEstimation(dai.node.HostNode):
         )
 
     def _map_denormalized_point(
-        self, x: int, y: int, detection: dai.ImgDetection, frame_shape: tuple
-    ) -> tuple[int, int]:
+        self, x: int, y: int, detection: dai.ImgDetection, frame_shape: Tuple
+    ) -> Tuple[int, int]:
         width = detection.xmax - detection.xmin
         mapped_x = detection.xmin + width * x
 

@@ -1,11 +1,11 @@
 import depthai as dai
-from depthai_nodes.ml.helpers.constants import OUTLINE_COLOR
-from depthai_nodes.ml.messages import (
+from depthai_nodes import (
     ImgDetectionsExtended,
     ImgDetectionExtended,
     Keypoints,
     Keypoint,
     Predictions,
+    OUTLINE_COLOR,
 )
 from typing import List
 from utils.gesture_recognition import recognize_gesture

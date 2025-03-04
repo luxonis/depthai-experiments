@@ -1,4 +1,4 @@
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
 depthai>=3.0.0a12
-numpy~=2.0
 git+https://github.com/luxonis/depthai-nodes.git@fix/restructure # TODO: REMOVE
+numpy>=1.22

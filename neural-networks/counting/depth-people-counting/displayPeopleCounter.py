@@ -2,7 +2,7 @@ import depthai as dai
 import numpy as np
 import cv2
 from utility import TextHelper, PeopleCounter, DETECTION_ROI
-from typing import Sequence
+from typing import Sequence, Tuple, List
 
 
 class DisplayPeopleCounter(dai.node.HostNode):
@@ -60,7 +60,7 @@ class DisplayPeopleCounter(dai.node.HostNode):
         if cv2.waitKey(1) == ord("q"):
             self.stopPipeline()
 
-    def frame_norm(self, frame, bbox) -> tuple[float, float, float, float]:
+    def frame_norm(self, frame, bbox) -> Tuple[float, float, float, float]:
         width, height = (
             frame.shape[0] + DETECTION_ROI[0],
             frame.shape[1] + DETECTION_ROI[1],
@@ -105,5 +105,5 @@ class DisplayPeopleCounter(dai.node.HostNode):
 
         return contours
 
-    def to_planar(self, arr: np.ndarray) -> list:
+    def to_planar(self, arr: np.ndarray) -> List:
         return arr.transpose(2, 0, 1).flatten()

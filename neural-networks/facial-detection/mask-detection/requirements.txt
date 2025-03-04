@@ -3,4 +3,4 @@ depthai~=3.0.0a1
 opencv-python==4.10.0.84
 blobconverter==1.3.0
 depthai-nodes~=0.0.2
-numpy~=2.0
+numpy>=1.22

@@ -3,7 +3,7 @@ import numpy as np
 import depthai as dai
 
 
-def frame_norm(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray[np.int64]:
+def frame_norm(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray:
     norm_vals = np.full(len(bbox), frame.shape[0])
     norm_vals[::2] = frame.shape[1]
     return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)

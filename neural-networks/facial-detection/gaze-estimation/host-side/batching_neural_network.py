@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import overload
 import depthai as dai
 import numpy as np
+from typing import List, Dict
 
 
 class BatchingNeuralNetwork(dai.node.ThreadedHostNode):
@@ -67,7 +68,7 @@ class BatchingNeuralNetwork(dai.node.ThreadedHostNode):
     def _get_nn_data(
         self,
         batched_nn_data: dai.NNData,
-        input_layer_names: list[str],
+        input_layer_names: List[str],
         batch_index: int,
     ):
         batch_nn_data = dai.NNData()
@@ -78,7 +79,7 @@ class BatchingNeuralNetwork(dai.node.ThreadedHostNode):
         nn_data: dai.NNData = self._nn_out_q.get()
         return nn_data
 
-    def _merge_nn_data(self, result_nn_data: list[dai.NNData]) -> dai.NNData:
+    def _merge_nn_data(self, result_nn_data: List[dai.NNData]) -> dai.NNData:
         output_nn_data = dai.NNData()
         first_data = result_nn_data[0]
 
@@ -103,7 +104,7 @@ class BatchingNeuralNetwork(dai.node.ThreadedHostNode):
     def setBackend(self, setBackend: str) -> None:
         return self._nn.setBackend(setBackend)
 
-    def setBackendProperties(self, setBackendProperties: dict[str, str]) -> None:
+    def setBackendProperties(self, setBackendProperties: Dict[str, str]) -> None:
         return self._nn.setBackendProperties(setBackendProperties)
 
     @overload

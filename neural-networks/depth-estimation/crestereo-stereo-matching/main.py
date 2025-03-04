@@ -4,7 +4,6 @@ import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 from utils.host_depth_color_transform import DepthColorTransform
 
-
 device = dai.Device()
 platform = device.getPlatform()
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

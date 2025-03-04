@@ -4,6 +4,7 @@ from utils import RotatedRectBuffer
 import depthai_nodes
 import cv2
 import numpy as np
+from typing import List
 
 
 class ProcessDetections(dai.node.HostNode):
@@ -100,7 +101,7 @@ class ProcessDetections(dai.node.HostNode):
         self.display.send(output_frame)
 
 
-def get_rotated_rect_from_detection(polygon: list[list[int]]) -> dai.RotatedRect:
+def get_rotated_rect_from_detection(polygon: List[List[int]]) -> dai.RotatedRect:
     rr = dai.RotatedRect()
 
     rr.center.x = (polygon[0][0] + polygon[2][0]) // 2
@@ -119,7 +120,7 @@ def get_rotated_rect_from_detection(polygon: list[list[int]]) -> dai.RotatedRect
 
 
 def print_bboxes_on_frame(
-    frame: dai.ImgFrame, polygon: list[list[int]]
+    frame: dai.ImgFrame, polygon: List[List[int]]
 ) -> dai.ImgFrame:
     polygon = np.array(polygon).astype(np.int32)
     cv2.polylines(frame, [polygon], True, (0, 255, 0), 2)
