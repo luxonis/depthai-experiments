@@ -2,7 +2,7 @@ import depthai as dai
 from pathlib import Path
 from host_qr_scanner import QRScanner
 
-from depthai_nodes.ml.helpers import Tiling, TilesPatcher
+from depthai_nodes.node import Tiling, TilesPatcher
 
 model_description = dai.NNModelDescription(
     modelSlug="qrdet", platform="RVC2", modelVersionSlug="nano-512x288"

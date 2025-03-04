@@ -17,7 +17,8 @@
             "depth-measurement/3d-measurement/pointcloud/rgbd-pointcloud",
             "depth-measurement/3d-measurement/pointcloud/device-pointcloud",
             "depth-measurement/qt-gui",
-            "stream-manipulation/rtsp-streaming"
+            "stream-manipulation/rtsp-streaming",
+            "tutorials/qr-with-tiling"
         ]
     },
     "RVC4": {
@@ -36,7 +37,8 @@
             "depth-measurement/3d-measurement/pointcloud/rgbd-pointcloud",
             "depth-measurement/3d-measurement/pointcloud/device-pointcloud",
             "depth-measurement/qt-gui",
-            "stream-manipulation/rtsp-streaming"
+            "stream-manipulation/rtsp-streaming",
+            "tutorials/qr-with-tiling"
         ]
     }
 }
