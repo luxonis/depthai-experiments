@@ -58,8 +58,7 @@ def test_args(request):
         "root_dir": request.config.getoption("--root-dir"),
         "timeout": request.config.getoption("--timeout"),
         "depthai_version": request.config.getoption("--depthai-version"),
-        "environment_variables": request.config.getoption("--environment-variables")
-        or {},
+        "environment_variables": request.config.getoption("--environment-variables"),
         "virtual_display": request.config.getoption("--virtual-display"),
         "platform": request.config.getoption("--platform"),
         "python_version": request.config.getoption("--python-version"),

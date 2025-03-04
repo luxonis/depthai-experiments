@@ -105,6 +105,7 @@ def run_experiment(env_exe, experiment_dir, args):
     """Runs the main.py script for the given timeout duration."""
     timeout = args["timeout"]
     env_vars = args["environment_variables"]
+
     virtual_env = args["virtual_display"]
     logger.debug(f"Running {experiment_dir} with timeout {timeout}s...")
 
@@ -113,8 +114,11 @@ def run_experiment(env_exe, experiment_dir, args):
     original_dir = Path.cwd()
     os.chdir(experiment_dir)
 
-    env = os.environ.copy()
-    env.update(env_vars)
+    if env_vars:
+        env_dict = dict(item.split("=") for item in env_vars.split())
+        env = os.environ.copy()
+        env.update(env_dict)
+
     if virtual_env:
         env["DISPLAY"] = ":99"
 
