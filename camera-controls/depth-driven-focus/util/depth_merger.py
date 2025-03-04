@@ -1,6 +1,6 @@
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionExtended, ImgDetectionsExtended
-
+from depthai_nodes import ImgDetectionExtended, ImgDetectionsExtended
+from typing import Union
 from .host_spatials_calc import HostSpatialsCalc
 
 
@@ -31,7 +31,7 @@ class DepthMerger(dai.node.HostNode):
 
     def _transform(
         self, message_2d: dai.Buffer, depth: dai.ImgFrame
-    ) -> dai.SpatialImgDetections | dai.SpatialImgDetection:
+    ) -> Union[dai.SpatialImgDetections, dai.SpatialImgDetection]:
         if isinstance(message_2d, dai.ImgDetection):
             return self._detection_to_spatial(message_2d, depth)
         elif isinstance(message_2d, dai.ImgDetections):
@@ -44,7 +44,9 @@ class DepthMerger(dai.node.HostNode):
             raise ValueError(f"Unknown message type: {type(message_2d)}")
 
     def _detection_to_spatial(
-        self, detection: dai.ImgDetection | ImgDetectionExtended, depth: dai.ImgFrame
+        self,
+        detection: Union[dai.ImgDetection, ImgDetectionExtended],
+        depth: dai.ImgFrame,
     ) -> dai.SpatialImgDetection:
         depth_frame = depth.getCvFrame()
         x_len = depth_frame.shape[1]
@@ -81,7 +83,9 @@ class DepthMerger(dai.node.HostNode):
         return spatial_img_detection
 
     def _detections_to_spatial(
-        self, detections: dai.ImgDetections | ImgDetectionsExtended, depth: dai.ImgFrame
+        self,
+        detections: Union[dai.ImgDetections, ImgDetectionsExtended],
+        depth: dai.ImgFrame,
     ) -> dai.SpatialImgDetections:
         new_dets = dai.SpatialImgDetections()
         new_dets.detections = [
