@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import depthai as dai
+from typing import Tuple
 
 
 class StereoSGBM(dai.node.HostNode):
@@ -48,7 +49,7 @@ class StereoSGBM(dai.node.HostNode):
         monoLeftOut: dai.Node.Output,
         monoRightOut: dai.Node.Output,
         calibObj: dai.CalibrationHandler,
-        resolution: tuple[int, int],
+        resolution: Tuple[int, int],
     ) -> "StereoSGBM":
         self.link_args(monoLeftOut, monoRightOut)
 
@@ -71,7 +72,7 @@ class StereoSGBM(dai.node.HostNode):
 
         self.create_disparity_map(monoLeftFrame, monoRightFrame)
 
-    def count_h(self, calibObj: dai.CalibrationHandler, resolution: tuple[int, int]):
+    def count_h(self, calibObj: dai.CalibrationHandler, resolution: Tuple[int, int]):
         width, height = resolution
 
         M_left = np.array(
@@ -94,7 +95,7 @@ class StereoSGBM(dai.node.HostNode):
         return H_left, H_right
 
     def count_focal_length(
-        self, calibObj: dai.CalibrationHandler, resolution: tuple[int, int]
+        self, calibObj: dai.CalibrationHandler, resolution: Tuple[int, int]
     ):
         width, height = resolution
 

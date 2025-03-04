@@ -12,7 +12,11 @@
             "neural-networks/object-detection/thermal-detection",
             "neural-networks/facial-detection/mask-detection",
             "neural-networks/segmentation/yolov8-instance-segmentation",
-            "connectivity/roboflow-integration"
+            "connectivity/roboflow-integration",
+            "depth-measurement/3d-measurement/box-measurement",
+            "depth-measurement/3d-measurement/pointcloud/rgbd-pointcloud",
+            "depth-measurement/3d-measurement/pointcloud/device-pointcloud",
+            "depth-measurement/qt-gui"
         ]
     },
     "RVC4": {
@@ -26,7 +30,11 @@
             "neural-networks/object-detection/thermal-detection",
             "neural-networks/facial-detection/mask-detection",
             "neural-networks/segmentation/yolov8-instance-segmentation",
-            "connectivity/roboflow-integration"
+            "connectivity/roboflow-integration",
+            "depth-measurement/3d-measurement/box-measurement",
+            "depth-measurement/3d-measurement/pointcloud/rgbd-pointcloud",
+            "depth-measurement/3d-measurement/pointcloud/device-pointcloud",
+            "depth-measurement/qt-gui"
         ]
     }
 }

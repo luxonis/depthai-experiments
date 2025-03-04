@@ -1,6 +1,6 @@
 import depthai as dai
-import depthai_nodes as nodes
-
+from depthai_nodes.node import ParsingNeuralNetwork
+from typing import Tuple
 from host_triangulation import Triangulation
 from host_display import Display
 
@@ -21,14 +21,14 @@ faceDet_nnarchive = dai.NNArchive(faceDet_archivePath)
 
 # Creates and connects nodes, once for the left camera and once for the right camera
 def populate_pipeline(
-    p: dai.Pipeline, left: bool, resolution: tuple[int, int]
-) -> tuple[dai.Node.Output, dai.Node.Output, dai.Node.Output]:
+    p: dai.Pipeline, left: bool, resolution: Tuple[int, int]
+) -> Tuple[dai.Node.Output, dai.Node.Output, dai.Node.Output]:
     socket = dai.CameraBoardSocket.CAM_B if left else dai.CameraBoardSocket.CAM_C
     cam = p.create(dai.node.Camera).build(socket)
     fps = 25 if rvc2 else 3
     cam_output = cam.requestOutput(resolution, type=dai.ImgFrame.Type.NV12, fps=fps)
 
-    face_nn = p.create(nodes.ParsingNeuralNetwork).build(cam, faceDet_nnarchive, fps)
+    face_nn = p.create(ParsingNeuralNetwork).build(cam, faceDet_nnarchive, fps)
 
     return cam_output, face_nn.out
 

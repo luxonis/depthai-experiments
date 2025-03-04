@@ -1,6 +1,7 @@
 import math
 import depthai as dai
 import numpy as np
+from typing import Tuple
 
 
 class RegionOfInterest(dai.Buffer):
@@ -92,11 +93,11 @@ class SpatialDistance(dai.Buffer):
         self._spatials = value
 
     @property
-    def centroid(self) -> tuple[int, int]:
+    def centroid(self) -> Tuple[int, int]:
         return self._centroid
 
     @centroid.setter
-    def centroid(self, value: tuple[int, int]) -> None:
+    def centroid(self, value: Tuple[int, int]) -> None:
         self._centroid = value
 
 
