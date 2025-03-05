@@ -6,6 +6,7 @@ import pytest
 from pathlib import Path
 from venv import EnvBuilder
 import logging
+from packaging import version
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +18,10 @@ def test_experiment_runs(experiment_dir, test_args):
         setup_virtual_display()
 
     experiment_dir = experiment_dir.resolve()
+
+    success, reason = is_valid(experiment_dir, test_args)
+    if not success:
+        pytest.skip(f"Skipping {experiment_dir}: {reason}")
 
     main_script = experiment_dir / "main.py"
     requirements_file = experiment_dir / "requirements.txt"
@@ -114,9 +119,9 @@ def run_experiment(env_exe, experiment_dir, args):
     original_dir = Path.cwd()
     os.chdir(experiment_dir)
 
+    env = os.environ.copy()
     if env_vars:
         env_dict = dict(item.split("=") for item in env_vars.split())
-        env = os.environ.copy()
         env.update(env_dict)
 
     if virtual_env:
@@ -147,6 +152,82 @@ def run_experiment(env_exe, experiment_dir, args):
     finally:
         # Restore the original working directory after running the script
         os.chdir(original_dir)
+
+
+def is_valid(experiment_dir, args):
+    """Checks if the experiment is valid or known to fail with this parameters.
+    If it is known to fail it returns the reason.
+    """
+    known_failing_experiments = args["known_failing_experiments"]
+
+    for exp in known_failing_experiments:
+        if exp in str(experiment_dir):
+            if not check_platform(
+                args["platform"], known_failing_experiments[exp]["platform"]
+            ):
+                logger.info(
+                    f"Platform check failed: Got `{args['platform']}`, shouldn't be `{known_failing_experiments[exp]['platform']}`"
+                )
+            if not check_python(
+                args["python_version"], known_failing_experiments[exp]["python_version"]
+            ):
+                logger.info(
+                    f"Python version check failed: Got `{args['python_version']}`, shouldn't be `{known_failing_experiments[exp]['python_version']}`"
+                )
+            if not check_dai(
+                args["depthai_version"],
+                known_failing_experiments[exp]["depthai_version"],
+            ):
+                logger.info(
+                    f"DepthAI version check failed: Got `{args['depthai_version']}`, shouldn't be `{known_failing_experiments[exp]['depthai_version']}`"
+                )
+
+            return (False, known_failing_experiments[exp]["reason"])
+
+    return (True, "")
+
+
+def check_platform(have, failing):
+    if failing == "all":
+        return False
+    return have not in failing
+
+
+def check_python(have, failing):
+    if failing == "all":
+        return False
+    return have not in failing
+
+
+def check_dai(have, failing):
+    if have is None or have == "":
+        # if not explicitly set we assume it should pass with one specified in requirements
+        return True
+
+    if failing == "all":
+        return False
+
+    have_version = version.parse(have)
+
+    # Extract operator and version number
+    operators = ["<=", ">=", "<", ">"]
+    for op in operators:
+        if failing.startswith(op):
+            version_number = failing[len(op) :]  # Remove operator from string
+            failing_version = version.parse(version_number)
+
+            # Perform the appropriate comparison
+            if op == "<":
+                return not (have_version < failing_version)
+            elif op == "<=":
+                return not (have_version <= failing_version)
+            elif op == ">":
+                return not (have_version > failing_version)
+            elif op == ">=":
+                return not (have_version >= failing_version)
+
+    # If no operator is found, assume exact match
+    return not (have_version == version.parse(failing_version))
 
 
 def get_installed_packages(env_exe):

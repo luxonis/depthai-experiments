@@ -24,6 +24,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--depthai-version",
         type=str,
+        default=None,
         help="Specify a depthai version to override requirements.txt.",
     )
     parser.addoption(
@@ -63,14 +64,21 @@ def test_args(request):
         "platform": request.config.getoption("--platform"),
         "python_version": request.config.getoption("--python-version"),
     }
+
+    script_dir = Path(__file__).parent
+    file_path = script_dir / "known_failing_examples.json"
+
+    with open(file_path) as f:
+        known_failing_experiments = json.load(f)
+
+    args["known_failing_experiments"] = known_failing_experiments
+
     return args
 
 
 def pytest_generate_tests(metafunc):
     if "experiment_dir" in metafunc.fixturenames:
         root_dir = metafunc.config.getoption("--root-dir")
-        platform = metafunc.config.getoption("--platform")
-        python_version = metafunc.config.getoption("--python-version")
         exp_dirs = []
 
         for dirpath, dirnames, filenames in os.walk(root_dir):
@@ -81,27 +89,4 @@ def pytest_generate_tests(metafunc):
             elif "main.py" not in filenames and "requirements.txt" in filenames:
                 logger.error(f"Skipping {dirpath} because it has no main.py")
 
-        exp_dirs = filter_experiments(exp_dirs, platform, python_version)
         metafunc.parametrize("experiment_dir", exp_dirs, ids=[str(p) for p in exp_dirs])
-
-
-def filter_experiments(all_exp_dirs, curr_platform, curr_python_version):
-    filtered_exp_dirs = []
-
-    script_dir = Path(__file__).parent
-    file_path = script_dir / "known_failing_examples.json"
-
-    with open(file_path) as f:
-        data = json.load(f)
-    excluded_dirs = (
-        data[curr_platform][curr_python_version] + data[curr_platform]["all"]
-    )
-    for exp_dir in all_exp_dirs:
-        logger.info(exp_dir, excluded_dirs)
-        if any([str(i) in str(exp_dir) for i in excluded_dirs]):
-            logger.error(
-                f"Skipping {exp_dir} because not supported on platform={curr_platform} with python={curr_python_version}"
-            )
-        else:
-            filtered_exp_dirs.append(exp_dir)
-    return filtered_exp_dirs
