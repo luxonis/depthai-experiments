@@ -15,7 +15,7 @@ FPS = 20
 frame_type = dai.ImgFrame.Type.BGR888p
 if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 30
+    FPS = 10
 else:
     raise RuntimeError("This demo is currently only supported on RVC4")
 
@@ -130,10 +130,12 @@ with dai.Pipeline(device) as pipeline:
 
     head_pose_script = pipeline.create(dai.node.Script)
     head_pose_script.setScriptPath(Path(__file__).parent / "utils/head_pose_script.py")
-    head_pose_node.outp
-    head_pose_node.getOutput(0).link(head_pose_script.inputs["yaw_input"])
-    head_pose_node.getOutput(1).link(head_pose_script.inputs["pitch_input"])
-    head_pose_node.getOutput(2).link(head_pose_script.inputs["roll_input"])
+    head_pose_node.out.link(head_pose_script.inputs["pose_input"])
+
+    # head_pose_node.outp
+    # head_pose_node.getOutput(0).link(head_pose_script.inputs["yaw_input"])
+    # head_pose_node.getOutput(1).link(head_pose_script.inputs["pitch_input"])
+    # head_pose_node.getOutput(2).link(head_pose_script.inputs["roll_input"])
 
     # gaze_estimation_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
 
@@ -147,10 +149,6 @@ with dai.Pipeline(device) as pipeline:
     )
     left_crop_node.out.link(gaze_estimation_node.inputs["left_eye_image"])
     right_crop_node.out.link(gaze_estimation_node.inputs["right_eye_image"])
-
-    # age_gender_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-    #     left_crop_node.out, "luxonis/age-gender-recognition:62x62"
-    # )
 
     # sync_node = pipeline.create(DetectionsAgeGenderSync)
     # input_node.link(sync_node.passthrough_input)
@@ -169,9 +167,11 @@ with dai.Pipeline(device) as pipeline:
 
     right_crop_q = right_crop_node.out.createOutputQueue()
     left_crop_q = left_crop_node.out.createOutputQueue()
+    head_pose_q = head_pose_script.outputs["head_pose_output"].createOutputQueue()
 
-    head_pose_q = head_pose_node.getOutput(0).createOutputQueue()  # yaw, pitch, roll
+    # head_pose_q = head_pose_node.getOutput(0).createOutputQueue()  # yaw, pitch, roll
     # head_pose_q = head_pose_node.out.createOutputQueue()
+    # joined_queue =  head_pose_script.outputs["head_pose_output"].createOutputQueue()
 
     gaze_q = gaze_estimation_node.out.createOutputQueue()
 
@@ -207,12 +207,110 @@ with dai.Pipeline(device) as pipeline:
                 )
                 cv2.circle(frame, pt, 2, (0, 255, 0), 2)
 
-        gaze = gaze_q.get()
-        print(gaze)
-        head_pose = head_pose_q.get()
-        print(type(head_pose))
-        for prediction in head_pose.predictions:
-            print(prediction.prediction)
+            gaze = gaze_q.get()
+            gaze_tensor = gaze.getTensor("Identity", dequantize=True)
+            gaze_tensor = gaze_tensor.flatten()
+
+            # print("gaze:", gaze_tensor)
+
+            center = np.mean(keypoints, axis=0)
+            center = np.array(center, dtype=np.int32)
+            center = center.tolist()
+            x, y = keypoints[0]
+            scale = 200
+
+            end_x = int(x + gaze_tensor[0] * scale)
+            end_y = int(y + gaze_tensor[1] * scale)
+
+            cv2.line(frame, (x, y), (end_x, end_y), (150, 200, 150), 2)
+
+            head_pose_msg = head_pose_q.get()
+            head_pose = head_pose_msg.getTensor("head_pose_angles_yaw_pitch_roll")
+            print("head_pose:", head_pose[0])
+            yaw, pitch, roll = head_pose[0]
+            size = 100
+            pitch = np.deg2rad(pitch)
+            yaw = np.deg2rad(yaw)
+            # roll  = np.deg2rad(roll)
+            roll = np.deg2rad(-roll)
+
+            # In many models, yaw is "positive to the left", so you might need to invert it:
+            # yaw = -yaw
+            # Or pitch might need inversion depending on the sign from the model.
+            # Adjust as needed to match your coordinate system.
+
+            # Build individual rotation matrices around x, y, z
+            # R_x: pitch
+            R_x = np.array(
+                [
+                    [1, 0, 0],
+                    [0, np.cos(pitch), -np.sin(pitch)],
+                    [0, np.sin(pitch), np.cos(pitch)],
+                ]
+            )
+
+            # R_y: yaw
+            R_y = np.array(
+                [
+                    [np.cos(yaw), 0, np.sin(yaw)],
+                    [0, 1, 0],
+                    [-np.sin(yaw), 0, np.cos(yaw)],
+                ]
+            )
+
+            # R_z: roll
+            R_z = np.array(
+                [
+                    [np.cos(roll), -np.sin(roll), 0],
+                    [np.sin(roll), np.cos(roll), 0],
+                    [0, 0, 1],
+                ]
+            )
+
+            # Combined rotation matrix
+            R = R_y @ R_x @ R_z
+
+            # Define the three 3D axes in the model coordinate space
+            # X axis is (size, 0, 0), Y axis is (0, size, 0), Z axis is (0, 0, size)
+            axes_3d = np.float32(
+                [
+                    [size, 0, 0],  # X axis
+                    [0, size, 0],  # Y axis
+                    [0, 0, size],
+                ]
+            )
+
+            # Rotate the 3D axes by R
+            axes_3d_rotated = axes_3d @ R.T  # (3x3) matrix multiply
+
+            # For a quick 2D overlay, just add the rotated x,y to the center.
+            # This is not a true perspective projection, but is an easy hack.
+            # If you want correct 3D perspective, you need camera intrinsics and a proper projection.
+            axis_points_2d = []
+            for axis in axes_3d_rotated:
+                x2d = int(center[0] + axis[0])
+                y2d = int(
+                    center[1] - axis[1]
+                )  # subtract y if image coordinates go down
+                axis_points_2d.append((x2d, y2d))
+
+            # Now draw lines for each axis
+            # center -> X axis (red)
+            cv2.line(frame, center, axis_points_2d[0], (0, 0, 255), 2)
+            # center -> Y axis (green)
+            cv2.line(frame, center, axis_points_2d[1], (0, 255, 0), 2)
+            # center -> Z axis (blue)
+            cv2.line(frame, center, axis_points_2d[2], (255, 0, 0), 2)
+
+        # Optionally, draw an arrow:
+        # cv2.arrowedLine(image, (x, y), (end_x, end_y), color, thickness, tipLength=0.2)
+
+        # all_together = joined_queue.get()
+        # print(all_together)
+
+        # print(type(head_pose))
+        # for prediction in head_pose.predictions:
+        #     print(prediction.prediction)
 
         cv2.imshow("left_eye", left_eye)
         cv2.imshow("right_eye", right_eye)

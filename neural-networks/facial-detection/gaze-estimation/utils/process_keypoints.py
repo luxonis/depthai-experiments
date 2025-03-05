@@ -17,8 +17,8 @@ class ProcessKeypointDetections(dai.node.ThreadedHostNode):
         self._target_h = 100
 
     def crop_eye(self, eye_center, face_w, face_h):
-        eye_w = int(face_w * 0.2)
-        eye_h = int(face_h * 0.2)
+        eye_w = int(face_w * 0.25)
+        eye_h = int(face_h * 0.25)
         eye_center = dai.Point2f(eye_center[0], eye_center[1])
         size = dai.Size2f(eye_w, eye_h)
         eye = dai.RotatedRect(eye_center, size, 0)
