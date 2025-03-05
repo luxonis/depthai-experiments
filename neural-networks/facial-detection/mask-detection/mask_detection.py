@@ -1,4 +1,5 @@
 import depthai as dai
+from typing import Tuple
 
 
 class MaskDetection(dai.node.HostNode):
@@ -54,8 +55,8 @@ class MaskDetection(dai.node.HostNode):
 
     def _is_inside_bbox(
         self,
-        outter_bbox: tuple[float, float, float, float],
-        inner_bbox: tuple[float, float, float, float],
+        outter_bbox: Tuple[float, float, float, float],
+        inner_bbox: Tuple[float, float, float, float],
     ) -> bool:
         return (
             outter_bbox[0] <= inner_bbox[0]
@@ -66,5 +67,5 @@ class MaskDetection(dai.node.HostNode):
 
     def _det_to_bbox(
         self, detection: dai.ImgDetection
-    ) -> tuple[float, float, float, float]:
+    ) -> Tuple[float, float, float, float]:
         return (detection.xmin, detection.ymin, detection.xmax, detection.ymax)

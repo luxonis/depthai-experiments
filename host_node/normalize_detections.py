@@ -5,6 +5,7 @@ from depthai_nodes import (
     ImgDetectionsExtended,
     Keypoints,
 )
+from typing import Union, List, Tuple
 
 
 class NormalizeDetections(dai.node.HostNode):
@@ -39,11 +40,13 @@ class NormalizeDetections(dai.node.HostNode):
     def _normalize_detections(
         self,
         frame: np.ndarray,
-        detections: dai.ImgDetections
-        | ImgDetectionsExtended
-        | Keypoints
-        | dai.SpatialImgDetections,
-    ) -> dai.ImgDetections | ImgDetectionsExtended | Keypoints:
+        detections: Union[
+            dai.ImgDetections,
+            ImgDetectionsExtended,
+            Keypoints,
+            dai.SpatialImgDetections,
+        ],
+    ) -> Union[dai.ImgDetections, ImgDetectionsExtended, Keypoints]:
         if isinstance(detections, ImgDetectionsExtended):
             normalized_dets = ImgDetectionsExtended()
             normalized_dets.detections = [
@@ -90,8 +93,10 @@ class NormalizeDetections(dai.node.HostNode):
         return spatial_det
 
     def _normalize_detection(
-        self, frame: np.ndarray, detection: dai.ImgDetection | ImgDetectionExtended
-    ) -> dai.ImgDetection | ImgDetectionExtended:
+        self,
+        frame: np.ndarray,
+        detection: Union[dai.ImgDetection, ImgDetectionExtended],
+    ) -> Union[dai.ImgDetection, ImgDetectionExtended]:
         if isinstance(detection, ImgDetectionExtended):
             img_det = ImgDetectionExtended()
             img_det.keypoints = self._normalize_kpts(frame, detection.keypoints)
@@ -115,20 +120,20 @@ class NormalizeDetections(dai.node.HostNode):
     def _normalize_kpts(
         self,
         frame: np.ndarray,
-        kpts: list[tuple[float, float] | tuple[float, float, float]],
-    ) -> list[tuple[int, int] | tuple[int, int, float]]:
+        kpts: List[Union[Tuple[float, float], Tuple[float, float, float]]],
+    ) -> List[Union[Tuple[int, int], Tuple[int, int, float]]]:
         return [self._norm_point((kpt[0], kpt[1]), frame) for kpt in kpts]
 
     def _normalize_bbox(
-        self, frame: np.ndarray, bbox: tuple[float, float, float, float]
-    ) -> tuple[int, int, int, int]:
+        self, frame: np.ndarray, bbox: Tuple[float, float, float, float]
+    ) -> Tuple[int, int, int, int]:
         return self._norm_point((bbox[0], bbox[1]), frame) + self._norm_point(
             (bbox[2], bbox[3]), frame
         )
 
     def _norm_point(
-        self, kpt: tuple[float, float], frame: np.ndarray
-    ) -> tuple[int, int]:
+        self, kpt: Tuple[float, float], frame: np.ndarray
+    ) -> Tuple[int, int]:
         # moves the point to equalize the crop
         if self.manip_mode == dai.ImgResizeMode.CROP:
             normVals = np.full(2, frame.shape[0])
