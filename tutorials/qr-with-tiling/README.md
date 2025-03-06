@@ -8,23 +8,25 @@ This experiment uses [qrdet:nano-512x288](https://hub.luxonis.com/ai/models/d118
 
 ## Installation
 
-1. Install the zbar library:
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+
+Install the zbar library:
 
 ```
 sudo apt-get install libzbar0
 ```
 
-2. Install the Python dependencies:
+Install required packages by running:
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-Here is a list of all available parameters:
+All scripts accept the following arguments:
 
 ```
 -d DEVICE, --device DEVICE
@@ -40,6 +42,10 @@ Here is a list of all available parameters:
 -is INPUT_SIZE, --input_size INPUT_SIZE
                     Input video stream resolution. {2160p, 1080p, 720p} (default: 1080p)
 ```
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -69,11 +75,18 @@ This will run the QR Code Detection with Tiling experiment with the default devi
 
 ### Standalone Mode
 
-Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
 
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-# TODO: add instructions for standalone mode once oakctl supports CLI arguments
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
