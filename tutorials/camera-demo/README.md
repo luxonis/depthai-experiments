@@ -27,7 +27,6 @@ All scripts accept the following arguments:
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
                     FPS limit for the model runtime. (default: 30)
-
 ```
 
 ### Peripheral Mode
