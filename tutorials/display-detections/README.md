@@ -22,17 +22,19 @@ Another solution is to stretch the frame to the correct aspect ratio and size of
 
 ## Installation
 
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+
+Install required packages by running:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-This experiment contains 3 scripts. One for each approach mentioned above.
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
-
-Here is a list of all available parameters:
+All scripts accept the following arguments:
 
 ```
 -d DEVICE, --device DEVICE
@@ -40,6 +42,10 @@ Here is a list of all available parameters:
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
                     FPS limit for the model runtime. (default: 30)
 ```
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -63,11 +69,18 @@ This will run the Display Detections experiment with the default device at 10 FP
 
 ### Standalone Mode
 
-Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
 
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-# TODO: add instructions for standalone mode once oakctl supports CLI arguments
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
