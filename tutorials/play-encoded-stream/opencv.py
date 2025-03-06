@@ -2,15 +2,14 @@ from pathlib import Path
 
 import depthai as dai
 from utils.arguments import initialize_argparser
+from utils.decode_video_cv2 import DecodeVideoCV2
 from utils.encoder_profiles import ENCODER_PROFILES
 
 _, args = initialize_argparser()
 
-if args.encode == "h265":
-    print(
-        "Playing H265 encoded stream using Visualizer is currently not supported. Using H264 encoding."
-    )
-    args.encode = "h264"
+if args.encode != "mjpeg":
+    print("OpenCV decoding only supports MJPEG. Using MJPEG encoding.")
+    args.encode = "mjpeg"
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
@@ -37,7 +36,9 @@ with dai.Pipeline(device) as pipeline:
         profile=ENCODER_PROFILES[args.encode],
     )
 
-    visualizer.addTopic("Video", encoder.out)
+    decoder = pipeline.create(DecodeVideoCV2).build(enc_out=encoder.bitstream)
+
+    visualizer.addTopic("Video", decoder.out)
     print("Pipeline created.")
 
     pipeline.start()
