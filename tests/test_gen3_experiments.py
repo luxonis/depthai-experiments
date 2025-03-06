@@ -54,7 +54,7 @@ def setup_virtual_display():
             ["which", "Xvfb"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         if result.returncode != 0:
-            logger.debug(
+            logger.error(
                 "Xvfb is not installed on this machine. Please install it and try again."
             )
             sys.exit(1)

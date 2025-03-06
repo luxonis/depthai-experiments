@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 ENV DISPLAY=:99
 
 # Copy your project files into the container
-# NOTE: If ran inside GH workflow this is not needed
+# NOTE: If ran inside GH workflow or with HIL --sync-workspace this is not needed
 # COPY . /tmp/depthai-experiments
 
 # Setup Test Command
