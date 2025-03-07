@@ -1,35 +1,67 @@
-# Mask / No-Mask classification demo
+# Face Mask Detection
 
-This example demonstrates how to run 2 stage inference with DepthAI library.
-It recognizes whether (all) detected faces on the frame are wearing face masks. Demo uses [face-detection-retail-0004](https://docs.openvino.ai/2021.4/omz_models_model_face_detection_retail_0004.html) model to detect faces, crops them on the device using Script node, and then sends face frames to [sbd_mask_classification_224x224](https://github.com/luxonis/depthai-model-zoo/tree/main/models/sbd_mask_classification_224x224) model which performs Mask/No-Mask classification.
+This experiment demonstrates how to build a single-stage DepthAI pipeline for face mask detection.
+It recognizes whether the human faces detected on the frame are (not) wearing face masks.
+The pipeline consists of the [PPE Detection](https://hub.luxonis.com/ai/models/c3830468-3178-4de6-bc09-0543bbe28b1c?view=page) model trained to recognize person protective equipment (PPE).
 
 ## Demo
 
-https://user-images.githubusercontent.com/18037362/171852659-2b0d127d-5b45-4c8f-b0a8-cc152f5a92a0.mp4
+[![face mask detection](media/face_mask_detection.gif)](media/face_mask_detection.gif)
 
-### How it works
+<sup>[Source](https://www.pexels.com/video/woman-art-iphone-smartphone-3960181/)</sup>
 
-1. Color camera produces high-res frames, sends them to host, Script node and downscale ImageManip node
-1. Downscale ImageManip will downscale from high-res frame to 300x300, required by 1st NN in this pipeline; object detection model
-1. 300x300 frames are sent from downscale ImageManip node to the object detection model (MobileNetSpatialDetectionNetwork)
-1. Object detections are sent to the Script node
-1. Script node first syncs object detections msg with frame. It then goes through all detections and creates ImageManipConfig for each detected face. These configs then get sent to ImageManip together with synced high-res frame
-1. ImageManip will crop only the face out of the original frame. It will also resize the face frame to required size (224,224) by the SBD-Mask classification NN model
-1. Face frames get send to the 2nd NN - SBD-Mask NN model. NN recognition results are sent back to the host
-1. Frames, object detections, and recognition results are all **synced on the host** side and then displayed to the user
+## Installation
 
-## 2-stage NN pipeline graph
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
-![image](https://user-images.githubusercontent.com/18037362/179375207-1ccf27a6-59bb-4a42-8cae-d8908c4ed51a.png)
-
-[DepthAI Pipeline Graph](https://github.com/geaxgx/depthai_pipeline_graph#depthai-pipeline-graph-experimental) was used to generate this image.
-
-## Pre-requisites
-
-```
-python3 -m pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run `python3 main.py`
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+Here is a list of all available parameters:
+
+```
+-m MODEL, --model MODEL
+                      HubAI model reference. (default: 'luxonis/ppe-detection:640x640')
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                      FPS limit for the model runtime. (default: None)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                      Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+```
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
+
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run the default PPE Detection model on your camera input.
+
+### Standalone Mode
+
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
