@@ -3,4 +3,4 @@ depthai~=3.0.0a4
 blobconverter==1.4.3
 numpy>=1.22
 opencv-python==4.10.0.84
-git+https://github.com/luxonis/depthai-nodes.git@main # TODO: REMOVE
+depthai-nodes~=0.2.0
