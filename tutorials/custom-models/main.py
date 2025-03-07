@@ -58,17 +58,13 @@ with dai.Pipeline(device) as pipeline:
     blur_nn_archive = dai.NNArchive(
         archivePath=f"models/blur.{platform.lower()}.tar.xz"
     )
-    nn_blur = pipeline.create(ParsingNeuralNetwork).build(
-        cam_rgb, blur_nn_archive, fps=args.fps_limit
-    )
+    nn_blur = pipeline.create(ParsingNeuralNetwork).build(cam_rgb_out, blur_nn_archive)
 
     # EDGE
     edge_nn_archive = dai.NNArchive(
         archivePath=f"models/edge.{platform.lower()}.tar.xz"
     )
-    nn_edge = pipeline.create(ParsingNeuralNetwork).build(
-        cam_rgb, edge_nn_archive, fps=args.fps_limit
-    )
+    nn_edge = pipeline.create(ParsingNeuralNetwork).build(cam_rgb_out, edge_nn_archive)
 
     # CONCAT
     concat_nn_archive = dai.NNArchive(
