@@ -13,14 +13,14 @@ platform = dai.Platform.__members__[args.platform.upper()]
 
 class Model(nn.Module):
     def forward(self, img1, img2):
-        sum1 = torch.sum(img1, dim=0)
-        sum2 = torch.sum(img2, dim=0)
+        sum1 = torch.sum(img1[0], dim=0)
+        sum2 = torch.sum(img2[0], dim=0)
         return torch.sub(sum1, sum2)
 
 
 model = Model()
 
-input_shape = (3, 720, 720)
+input_shape = (1, 3, 720, 720)
 
 cfg_dict = {
     "config_version": CONFIG_VERSION,
@@ -36,7 +36,7 @@ cfg_dict = {
                 "dtype": "float32",
                 "input_type": "image",
                 "shape": input_shape,
-                "layout": "CHW",
+                "layout": "NCHW",
                 "preprocessing": {
                     "mean": [0.0, 0.0, 0.0],
                     "scale": [1.0, 1.0, 1.0],
@@ -49,7 +49,7 @@ cfg_dict = {
                 "dtype": "float32",
                 "input_type": "image",
                 "shape": input_shape,
-                "layout": "CHW",
+                "layout": "NCHW",
                 "preprocessing": {
                     "mean": [0.0, 0.0, 0.0],
                     "scale": [1.0, 1.0, 1.0],
