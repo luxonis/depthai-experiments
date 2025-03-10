@@ -2,5 +2,5 @@
 depthai==3.0a13
 blobconverter==1.4.3
 numpy>=1.22
-opencv-python-headless==4.10.0.84
+opencv-python-headless~=4.10.0
 depthai-nodes==0.1.1
