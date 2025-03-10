@@ -54,7 +54,7 @@ These scripts run only in the corresponding mode, which cannot be toggled during
 
 ## Usage
 
-You can run the experiment fully on device (`STANDALONE` mode) or using your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your computer as host (`PERIPHERAL` mode). `STANDALONE` mode is only supported on RVC4.
 
 All scripts accept the following arguments:
 

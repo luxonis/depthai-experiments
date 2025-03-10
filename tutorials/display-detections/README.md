@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode). `STANDALONE` mode is only supported on RVC4.
 
 All scripts accept the following arguments:
 

@@ -32,7 +32,7 @@ For more information see [README.md](generate_model/README.md) file in the `gene
 
 ## Usage
 
-You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode). `STANDALONE` mode is only supported on RVC4.
 
 Here is a list of all available parameters:
 
