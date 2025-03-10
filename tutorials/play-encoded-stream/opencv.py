@@ -28,7 +28,7 @@ with dai.Pipeline(device) as pipeline:
         cam_out = replay.out
     else:
         cam = pipeline.create(dai.node.Camera).build()
-        cam_out = cam.requestOutput((1920, 1080), type=dai.ImgFrame.Type.NV12)
+        cam_out = cam.requestOutput((1920, 1440), type=dai.ImgFrame.Type.NV12)
 
     encoder = pipeline.create(dai.node.VideoEncoder).build(
         input=cam_out,
