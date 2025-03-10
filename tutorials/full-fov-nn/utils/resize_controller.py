@@ -39,13 +39,6 @@ class ResizeController(dai.node.HostNode):
         cfg.setFrameType(self.output_type)
 
         if key == ord("a"):
-            if (
-                self.getParentPipeline().getDefaultDevice().getPlatform()
-                == dai.Platform.RVC4
-            ):
-                print("Resize mode LETTERBOX is not yet supported on RVC4 platform")
-                return
-
             self.send_dummy_config()
             self.current_mode = dai.ImageManipConfigV2.ResizeMode.LETTERBOX
             cfg.setOutputSize(

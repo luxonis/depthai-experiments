@@ -9,10 +9,6 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 platform = device.getPlatform()
 
 
-if platform == dai.Platform.RVC4:
-    raise RuntimeError("ResizeMode.LETTERBOX is not yet supported on RVC4 platform")
-
-
 with dai.Pipeline(device) as pipeline:
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     cam_out = cam.requestOutput(
