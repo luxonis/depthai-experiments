@@ -23,7 +23,7 @@ with dai.Pipeline(device) as pipeline:
     stereo = pipeline.create(dai.node.StereoDepth).build(
         left=left_output,
         right=right_output,
-        presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     stereo.setOutputSize(*color_resolution)
