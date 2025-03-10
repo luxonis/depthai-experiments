@@ -48,7 +48,13 @@ with dai.Pipeline(device) as pipeline:
         nn_shape=nn_archive.getInputSize(),
     )
 
-    nn = pipeline.create(ParsingNeuralNetwork).build(tile_manager.out, nn_archive)
+    nn_input = tile_manager.out
+    if pipeline.getDefaultDevice().getPlatform() == dai.Platform.RVC4:
+        interleaved_manip = pipeline.create(dai.node.ImageManipV2)
+        interleaved_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+        nn_input = interleaved_manip.out
+
+    nn = pipeline.create(ParsingNeuralNetwork).build(nn_input, nn_archive)
 
     nn.input.setMaxSize(len(tile_manager.tile_positions))
     nn.input.setBlocking(False)
