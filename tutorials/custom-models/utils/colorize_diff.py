@@ -30,7 +30,12 @@ class ColorizeDiff(dai.node.HostNode):
         self._out.send(img)
 
     def get_frame(self, data: dai.NNData, shape):
-        diff = data.getFirstTensor().astype(np.float16).flatten().reshape(shape)
+        diff = (
+            data.getFirstTensor(dequantize=True)
+            .astype(np.float16)
+            .flatten()
+            .reshape(shape)
+        )
         colorize = cv2.normalize(diff, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
         return cv2.applyColorMap(colorize, cv2.COLORMAP_JET)
 
