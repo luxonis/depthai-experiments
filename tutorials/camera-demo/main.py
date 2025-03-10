@@ -25,8 +25,6 @@ with dai.Pipeline(device) as pipeline:
         right=right_output,
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
-    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setOutputSize(*color_resolution)
 
     depth_parser = pipeline.create(DepthColorTransform).build(stereo.disparity)
     depth_parser.setMaxDisparity(stereo.initialConfig.getMaxDisparity())
