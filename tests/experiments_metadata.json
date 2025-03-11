@@ -1,0 +1,117 @@
+{
+    "known_failing_experiments": {
+        "neural-networks/facial-detection/age-gender": {
+            "reason": "Usage of MessageGroup not supported on RVC2 yet",
+            "platform": "RVC2",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/facial-detection/fatigue-detection": {
+            "reason": "Usage of MessageGroup not supported on RVC2 yet",
+            "platform": "RVC2",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/facial-detection/head-posture-detection": {
+            "reason": "luxonis/yunet:640x640 not available anymore, should be swaped with luxonis/yunet:640x480 + some edits in the pipeline",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/speech-recognition/whisper-tiny-en": {
+            "reason": "Can't run without arguments, needs to be updated",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/object-detection/yolo-world": {
+            "reason": "Can't run without arguments, needs to be updated",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/object-detection/thermal-detection": {
+            "reason": "Needs thermal camera",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/segmentation/yolov8-instance-segmentation": {
+            "reason": "Failed to connect to Rerun server",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "connectivity/roboflow-integration": {
+            "reason": "Can't run without arguments (e.g. roboflow api-key)",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "depth-measurement/3d-measurement/box-measurement": {
+            "reason": "Open3D causes some memory segfault",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "depth-measurement/3d-measurement/pointcloud/rgbd-pointcloud": {
+            "reason": "Open3D causes some memory segfault",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "depth-measurement/3d-measurement/pointcloud/device-pointcloud": {
+            "reason": "Open3D causes some memory segfault",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "depth-measurement/qt-gui": {
+            "reason": "PyQT installation issues",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "stream-manipulation/rtsp-streaming": {
+            "reason": "PyCairo installation issues",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "tutorials/qr-with-tiling": {
+            "reason": "Pyzbar installation issues",
+            "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        }
+    },
+    "experimental_subset": [
+        "neural-networks/counting/crowdcounting",
+        "neural-networks/counting/people-counter",
+        "neural-networks/generic-example",
+        "neural-networks/object-tracking/people-tracker",
+        "neural-networks/pose-estimation/hand-pose",
+        "neural-networks/3D-detection/objectron",
+        "neural-networks/depth-estimation/crestereo-stereo-matching",
+        "neural-networks/facial-detection/age-gender",
+        "neural-networks/facial-detection/blur-faces",
+        "neural-networks/facial-detection/emotion-recognition",
+        "neural-networks/feature-detection/xfeat",
+        "neural-networks/object-detection/human-machine-safety",
+        "neural-networks/object-detection/social-distancing",
+        "neural-networks/object-detection/spatial-detections",
+        "neural-networks/object-detection/text-blur",
+        "neural-networks/object-detection/thermal-detection",
+        "neural-networks/object-detection/yolo-host-decoding",
+        "neural-networks/object-detection/yolo-p",
+        "neural-networks/object-detection/yolo-world",
+        "neural-networks/object-tracking/deepsort-tracking",
+        "neural-networks/pose-estimation/animal-pose",
+        "neural-networks/reidentification/human-reidentification",
+        "neural-networks/segmentation/yolov8-instance-segmentation",
+        "stream-manipulation/mjpeg-streaming",
+        "stream-manipulation/on-device-encoding",
+        "stream-manipulation/rtsp-streaming",
+        "stream-manipulation/webrtc-streaming"
+    ]
+}

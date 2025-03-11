@@ -64,14 +64,15 @@ def test_args(request):
         "platform": request.config.getoption("--platform"),
         "python_version": request.config.getoption("--python-version"),
     }
+    logger.info(f"Test arguments: {args}")
 
     script_dir = Path(__file__).parent
-    file_path = script_dir / "known_failing_examples.json"
+    file_path = script_dir / "experiments_metadata.json"
 
     with open(file_path) as f:
-        known_failing_experiments = json.load(f)
+        experiments_metadata = json.load(f)
 
-    args["known_failing_experiments"] = known_failing_experiments
+    args["experiments_metadata"] = experiments_metadata
 
     return args
 

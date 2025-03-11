@@ -19,28 +19,56 @@ def test_experiment_runs(experiment_dir, test_args):
 
     experiment_dir = experiment_dir.resolve()
 
-    success, reason = is_valid(experiment_dir, test_args)
+    dai_experimental = test_args["depthai_version"] == "experimental"
+    if dai_experimental and not is_experimental(
+        experiment_dir=experiment_dir,
+        experimental_subset=test_args["experiments_metadata"]["experimental_subset"],
+    ):
+        pytest.skip(
+            f"Skipping {experiment_dir}: Not part of the experimental DAI subset."
+        )
+
+    success, reason = is_valid(
+        experiment_dir=experiment_dir,
+        known_failing_experiments=test_args["experiments_metadata"][
+            "known_failing_experiments"
+        ],
+        desired_platform=test_args["platform"],
+        desired_py=test_args["python_version"],
+        desired_dai=""
+        if dai_experimental
+        else test_args[
+            "depthai_version"
+        ],  # if experimental DAI then don't check DAI version
+    )
     if not success:
         pytest.skip(f"Skipping {experiment_dir}: {reason}")
 
     main_script = experiment_dir / "main.py"
     requirements_file = experiment_dir / "requirements.txt"
-    venv_dir = experiment_dir / ".test-venv"
-    env_exe = venv_dir / "bin" / "python3"
-
     if not main_script.exists():
         pytest.skip(f"Skipping {experiment_dir}, no main.py found.")
     if not requirements_file.exists():
         pytest.skip(f"Skipping {experiment_dir}, no requirements.txt found.")
 
-    setup_virtual_env(venv_dir, requirements_file, test_args["depthai_version"])
-    success = run_experiment(
-        env_exe,
-        experiment_dir,
-        test_args,
-    )
-    shutil.rmtree(venv_dir, ignore_errors=True)
-    assert success, f"Test failed for {experiment_dir}"
+    if not dai_experimental:
+        venv_dir = experiment_dir / ".test-venv"
+        env_exe = venv_dir / "bin" / "python3"
+
+        setup_virtual_env(venv_dir, requirements_file, test_args["depthai_version"])
+
+        success = run_experiment(
+            env_exe,
+            experiment_dir,
+            test_args,
+        )
+        shutil.rmtree(venv_dir, ignore_errors=True)
+        assert success, f"Test failed for {experiment_dir}"
+    else:
+        # TODO: Implement creating a python environment that has an experimental DAI installed and runns experiment inside it
+        raise NotImplementedError(
+            "Using DAI `experimental` version is not yet fully supported..."
+        )
 
 
 def setup_virtual_display():
@@ -154,32 +182,40 @@ def run_experiment(env_exe, experiment_dir, args):
         os.chdir(original_dir)
 
 
-def is_valid(experiment_dir, args):
+def is_experimental(experiment_dir, experimental_subset):
+    """Checks if the experiment is part of the subset of experiments used for experimental DAI version testing"""
+    for exp in experimental_subset:
+        if exp in str(experiment_dir):
+            return True
+    return False
+
+
+def is_valid(
+    experiment_dir, known_failing_experiments, desired_platform, desired_py, desired_dai
+):
     """Checks if the experiment is valid or known to fail with this parameters.
     If it is known to fail it returns the reason.
     """
-    known_failing_experiments = args["known_failing_experiments"]
-
     for exp in known_failing_experiments:
         if exp in str(experiment_dir):
             if not check_platform(
-                args["platform"], known_failing_experiments[exp]["platform"]
+                desired_platform, known_failing_experiments[exp]["platform"]
             ):
                 logger.info(
-                    f"Platform check failed: Got `{args['platform']}`, shouldn't be `{known_failing_experiments[exp]['platform']}`"
+                    f"Platform check failed: Got `{desired_platform}`, shouldn't be `{known_failing_experiments[exp]['platform']}`"
                 )
             if not check_python(
-                args["python_version"], known_failing_experiments[exp]["python_version"]
+                desired_py, known_failing_experiments[exp]["python_version"]
             ):
                 logger.info(
-                    f"Python version check failed: Got `{args['python_version']}`, shouldn't be `{known_failing_experiments[exp]['python_version']}`"
+                    f"Python version check failed: Got `{desired_py}`, shouldn't be `{known_failing_experiments[exp]['python_version']}`"
                 )
             if not check_dai(
-                args["depthai_version"],
+                desired_dai,
                 known_failing_experiments[exp]["depthai_version"],
             ):
                 logger.info(
-                    f"DepthAI version check failed: Got `{args['depthai_version']}`, shouldn't be `{known_failing_experiments[exp]['depthai_version']}`"
+                    f"DepthAI version check failed: Got `{desired_dai}`, shouldn't be `{known_failing_experiments[exp]['depthai_version']}`"
                 )
 
             return (False, known_failing_experiments[exp]["reason"])

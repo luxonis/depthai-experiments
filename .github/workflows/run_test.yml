@@ -6,6 +6,10 @@ on:
       depthai_version:
         description: 'Version of DepthAI to install for the test run. If specified the version will override version specified in requirements.txt'
         required: false
+      platform:
+        description: 'Platform to use for testing. By default both RVC2 and RVC4 are used but you can use only one by passing only `RVC2` or `RVC4`.'
+        required: false
+        default: ""
       log_level:
         description: 'Log level to use for pytest.'
         type: choice
@@ -15,10 +19,6 @@ on:
           - DEBUG
         default: INFO
         required: false
-  
-  # push:
-  #   branches:
-  #     - gen3
 
 jobs:
   test:
@@ -27,7 +27,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8", "3.10", "3.12"]
-        platform: [RVC2] #TODO: add RVC4 platform
+        platform: ${{ fromJSON('["RVC2", "RVC4"]') if inputs.platform == '' else fromJSON(format('["{0}"]', inputs.platform)) }}
+
       fail-fast: false
 
     steps:
