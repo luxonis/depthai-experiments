@@ -1,50 +1,70 @@
 import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
 
-from host_nodes.host_concat import ReshapeNNOutputConcat, CONCAT_SHAPE
-from host_nodes.host_display import Display
+NN_CONCAT_SIZE = (300, 300)
+
+_, args = initialize_argparser()
+
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
 
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
+    platform = pipeline.getDefaultDevice().getPlatformAsString()
+
     cam_rgb = pipeline.create(dai.node.Camera).build(
         boardSocket=dai.CameraBoardSocket.CAM_A
     )
-    preview = cam_rgb.requestOutput(
-        size=(CONCAT_SHAPE, CONCAT_SHAPE), type=dai.ImgFrame.Type.BGR888p
+    cam_left = pipeline.create(dai.node.Camera).build(
+        boardSocket=dai.CameraBoardSocket.CAM_B
+    )
+    cam_right = pipeline.create(dai.node.Camera).build(
+        boardSocket=dai.CameraBoardSocket.CAM_C
     )
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    cam_left_out = cam_left.requestOutput(
+        size=NN_CONCAT_SIZE,
+        type=dai.ImgFrame.Type.BGR888i
+        if platform == "RVC4"
+        else dai.ImgFrame.Type.BGR888p,
+        fps=args.fps_limit,
+    )
+    cam_right_out = cam_right.requestOutput(
+        size=NN_CONCAT_SIZE,
+        type=dai.ImgFrame.Type.BGR888i
+        if platform == "RVC4"
+        else dai.ImgFrame.Type.BGR888p,
+        fps=args.fps_limit,
+    )
+    cam_rgb_out = cam_rgb.requestOutput(
+        size=NN_CONCAT_SIZE,
+        type=dai.ImgFrame.Type.BGR888i
+        if platform == "RVC4"
+        else dai.ImgFrame.Type.BGR888p,
+        fps=args.fps_limit,
+    )
 
-    # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
-    manipLeft = pipeline.create(dai.node.ImageManip)
-    manipLeft.initialConfig.setResize(CONCAT_SHAPE, CONCAT_SHAPE)
-    # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-    manipLeft.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    left.out.link(manipLeft.inputImage)
+    # CONCAT
+    concat_nn_archive = dai.NNArchive(
+        archivePath=f"models/concat.{platform.lower()}.tar.xz"
+    )
+    nn_concat = pipeline.create(ParsingNeuralNetwork)
+    nn_concat.setNNArchive(concat_nn_archive)
+    cam_rgb_out.link(nn_concat.inputs["img1"])
+    cam_left_out.link(nn_concat.inputs["img2"])
+    cam_right_out.link(nn_concat.inputs["img3"])
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+    visualizer.addTopic("Concat", nn_concat.out, "images")
 
-    # ImageManip for cropping (face detection NN requires input image of 300x300) and to change frame type
-    manipRight = pipeline.create(dai.node.ImageManip)
-    manipRight.initialConfig.setResize(CONCAT_SHAPE, CONCAT_SHAPE)
-    # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-    manipRight.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    right.out.link(manipRight.inputImage)
+    print("Pipeline created.")
 
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath("models/concat_openvino_2021.4_6shave.blob")
-    nn.setNumInferenceThreads(2)
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
 
-    manipLeft.out.link(nn.inputs["img1"])
-    preview.link(nn.inputs["img2"])
-    manipRight.out.link(nn.inputs["img3"])
-
-    reshape = pipeline.create(ReshapeNNOutputConcat).build(nn_out=nn.out)
-
-    concat = pipeline.create(Display).build(frame=reshape.output)
-    concat.setName("Concat")
-
-    pipeline.run()
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

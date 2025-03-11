@@ -1,42 +1,69 @@
 import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
 
-from host_node.host_display import Display
-from host_node.normalize_bbox import NormalizeBbox
-from host_node.draw_detections import DrawDetections
+_, args = initialize_argparser()
 
-device = dai.Device()
-platform = device.getPlatform()
 
-model_description = dai.NNModelDescription(
-    modelSlug="yolov6-nano", platform=platform.name, modelVersionSlug="r2-coco-512x288"
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+
+
+class FilterDets(dai.node.HostNode):
+    def __init__(self):
+        super().__init__()
+        self.output = self.createOutput()
+
+    def build(self, detections: dai.Node.Output):
+        self.link_args(detections)
+        return self
+
+    def process(self, detections: dai.ImgDetections):
+        new_dets = dai.ImgDetections()
+        new_dets_list = []
+        for detection in detections.detections:
+            if detection.label != 57:
+                new_dets_list.append(detection)
+        new_dets.detections = new_dets_list
+        new_dets.setTimestamp(detections.getTimestamp())
+        new_dets.setSequenceNum(detections.getSequenceNum())
+        self.output.send(new_dets)
+
 
 with dai.Pipeline(device) as pipeline:
-    cam = pipeline.create(dai.node.Camera).build(
-        boardSocket=dai.CameraBoardSocket.CAM_A
+    platform = device.getPlatform()
+
+    model_description = dai.NNModelDescription(
+        "luxonis/yolov6-nano:r2-coco-512x288", platform=platform.name
     )
-    preview = cam.requestOutput(
-        size=(512, 288),
+    archive_path = dai.getModelFromZoo(model_description)
+    nn_archive = dai.NNArchive(archivePath=archive_path)
+
+    cam = pipeline.create(dai.node.Camera).build()
+    cam_out = cam.requestOutput(
+        (512, 288),
+        fps=args.fps_limit,
         type=dai.ImgFrame.Type.BGR888i
         if platform == dai.Platform.RVC4
         else dai.ImgFrame.Type.BGR888p,
     )
 
-    nn = pipeline.create(dai.node.DetectionNetwork).build(
-        preview, nn_archive, confidenceThreshold=0.5
-    )
-    label_map = nn.getClasses()
+    nn = pipeline.create(ParsingNeuralNetwork).build(cam_out, nn_archive)
 
-    normalized_detections = pipeline.create(NormalizeBbox).build(
-        frame=preview, nn=nn.out
-    )
-    draw_detections = pipeline.create(DrawDetections).build(
-        frame=preview, nn=normalized_detections.output, label_map=label_map
-    )
-    rgb = pipeline.create(Display).build(frames=draw_detections.output)
-    rgb.setName("RGB")
+    filter_dets = pipeline.create(FilterDets).build(nn.out)
+
+    visualizer.addTopic("Passthrough", nn.passthrough)
+    visualizer.addTopic("Detections", filter_dets.output)
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

@@ -77,12 +77,6 @@
             "platform": "all",
             "python_version": "all",
             "depthai_version": "all"
-        },
-        "tutorials/qr-with-tiling": {
-            "reason": "Pyzbar installation issues",
-            "platform": "all",
-            "python_version": "all",
-            "depthai_version": "all"
         }
     },
     "experimental_subset": [

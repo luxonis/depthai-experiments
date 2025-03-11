@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     x11-utils \
     xorg \
     ffmpeg \
+    libzbar-dev \
     && rm -rf /var/lib/apt/lists/*
 ENV DISPLAY=:99
 

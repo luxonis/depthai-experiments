@@ -1,60 +1,60 @@
-import depthai as dai
 from pathlib import Path
-from host_qr_scanner import QRScanner
 
-from depthai_nodes.node import Tiling, TilesPatcher
+import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork, TilesPatcher, Tiling
+from utils.arguments import initialize_argparser
+from utils.host_qr_scanner import QRScanner
 
-model_description = dai.NNModelDescription(
-    modelSlug="qrdet", platform="RVC2", modelVersionSlug="nano-512x288"
-)
-archivePath = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archivePath)
+_, args = initialize_argparser()
 
-with dai.Pipeline() as pipeline:
-    # IMG_SHAPE = (1080, 1080)
-    # IMG_SHAPE = (1920, 1080)
-    # IMG_SHAPE = (1280, 720)
-    IMG_SHAPE = (3840, 2160)
+IMG_SIZES = {"2160p": (3840, 2160), "1080p": (1920, 1080), "720p": (1280, 720)}
+IMG_SHAPE = IMG_SIZES[args.input_size]
 
-    # cam = pipeline.create(dai.node.ColorCamera)
-    # cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    # cam.setPreviewSize(IMG_SHAPE)
-    # cam.setInterleaved(False)
-    # cam.initialControl.setManualFocus(145)
-    # cam.setFps(20)
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-    replay = pipeline.create(dai.node.ReplayVideo)
-    replay.setLoop(False)
-    replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-    replay.setReplayVideoFile(Path("videos/home_test_2.mp4"))
-    replay.setSize(IMG_SHAPE)
-    replay.setFps(10)
-    cam_out = replay.out
+with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
 
-    grid_size = (9, 6)
-    # grid_size = (1,1) # no tiling :D
-    grid_matrix = [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 2, 0, 0, 0, 0],
-        [0, 0, 0, 0, 5, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    ]
+    model_description = dai.NNModelDescription("qrdet:nano-512x288")
+    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    model_description.platform = platform
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        replay.setFps(args.fps_limit)
+        replay.setSize(IMG_SHAPE)
+        cam_out = replay.out
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+        cam_out = cam.requestOutput(
+            IMG_SHAPE, type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+        )
+
+    grid_size = (args.rows, args.columns)
 
     tile_manager = pipeline.create(Tiling).build(
         img_output=cam_out,
         img_shape=IMG_SHAPE,
         overlap=0.2,
         grid_size=grid_size,
-        grid_matrix=grid_matrix,
+        grid_matrix=None,
         global_detection=False,
-        nn_shape=(512, 288),
+        nn_shape=nn_archive.getInputSize(),
     )
 
-    nn = pipeline.create(dai.node.DetectionNetwork).build(
-        nnArchive=nn_archive, input=tile_manager.out, confidenceThreshold=0.3
-    )
+    nn_input = tile_manager.out
+    if pipeline.getDefaultDevice().getPlatform() == dai.Platform.RVC4:
+        interleaved_manip = pipeline.create(dai.node.ImageManipV2)
+        interleaved_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+        nn_input = interleaved_manip.out
+
+    nn = pipeline.create(ParsingNeuralNetwork).build(nn_input, nn_archive)
+
     nn.input.setMaxSize(len(tile_manager.tile_positions))
     nn.input.setBlocking(False)
 
@@ -70,5 +70,18 @@ with dai.Pipeline() as pipeline:
     scanner.inputs["preview"].setBlocking(False)
     scanner.inputs["preview"].setMaxSize(2)
 
+    visualizer.addTopic("Video", cam_out, "images")
+    visualizer.addTopic("Visualizations", scanner.out, "images")
+    visualizer.addTopic("Tiling grid", scanner.out_grid, "images")
+
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
