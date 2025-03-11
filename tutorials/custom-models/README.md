@@ -1,40 +1,87 @@
-## \[Gen3\] Creating custom models
+# Custom models
 
-This experiment can be used as a tutorial on how users can create custom models with
-PyTorch/Kornia, convert them and run them on the DepthAI.
+This experiment demonstrates, how to create custom models with PyTorch/Kornia, convert them and run them with DepthAI. For more information see [Conversion](https://rvc4.docs.luxonis.com/software/ai-inference/conversion/) section in the documentation and [README.md](generate_model/README.md) file in the `generate_model/` folder.
 
-[Tutorial documentation here](https://docs.luxonis.com/en/latest/pages/tutorials/creating-custom-nn-models/).
+`blur.py`, `concat.py`, `diff.py`, `edge.py` and `main.py` are scripts that run created custom models. `generate_model/` folder contains scripts that create these custom models (frame blurring, frame concatenation, frame difference and edge detection).
 
-`blur.py`, `concat.py`, `diff.py` and `edge.py` are scripts that run created custom models. `generate_model/` folder contains scripts that create these custom models (frame blurring, frame concatenation, frame difference and edge detection).
+## Installation
 
-## Demos
+### Running the models
 
-### Starts all tutorials at once
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
 
-main.py
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
 
-### Concatenate frames
+You can simply install them by running:
 
-![Concat frames](https://user-images.githubusercontent.com/18037362/134209980-09c6e2f9-8a26-45d5-a6ad-c31d9e2816e1.png)
+```bash
+pip install -r requirements.txt
+```
 
-### Blur frames
+### Generating the models
 
-![Blur frames](https://docs.luxonis.com/en/latest/_images/blur.jpeg)
+To generate the models, you need to install packages specified in `generate_model/requirements.txt` file:
 
-### Corner detection
+```bash
+pip install -r generate_model/requirements.txt
+```
 
-![Laplacian corner detection](https://user-images.githubusercontent.com/18037362/134209951-4e1c7343-a333-4fb6-bdc9-bc86f6dc36b2.jpeg)
+For more information see [README.md](generate_model/README.md) file in the `generate_model/` folder.
 
-### Difference between 2 frames
+## Usage
 
-`diff.py` computes the difference between two consecutive color frames and visualizes that along with the color frame.
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode). `STANDALONE` mode is only supported on RVC4.
 
-![diff-demo](https://user-images.githubusercontent.com/18037362/185765421-3f391d9c-341a-4e5c-9f5d-3ce322347af1.gif)
-
-## Pre-requisites
-
-Install requirements
+Here is a list of all available parameters:
 
 ```
-python3 -m pip install -r requirements.txt
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect
+                    to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30)
 ```
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example:
+
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run all models at once on your camera input.
+
+```bash
+python3 blur.py
+```
+
+This will run the blurring model on your camera input.
+
+```bash
+python3 concat.py -fps 10
+```
+
+This will run the concatenation model on your camera input with FPS set to 10.
+
+### Standalone Mode
+
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

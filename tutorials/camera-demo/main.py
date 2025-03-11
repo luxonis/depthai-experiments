@@ -1,41 +1,47 @@
+import cv2
 import depthai as dai
-
-from host_node.host_display import Display
-from host_node.host_depth_color_transform import DepthColorTransform
+from utils.arguments import initialize_argparser
+from utils.depth_color_transform import DepthColorTransform
 
 color_resolution = (1280, 720)
 
-with dai.Pipeline() as pipeline:
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-    color_output = color.requestOutput(color_resolution, dai.ImgFrame.Type.BGR888i)
-    left_output = left.requestFullResolutionOutput()
-    right_output = right.requestFullResolutionOutput()
+    color_output = color.requestOutput(color_resolution, dai.ImgFrame.Type.NV12)
+    left_output = left.requestFullResolutionOutput(dai.ImgFrame.Type.NV12)
+    right_output = right.requestFullResolutionOutput(dai.ImgFrame.Type.NV12)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left_output, right=right_output
+        left=left_output,
+        right=right_output,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
-    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setOutputSize(*color_resolution)
-    stereo.initialConfig.setConfidenceThreshold(200)
-    stereo.initialConfig.setMedianFilter(dai.StereoDepthConfig.MedianFilter.KERNEL_5x5)
-    stereo.setLeftRightCheck(True)
-    stereo.setExtendedDisparity(False)
-    stereo.setSubpixel(False)
 
     depth_parser = pipeline.create(DepthColorTransform).build(stereo.disparity)
+    depth_parser.setMaxDisparity(stereo.initialConfig.getMaxDisparity())
+    depth_parser.setColormap(cv2.COLORMAP_JET)
 
-    color_display = pipeline.create(Display).build(color_output)
-    color_display.setName("Color camera")
-    left_display = pipeline.create(Display).build(left_output)
-    left_display.setName("Left camera")
-    right_display = pipeline.create(Display).build(right_output)
-    right_display.setName("Right camera")
-    disparity_display = pipeline.create(Display).build(depth_parser.output)
-    disparity_display.setName("Disparity")
+    visualizer.addTopic("Color", color_output, "images")
+    visualizer.addTopic("Left", left_output, "images")
+    visualizer.addTopic("Right", right_output, "images")
+    visualizer.addTopic("Depth", depth_parser.output, "images")
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
