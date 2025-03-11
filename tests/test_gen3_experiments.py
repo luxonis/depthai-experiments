@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 def test_experiment_runs(experiment_dir, test_args):
     """Tests if a experiment runs for at least N seconds without errors."""
     # time that device is waiting before timing out, set for RVC4 tests
-    os.environ["DEPTHAI_SEARCH_TIMEOUT"] = 30000
+    os.environ["DEPTHAI_SEARCH_TIMEOUT"] = "30000"
 
     if test_args["virtual_display"]:
         setup_virtual_display()
