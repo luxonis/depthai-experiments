@@ -37,6 +37,7 @@ jobs:
           fi
   
   test:
+    needs: setup
     runs-on: ["self-hosted", "testbed-runner"]
 
     strategy:
