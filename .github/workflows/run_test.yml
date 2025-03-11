@@ -21,13 +21,26 @@ on:
         required: false
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_platform: ${{ steps.set-matrix.outputs.platform }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ github.event.inputs.platform }}" = "" ]; then
+            echo 'platform=["RVC2","RVC4"]' >> $GITHUB_OUTPUT
+          else
+            echo "platform=[\"${{ github.event.inputs.platform }}\"]" >> $GITHUB_OUTPUT
+          fi
+  
   test:
     runs-on: ["self-hosted", "testbed-runner"]
 
     strategy:
       matrix:
         python-version: ["3.8", "3.10", "3.12"]
-        platform: ${{ fromJSON('["RVC2", "RVC4"]') if inputs.platform == '' else fromJSON(format('["{0}"]', inputs.platform)) }}
+        platform: ${{ fromJSON(needs.setup.outputs.matrix_platform) }}
 
       fail-fast: false
 
