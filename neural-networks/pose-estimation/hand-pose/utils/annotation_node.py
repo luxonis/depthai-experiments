@@ -46,6 +46,7 @@ class AnnotationNode(dai.node.HostNode):
         detections_list: List[ImgDetectionExtended] = detections_message.detections
 
         new_dets = ImgDetectionsExtended()
+        new_dets.transformation = detections_message.transformation
 
         annotations = dai.ImgAnnotations()
         annotation = dai.ImgAnnotation()

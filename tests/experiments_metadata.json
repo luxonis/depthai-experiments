@@ -48,6 +48,18 @@
             "python_version": "all",
             "depthai_version": "all"
         },
+        "connectivity/rerun": {
+            "reason": "Failed loading `libxkbcommon-x11.so.0`",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "connectivity/foxglove": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4`",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
         "depth-measurement/3d-measurement/box-measurement": {
             "reason": "Open3D causes some memory segfault",
             "platform": "all",
@@ -106,6 +118,12 @@
         "stream-manipulation/mjpeg-streaming",
         "stream-manipulation/on-device-encoding",
         "stream-manipulation/rtsp-streaming",
-        "stream-manipulation/webrtc-streaming"
+        "stream-manipulation/webrtc-streaming",
+        "tutorials/camera-demo",
+        "tutorials/custom-models",
+        "tutorials/display-detections",
+        "tutorials/full-fov-nn",
+        "tutorials/play-encoded-stream",
+        "tutorials/qr-with-tiling"
     ]
 }

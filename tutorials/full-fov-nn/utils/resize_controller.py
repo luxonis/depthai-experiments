@@ -1,4 +1,5 @@
 import depthai as dai
+from typing import Tuple
 
 
 class ResizeController(dai.node.HostNode):
@@ -20,7 +21,7 @@ class ResizeController(dai.node.HostNode):
     def build(
         self,
         frames: dai.Node.Output,
-        nn_size: tuple[int, int],
+        nn_size: Tuple[int, int],
         output_type: dai.ImgFrame.Type,
     ):
         self.nn_size = nn_size
@@ -58,7 +59,7 @@ class ResizeController(dai.node.HostNode):
             )
             self.out_cfg.send(cfg)
 
-    def create_text_annot(self, text: str, pos: tuple[float, float]):
+    def create_text_annot(self, text: str, pos: Tuple[float, float]):
         txt_annot = dai.TextAnnotation()
         txt_annot.fontSize = 10
         txt_annot.backgroundColor = dai.Color(0, 1, 0, 1)
