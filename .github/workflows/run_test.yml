@@ -8,8 +8,8 @@ on:
         required: false
       platform:
         description: 'Platform to use for testing. By default both RVC2 and RVC4 are used but you can use only one by passing only `RVC2` or `RVC4`.'
+        default: "all"
         required: false
-        default: ""
       log_level:
         description: 'Log level to use for pytest.'
         type: choice
@@ -27,11 +27,13 @@ jobs:
       matrix_platform: ${{ steps.set-matrix.outputs.platform }}
     steps:
       - id: set-matrix
+        env:
+          INPUT_PLATFORM: ${{ github.event.inputs.platform }}
         run: |
-          if [ "${{ github.event.inputs.platform }}" = "" ]; then
+          if [ "$INPUT_PLATFORM" = "all" ]; then
             echo 'platform=["RVC2","RVC4"]' >> $GITHUB_OUTPUT
           else
-            echo "platform=[\"${{ github.event.inputs.platform }}\"]" >> $GITHUB_OUTPUT
+            echo "platform=[\"$INPUT_PLATFORM\"]" >> $GITHUB_OUTPUT
           fi
   
   test:
