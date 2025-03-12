@@ -56,7 +56,7 @@ Running in peripheral mode requires a host computer and there will be communicat
 
 ```bash
 python3 main.py \
-    -d <<DeviceIP / DeviceID>>
+    --device <DEVICE IP OR MXID>
 ```
 
 ### Standalone Mode

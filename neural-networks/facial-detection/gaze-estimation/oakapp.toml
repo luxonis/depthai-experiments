@@ -1,4 +1,4 @@
-identifier = "com.luxonis.gaze-estimation"
+identifier = "com.luxonis.facial-detection.gaze-estimation"
 app_version = "1.0.0"
 
 prepare_container = [
