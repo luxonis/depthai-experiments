@@ -1,4 +1,4 @@
-identifier = "com.luxonis.face-mask-detection"
+identifier = "com.luxonis.facial-detection.face-mask-detection"
 app_version = "1.0.0"
 
 prepare_container = [
