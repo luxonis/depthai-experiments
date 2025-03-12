@@ -190,6 +190,7 @@
     "experimental_subset": [
         "neural-networks/counting/crowdcounting",
         "neural-networks/counting/people-counter",
+        "neural-networks/facial-detection/face-mask-detection",
         "neural-networks/generic-example",
         "neural-networks/object-tracking/people-tracker",
         "neural-networks/pose-estimation/hand-pose",
