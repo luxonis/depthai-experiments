@@ -68,11 +68,11 @@ To run the example in this mode, first install the [oakctl](https://rvc4.docs.lu
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
+Replace `<API_KEY>`, `<WORKSPACE_NAME>` and `<DATASET_NAME>` with your Roboflow API key, workspace and dataset names in the [oakapp.toml](oakapp.toml) file.
+
 The app can then be run with:
 
 ```bash
 oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
-
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
