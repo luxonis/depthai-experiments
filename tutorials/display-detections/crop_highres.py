@@ -1,57 +1,55 @@
 import depthai as dai
+from depthai_nodes import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.translate_cropped_detections import TranslateCroppedDetections
 
-from host_node.host_display import Display
-from host_node.normalize_bbox import NormalizeBbox
-from host_node.draw_detections import DrawDetections
+_, args = initialize_argparser()
 
 
-device = dai.Device()
-platform = device.getPlatform()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-model_description = dai.NNModelDescription(
-    modelSlug="yolov6-nano", platform=platform.name, modelVersionSlug="r2-coco-512x288"
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
-
+visualizer = dai.RemoteConnection(httpPort=8082)
 
 with dai.Pipeline(device) as pipeline:
-    cam = pipeline.create(dai.node.Camera).build(
-        boardSocket=dai.CameraBoardSocket.CAM_A
-    )
-    preview = cam.requestOutput(size=(720, 720), type=dai.ImgFrame.Type.NV12)
+    platform = device.getPlatform()
 
-    crop = pipeline.create(dai.node.ImageManipV2)
-    crop.initialConfig.addResize(512, 288)
-    crop.initialConfig.setFrameType(
-        dai.ImgFrame.Type.BGR888i
+    model_description = dai.NNModelDescription(
+        "luxonis/yolov6-nano:r2-coco-512x288", platform=platform.name
+    )
+    archive_path = dai.getModelFromZoo(model_description)
+    nn_archive = dai.NNArchive(archivePath=archive_path)
+
+    cam = pipeline.create(dai.node.Camera).build()
+    cam_out = cam.requestOutput(
+        (640, 480),
+        fps=args.fps_limit,
+        type=dai.ImgFrame.Type.BGR888i
         if platform == dai.Platform.RVC4
-        else dai.ImgFrame.Type.BGR888p
+        else dai.ImgFrame.Type.BGR888p,
     )
-    preview.link(crop.inputImage)
 
-    nn = pipeline.create(dai.node.DetectionNetwork).build(
-        crop.out, nn_archive, confidenceThreshold=0.5
-    )
-    label_map = nn.getClasses()
+    crop_manip = pipeline.create(dai.node.ImageManipV2)
+    crop_manip.initialConfig.addCrop(0, 0, 512, 288)
+    cam_out.link(crop_manip.inputImage)
 
-    rgb_dets_normalized = pipeline.create(NormalizeBbox).build(frame=preview, nn=nn.out)
-    rgb_dets = pipeline.create(DrawDetections).build(
-        frame=preview, nn=rgb_dets_normalized.output, label_map=label_map
+    nn = pipeline.create(ParsingNeuralNetwork).build(crop_manip.out, nn_archive)
+    translate_cropped_dets = pipeline.create(TranslateCroppedDetections).build(
+        nn.out, (640, 480), (512, 288)
     )
-    rgb_dets.set_color((0, 0, 255))
-    rgb_dets.set_thickness(4)
-    rgb = pipeline.create(Display).build(frames=rgb_dets.output)
-    rgb.setName("RGB")
 
-    crop_dets_normalized = pipeline.create(NormalizeBbox).build(
-        frame=crop.out, nn=nn.out
-    )
-    crop_dets = pipeline.create(DrawDetections).build(
-        frame=crop.out, nn=crop_dets_normalized.output, label_map=label_map
-    )
-    crop = pipeline.create(Display).build(frames=crop_dets.output)
-    crop.setName("Crop")
+    visualizer.addTopic("Full cam FOV (4:3)", cam_out, "full")
+    visualizer.addTopic("Translated Detections", translate_cropped_dets.out, "full")
+    visualizer.addTopic("Cropped (16:9)", crop_manip.out, "cropped")
+    visualizer.addTopic("Original Detections", nn.out, "cropped")
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

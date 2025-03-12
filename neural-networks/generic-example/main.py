@@ -57,6 +57,7 @@ with dai.Pipeline(device) as pipeline:
         visualizer.addTopic("Detections", nn_with_parser.out, "detections")
     else:
         visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
+        visualizer.addTopic("Detections", nn_with_parser.out, "detections")
 
     print("Pipeline created.")
 
