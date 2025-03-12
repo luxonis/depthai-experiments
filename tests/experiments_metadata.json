@@ -42,6 +42,60 @@
             "python_version": "all",
             "depthai_version": "all"
         },
+        "neural-networks/ocr/general-ocr": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/object-tracking/kalman": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/object-tracking/collision-avoidance": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/object-tracking/cumulative-object-counting": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/counting/depth-people-counting": {
+            "reason": "Pipeline node with name: 'ObjectTracker' doesn't exist",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/object-detection/fire-detection": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/segmentation/depth-crop": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/facial-detection/gaze-estimation/host-side": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/facial-detection/gaze-estimation/device-side": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
         "connectivity/roboflow-integration": {
             "reason": "Can't run without arguments (e.g. roboflow api-key)",
             "platform": "all",
@@ -84,9 +138,33 @@
             "python_version": "all",
             "depthai_version": "all"
         },
+        "depth-measurement/stereo-on-host": {
+            "reason": "Extrinsic connection between the requested cameraId's doesn't exist. Please recalibrate or modify your calibration data",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
         "stream-manipulation/rtsp-streaming": {
             "reason": "PyCairo installation issues",
             "platform": "all",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "stream-manipulation/poe-mqtt": {
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "tutorials/multiple-devices/spatial-detection-fusion": {
+            "reason": "No devices found after filtering (also has RVC2 model)",
+            "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "tutorials/multiple-devices/multi-cam-calibration": {
+            "reason": "No devices found after filtering",
+            "platform": "RVC4",
             "python_version": "all",
             "depthai_version": "all"
         }
