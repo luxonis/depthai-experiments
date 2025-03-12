@@ -27,7 +27,6 @@ class FilterDetections(dai.node.HostNode):
         self._label_encoding = label_encoding
 
     def process(self, detections_msg: dai.Buffer):
-
         assert isinstance(detections_msg, dai.ImgDetections)
 
         detections = []
@@ -46,7 +45,6 @@ class FilterDetections(dai.node.HostNode):
         self.output.send(detections_msg_new)
 
     def _process_detection(self, detection: dai.ImgDetection) -> ImgDetectionExtended:
-
         processed_detection: ImgDetectionExtended = ImgDetectionExtended()
 
         x_center = (detection.xmin + detection.xmax) / 2
