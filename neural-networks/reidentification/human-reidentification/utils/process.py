@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.message import ImgDetectionExtended, ImgDetectionsExtended
+from depthai_nodes import ImgDetectionExtended, ImgDetectionsExtended
 
 
 class ProcessDetections(dai.node.HostNode):
