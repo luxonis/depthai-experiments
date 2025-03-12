@@ -5,6 +5,7 @@ ENV PLATFORM=""
 ENV DAI_VERSION=""
 ENV PYTHON_VERSION_ENV=""
 ENV LOG_LEVEL="INFO"
+ENV ROOT_DIR="."
 
 # Install Virtual Display
 RUN apt-get update && apt-get install -y \
@@ -32,7 +33,7 @@ ENTRYPOINT ["sh", "-c", "\
     pip install -r tests/requirements.txt && \
     echo 'Running tests...' && \
     pytest -v -r a --log-cli-level=${LOG_LEVEL} --log-file=out.log --color=yes \
-    --root-dir=. \
+    --root-dir=${ROOT_DIR} \
     --depthai-version=${DAI_VERSION} \
     --environment-variables=DEPTHAI_PLATFORM=${PLATFORM} \
     --virtual-display \

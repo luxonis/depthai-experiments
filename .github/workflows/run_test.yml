@@ -6,6 +6,10 @@ on:
       depthai_version:
         description: 'Version of DepthAI to install for the test run. If specified the version will override version specified in requirements.txt'
         required: false
+      python_version:
+        description: 'Python version to use. By default 3.8, 3.10 and 3.12 are used but you can use only one by passing only `3.8`, `3.10` or `3.12`.'
+        default: "all"
+        required: false
       platform:
         description: 'Platform to use for testing. By default both RVC2 and RVC4 are used but you can use only one by passing only `RVC2` or `RVC4`.'
         default: "all"
@@ -19,21 +23,33 @@ on:
           - DEBUG
         default: INFO
         required: false
+      root_dir:
+        decription: 'Root directory of the experiments you want to test. Defaults to all experiments.'
+        defulat: "."
+        required: false
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
       matrix_platform: ${{ steps.set-matrix.outputs.platform }}
+      matrix_python: ${{ steps.set-matrix.outputs.python }}
     steps:
       - id: set-matrix
         env:
           INPUT_PLATFORM: ${{ github.event.inputs.platform }}
+          INPUT_PYTHON: ${{ github.event.inputs.python_version }}
         run: |
           if [ "$INPUT_PLATFORM" = "all" ]; then
             echo 'platform=["RVC2","RVC4"]' >> $GITHUB_OUTPUT
           else
             echo "platform=[\"$INPUT_PLATFORM\"]" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$INPUT_PYTHON" = "all" ]; then
+            echo 'python=["3.8", "3.10", "3.12"]' >> $GITHUB_OUTPUT
+          else
+            echo "python=[\"$INPUT_PYTHON\"]" >> $GITHUB_OUTPUT
           fi
   
   test:
@@ -42,7 +58,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.8", "3.10", "3.12"]
+        python-version: ${{ fromJSON(needs.setup.outputs.matrix_python) }}
         platform: ${{ fromJSON(needs.setup.outputs.matrix_platform) }}
 
       fail-fast: false
@@ -81,7 +97,8 @@ jobs:
             --env PLATFORM=${{ matrix.platform }} \
             --env DAI_VERSION=${{ github.event.inputs.depthai_version }} \
             --env PYTHON_VERSION_ENV=${{ matrix.python-version }} \
-            --env LOG_LEVEL=${{ github.event.inputs.log_level }}"
+            --env LOG_LEVEL=${{ github.event.inputs.log_level }} \
+            --env ROOT_DIR=${{ github.event.inputs.root_dir }}"
 
           hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./tests/Dockerfile \

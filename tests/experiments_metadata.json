@@ -60,7 +60,7 @@
             "python_version": "all",
             "depthai_version": "all"
         },
-        "neural-networks/object-tracking/cumulative-object-counting": {
+        "neural-networks/counting/cumulative-object-counting": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": "RVC4",
             "python_version": "all",
@@ -96,6 +96,18 @@
             "python_version": "all",
             "depthai_version": "all"
         },
+        "neural-networks/object-detection/spatial-detections": {
+            "reason": "Blob compiled for 8 shaves, but only 7 are available in current configuration",
+            "platform": "RVC2",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "neural-networks/object-detection/human-machine-safety": {
+            "reason": "Blob compiled for 8 shaves, but only 7 are available in current configuration",
+            "platform": "RVC2",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
         "connectivity/roboflow-integration": {
             "reason": "Can't run without arguments (e.g. roboflow api-key)",
             "platform": "all",
@@ -103,14 +115,20 @@
             "depthai_version": "all"
         },
         "connectivity/rerun": {
-            "reason": "Failed loading `libxkbcommon-x11.so.0`",
+            "reason": "Failed loading `libxkbcommon-x11.so.0",
             "platform": "RVC4",
             "python_version": "all",
             "depthai_version": "all"
         },
         "connectivity/foxglove": {
-            "reason": "Loaded model is for RVC2, but the device is RVC4`",
+            "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": "RVC4",
+            "python_version": "all",
+            "depthai_version": "all"
+        },
+        "connectivity/hub-snaps-events": {
+            "reason": "Missing token, please set DEPTHAI_HUB_API_KEY environment variable or use setToken method - Needs to be set by the user.",
+            "platform": "all",
             "python_version": "all",
             "depthai_version": "all"
         },
