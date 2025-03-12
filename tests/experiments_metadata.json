@@ -84,30 +84,6 @@
             "python_version": "all",
             "depthai_version": "all"
         },
-        "neural-networks/facial-detection/gaze-estimation/host-side": {
-            "reason": "Loaded model is for RVC2, but the device is RVC4",
-            "platform": "RVC4",
-            "python_version": "all",
-            "depthai_version": "all"
-        },
-        "neural-networks/facial-detection/gaze-estimation/device-side": {
-            "reason": "Loaded model is for RVC2, but the device is RVC4",
-            "platform": "RVC4",
-            "python_version": "all",
-            "depthai_version": "all"
-        },
-        "neural-networks/object-detection/spatial-detections": {
-            "reason": "Blob compiled for 8 shaves, but only 7 are available in current configuration",
-            "platform": "RVC2",
-            "python_version": "all",
-            "depthai_version": "all"
-        },
-        "neural-networks/object-detection/human-machine-safety": {
-            "reason": "Blob compiled for 8 shaves, but only 7 are available in current configuration",
-            "platform": "RVC2",
-            "python_version": "all",
-            "depthai_version": "all"
-        },
         "connectivity/roboflow-integration": {
             "reason": "Can't run without arguments (e.g. roboflow api-key)",
             "platform": "all",

@@ -43,6 +43,8 @@ with dai.Pipeline(device) as pipeline:
         nnArchive=nn_archive,
         fps=float(args.fps_limit),
     )
+    if platform == "RVC2":
+        nn.setNNArchive(nn_archive, numShaves=7)
     nn.setBoundingBoxScaleFactor(0.7)
 
     annotation_node = pipeline.create(AnnotationNode).build(

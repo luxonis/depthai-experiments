@@ -82,6 +82,9 @@ with dai.Pipeline(device) as pipeline:
         object_detection_manip.out,
         object_detection_nn_archive,
     )
+    if platform == "RVC2":
+        object_detection_nn.setNNArchive(object_detection_nn_archive, numShaves=7)
+
     palm_detection_manip = pipeline.create(dai.node.ImageManipV2)
     palm_detection_manip.initialConfig.setOutputSize(
         192, 192, mode=dai.ImageManipConfigV2.ResizeMode.STRETCH
@@ -95,6 +98,9 @@ with dai.Pipeline(device) as pipeline:
         palm_detection_manip.out,
         palm_detection_nn_archive,
     )
+    if platform == "RVC2":
+        palm_detection_nn.setNNArchive(palm_detection_nn_archive, numShaves=7)
+
     parser: MPPalmDetectionParser = palm_detection_nn.getParser(0)
     parser.setConfidenceThreshold(0.7)
 
