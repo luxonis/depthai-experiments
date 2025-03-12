@@ -4,7 +4,7 @@
 
 This example demonstrates the implementation of multi-input [YOLO-World](https://github.com/AILab-CVC/YOLO-World) object detection pipeline on DepthAI. The experiment works only on RVC4.
 
-[![Barrel detection](media/barrel-detection.gif)](media/barrel-detection.gif)
+![Barrel detection](media/barrel-detection.gif)
 
 ## Features
 
