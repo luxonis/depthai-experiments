@@ -28,7 +28,7 @@ with dai.Pipeline(device) as pipeline:
         cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888p).link(
             detectionNetwork.input
         )
-        detectionNetwork.setNNArchive(nnArchive, numShaves=6)
+        detectionNetwork.setNNArchive(nnArchive, numShaves=4)
     else:
         detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(
             cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888i),
@@ -68,7 +68,7 @@ with dai.Pipeline(device) as pipeline:
         stereo = pipeline.create(dai.node.StereoDepth).build(
             left=left_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
             right=right_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
-            presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY,
+            presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
         )
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
         if platform == dai.Platform.RVC2:
@@ -77,6 +77,6 @@ with dai.Pipeline(device) as pipeline:
         coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
         coloredDepth.setColormap(cv2.COLORMAP_JET)
         remoteConnector.addTopic("Depth", coloredDepth.output)
-
+    pipeline.build()
     remoteConnector.registerPipeline(pipeline)
     pipeline.run()
