@@ -178,7 +178,11 @@ def run_experiment(env_exe, experiment_dir, args, max_retries=3):
                     )
                     return False
 
-                if "No internet connection available." in result.stderr:
+                if (
+                    "No internet connection available." in result.stderr
+                    or "There was an error while sending a request to the Hub"
+                    in result.stderr
+                ):
                     logger.warning(
                         f"Retryable error in {experiment_dir}: {result.stderr.strip()}"
                     )
