@@ -3,7 +3,7 @@ import onnxruntime
 from transformers import AutoTokenizer
 import cv2
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 import argparse
 import os
 

@@ -1,8 +1,7 @@
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
-from depthai_nodes.ml.helpers import TilesPatcher, Tiling
+from depthai_nodes.node import ParsingNeuralNetwork, TilesPatcher, Tiling
 from utils.arguments import initialize_argparser
 from utils.host_qr_scanner import QRScanner
 

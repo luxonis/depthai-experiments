@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes import ParserGenerator, XFeatStereoParser
+from depthai_nodes.node import ParserGenerator, XFeatStereoParser
 from utils.custom_visualizer import StereoVersionVisualizer
 
 

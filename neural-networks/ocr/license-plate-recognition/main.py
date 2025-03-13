@@ -1,12 +1,12 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.visualizer_node import VisualizeLicensePlates
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform()
 
 FPS = 5

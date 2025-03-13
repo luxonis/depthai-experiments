@@ -2,6 +2,7 @@
 import cv2
 import depthai as dai
 from host_node.host_depth_color_transform import DepthColorTransform
+from typing import Optional
 
 
 STEREO_RESOLUTION = (800, 600)
@@ -53,8 +54,8 @@ with dai.Pipeline(device) as pipeline:
     # Stereo depth - only for stereo devices
     cameraFeatures = device.getConnectedCameraFeatures()
 
-    cam_mono_1: dai.CameraBoardSocket | None = None
-    cam_mono_2: dai.CameraBoardSocket | None = None
+    cam_mono_1: Optional[dai.CameraBoardSocket] = None
+    cam_mono_2: Optional[dai.CameraBoardSocket] = None
     for feature in cameraFeatures:
         if dai.CameraSensorType.MONO in feature.supportedTypes:
             if cam_mono_1 is None:

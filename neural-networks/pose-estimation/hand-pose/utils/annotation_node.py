@@ -1,11 +1,11 @@
 import depthai as dai
-from depthai_nodes.ml.helpers.constants import OUTLINE_COLOR
-from depthai_nodes.ml.messages import (
+from depthai_nodes import (
     ImgDetectionsExtended,
     ImgDetectionExtended,
     Keypoints,
     Keypoint,
     Predictions,
+    OUTLINE_COLOR,
 )
 from typing import List
 from utils.gesture_recognition import recognize_gesture
@@ -46,6 +46,7 @@ class AnnotationNode(dai.node.HostNode):
         detections_list: List[ImgDetectionExtended] = detections_message.detections
 
         new_dets = ImgDetectionsExtended()
+        new_dets.transformation = detections_message.transformation
 
         annotations = dai.ImgAnnotations()
         annotation = dai.ImgAnnotation()

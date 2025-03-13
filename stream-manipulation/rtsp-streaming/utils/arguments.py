@@ -3,7 +3,9 @@ import argparse
 
 def initialize_argparser():
     """Initialize the argument parser for the script."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     parser.add_argument(
         "-d",

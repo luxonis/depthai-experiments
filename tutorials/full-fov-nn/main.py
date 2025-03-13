@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.resize_controller import ResizeController
 

@@ -1,6 +1,6 @@
 import depthai as dai
 import numpy as np
-from depthai_nodes.ml.messages import Map2D
+from depthai_nodes import Map2D
 from .text_annotation_builder import TextAnnotationBuilder
 
 

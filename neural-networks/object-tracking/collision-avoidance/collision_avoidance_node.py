@@ -6,6 +6,7 @@ import depthai as dai
 from tracker import Tracker
 from collision_avoidance import CollisionAvoidance
 from imutils.video import FPS
+from typing import Tuple, Union
 
 
 class CollisionAvoidanceNode(dai.node.HostNode):
@@ -148,7 +149,7 @@ class CollisionAvoidanceNode(dai.node.HostNode):
         if key == ord("q"):
             self.stopPipeline()
 
-    def _calc_x(self, val: float, padding: int = 0) -> tuple[int, int] | int:
+    def _calc_x(self, val: float, padding: int = 0) -> Union[Tuple[int, int], int]:
         norm = min(self.MAX_X, max(val, self.MIN_X))
         center = (
             (norm - self.MIN_X)
@@ -162,7 +163,7 @@ class CollisionAvoidanceNode(dai.node.HostNode):
         else:
             return int(center)
 
-    def _calc_z(self, val: float, padding: int = 0) -> tuple[int, int] | int:
+    def _calc_z(self, val: float, padding: int = 0) -> Union[Tuple[int, int], int]:
         norm = min(self.MAX_Z, max(val, self.MIN_Z))
         center = (
             1 - (norm - self.MIN_Z) / (self.MAX_Z - self.MIN_Z)

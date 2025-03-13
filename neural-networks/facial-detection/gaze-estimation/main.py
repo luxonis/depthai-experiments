@@ -9,13 +9,15 @@ from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform()
 
 FPS = 30
 frame_type = dai.ImgFrame.Type.BGR888i
 if "RVC2" in str(platform):
-    raise RuntimeError("This demo is currently only supported on RVC4!")
+    raise RuntimeError(
+        f"This demo is currently only supported on RVC4, got `{platform}`"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")

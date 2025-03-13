@@ -1,8 +1,8 @@
 import depthai as dai
 import numpy as np
 import cv2
-from depthai_nodes.ml.messages import SegmentationMask
-from depthai_nodes.ml.messages import ImgDetectionsExtended
+from depthai_nodes import SegmentationMask
+from depthai_nodes import ImgDetectionsExtended
 
 
 class SegAnnotationNode(dai.node.HostNode):

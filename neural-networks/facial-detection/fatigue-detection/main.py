@@ -1,13 +1,13 @@
 import depthai as dai
 from utils.host_fatigue_detection import FatigueDetection
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
 from pathlib import Path
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform()
 
 FPS = 20
@@ -16,7 +16,9 @@ if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
     FPS = 30
 else:
-    raise RuntimeError("This demo is currently only supported on RVC4")
+    raise RuntimeError(
+        f"This demo is currently only supported on RVC4, got `{platform}`"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")

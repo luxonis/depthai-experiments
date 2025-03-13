@@ -1,4 +1,5 @@
 import depthai as dai
+from typing import List
 
 
 class VisualizedTracklets(dai.Tracklets):
@@ -6,7 +7,7 @@ class VisualizedTracklets(dai.Tracklets):
         super().__init__()
         self._labels = None
 
-    def setLabels(self, labels: list[str]):
+    def setLabels(self, labels: List[str]):
         self._labels = labels
 
     def getVisualizationMessage(self):
@@ -60,7 +61,7 @@ class TrackletVisualizer(dai.node.HostNode):
         )
 
     def build(
-        self, tracklets: dai.Node.Output, labels: list[str]
+        self, tracklets: dai.Node.Output, labels: List[str]
     ) -> "TrackletVisualizer":
         self._labels = labels
         self.link_args(tracklets)

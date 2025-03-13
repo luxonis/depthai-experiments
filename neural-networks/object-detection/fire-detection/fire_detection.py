@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import depthai as dai
+from typing import Tuple
 
 
 class FireDetection(dai.node.HostNode):
@@ -23,7 +24,7 @@ class FireDetection(dai.node.HostNode):
     def set_line_type(self, line_type: int) -> None:
         self._line_type = line_type
 
-    def set_text_color(self, color: tuple[int, int, int]) -> None:
+    def set_text_color(self, color: Tuple[int, int, int]) -> None:
         self._text_color = color
 
     def build(
@@ -55,7 +56,7 @@ class FireDetection(dai.node.HostNode):
 
         self.output.send(output_frame)
 
-    def _put_text(self, frame: np.ndarray, text: str, dot: tuple[int, int]) -> None:
+    def _put_text(self, frame: np.ndarray, text: str, dot: Tuple[int, int]) -> None:
         dot = tuple(dot[:2])
         cv2.putText(
             img=frame,

@@ -10,4 +10,4 @@ prepare_build_container = []
 
 build_steps = ["pip3 install -r /app/requirements.txt --break-system-packages"]
 
-entrypoint = ["bash", "-c", "python3 /app/main.py -det luxonis/scrfd-person-detection:25g-640x640 -rec luxonis/osnet:imagenet-128x256 -cos 0.8 -fps 5"]
+entrypoint = ["bash", "-c", "python3 /app/main.py"]

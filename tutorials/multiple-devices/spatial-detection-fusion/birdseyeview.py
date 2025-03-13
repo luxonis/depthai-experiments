@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import collections
 from detection import Detection
+from typing import Dict, List
 
 
 class BirdsEyeView:
@@ -16,8 +17,8 @@ class BirdsEyeView:
 
     def __init__(
         self,
-        cam_to_world: dict[str, any],
-        friendly_id: dict[str, int],
+        cam_to_world: Dict[str, any],
+        friendly_id: Dict[str, int],
         width,
         height,
         scale,
@@ -155,7 +156,7 @@ class BirdsEyeView:
                     self.img, avg, int(i / self.history.maxlen * 10), (c, c, c), -1
                 )
 
-    def render(self, detected_objects: list[Detection]):
+    def render(self, detected_objects: List[Detection]):
         self.detected_objects = detected_objects
         self.img = np.zeros((self.height, self.width, 3), np.uint8)
         self.draw_coordinate_system()

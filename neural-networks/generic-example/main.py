@@ -1,6 +1,6 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.segmentation import SegAnnotationNode, DetSegAnntotationNode
 from utils.arguments import initialize_argparser
 
@@ -11,7 +11,6 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-
     model_description = dai.NNModelDescription(args.model)
     platform = pipeline.getDefaultDevice().getPlatformAsString()
     model_description.platform = platform

@@ -1,9 +1,9 @@
 from datetime import timedelta
-
+from typing import List, Tuple, Union
 import cv2
 import depthai as dai
 import numpy as np
-from depthai_nodes.ml.messages import (
+from depthai_nodes import (
     ImgDetectionExtended,
     ImgDetectionsExtended,
     Keypoints,
@@ -31,8 +31,8 @@ class DrawDetections(dai.node.HostNode):
         self,
         frame: dai.Node.Output,
         nn: dai.Node.Output,
-        label_map: list[str],
-        lines: list[tuple[int, int]] = [],
+        label_map: List[str],
+        lines: List[Tuple[int, int]] = [],
     ) -> "DrawDetections":
         self.label_map = label_map
         self.lines = lines
@@ -66,10 +66,12 @@ class DrawDetections(dai.node.HostNode):
     def draw_detections(
         self,
         frame: np.ndarray,
-        detections: ImgDetectionsExtended
-        | dai.ImgDetections
-        | Keypoints
-        | dai.SpatialImgDetections,
+        detections: Union[
+            ImgDetectionsExtended,
+            dai.ImgDetections,
+            Keypoints,
+            dai.SpatialImgDetections,
+        ],
     ) -> np.ndarray:
         if isinstance(
             detections,
@@ -90,8 +92,8 @@ class DrawDetections(dai.node.HostNode):
     def _draw_lines(
         self,
         frame: np.ndarray,
-        kpts: list[list[tuple[float, float]]],
-        lines: list[tuple[int, int]],
+        kpts: List[List[Tuple[float, float]]],
+        lines: List[Tuple[int, int]],
     ) -> np.ndarray:
         for kpts_det in kpts:
             for line in lines:
@@ -103,7 +105,7 @@ class DrawDetections(dai.node.HostNode):
     def _draw_kpts(
         self,
         frame: np.ndarray,
-        kpts: list[list[tuple[float, float]]],
+        kpts: List[List[Tuple[float, float]]],
     ):
         for kpts_det in kpts:
             for kpt in kpts_det:
@@ -120,9 +122,11 @@ class DrawDetections(dai.node.HostNode):
     def _draw_bboxes(
         self,
         frame: np.ndarray,
-        detections: list[dai.ImgDetection]
-        | list[ImgDetectionExtended]
-        | list[dai.SpatialImgDetection],
+        detections: Union[
+            List[dai.ImgDetection],
+            List[ImgDetectionExtended],
+            List[dai.SpatialImgDetection],
+        ],
     ) -> np.ndarray:
         for detection in detections:
             bbox = (detection.xmin, detection.ymin, detection.xmax, detection.ymax)
@@ -170,10 +174,10 @@ class DrawDetections(dai.node.HostNode):
 
         return frame
 
-    def set_color(self, color: tuple[int, int, int]) -> None:
+    def set_color(self, color: Tuple[int, int, int]) -> None:
         self.color = color
 
-    def set_kpt_color(self, kpt_color: tuple[int, int, int]) -> None:
+    def set_kpt_color(self, kpt_color: Tuple[int, int, int]) -> None:
         self.kpt_color = kpt_color
 
     def set_thickness(self, thickness: int) -> None:

@@ -1,6 +1,6 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 
 from utils.arguments import initialize_argparser
 from utils.counter import CrowdCounter
@@ -10,7 +10,7 @@ from utils.overlay import OverlayFrames
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device_id)) if args.device_id else dai.Device()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
 frame_type = (
     dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
@@ -20,7 +20,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # Model NN Archive
-    cc_model_description = dai.NNModelDescription(args.crowd_counting_model)
+    cc_model_description = dai.NNModelDescription(args.model)
     cc_model_description.platform = platform
     cc_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(cc_model_description))
     INPUT_WIDTH = cc_model_nn_archive.getInputWidth()

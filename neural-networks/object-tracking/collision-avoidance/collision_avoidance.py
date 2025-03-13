@@ -32,7 +32,7 @@ class CollisionAvoidance:
     def is_dangerous_trajectory(self, objectID):
         try:
             m, b = self.best_fit_slope_and_intercept(objectID)
-        except ValueError:
+        except Exception:
             return False
         distance = abs(b) / math.sqrt(math.pow(m, 2) + 1)
 

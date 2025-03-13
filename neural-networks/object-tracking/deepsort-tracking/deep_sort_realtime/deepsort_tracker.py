@@ -114,7 +114,9 @@ class DeepSort(object):
         # Decode detections into bounding boxes
         object_bbs = self.decode_dets(detections, (width, height))
         # Calculate embeddings for each crop
-        object_embeds = np.array([emb.getFirstTensor().flatten() for emb in embeddings])
+        object_embeds = np.array(
+            [emb.getFirstTensor(dequantize=True).flatten() for emb in embeddings]
+        )
         # Track iteration
         object_tracks = self.update_tracks(object_bbs, embeds=object_embeds)
         return object_tracks
