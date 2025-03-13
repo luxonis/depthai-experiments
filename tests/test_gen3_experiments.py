@@ -221,8 +221,6 @@ def is_valid(
             failed = [
                 f for f in [platform_failed, python_failed, dai_failed] if f is not None
             ]
-            logger.info(f"Plat:{platform_failed}, Py:{python_failed}, Dai:{dai_failed}")
-            logger.info(f"Failed:{failed}, check: {all(f is True for f in failed)}")
             if all(f is True for f in failed):
                 if platform_failed:
                     logger.info(
