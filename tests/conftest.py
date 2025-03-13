@@ -24,7 +24,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--depthai-version",
         type=str,
-        default=None,
+        default="",
         help="Specify a depthai version to override requirements.txt.",
     )
     parser.addoption(

@@ -201,27 +201,40 @@ def is_valid(
     """
     for exp in known_failing_experiments:
         if exp in str(experiment_dir):
-            if not check_platform(
-                desired_platform, known_failing_experiments[exp]["platform"]
-            ):
-                logger.info(
-                    f"Platform check failed: Got `{desired_platform}`, shouldn't be `{known_failing_experiments[exp]['platform']}`"
-                )
-            if not check_python(
-                desired_py, known_failing_experiments[exp]["python_version"]
-            ):
-                logger.info(
-                    f"Python version check failed: Got `{desired_py}`, shouldn't be `{known_failing_experiments[exp]['python_version']}`"
-                )
-            if not check_dai(
-                desired_dai,
-                known_failing_experiments[exp]["depthai_version"],
-            ):
-                logger.info(
-                    f"DepthAI version check failed: Got `{desired_dai}`, shouldn't be `{known_failing_experiments[exp]['depthai_version']}`"
-                )
+            failing_platform = known_failing_experiments[exp].get("platform", None)
+            failing_python = known_failing_experiments[exp].get("python_version", None)
+            failing_dai = known_failing_experiments[exp].get("depthai_version", None)
 
-            return (False, known_failing_experiments[exp]["reason"])
+            platform_failed = None
+            if failing_platform is not None:
+                platform_failed = not check_platform(desired_platform, failing_platform)
+
+            python_failed = None
+            if failing_python is not None:
+                python_failed = not check_platform(desired_py, failing_python)
+
+            dai_failed = None
+            if failing_dai is not None:
+                dai_failed = not check_platform(desired_dai, failing_dai)
+
+            # Return False only if all checks failed and exclude non relevant checks
+            failed = [
+                f for f in [platform_failed, python_failed, dai_failed] if f is not None
+            ]
+            if all(f is True for f in failed):
+                if platform_failed:
+                    logger.info(
+                        f"Platform check failed: Got `{desired_platform}`, shouldn't be `{known_failing_experiments[exp]['platform']}`"
+                    )
+                if python_failed:
+                    logger.info(
+                        f"Python version check failed: Got `{desired_py}`, shouldn't be `{known_failing_experiments[exp]['python_version']}`"
+                    )
+                if dai_failed:
+                    logger.info(
+                        f"DepthAI version check failed: Got `{desired_dai}`, shouldn't be `{known_failing_experiments[exp]['depthai_version']}`"
+                    )
+                return (False, known_failing_experiments[exp]["reason"])
 
     return (True, "")
 
