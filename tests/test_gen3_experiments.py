@@ -3,6 +3,7 @@ import subprocess
 import shutil
 import sys
 import pytest
+import time
 from pathlib import Path
 from venv import EnvBuilder
 import logging
@@ -137,7 +138,7 @@ def setup_virtual_env(venv_dir, requirements_file, depthai_version):
         pytest.fail(f"Failed to install dependencies for {venv_dir.parent}: {e.stderr}")
 
 
-def run_experiment(env_exe, experiment_dir, args):
+def run_experiment(env_exe, experiment_dir, args, max_retries=3):
     """Runs the main.py script for the given timeout duration."""
     timeout = args["timeout"]
     env_vars = args["environment_variables"]
@@ -159,27 +160,47 @@ def run_experiment(env_exe, experiment_dir, args):
         env["DISPLAY"] = ":99"
 
     try:
-        # Run the experiment script (main.py)
-        result = subprocess.run(
-            [env_exe, str(main_script)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env,
-            timeout=timeout,
-        )
+        for attempt in range(1, max_retries + 1):
+            try:
+                # Run the experiment script (main.py)
+                result = subprocess.run(
+                    [env_exe, str(main_script)],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    env=env,
+                    timeout=timeout,
+                )
 
-        if result.returncode == 0:
-            logger.error(
-                f"{experiment_dir} ran for {timeout} seconds before terminating (exit code 0)."
-            )
-            return False
-        else:
-            logger.error(f"Error in {experiment_dir}:\n{result.stderr}")
-            return False
-    except subprocess.TimeoutExpired:
-        logger.info(f"{experiment_dir} ran for {timeout} seconds before timeout.")
-        return True
+                if result.returncode == 0:
+                    logger.error(
+                        f"{experiment_dir} ran for {timeout} seconds before terminating (exit code 0)."
+                    )
+                    return False
+
+                if "No internet connection available." in result.stderr:
+                    logger.warning(
+                        f"Retryable error in {experiment_dir}: {result.stderr.strip()}"
+                    )
+                    if attempt < max_retries:
+                        time.sleep(5)
+                        continue
+                    else:
+                        logger.error("Max retries reached.")
+                        return False
+
+                # Any other error, treat as failure
+                logger.error(f"Error in {experiment_dir}:\n{result.stderr}")
+                return False
+
+            except subprocess.TimeoutExpired:
+                logger.info(
+                    f"{experiment_dir} ran for {timeout} seconds before timeout."
+                )
+                return True
+
+        return False
+
     finally:
         # Restore the original working directory after running the script
         os.chdir(original_dir)
