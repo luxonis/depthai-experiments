@@ -154,7 +154,9 @@ def run_experiment(env_exe, experiment_dir, args):
     env = os.environ.copy()
     if env_vars:
         env_dict = dict(item.split("=") for item in env_vars.split())
+        logger.debug(f"platform env: {env_dict}")
         env.update(env_dict)
+        logger.debug(f"{env_dict}")
 
     if virtual_env:
         env["DISPLAY"] = ":99"
