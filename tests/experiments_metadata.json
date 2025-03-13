@@ -12,6 +12,18 @@
                 "RVC2"
             ]
         },
+        "neural-networks/facial-detection/gaze-estimation": {
+            "reason": "Usage of MessageGroup not supported on RVC2 yet",
+            "platform": [
+                "RVC2"
+            ]
+        },
+        "neural-networks/reidentification/human-reidentification": {
+            "reason": "Usage of MessageGroup not supported on RVC2 yet",
+            "platform": [
+                "RVC2"
+            ]
+        },
         "neural-networks/facial-detection/head-posture-detection": {
             "reason": "luxonis/yunet:640x640 not available anymore, should be swaped with luxonis/yunet:640x480 + some edits in the pipeline",
             "platform": "all"

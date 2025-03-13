@@ -11,6 +11,12 @@ _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+
+if "RVC2" in str(platform):
+    raise RuntimeError(
+        f"This demo is currently only supported on RVC4, got `{platform}`"
+    )
+
 frame_type = (
     dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
 )

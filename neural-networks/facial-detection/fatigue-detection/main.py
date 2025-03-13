@@ -16,7 +16,9 @@ if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
     FPS = 30
 else:
-    raise RuntimeError("This demo is currently only supported on RVC4")
+    raise RuntimeError(
+        f"This demo is currently only supported on RVC4, got `{platform}`"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
