@@ -11,7 +11,7 @@ on:
         default: "all"
         required: false
       platform:
-        description: 'Platform to use for testing. By default both RVC2 and RVC4 are used but you can use only one by passing only `rvc2` or `rvc4`(use lower caps).'
+        description: 'Platform to use for testing. By default both RVC2 and RVC4 are used but you can use only one by passing only `rvc2` or `rvc4`(use lowercase).'
         default: "all"
         required: false
       log_level:

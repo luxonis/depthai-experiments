@@ -8,7 +8,7 @@ from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform()
 
 FPS = 20
