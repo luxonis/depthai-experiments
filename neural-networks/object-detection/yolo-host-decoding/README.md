@@ -10,7 +10,7 @@ You can find the tutorial for training the custom YOLO model and generation of *
 
 <!-- ![Example Image](https://user-images.githubusercontent.com/56075061/145186805-38e3115d-94fa-4850-9ec4-c34f90c05d30.gif) -->
 
-![Demo](../../media/yolov6-nano.gif)
+![Demo](../../generic-example/media/yolov6-nano.gif)
 
 ## Installation
 
