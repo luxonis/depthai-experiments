@@ -47,6 +47,7 @@ def test_experiment_runs(experiment_dir, test_args):
     if not success:
         pytest.skip(f"Skipping {experiment_dir}: {reason}")
 
+    logger.info(f"Success: {success}")
     main_script = experiment_dir / "main.py"
     requirements_file = experiment_dir / "requirements.txt"
     if not main_script.exists():
@@ -221,6 +222,8 @@ def is_valid(
             failed = [
                 f for f in [platform_failed, python_failed, dai_failed] if f is not None
             ]
+            logger.info(f"Plat:{platform_failed}, Py:{python_failed}, Dai:{dai_failed}")
+            logger.info(f"Failed:{failed}, check: {all(f is True for f in failed)}")
             if all(f is True for f in failed):
                 if platform_failed:
                     logger.info(
