@@ -39,10 +39,10 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--platform",
-        default="RVC2",
+        default="rvc2",
         type=str,
-        choices=["RVC2", "RVC4"],
-        help="Specify a platform this is tested on (RVC2 or RVC4). Only used for filtering test examples.",
+        choices=["rvc2", "rvc4"],
+        help="Specify a platform this is tested on (rvc2 or rvc4). Only used for filtering test examples.",
     )
     parser.addoption(
         "--python-version",

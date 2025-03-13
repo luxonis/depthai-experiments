@@ -3,25 +3,25 @@
         "neural-networks/facial-detection/age-gender": {
             "reason": "Usage of MessageGroup not supported on RVC2 yet",
             "platform": [
-                "RVC2"
+                "rvc2"
             ]
         },
         "neural-networks/facial-detection/fatigue-detection": {
             "reason": "Usage of MessageGroup not supported on RVC2 yet",
             "platform": [
-                "RVC2"
+                "rvc2"
             ]
         },
         "neural-networks/facial-detection/gaze-estimation": {
             "reason": "Usage of MessageGroup not supported on RVC2 yet",
             "platform": [
-                "RVC2"
+                "rvc2"
             ]
         },
         "neural-networks/reidentification/human-reidentification": {
             "reason": "Usage of MessageGroup not supported on RVC2 yet",
             "platform": [
-                "RVC2"
+                "rvc2"
             ]
         },
         "neural-networks/facial-detection/head-posture-detection": {
@@ -47,43 +47,43 @@
         "neural-networks/ocr/general-ocr": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "neural-networks/object-tracking/kalman": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "neural-networks/object-tracking/collision-avoidance": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "neural-networks/counting/cumulative-object-counting": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "neural-networks/counting/depth-people-counting": {
             "reason": "Pipeline node with name: 'ObjectTracker' doesn't exist",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "neural-networks/object-detection/fire-detection": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "neural-networks/segmentation/depth-crop": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "connectivity/roboflow-integration": {
@@ -93,13 +93,13 @@
         "connectivity/rerun": {
             "reason": "Failed loading `libxkbcommon-x11.so.0",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "connectivity/foxglove": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "connectivity/hub-snaps-events": {
@@ -125,7 +125,7 @@
         "depth-measurement/stereo-on-host": {
             "reason": "Extrinsic connection between the requested cameraId's doesn't exist. Please recalibrate or modify your calibration data",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "stream-manipulation/rtsp-streaming": {
@@ -135,19 +135,19 @@
         "stream-manipulation/poe-mqtt": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "tutorials/multiple-devices/spatial-detection-fusion": {
             "reason": "No devices found after filtering (also has RVC2 model)",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         },
         "tutorials/multiple-devices/multi-cam-calibration": {
             "reason": "No devices found after filtering",
             "platform": [
-                "RVC4"
+                "rvc4"
             ]
         }
     },
