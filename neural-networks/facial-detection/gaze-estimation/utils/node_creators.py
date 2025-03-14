@@ -15,6 +15,7 @@ def create_crop_node(
     config_sender_script.setScript(script_content)
     config_sender_script.inputs["frame_input"].setBlocking(True)
     config_sender_script.inputs["config_input"].setBlocking(True)
+    config_sender_script.setProcessor(dai.ProcessorType.LEON_CSS)
 
     img_manip_node = pipeline.create(dai.node.ImageManipV2)
     img_manip_node.initialConfig.setReusePreviousImage(False)

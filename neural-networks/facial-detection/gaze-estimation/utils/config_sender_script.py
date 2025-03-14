@@ -6,7 +6,9 @@ try:
         conf_seq = configs_message.getSequenceNum()
         frame_seq = frame.getSequenceNum()
 
-        for i, cfg in configs_message:
+        messages = configs_message.getMessageNames()
+        for msg_name in messages:
+            cfg = configs_message[msg_name]
             node.outputs["output_config"].send(cfg)
             node.outputs["output_frame"].send(frame)
 

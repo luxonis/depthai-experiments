@@ -2,7 +2,7 @@ import depthai as dai
 from depthai_nodes import ImgDetectionExtended, ImgDetectionsExtended
 
 
-class LandmarksProcessing(dai.node.ThreadedHostNode):
+class LandmarksProcessing(dai.node.HostNode):
     def __init__(self):
         super().__init__()
         self.detections_input = self.createInput()
@@ -16,54 +16,65 @@ class LandmarksProcessing(dai.node.ThreadedHostNode):
         self._target_w = 100
         self._target_h = 100
 
-    def run(self) -> None:
-        while self.isRunning():
-            img_detections = self.detections_input.get()
-            detections = img_detections.detections
-            sequence_num = img_detections.getSequenceNum()
-            timestamp = img_detections.getTimestamp()
+    def build(
+        self,
+        detections_input: dai.Node.Output,
+        w: int = 1,
+        h: int = 1,
+        target_w: int = 100,
+        target_h: int = 100,
+    ) -> "LandmarksProcessing":
+        self.w = w
+        self.h = h
+        self.target_w = target_w
+        self.target_h = target_h
+        self.link_args(detections_input)
 
-            left_configs_message = dai.MessageGroup()
-            right_configs_message = dai.MessageGroup()
-            face_configs_message = dai.MessageGroup()
-            for i, detection in enumerate(detections):
-                detection: ImgDetectionExtended = detection
-                keypoints = detection.keypoints
-                face_size = detection.rotated_rect.size
-                face_w, face_h = face_size.width * self.w, face_size.height * self.h
+        return self
 
-                right_eye = self.crop_rectangle(
-                    keypoints[0], face_w * 0.25, face_h * 0.25
-                )
-                right_configs_message[str(i + 100)] = self.create_crop_cfg(
-                    right_eye, img_detections
-                )
+    def process(self, img_detections: dai.Buffer) -> None:
+        assert isinstance(img_detections, ImgDetectionsExtended)
+        detections = img_detections.detections
+        sequence_num = img_detections.getSequenceNum()
+        timestamp = img_detections.getTimestamp()
 
-                left_eye = self.crop_rectangle(
-                    keypoints[1], face_w * 0.25, face_h * 0.25
-                )
-                left_configs_message[str(i + 100)] = self.create_crop_cfg(
-                    left_eye, img_detections
-                )
+        left_configs_message = dai.MessageGroup()
+        right_configs_message = dai.MessageGroup()
+        face_configs_message = dai.MessageGroup()
+        for i, detection in enumerate(detections):
+            detection: ImgDetectionExtended = detection
+            keypoints = detection.keypoints
+            face_size = detection.rotated_rect.size
+            face_w, face_h = face_size.width * self.w, face_size.height * self.h
 
-                face_rect = detection.rotated_rect
-                face_rect = face_rect.denormalize(self.w, self.h)
-                face_configs_message[str(i + 100)] = self.create_crop_cfg(
-                    face_rect, img_detections
-                )
+            right_eye = self.crop_rectangle(keypoints[0], face_w * 0.25, face_h * 0.25)
+            right_configs_message[str(i + 100)] = self.create_crop_cfg(
+                right_eye, img_detections
+            )
 
-            left_configs_message.setSequenceNum(sequence_num)
-            left_configs_message.setTimestamp(timestamp)
+            left_eye = self.crop_rectangle(keypoints[1], face_w * 0.25, face_h * 0.25)
+            left_configs_message[str(i + 100)] = self.create_crop_cfg(
+                left_eye, img_detections
+            )
 
-            right_configs_message.setSequenceNum(sequence_num)
-            right_configs_message.setTimestamp(timestamp)
+            face_rect = detection.rotated_rect
+            face_rect = face_rect.denormalize(self.w, self.h)
+            face_configs_message[str(i + 100)] = self.create_crop_cfg(
+                face_rect, img_detections
+            )
 
-            face_configs_message.setSequenceNum(sequence_num)
-            face_configs_message.setTimestamp(timestamp)
+        left_configs_message.setSequenceNum(sequence_num)
+        left_configs_message.setTimestamp(timestamp)
 
-            self.face_config_output.send(face_configs_message)
-            self.left_config_output.send(left_configs_message)
-            self.right_config_output.send(right_configs_message)
+        right_configs_message.setSequenceNum(sequence_num)
+        right_configs_message.setTimestamp(timestamp)
+
+        face_configs_message.setSequenceNum(sequence_num)
+        face_configs_message.setTimestamp(timestamp)
+
+        self.face_config_output.send(face_configs_message)
+        self.left_config_output.send(left_configs_message)
+        self.right_config_output.send(right_configs_message)
 
     def crop_rectangle(self, center_keypoint: dai.Point2f, crop_w: int, crop_h: int):
         center = [
@@ -87,16 +98,6 @@ class LandmarksProcessing(dai.node.ThreadedHostNode):
         cfg.setSequenceNum(img_detections.getSequenceNum())
 
         return cfg
-
-    def set_target_size(self, w: int, h: int):
-        """Set the target size for the output image."""
-        self._target_w = w
-        self._target_h = h
-
-    def set_source_size(self, w: int, h: int):
-        """Set the source size for the input image."""
-        self._w = w
-        self._h = h
 
     @property
     def w(self):

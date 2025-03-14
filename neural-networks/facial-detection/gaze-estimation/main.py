@@ -6,6 +6,7 @@ from utils.process_keypoints import LandmarksProcessing
 from utils.node_creators import create_crop_node, create_gaze_estimation_model
 from utils.host_sync import ImageLandmarkSync
 from utils.annotation_node import AnnotationNode
+from utils.host_concatenate_head_pose import ConcatenateHeadPose
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
@@ -15,9 +16,8 @@ platform = device.getPlatform()
 FPS = 30
 frame_type = dai.ImgFrame.Type.BGR888i
 if "RVC2" in str(platform):
-    raise RuntimeError(
-        f"This demo is currently only supported on RVC4, got `{platform}`"
-    )
+    FPS = 10
+    frame_type = dai.ImgFrame.Type.BGR888p
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -50,10 +50,9 @@ with dai.Pipeline(device) as pipeline:
         ParsingNeuralNetwork
     ).build(resize_node.out, "luxonis/scrfd-face-detection:10g-640x640")
     face_detection_node.input.setBlocking(True)
-    detection_process_node = pipeline.create(LandmarksProcessing)
-    detection_process_node.set_source_size(1280, 1280)
-    detection_process_node.set_target_size(60, 60)
-    face_detection_node.out.link(detection_process_node.detections_input)
+    detection_process_node = pipeline.create(LandmarksProcessing).build(
+        face_detection_node.out, 1280, 1280, 60, 60
+    )
 
     left_eye_crop_node = create_crop_node(
         pipeline, input_node, detection_process_node.left_config_output
@@ -72,14 +71,14 @@ with dai.Pipeline(device) as pipeline:
     head_pose_node.input.setBlocking(True)
     face_crop_node.out.link(head_pose_node.input)
 
-    head_pose_script = pipeline.create(dai.node.Script)
-    head_pose_script.setScriptPath(Path(__file__).parent / "utils/head_pose_script.py")
-    head_pose_node.out.link(head_pose_script.inputs["pose_input"])
-    head_pose_script.inputs["pose_input"].setBlocking(True)
+    concatenate_head_pose = pipeline.create(ConcatenateHeadPose).build(
+        head_pose_node.out
+    )
+    concatenate_head_pose.pose_input.setBlocking(True)
 
     gaze_estimation_node = create_gaze_estimation_model(
         pipeline,
-        head_pose_script.outputs["head_pose_output"],
+        concatenate_head_pose.head_pose_output,
         left_eye_crop_node.out,
         right_eye_crop_node.out,
     )
@@ -98,9 +97,9 @@ with dai.Pipeline(device) as pipeline:
     annotation_node = pipeline.create(AnnotationNode)
     host_sync_node.out.link(annotation_node.input)
 
-    visualizer.addTopic("annotation", annotation_node.output)
-    visualizer.addTopic("frame", host_sync_node.frame_out)
-
+    visualizer.addTopic("Gaze", annotation_node.output)
+    visualizer.addTopic("Frame", host_sync_node.frame_out)
+    q = host_sync_node.frame_out.createOutputQueue()
     print("Pipeline created.")
     pipeline.start()
     visualizer.registerPipeline(pipeline)
