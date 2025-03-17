@@ -9,7 +9,7 @@ This example demonstrates how to run a 3 stage pipeline and multi input models.
 A gaze estimation example is built to showcase the 3 stage pipeline. The pipeline is composed of the following three models:
 
 1. [SCRFD face detection model](https://hub.luxonis.com/ai/models/1f3d7546-66e4-43a8-8724-2fa27df1096f?view=page) is used to detect the faces and their keypoints. Based on this models outputs, the entire face and the eyes are cropped from the original frame.
-1. The cropped face is used as input to the [Head pose model](https://hub.luxonis.com/ai/models/068ac18a-de71-4a6e-9f0f-42776c0ef980?view=page) which returns the 3D vector the heads position.
+1. The cropped face is used as input to the [Head pose model](https://hub.luxonis.com/ai/models/068ac18a-de71-4a6e-9f0f-42776c0ef980?view=page) which returns the 3D vector of the head positional coordinates.
 1. The cropped eyes and the 3D pose vector are fed into [ADAS gaze estimation model](https://hub.luxonis.com/ai/models/b174ff1b-740b-4016-b8d5-b9488dbdd657?view=page) to compute the final gaze of the person.
 
 ## Installation
@@ -58,7 +58,7 @@ python3 main.py \
     --device <DEVICE IP OR MXID>
 ```
 
-### Standalone Mode
+### RVC4 Standalone Mode
 
 Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
