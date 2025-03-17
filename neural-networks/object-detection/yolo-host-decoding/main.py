@@ -46,6 +46,9 @@ with dai.Pipeline(device) as pipeline:
     manip = pipeline.create(dai.node.ImageManipV2)
     manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
     manip.initialConfig.setFrameType(frame_type)
+    manip.setMaxOutputFrameSize(
+        nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
+    )
     input_node.link(manip.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork).build(manip.out, nn_archive)
