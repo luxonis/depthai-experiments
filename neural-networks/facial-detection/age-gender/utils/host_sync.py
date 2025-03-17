@@ -27,9 +27,12 @@ class DetectionsAgeGenderSync(dai.node.ThreadedHostNode):
 
     def run(self) -> None:
         while self.isRunning():
-            passthrough = self.passthrough_input.get()
-            detections_message = self.detections_input.get()
+            print("--------------------")
 
+            passthrough = self.passthrough_input.get()
+            print("got passthrough", passthrough.getSequenceNum())
+            detections_message = self.detections_input.get()
+            print("got detections", detections_message.getSequenceNum())
             message_group = dai.MessageGroup()
             det_ts = detections_message.getTimestamp()
 
@@ -38,8 +41,9 @@ class DetectionsAgeGenderSync(dai.node.ThreadedHostNode):
 
             for i, detection in enumerate(detections_message.detections):
                 age_message = self.age_input.get()
+                print("got age", age_message.getSequenceNum())
                 gender_message = self.gender_input.get()
-
+                print("got gender", gender_message.getSequenceNum())
                 ages.append(age_message.predictions[0])
                 genders.append(gender_message)
 
