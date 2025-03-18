@@ -50,15 +50,11 @@ with dai.Pipeline(device) as pipeline:
 
     # Density Map Transform and Resize Nodes
     density_map_transform_node = pipeline.create(DensityMapToFrame).build(nn.out)
-    density_map_resize_node = pipeline.create(dai.node.ImageManipV2)
-    density_map_resize_node.setMaxOutputFrameSize(INPUT_WIDTH * INPUT_HEIGHT * 3)
-    density_map_resize_node.initialConfig.setOutputSize(INPUT_WIDTH, INPUT_HEIGHT)
-    density_map_resize_node.initialConfig.setFrameType(frame_type)
-    density_map_transform_node.output.link(density_map_resize_node.inputImage)
 
     # Overlay Frames Node
     overlay_frames = pipeline.create(OverlayFrames).build(
-        nn.passthrough, density_map_resize_node.out
+        nn.passthrough,
+        density_map_transform_node.output,
     )
 
     # Visualizer
