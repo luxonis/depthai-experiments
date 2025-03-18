@@ -1,11 +1,11 @@
 from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import OverlayFrames
 
 from utils.arguments import initialize_argparser
 from utils.counter import CrowdCounter
 from utils.density_map_transform import DensityMapToFrame
-from utils.overlay import OverlayFrames
 
 _, args = initialize_argparser()
 
