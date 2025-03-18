@@ -1,7 +1,9 @@
 from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
-from utils.segmentation import SegAnnotationNode, DetSegAnntotationNode
+from depthai_nodes.node import OverlayFrames
+from depthai_nodes.node import ApplyColormap
+
 from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
@@ -43,20 +45,18 @@ with dai.Pipeline(device) as pipeline:
         input_node, nn_archive, fps=args.fps_limit
     )
 
-    if args.annotation_mode == "segmentation":
-        annotation_node = pipeline.create(SegAnnotationNode).build(
-            nn_with_parser.passthrough, nn_with_parser.out
+    if args.overlay_mode:
+        # transform output array to colormap
+        apply_colormap_node = pipeline.create(ApplyColormap).build(nn_with_parser.out)
+        # overlay frames
+        overlay_frames_node = pipeline.create(OverlayFrames).build(
+            nn_with_parser.passthrough,
+            apply_colormap_node.out,
         )
-        visualizer.addTopic("Video", annotation_node.output, "images")
-    elif args.annotation_mode == "segmentation_with_annotation":
-        annotation_node = pipeline.create(DetSegAnntotationNode).build(
-            nn_with_parser.passthrough, nn_with_parser.out
-        )
-        visualizer.addTopic("Video", annotation_node.output, "images")
-        visualizer.addTopic("Detections", nn_with_parser.out, "detections")
+        visualizer.addTopic("Video", overlay_frames_node.output, "images")
     else:
         visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
-        visualizer.addTopic("Detections", nn_with_parser.out, "detections")
+    visualizer.addTopic("Detections", nn_with_parser.out, "detections")
 
     print("Pipeline created.")
 

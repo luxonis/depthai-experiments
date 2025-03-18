@@ -6,12 +6,10 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = (
-        "General example script to run any model available in HubAI on DepthAI device. \
+    parser.description = "General example script to run any model available in HubAI on DepthAI device. \
         All you need is a model slug of the model and the script will download the model from HubAI and create \
         the whole pipeline with visualizations. You also need a DepthAI device connected to your computer. \
         If using OAK-D Lite, please set the FPS limit to 28."
-    )
 
     parser.add_argument(
         "-m",
@@ -25,15 +23,6 @@ def initialize_argparser():
         "-d",
         "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
-        required=False,
-        default=None,
-        type=str,
-    )
-
-    parser.add_argument(
-        "-ann",
-        "--annotation_mode",
-        help="Annotation mode. Can be either 'segmentation', 'segmentation_with_annotation', or None (default).",
         required=False,
         default=None,
         type=str,
@@ -64,6 +53,14 @@ def initialize_argparser():
         required=False,
         default="",
         type=str,
+    )
+
+    parser.add_argument(
+        "-overlay",
+        "--overlay_mode",
+        help="If passed, overlays model output on the input image when the output is an array (e.g., depth maps, segmentation maps). Otherwise, displays outputs separately.",
+        required=False,
+        action="store_true",
     )
 
     args = parser.parse_args()
