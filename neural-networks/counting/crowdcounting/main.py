@@ -2,10 +2,10 @@ from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 from depthai_nodes.node import OverlayFrames
+from depthai_nodes.node import ApplyColormap
 
 from utils.arguments import initialize_argparser
 from utils.counter import CrowdCounter
-from utils.density_map_transform import DensityMapToFrame
 
 _, args = initialize_argparser()
 
@@ -48,13 +48,12 @@ with dai.Pipeline(device) as pipeline:
     # Counter Node
     crowd_counter_node = pipeline.create(CrowdCounter).build(nn.out)
 
-    # Density Map Transform and Resize Nodes
-    density_map_transform_node = pipeline.create(DensityMapToFrame).build(nn.out)
+    density_map_transform_node = pipeline.create(ApplyColormap).build(nn.out)
 
     # Overlay Frames Node
     overlay_frames = pipeline.create(OverlayFrames).build(
         nn.passthrough,
-        density_map_transform_node.output,
+        density_map_transform_node.out,
     )
 
     # Visualizer
