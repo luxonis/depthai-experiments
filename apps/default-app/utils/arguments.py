@@ -7,7 +7,7 @@ def initialize_argparser():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.description = (
-        ""
+        "Real-time object detection using a YOLOv6-nano model and stereo depth estimation (if the device has stereo cameras). It streams raw video, H.264/MJPEG encoded video, object detection results, and a colorized depth map to a remote visualizer for monitoring and analysis."
     )
 
     parser.add_argument(

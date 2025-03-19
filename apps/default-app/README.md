@@ -18,8 +18,7 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-
-You can run the experiment using your your computer as host.
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
 Here is a list of all available parameters:
 
@@ -35,3 +34,21 @@ Here is a list of all available parameters:
 ```bash
 python3 main.py
 ```
+
+### Standalone Mode
+
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
