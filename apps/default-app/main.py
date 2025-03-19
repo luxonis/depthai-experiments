@@ -17,8 +17,9 @@ NN_DIMENSIONS = (512, 288)
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     model_description = dai.NNModelDescription(f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}")
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
-    model_description.platform = platform
+    platform = pipeline.getDefaultDevice().getPlatform()
+    platform_str = pipeline.getDefaultDevice().getPlatformAsString()
+    model_description.platform = platform_str 
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(
             model_description,
@@ -27,7 +28,7 @@ with dai.Pipeline(device) as pipeline:
     )
     cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
-    if platform == 'RVC2':
+    if platform == dai.Platform.RVC2:
         detectionNetwork = pipeline.create(dai.node.DetectionNetwork)
         cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888p).link(
             detectionNetwork.input
@@ -43,7 +44,7 @@ with dai.Pipeline(device) as pipeline:
     h264Encoder = pipeline.create(dai.node.VideoEncoder)
     encoding = (
         dai.VideoEncoderProperties.Profile.MJPEG
-        if platform == 'RVC2' 
+        if platform == dai.Platform.RVC2 
         else dai.VideoEncoderProperties.Profile.H264_MAIN
     )
     h264Encoder.setDefaultProfilePreset(30, encoding)
@@ -75,7 +76,7 @@ with dai.Pipeline(device) as pipeline:
             presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
         )
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-        if platform == 'RVC2':
+        if platform == dai.Platform.RVC2:
             stereo.setOutputSize(*STEREO_RESOLUTION)
 
         coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
