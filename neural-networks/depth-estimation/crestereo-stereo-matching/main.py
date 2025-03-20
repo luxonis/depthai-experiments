@@ -71,7 +71,6 @@ with dai.Pipeline(device) as pipeline:
     lr_sync.out.link(demux.input)
 
     nn = pipeline.create(ParsingNeuralNetwork)
-    nn.setNNArchive(model, numShaves=7)
     if platform == dai.Platform.RVC4:
         nn.setBackend("snpe")
         nn.setBackendProperties(
@@ -80,6 +79,8 @@ with dai.Pipeline(device) as pipeline:
                 "performance_profile": "default",
             }
         )
+    elif platform == dai.Platform.RVC2:
+        nn.setNNArchive(model, numShaves=7)
 
     demux.outputs["left"].link(nn.inputs["left"])
     demux.outputs["right"].link(nn.inputs["right"])
