@@ -72,6 +72,7 @@ with dai.Pipeline(device) as pipeline:
 
     nn = pipeline.create(ParsingNeuralNetwork)
     if platform == dai.Platform.RVC4:
+        nn.setNNArchive(model, numShaves=7)
         nn.setBackend("snpe")
         nn.setBackendProperties(
             {
