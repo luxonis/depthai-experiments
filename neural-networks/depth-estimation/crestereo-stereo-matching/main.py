@@ -71,7 +71,7 @@ with dai.Pipeline(device) as pipeline:
     lr_sync.out.link(demux.input)
 
     nn = pipeline.create(ParsingNeuralNetwork)
-    nn.setNNArchive(model)
+    nn.setNNArchive(model, numShaves=7)
     if platform == dai.Platform.RVC4:
         nn.setBackend("snpe")
         nn.setBackendProperties(

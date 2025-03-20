@@ -59,7 +59,12 @@ def test_experiment_runs(experiment_dir, test_args):
         venv_dir = experiment_dir / ".test-venv"
         env_exe = venv_dir / "bin" / "python3"
 
-        setup_virtual_env(venv_dir, requirements_file, test_args["depthai_version"])
+        setup_virtual_env(
+            venv_dir=venv_dir,
+            requirements_file=requirements_file,
+            depthai_version=test_args["depthai_version"],
+            depthai_nodes_version=test_args["depthai_nodes_version"],
+        )
 
         success = run_experiment(
             env_exe,
@@ -97,7 +102,14 @@ def setup_virtual_display():
         )
 
 
-def setup_virtual_env(venv_dir, requirements_file, depthai_version):
+def setup_virtual_env(
+    venv_dir,
+    requirements_file,
+    depthai_version,
+    depthai_nodes_version,
+    install_dai=True,
+    install_dai_nodes=True,
+):
     """Creates and sets up a virtual environment with the required dependencies."""
     logger.debug(f"Setting up virtual environment for {venv_dir.parent}...")
     EnvBuilder(clear=True, with_pip=True).create(venv_dir)
@@ -106,13 +118,33 @@ def setup_virtual_env(venv_dir, requirements_file, depthai_version):
     # Modify requirements.txt if depthai version is specified
     with open(requirements_file, "r") as f:
         requirements = f.readlines()
-    if depthai_version:
+
+    if depthai_version and install_dai:
         requirements = [
-            f"depthai=={depthai_version}\n" if "depthai==" in line else line
+            f"depthai=={depthai_version}\n"
+            if ("depthai" in line and "depthai-nodes" not in line)
+            else line
             for line in requirements
         ]
 
-    with open(venv_dir / "requirements.txt", "w") as f:
+    if depthai_nodes_version and install_dai_nodes:
+        try:
+            # if this passes then the input is pypi version otherwise we assume its a custom branch from dai-nodes repo
+            _ = version.parse(depthai_nodes_version)
+            requirements = [
+                f"depthai-nodes=={depthai_nodes_version}\n"
+                if "depthai-nodes" in line
+                else line
+                for line in requirements
+            ]
+        except version.InvalidVersion:
+            # example: depthai_nodes_version = git+https://github.com/luxonis/depthai-nodes.git@main
+            requirements = [
+                f"{depthai_nodes_version}\n" if "depthai-nodes" in line else line
+                for line in requirements
+            ]
+
+    with open(venv_dir / "requirements_modified.txt", "w") as f:
         f.writelines(requirements)
 
     # Install dependencies
@@ -124,7 +156,7 @@ def setup_virtual_env(venv_dir, requirements_file, depthai_version):
                 "pip",
                 "install",
                 "-r",
-                str(venv_dir / "requirements.txt"),
+                str(venv_dir / "requirements_modified.txt"),
                 "--timeout=60",
             ],
             check=True,
@@ -136,6 +168,8 @@ def setup_virtual_env(venv_dir, requirements_file, depthai_version):
     except subprocess.CalledProcessError as e:
         shutil.rmtree(venv_dir)
         pytest.fail(f"Failed to install dependencies for {venv_dir.parent}: {e.stderr}")
+    finally:
+        os.remove(venv_dir / "requirements_modified.txt")
 
 
 def run_experiment(env_exe, experiment_dir, args, max_retries=3):

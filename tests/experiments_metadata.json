@@ -62,6 +62,12 @@
                 "rvc4"
             ]
         },
+        "neural-networks/object-tracking/people-tracker": {
+            "reason": "ObjectTracker node not available on RVC4",
+            "platform": [
+                "rvc4"
+            ]
+        },
         "neural-networks/counting/cumulative-object-counting": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [

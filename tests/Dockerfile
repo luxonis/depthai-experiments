@@ -3,6 +3,7 @@ FROM python:${PYTHON_VERSION}
 
 ENV PLATFORM=""
 ENV DAI_VERSION=""
+ENV DAI_NODES_VERSION=""
 ENV PYTHON_VERSION_ENV=""
 ENV LOG_LEVEL="INFO"
 ENV ROOT_DIR="."
@@ -35,6 +36,7 @@ ENTRYPOINT ["sh", "-c", "\
     pytest -v -r a --log-cli-level=${LOG_LEVEL} --log-file=out.log --color=yes \
     --root-dir=${ROOT_DIR} \
     --depthai-version=${DAI_VERSION} \
+    --depthai-nodes-version=${DAI_NODES_VERSION} \
     --environment-variables=DEPTHAI_PLATFORM=${PLATFORM} \
     --virtual-display \
     --platform=${PLATFORM} \

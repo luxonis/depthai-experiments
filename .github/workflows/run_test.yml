@@ -6,6 +6,9 @@ on:
       depthai_version:
         description: 'Version of DepthAI to install for the test run. If specified the version will override version specified in requirements.txt'
         required: false
+      depthai_nodes_version:
+        description: 'Version of depthai-nodes to install for the test run. If specified the version will override version specified in requirements.txt'
+        required: false
       python_version:
         description: 'Python version to use. By default 3.8, 3.10 and 3.12 are used but you can use only one by passing only `3.8`, `3.10` or `3.12`.'
         default: "all"
@@ -96,6 +99,7 @@ jobs:
           ENV_VARS="\
             --env PLATFORM=${{ matrix.platform }} \
             --env DAI_VERSION=${{ github.event.inputs.depthai_version }} \
+            --env DAI_NODES_VERSION=${{ github.event.inputs.depthai_nodes_version }} \
             --env PYTHON_VERSION_ENV=${{ matrix.python-version }} \
             --env LOG_LEVEL=${{ github.event.inputs.log_level }} \
             --env ROOT_DIR=${{ github.event.inputs.root_dir }}"
