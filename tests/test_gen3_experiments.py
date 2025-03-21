@@ -121,24 +121,23 @@ def setup_virtual_env(
 
     if depthai_version and install_dai:
         try:
-            _ = version.parse(depthai_nodes_version)
+            parsed_dai_version = version.parse(depthai_version)
             requirements = [
                 f"depthai=={depthai_version}\n"
                 if ("depthai" in line and "depthai-nodes" not in line)
                 else line
                 for line in requirements
             ]
+
+            if parsed_dai_version.is_devrelease:
+                requirements.insert(
+                    0,
+                    "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/\n",
+                )
+
         except version.InvalidVersion:
-            requirements = [
-                f"{depthai_version}\n"
-                if ("depthai" in line and "depthai-nodes" not in line)
-                else line
-                for line in requirements
-            ]
-            # pull from snapshot instead of release artifactory
-            requirements.append(
-                "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/"
-            )
+            # DAI can't be installed directly from GH repo like e.g. depthai-nodes
+            logger.errro("Can't parse DepthAI version")
 
     if depthai_nodes_version and install_dai_nodes:
         try:
