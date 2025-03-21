@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import depthai as dai
+from typing import List
 
 from kalman_filter import KalmanFilter
 
@@ -16,7 +17,7 @@ class KalmanFilterNode(dai.node.HostNode):
         tracker_out: dai.Node.Output,
         baseline: float,
         focal_length: float,
-        label_map: list[str],
+        label_map: List[str],
     ) -> "KalmanFilterNode":
         self.link_args(rgb, tracker_out)
         self.sendProcessingToPipeline(True)

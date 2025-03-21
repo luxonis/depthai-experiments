@@ -1,6 +1,7 @@
 import cv2
 import depthai as dai
 import numpy as np
+from typing import Tuple
 
 from detected_recognitions import DetectedRecognitions
 
@@ -23,10 +24,10 @@ class HeadPostureDetection(dai.node.HostNode):
     def set_min_threshold(self, min_threshold: float) -> None:
         self._min_threshold = min_threshold
 
-    def set_bg_color(self, bg_color: tuple[int, int, int]) -> None:
+    def set_bg_color(self, bg_color: Tuple[int, int, int]) -> None:
         self._bg_color = bg_color
 
-    def set_color(self, color: tuple[int, int, int]) -> None:
+    def set_color(self, color: Tuple[int, int, int]) -> None:
         self._color = color
 
     def set_text_type(self, text_type: int) -> None:
@@ -83,7 +84,7 @@ class HeadPostureDetection(dai.node.HostNode):
             self.stopPipeline()
 
     def _frame_norm(
-        self, frame: np.ndarray, bbox: tuple[int, int, int, int]
+        self, frame: np.ndarray, bbox: Tuple[int, int, int, int]
     ) -> np.ndarray:
         normVals = np.full(len(bbox), frame.shape[0])
         normVals[::2] = frame.shape[1]
@@ -130,7 +131,7 @@ class HeadPostureDetection(dai.node.HostNode):
         self,
         frame: np.ndarray,
         text: str,
-        coords: tuple[int, int],
+        coords: Tuple[int, int],
         size=0.6,
         bold=False,
     ) -> None:

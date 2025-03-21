@@ -2,6 +2,7 @@ import cv2
 import depthai as dai
 import numpy as np
 import math
+from typing import Tuple
 
 
 class FilterWindow:
@@ -26,7 +27,7 @@ class FilterWindow:
 
     def filter(
         self, disparity, right, depthScaleFactor
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         # https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp#L92
         self.wlsFilter.setLambda(self._lambda)
         # https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/include/opencv2/ximgproc/disparity_filter.hpp#L99

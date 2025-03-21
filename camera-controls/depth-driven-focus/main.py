@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from util.arguments import initialize_argparser
 from util.depth_color_transform import DepthColorTransform
 from util.depth_driven_focus import DepthDrivenFocus

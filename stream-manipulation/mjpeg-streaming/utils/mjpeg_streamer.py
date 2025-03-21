@@ -1,5 +1,5 @@
 import threading
-
+from typing import List
 import cv2
 import depthai as dai
 import numpy as np
@@ -17,7 +17,7 @@ class MJPEGStreamer(dai.node.HostNode):
         super().__init__()
 
     def build(
-        self, preview: dai.Node.Output, nn: dai.Node.Output, labels: list[str]
+        self, preview: dai.Node.Output, nn: dai.Node.Output, labels: List[str]
     ) -> "MJPEGStreamer":
         self.link_args(preview, nn)
         self.sendProcessingToPipeline(True)

@@ -36,9 +36,7 @@ with dai.Pipeline(device) as pipeline:
     spatialDetectionNetwork = pipeline.create(dai.node.SpatialDetectionNetwork).build(
         cam,
         stereo,
-        dai.NNModelDescription(
-            modelSlug="yolov6-nano", modelVersionSlug="r2-coco-512x288"
-        ),
+        "luxonis/yolov6-nano:r2-coco-512x288",
         fps=FPS,
     )
     spatialDetectionNetwork.setConfidenceThreshold(0.5)

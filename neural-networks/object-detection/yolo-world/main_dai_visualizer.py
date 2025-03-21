@@ -2,8 +2,8 @@ import numpy as np
 import onnxruntime
 from transformers import AutoTokenizer
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
-from depthai_nodes.ml.messages import ImgDetectionsExtended
+from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes import ImgDetectionsExtended
 import argparse
 import os
 

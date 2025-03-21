@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages.img_detections import ImgDetectionsExtended
+from depthai_nodes import ImgDetectionsExtended
 
 
 class ParserBridge(dai.node.ThreadedHostNode):

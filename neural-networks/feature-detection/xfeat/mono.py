@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes import ParserGenerator, XFeatMonoParser
+from depthai_nodes.node import ParserGenerator, XFeatMonoParser
 from utils.custom_visualizer import MonoVersionVisualizer
 
 

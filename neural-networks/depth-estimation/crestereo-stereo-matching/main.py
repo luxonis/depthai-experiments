@@ -1,9 +1,8 @@
 import argparse
 import cv2
 import depthai as dai
-import depthai_nodes as nodes
-from host_node.host_depth_color_transform import DepthColorTransform
-
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.host_depth_color_transform import DepthColorTransform
 
 device = dai.Device()
 platform = device.getPlatform()
@@ -71,7 +70,7 @@ with dai.Pipeline(device) as pipeline:
     demux = pipeline.create(dai.node.MessageDemux)
     lr_sync.out.link(demux.input)
 
-    nn = pipeline.create(nodes.ParsingNeuralNetwork)
+    nn = pipeline.create(ParsingNeuralNetwork)
     nn.setNNArchive(model)
     if platform == dai.Platform.RVC4:
         nn.setBackend("snpe")

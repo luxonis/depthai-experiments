@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionsExtended, SegmentationMask
+from depthai_nodes import ImgDetectionsExtended, SegmentationMask
 
 import cv2
 import numpy as np

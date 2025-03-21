@@ -35,7 +35,7 @@ Here is a list of all available parameters:
                     Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
 Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
@@ -64,3 +64,5 @@ The app can then be run with:
 oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.parser_bridge import ParserBridge
 from utils.people_counter import PeopleCounter

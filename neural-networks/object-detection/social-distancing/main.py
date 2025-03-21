@@ -1,6 +1,5 @@
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
-from depthai_nodes.nodes import DepthMerger
+from depthai_nodes.node import ParsingNeuralNetwork, DepthMerger
 from utils.host_bird_eye_view import BirdsEyeView
 from utils.measure_object_distance import MeasureObjectDistance
 from host_social_distancing import SocialDistancing

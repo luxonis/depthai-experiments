@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
 import depthai as dai
-from depthai_nodes.ml.messages.img_detections import (
+from depthai_nodes import (
     ImgDetectionsExtended,
     ImgDetectionExtended,
 )
-
+from typing import Tuple, List
 from utility import TextHelper
 from stereo_inference import StereoInference
 
@@ -31,7 +31,7 @@ class Triangulation(dai.node.HostNode):
         face_nn_left: dai.Node.Output,
         face_nn_right: dai.Node.Output,
         device: dai.Device,
-        resolution_number: tuple[int, int],
+        resolution_number: Tuple[int, int],
     ) -> "Triangulation":
         self.link_args(face_left, face_right, face_nn_left, face_nn_right)
         self._stereoInference = StereoInference(device, resolution_number)
@@ -116,16 +116,16 @@ class Triangulation(dai.node.HostNode):
     def _draw_disparity_line(
         self,
         combined: np.ndarray,
-        coords_left: tuple[int, int],
-        coords_right: tuple[int, int],
+        coords_left: Tuple[int, int],
+        coords_right: Tuple[int, int],
     ) -> None:
         cv2.line(combined, coords_right, coords_left, (0, 0, 255), 1)
 
     def _draw_keypoint(
         self,
         left_frame: np.ndarray,
-        coords_left: tuple[int, int],
-        color: tuple[int, int, int],
+        coords_left: Tuple[int, int],
+        color: Tuple[int, int, int],
     ) -> None:
         cv2.circle(left_frame, coords_left, 3, color)
 
@@ -138,7 +138,7 @@ class Triangulation(dai.node.HostNode):
         return output_frame
 
     def _displayDetections(
-        self, frame: np.ndarray, detections: list[ImgDetectionExtended], color
+        self, frame: np.ndarray, detections: List[ImgDetectionExtended], color
     ) -> None:
         for detection in detections:
             rect = detection.rotated_rect

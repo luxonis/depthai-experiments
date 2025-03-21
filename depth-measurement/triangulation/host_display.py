@@ -1,5 +1,6 @@
 import depthai as dai
 import cv2
+from typing import List
 
 
 class Display(dai.node.HostNode):
@@ -45,9 +46,9 @@ class Display(dai.node.HostNode):
         if self.process_wait_key and ord("q") in self._waitKeys():
             self.stopPipeline()
 
-    def _waitKeys(self) -> list[int]:
+    def _waitKeys(self) -> List[int]:
         if self.keyboard_input_q:
-            key_presses: list = self.keyboard_input_q.tryGetAll()
+            key_presses: List = self.keyboard_input_q.tryGetAll()
             if key_presses:
                 return [key_press.key for key_press in key_presses]
             else:

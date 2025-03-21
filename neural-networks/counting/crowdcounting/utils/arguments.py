@@ -3,13 +3,15 @@ import argparse
 
 def initialize_argparser():
     """Initialize the argument parser for the script."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     parser.add_argument(
-        "-model",
-        "--crowd_counting_model",
+        "-m",
+        "--model",
         help="Crowd counting model HubAI reference.",
-        required=True,
+        default="luxonis/dm-count:shb-426x240",
         type=str,
     )
 
@@ -27,13 +29,13 @@ def initialize_argparser():
         "--fps_limit",
         help="FPS limit for the model runtime.",
         required=False,
-        default=1,
+        default=5,
         type=int,
     )
 
     parser.add_argument(
-        "-device",
-        "--device_id",
+        "-d",
+        "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
         required=False,
         default=None,

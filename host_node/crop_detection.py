@@ -1,6 +1,6 @@
 import depthai as dai
 import numpy as np
-from depthai_nodes.ml.messages import ImgDetectionsExtended
+from depthai_nodes import ImgDetectionsExtended
 
 
 class CropDetection(dai.node.HostNode):

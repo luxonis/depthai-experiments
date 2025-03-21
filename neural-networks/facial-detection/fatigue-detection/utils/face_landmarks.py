@@ -1,7 +1,7 @@
 import cv2
 import math
 import numpy as np
-from depthai_nodes.ml.messages import Keypoints
+from depthai_nodes import Keypoints
 
 
 def determine_fatigue(

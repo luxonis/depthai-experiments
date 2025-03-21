@@ -1,4 +1,4 @@
-identifier = "com.luxonis.play-encoded-stream"
+identifier = "com.luxonis.tutorials.play-encoded-stream"
 app_version = "1.0.0"
 
 prepare_container = [

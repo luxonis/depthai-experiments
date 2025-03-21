@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages import Classifications
+from depthai_nodes import Classifications
 import numpy as np
 
 

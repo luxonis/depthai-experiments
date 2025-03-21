@@ -1,10 +1,11 @@
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionsExtended
+from depthai_nodes import ImgDetectionsExtended
+from typing import Dict, Optional, List
 
 
 class ObjectCount(dai.Buffer):
     def __init__(
-        self, label_counts: dict[int, int], label_map: list[str] | None = None
+        self, label_counts: Dict[int, int], label_map: Optional[List[str]] = None
     ) -> None:
         super().__init__(0)
         self._label_counts = label_counts
@@ -15,7 +16,7 @@ class ObjectCount(dai.Buffer):
         return self._label_counts
 
     @label_counts.setter
-    def label_counts(self, value: dict[int, int]) -> None:
+    def label_counts(self, value: Dict[int, int]) -> None:
         self._label_counts = value
 
     def getTotalCount(self) -> int:
@@ -55,7 +56,7 @@ class ObjectCounter(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
         self._confidence_threshold = 0.5
-        self._label_map: list[str] | None = None
+        self._label_map: Optional[List[str]] = None
         self._out = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)
@@ -68,7 +69,7 @@ class ObjectCounter(dai.node.HostNode):
         )
 
     def build(
-        self, nn: dai.Node.Output, label_map: list[str] | None = None
+        self, nn: dai.Node.Output, label_map: Optional[List[str]] = None
     ) -> "ObjectCounter":
         self.link_args(nn)
         self._label_map = label_map
