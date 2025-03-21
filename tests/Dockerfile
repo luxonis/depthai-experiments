@@ -42,5 +42,5 @@ ENTRYPOINT ["sh", "-c", "\
     --virtual-display \
     --platform=${PLATFORM} \
     --python-version=${PYTHON_VERSION_ENV} \
-    --strict-mode=${STRICT_MODE}} \
+    --strict-mode=${STRICT_MODE} \
     tests/"]
