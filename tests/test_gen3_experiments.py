@@ -120,16 +120,28 @@ def setup_virtual_env(
         requirements = f.readlines()
 
     if depthai_version and install_dai:
-        requirements = [
-            f"depthai=={depthai_version}\n"
-            if ("depthai" in line and "depthai-nodes" not in line)
-            else line
-            for line in requirements
-        ]
+        try:
+            _ = version.parse(depthai_nodes_version)
+            requirements = [
+                f"depthai=={depthai_version}\n"
+                if ("depthai" in line and "depthai-nodes" not in line)
+                else line
+                for line in requirements
+            ]
+        except version.InvalidVersion:
+            requirements = [
+                f"{depthai_version}\n"
+                if ("depthai" in line and "depthai-nodes" not in line)
+                else line
+                for line in requirements
+            ]
+            # pull from snapshot instead of release artifactory
+            requirements.append(
+                "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/"
+            )
 
     if depthai_nodes_version and install_dai_nodes:
         try:
-            # if this passes then the input is pypi version otherwise we assume its a custom branch from dai-nodes repo
             _ = version.parse(depthai_nodes_version)
             requirements = [
                 f"depthai-nodes=={depthai_nodes_version}\n"
@@ -138,7 +150,6 @@ def setup_virtual_env(
                 for line in requirements
             ]
         except version.InvalidVersion:
-            # example: depthai_nodes_version = git+https://github.com/luxonis/depthai-nodes.git@main
             requirements = [
                 f"{depthai_nodes_version}\n" if "depthai-nodes" in line else line
                 for line in requirements

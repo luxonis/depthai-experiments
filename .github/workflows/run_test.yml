@@ -104,7 +104,7 @@ jobs:
             --env LOG_LEVEL=${{ github.event.inputs.log_level }} \
             --env ROOT_DIR=${{ github.event.inputs.root_dir }}"
 
-          hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
+          exec hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./tests/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
               --docker-run-args "$ENV_VARS"
