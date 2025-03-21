@@ -157,6 +157,10 @@
             ]
         }
     },
+    "known_warnings": [
+        "The issued warnings are orientative, based on optimal settings for a single network, if multiple networks are running in parallel the optimal settings may vary",
+        "[Script"
+    ],
     "experimental_subset": [
         "neural-networks/counting/crowdcounting",
         "neural-networks/counting/people-counter",

@@ -57,6 +57,13 @@ def pytest_addoption(parser):
         choices=["3.8", "3.10", "3.12"],
         help="Specify a python version this is tested with (3.8, 3.10 or 3.12). Only used for filtering test examples.",
     )
+    parser.addoption(
+        "--strict-mode",
+        default="no",
+        type=str,
+        choices=["yes", "no"],
+        help="If set to 'yes', tests will fail on DepthAI warnings.",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -70,7 +77,11 @@ def test_args(request):
         "virtual_display": request.config.getoption("--virtual-display"),
         "platform": request.config.getoption("--platform"),
         "python_version": request.config.getoption("--python-version"),
+        "strict_mode": True
+        if request.config.getoption("--strict-mode") == "yes"
+        else False,
     }
+
     logger.info(f"Test arguments: {args}")
 
     script_dir = Path(__file__).parent

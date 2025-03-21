@@ -67,9 +67,9 @@ def test_experiment_runs(experiment_dir, test_args):
         )
 
         success = run_experiment(
-            env_exe,
-            experiment_dir,
-            test_args,
+            env_exe=env_exe,
+            experiment_dir=experiment_dir,
+            args=test_args,
         )
         shutil.rmtree(venv_dir, ignore_errors=True)
         assert success, f"Test failed for {experiment_dir}"
@@ -207,29 +207,49 @@ def run_experiment(env_exe, experiment_dir, args, max_retries=3):
     try:
         for attempt in range(1, max_retries + 1):
             try:
-                # Run the experiment script (main.py)
-                result = subprocess.run(
+                # Start subprocess using Popen
+                process = subprocess.Popen(
                     [env_exe, str(main_script)],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
                     env=env,
-                    timeout=timeout,
                 )
 
-                if result.returncode == 0:
+                # Use timer to wait for timeout
+                try:
+                    stdout, stderr = process.communicate(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    stdout, stderr = process.communicate()
+                    logger.info(
+                        f"{experiment_dir} ran for {timeout} seconds before timeout."
+                    )
+
+                    if args["strict_mode"]:
+                        all_output = stdout.splitlines() + stderr.splitlines()
+                        dai_warnings = filter_warnings(
+                            all_output, args["experiments_metadata"]["known_warnings"]
+                        )
+                        if len(dai_warnings) > 0:
+                            logger.error(f"Unexpected DepthAI warnings: {dai_warnings}")
+                            return False
+
+                    return True  # Success case — ran full duration
+
+                # If it finishes early (not ideal), check exit code and logs
+                if process.returncode == 0:
                     logger.error(
-                        f"{experiment_dir} ran for {timeout} seconds before terminating (exit code 0)."
+                        f"{experiment_dir} ran for less than {timeout} seconds before terminating (exit code 0)."
                     )
                     return False
 
                 if (
-                    "No internet connection available." in result.stderr
-                    or "There was an error while sending a request to the Hub"
-                    in result.stderr
+                    "No internet connection available." in stderr
+                    or "There was an error while sending a request to the Hub" in stderr
                 ):
                     logger.warning(
-                        f"Retryable error in {experiment_dir}: {result.stderr.strip()}"
+                        f"Retryable error in {experiment_dir}: {stderr.strip()}"
                     )
                     if attempt < max_retries:
                         time.sleep(5)
@@ -238,15 +258,13 @@ def run_experiment(env_exe, experiment_dir, args, max_retries=3):
                         logger.error("Max retries reached.")
                         return False
 
-                # Any other error, treat as failure
-                logger.error(f"Error in {experiment_dir}:\n{result.stderr}")
+                # Handle other early errors
+                logger.error(f"Error in {experiment_dir}:\n{stderr}")
                 return False
 
-            except subprocess.TimeoutExpired:
-                logger.info(
-                    f"{experiment_dir} ran for {timeout} seconds before timeout."
-                )
-                return True
+            except Exception as e:
+                logger.error(f"Unexpected exception in {experiment_dir}: {e}")
+                return False
 
         return False
 
@@ -350,6 +368,17 @@ def check_dai(have, failing):
 
     # If no operator is found, assume exact match
     return not (have_version == version.parse(failing_version))
+
+
+def filter_warnings(output, ignored_warnings):
+    """Filter out warnings that are from DAI and shouldn't be ignored"""
+    dai_warnings = [line for line in output if "[warning]" in line]
+    unexpected = []
+    for line in dai_warnings:
+        if not any(ignored in line for ignored in ignored_warnings):
+            unexpected.append(line)
+
+    return unexpected
 
 
 def get_installed_packages(env_exe):

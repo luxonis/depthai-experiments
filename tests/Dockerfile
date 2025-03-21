@@ -7,6 +7,7 @@ ENV DAI_NODES_VERSION=""
 ENV PYTHON_VERSION_ENV=""
 ENV LOG_LEVEL="INFO"
 ENV ROOT_DIR="."
+ENV STRICT_MODE="no"
 
 # Install Virtual Display
 RUN apt-get update && apt-get install -y \
@@ -41,4 +42,5 @@ ENTRYPOINT ["sh", "-c", "\
     --virtual-display \
     --platform=${PLATFORM} \
     --python-version=${PYTHON_VERSION_ENV} \
+    --strict-mode=${STRICT_MODE}} \
     tests/"]
