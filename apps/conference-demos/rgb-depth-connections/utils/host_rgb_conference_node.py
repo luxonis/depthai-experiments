@@ -2,13 +2,13 @@ import cv2
 import depthai as dai
 import numpy as np
 
-from utility import TextHelper, TitleHelper
+from utils.texts import TextHelper, TitleHelper
 
 JET_CUSTOM = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 JET_CUSTOM = JET_CUSTOM[::-1]
 JET_CUSTOM[0] = [0, 0, 0]
 
-LOGO = cv2.imread("logo.jpeg")
+LOGO = cv2.imread("./media/logo.jpeg")
 LOGO = cv2.resize(LOGO, (250, 67))
 
 # Tiny yolo v3/4 label texts
@@ -106,6 +106,10 @@ class CombineOutputs(dai.node.HostNode):
         )
         self.text = TextHelper()
         self.title = TitleHelper()
+        self.draw_bbox = True
+
+    def toggle_bbox(self) -> None:
+        self.draw_bbox = not self.draw_bbox
 
     def build(
         self,
@@ -146,6 +150,9 @@ class CombineOutputs(dai.node.HostNode):
         resized_frame = cv2.resize(combined_frame, (1920, 1080))
         height, width = resized_frame.shape[:2]
 
+        adjusted_detections = dai.SpatialImgDetections()
+        adjusted_detections.detections = []
+
         for detection in detections:
             # Denormalize bounding box
             detection.xmin = 1 - detection.xmin
@@ -155,34 +162,35 @@ class CombineOutputs(dai.node.HostNode):
             y1 = int(detection.ymin * height)
             y2 = int(detection.ymax * height)
 
-            try:
-                label = labelMap[detection.label]
-            except KeyError:
-                label = detection.label
+            if self.draw_bbox:
+                try:
+                    label = labelMap[detection.label]
+                except KeyError:
+                    label = detection.label
 
-            self.text.putText(resized_frame, str(label), (x2 + 10, y1 + 20))
-            self.text.putText(
-                resized_frame,
-                "{:.0f}%".format(detection.confidence * 100),
-                (x2 + 10, y1 + 40),
-            )
-            self.text.rectangle(resized_frame, (x1, y1), (x2, y2), detection.label)
-            if detection.spatialCoordinates.z != 0:
+                self.text.putText(resized_frame, str(label), (x2 + 10, y1 + 20))
                 self.text.putText(
                     resized_frame,
-                    "X: {:.2f} m".format(detection.spatialCoordinates.x / 1000),
-                    (x2 + 10, y1 + 60),
+                    "{:.0f}%".format(detection.confidence * 100),
+                    (x2 + 10, y1 + 40),
                 )
-                self.text.putText(
-                    resized_frame,
-                    "Y: {:.2f} m".format(detection.spatialCoordinates.y / 1000),
-                    (x2 + 10, y1 + 80),
-                )
-                self.text.putText(
-                    resized_frame,
-                    "Z: {:.2f} m".format(detection.spatialCoordinates.z / 1000),
-                    (x2 + 10, y1 + 100),
-                )
+                self.text.rectangle(resized_frame, (x1, y1), (x2, y2), detection.label)
+                if detection.spatialCoordinates.z != 0:
+                    self.text.putText(
+                        resized_frame,
+                        "X: {:.2f} m".format(detection.spatialCoordinates.x / 1000),
+                        (x2 + 10, y1 + 60),
+                    )
+                    self.text.putText(
+                        resized_frame,
+                        "Y: {:.2f} m".format(detection.spatialCoordinates.y / 1000),
+                        (x2 + 10, y1 + 80),
+                    )
+                    self.text.putText(
+                        resized_frame,
+                        "Z: {:.2f} m".format(detection.spatialCoordinates.z / 1000),
+                        (x2 + 10, y1 + 100),
+                    )
 
         self.title.putText(resized_frame, "DEPTH", (30, 50))
         self.title.putText(resized_frame, "RGB", (width // 2 + 30, 50))

@@ -1,18 +1,21 @@
 import depthai as dai
-import cv2
 
-from host_bird_eye_view import BirdsEyeView
-from host_rgb_conference_node import CombineOutputs
-from host_display import Display
+from utils.host_bird_eye_view import BirdsEyeView
+from utils.host_rgb_conference_node import CombineOutputs
+from utils.arguments import initialize_argparser
 
+_, args = initialize_argparser()
 
+visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device()
-device.setIrLaserDotProjectorIntensity(1)
-platform = device.getPlatform()
+
+OUTPUT_SHAPE = (512, 288)
+if not device.setIrLaserDotProjectorIntensity(1):
+    print("Failed to set IR laser projector intensity. Maybe your device does not support this feature.")
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    OUTPUT_SHAPE = (512, 288)
+    platform = pipeline.getDefaultDevice().getPlatform()
     FPS = 10 if platform == dai.Platform.RVC2 else 30
 
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -73,11 +76,20 @@ with dai.Pipeline(device) as pipeline:
         birdseye=bird_eye.output,
         detections=demux.outputs["detections"],
     )
-    display = pipeline.create(Display).build(combined.output)
-    display.setName("Luxonis")
 
-    cv2.namedWindow("Luxonis", cv2.WND_PROP_FULLSCREEN)
-    cv2.setWindowProperty("Luxonis", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    visualizer.addTopic("Color Frame", demux.outputs["color"], "images")
+    visualizer.addTopic("Detections", demux.outputs["detections"], "spatial")
+    visualizer.addTopic("Combined View", combined.output, "images")
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
+        if key == ord("d"):
+            combined.toggle_bbox()
