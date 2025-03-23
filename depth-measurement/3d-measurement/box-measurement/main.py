@@ -1,4 +1,3 @@
-from cv2 import STEREO_SGBM_MODE_HH
 import depthai as dai
 
 from utils.host_box_measurement import BoxMeasurement
@@ -6,14 +5,11 @@ from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
 
-# Higher resolution for example THE_720_P makes better results but drastically lowers FPS
-RESOLUTION = dai.MonoCameraProperties.SensorResolution.THE_400_P
-# IMG_SHAPE = (1920, 1080)
-IMG_SHAPE = (640, 400)
-STEREO_SHAPE = (640, 400)
+IMG_SHAPE = (640, 400) # higher resolution is possible, but it will slow down fps drastically
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     platform = device.getPlatform()
@@ -31,8 +27,8 @@ with dai.Pipeline(device) as pipeline:
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-    left_output = left.requestOutput(STEREO_SHAPE, type=dai.ImgFrame.Type.NV12)
-    right_output = right.requestOutput(STEREO_SHAPE, type=dai.ImgFrame.Type.NV12)
+    left_output = left.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.NV12)
+    right_output = right.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.NV12)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
         left=left_output,
@@ -45,7 +41,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.setSubpixel(True)
     stereo.setSubpixelFractionalBits(3)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setOutputSize(STEREO_SHAPE[0], STEREO_SHAPE[1])
+    stereo.setOutputSize(IMG_SHAPE[0], IMG_SHAPE[1])
 
     """ In-place post-processing configuration for a stereo depth node
     The best combo of filters is application specific. Hard to say there is a one size fits all.
@@ -69,7 +65,7 @@ with dai.Pipeline(device) as pipeline:
         color=cam_out,
         depth=stereo.depth,
         cam_intrinsics=intrinsics,
-        shape=STEREO_SHAPE,
+        shape=IMG_SHAPE,
         max_dist=args.max_dist,
         min_box_size=args.min_box_size,
     )
@@ -78,8 +74,6 @@ with dai.Pipeline(device) as pipeline:
     box_measurement.inputs["depth"].setBlocking(False)
     box_measurement.inputs["depth"].setMaxSize(4)
 
-    
-    # Configure visualizer to display box measurements
     visualizer.addTopic("Main Stream", box_measurement.passthrough, "images")
     visualizer.addTopic("Box Detection", box_measurement.annotation_output, "images")
     visualizer.addTopic("Dimensions", box_measurement.measurements_output, "images")
