@@ -10,8 +10,10 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device()
 
 OUTPUT_SHAPE = (512, 288)
+
 if not device.setIrLaserDotProjectorIntensity(1):
     print("Failed to set IR laser projector intensity. Maybe your device does not support this feature.")
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
@@ -77,9 +79,8 @@ with dai.Pipeline(device) as pipeline:
         detections=demux.outputs["detections"],
     )
 
-    visualizer.addTopic("Color Frame", demux.outputs["color"], "images")
-    visualizer.addTopic("Detections", demux.outputs["detections"], "spatial")
     visualizer.addTopic("Combined View", combined.output, "images")
+    visualizer.addTopic("Detections", combined.detections_output, "images")
 
     print("Pipeline created.")
 
@@ -91,5 +92,3 @@ with dai.Pipeline(device) as pipeline:
         if key == ord("q"):
             print("Got q key from the remote connection!")
             break
-        if key == ord("d"):
-            combined.toggle_bbox()

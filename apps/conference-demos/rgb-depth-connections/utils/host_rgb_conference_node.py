@@ -2,7 +2,8 @@ import cv2
 import depthai as dai
 import numpy as np
 
-from utils.texts import TextHelper, TitleHelper
+from .texts import TextHelper, TitleHelper
+from .annotation_helper import AnnotationHelper
 
 JET_CUSTOM = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 JET_CUSTOM = JET_CUSTOM[::-1]
@@ -104,12 +105,13 @@ class CombineOutputs(dai.node.HostNode):
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
+        self.detections_output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
+            ]
+        )
         self.text = TextHelper()
         self.title = TitleHelper()
-        self.draw_bbox = True
-
-    def toggle_bbox(self) -> None:
-        self.draw_bbox = not self.draw_bbox
 
     def build(
         self,
@@ -153,44 +155,78 @@ class CombineOutputs(dai.node.HostNode):
         adjusted_detections = dai.SpatialImgDetections()
         adjusted_detections.detections = []
 
+        # for detection in detections:
+        #     # Denormalize bounding box
+        #     detection.xmin = 1 - detection.xmin
+        #     detection.xmax = 1 - detection.xmax
+        #     x1 = int(detection.xmin * width)
+        #     x2 = int(detection.xmax * width)
+        #     y1 = int(detection.ymin * height)
+        #     y2 = int(detection.ymax * height)
+        #
+        #     try:
+        #         label = labelMap[detection.label]
+        #     except KeyError:
+        #         label = detection.label
+        #
+        #     self.text.putText(resized_frame, str(label), (x2 + 10, y1 + 20))
+        #     self.text.putText(
+        #         resized_frame,
+        #         "{:.0f}%".format(detection.confidence * 100),
+        #         (x2 + 10, y1 + 40),
+        #     )
+        #     self.text.rectangle(resized_frame, (x1, y1), (x2, y2), detection.label)
+        #     if detection.spatialCoordinates.z != 0:
+        #         self.text.putText(
+        #             resized_frame,
+        #             "X: {:.2f} m".format(detection.spatialCoordinates.x / 1000),
+        #             (x2 + 10, y1 + 60),
+        #         )
+        #         self.text.putText(
+        #             resized_frame,
+        #             "Y: {:.2f} m".format(detection.spatialCoordinates.y / 1000),
+        #             (x2 + 10, y1 + 80),
+        #         )
+        #         self.text.putText(
+        #             resized_frame,
+        #             "Z: {:.2f} m".format(detection.spatialCoordinates.z / 1000),
+        #             (x2 + 10, y1 + 100),
+        #         )
+
+        annotation_helper = AnnotationHelper()
         for detection in detections:
-            # Denormalize bounding box
-            detection.xmin = 1 - detection.xmin
-            detection.xmax = 1 - detection.xmax
-            x1 = int(detection.xmin * width)
-            x2 = int(detection.xmax * width)
-            y1 = int(detection.ymin * height)
-            y2 = int(detection.ymax * height)
+            # Use normalized coordinates adjusted for the flipped image
+            left = detection.xmax  # After flip, xmax is the left edge
+            right = detection.xmin  # After flip, xmin is the right edge
+            top = detection.ymin
+            bottom = detection.ymax
+            # Draw bounding box (green outline)
+            annotation_helper.draw_rectangle(
+                (left, top),
+                (right, bottom),
+                outline_color=(0, 255, 0, 255),  # RGBA: green, fully opaque
+                thickness=2
+            )
+            # Optionally add label and confidence as text
+            try:
+                label = labelMap[detection.label]
+            except KeyError:
+                label = str(detection.label)
+            text_x = left + 0.01  # Small offset in normalized units
+            text_y = top + 0.02
+            annotation_helper.draw_text(
+                f"{label} {detection.confidence:.2f}",
+                (text_x, text_y),
+                color=(255, 255, 255, 255),  # White text
+                size=32
+            )
 
-            if self.draw_bbox:
-                try:
-                    label = labelMap[detection.label]
-                except KeyError:
-                    label = detection.label
-
-                self.text.putText(resized_frame, str(label), (x2 + 10, y1 + 20))
-                self.text.putText(
-                    resized_frame,
-                    "{:.0f}%".format(detection.confidence * 100),
-                    (x2 + 10, y1 + 40),
-                )
-                self.text.rectangle(resized_frame, (x1, y1), (x2, y2), detection.label)
-                if detection.spatialCoordinates.z != 0:
-                    self.text.putText(
-                        resized_frame,
-                        "X: {:.2f} m".format(detection.spatialCoordinates.x / 1000),
-                        (x2 + 10, y1 + 60),
-                    )
-                    self.text.putText(
-                        resized_frame,
-                        "Y: {:.2f} m".format(detection.spatialCoordinates.y / 1000),
-                        (x2 + 10, y1 + 80),
-                    )
-                    self.text.putText(
-                        resized_frame,
-                        "Z: {:.2f} m".format(detection.spatialCoordinates.z / 1000),
-                        (x2 + 10, y1 + 100),
-                    )
+        # Build and send the ImgAnnotations message
+        annotations_msg = annotation_helper.build(
+            timestamp=color_frame.getTimestamp(),
+            sequence_num=color_frame.getSequenceNum()
+        )
+        self.detections_output.send(annotations_msg)
 
         self.title.putText(resized_frame, "DEPTH", (30, 50))
         self.title.putText(resized_frame, "RGB", (width // 2 + 30, 50))
