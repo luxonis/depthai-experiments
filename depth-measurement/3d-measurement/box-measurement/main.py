@@ -1,3 +1,4 @@
+from cv2 import STEREO_SGBM_MODE_HH
 import depthai as dai
 
 from utils.host_box_measurement import BoxMeasurement
@@ -7,36 +8,44 @@ _, args = initialize_argparser()
 
 # Higher resolution for example THE_720_P makes better results but drastically lowers FPS
 RESOLUTION = dai.MonoCameraProperties.SensorResolution.THE_400_P
+# IMG_SHAPE = (1920, 1080)
+IMG_SHAPE = (640, 400)
+STEREO_SHAPE = (640, 400)
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
+    platform = device.getPlatform()
     calib_data = device.readCalibration()
     device.setIrLaserDotProjectorIntensity(1)
 
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setIspScale(1, 3)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-    cam.initialControl.setManualFocus(130)
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cam_out = cam.requestOutput(
+        IMG_SHAPE,
+        type=dai.ImgFrame.Type.BGR888i
+        if platform == dai.Platform.RVC4
+        else dai.ImgFrame.Type.BGR888p,
+    )
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(RESOLUTION)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(RESOLUTION)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    left_output = left.requestOutput(STEREO_SHAPE, type=dai.ImgFrame.Type.NV12)
+    right_output = right.requestOutput(STEREO_SHAPE, type=dai.ImgFrame.Type.NV12)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
+    stereo = pipeline.create(dai.node.StereoDepth).build(
+        left=left_output,
+        right=right_output,
+        presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY,
+    )
     stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
     stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(True)
     stereo.setSubpixelFractionalBits(3)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+    stereo.setOutputSize(STEREO_SHAPE[0], STEREO_SHAPE[1])
 
     """ In-place post-processing configuration for a stereo depth node
     The best combo of filters is application specific. Hard to say there is a one size fits all.
@@ -51,16 +60,16 @@ with dai.Pipeline(device) as pipeline:
     stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 15000
     stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
 
-    width, height = cam.getIspSize()
+    width, height = IMG_SHAPE 
     intrinsics = calib_data.getCameraIntrinsics(
         dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
     )
 
     box_measurement = pipeline.create(BoxMeasurement).build(
-        color=cam.isp,
+        color=cam_out,
         depth=stereo.depth,
         cam_intrinsics=intrinsics,
-        shape=(width, height),
+        shape=STEREO_SHAPE,
         max_dist=args.max_dist,
         min_box_size=args.min_box_size,
     )
@@ -68,10 +77,12 @@ with dai.Pipeline(device) as pipeline:
     box_measurement.inputs["color"].setMaxSize(4)
     box_measurement.inputs["depth"].setBlocking(False)
     box_measurement.inputs["depth"].setMaxSize(4)
+
     
     # Configure visualizer to display box measurements
-    visualizer.addTopic("Box Measurement", box_measurement.output, "images")
-    visualizer.addTopic("Dimensions", box_measurement.dimensions_output, "text")
+    visualizer.addTopic("Main Stream", box_measurement.passthrough, "images")
+    visualizer.addTopic("Box Detection", box_measurement.annotation_output, "images")
+    visualizer.addTopic("Dimensions", box_measurement.measurements_output, "images")
 
     print("Pipeline created.")
     pipeline.start()

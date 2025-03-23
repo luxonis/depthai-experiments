@@ -2,6 +2,9 @@ import numpy as np
 import open3d as o3d
 import cv2
 import random
+import depthai as dai
+from .img_annotation_helper import AnnotationHelper
+from .img_annotation_helper import Point
 
 DISTANCE_THRESHOLD_PLANE = 0.02  # Defines the maximum distance a point can have
 # to an estimated plane to be considered an inlier
@@ -28,7 +31,7 @@ class BoxEstimator:
 
         self.bounding_box = None
         self.rotation_matrix = None
-        self.translate_vector = None
+        self.translate_vector = np.array([0, 0, 0])
 
         self.max_distance = max_distance
 
@@ -79,7 +82,7 @@ class BoxEstimator:
             self.vis.update_renderer()
             self.vis.remove_geometry(line_set, reset_bounding_box=False)
 
-    def vizualise_box_2d(self, intrinsic_mat, img):
+    def add_visualization_2d(self, intrinsic_mat, annotation_helper: AnnotationHelper, width, height):
         bounding_box = self.bounding_box
         points_floor = np.c_[bounding_box, np.zeros(4)]
         points_top = np.c_[bounding_box, self.height * np.ones(4)]
@@ -123,13 +126,10 @@ class BoxEstimator:
             np.zeros(4, dtype="float32"),
         )
 
-        # Draw perspective correct point cloud back on the image
         for line in lines:
-            p1 = [int(x) for x in img_points[line[0]][0]]
-            p2 = [int(x) for x in img_points[line[1]][0]]
-            cv2.line(img, p1, p2, (0, 0, 255), 2)
-
-        return img
+            p1 = (float(img_points[line[0]][0][0]) / width, float(img_points[line[0]][0][1]) / height)
+            p2 = (float(img_points[line[1]][0][0]) / width, float(img_points[line[1]][0][1]) / height)
+            annotation_helper.draw_line(p1, p2, (255, 0, 0, 255), 2)
 
     def process_pcl(self, raw_pcl):
         self.raw_pcl = raw_pcl
