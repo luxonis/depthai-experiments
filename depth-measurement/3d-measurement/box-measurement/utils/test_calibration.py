@@ -3,8 +3,8 @@ import time
 
 import box_estimator
 
-PATH_CALIB = "./example_pcls/calibration/calibration.ply"
-PATH_BOX = "./example_pcls/calibration/box.ply"
+PATH_CALIB = "../media/example_pcls/calibration/calibration.ply"
+PATH_BOX = "../media/example_pcls/calibration/box.ply"
 
 # Read the pointcloud
 calib_pcl = o3d.io.read_point_cloud(PATH_CALIB)

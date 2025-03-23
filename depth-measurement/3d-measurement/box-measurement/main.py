@@ -1,29 +1,15 @@
 import depthai as dai
-import argparse
 
-from host_box_measurement import BoxMeasurement
+from utils.host_box_measurement import BoxMeasurement
+from utils.arguments import initialize_argparser
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-maxd",
-    "--max-dist",
-    type=float,
-    default=2,
-    help="maximum distance between camera and object in space in meters",
-)
-parser.add_argument(
-    "-mins",
-    "--min-box-size",
-    type=float,
-    default=0.003,
-    help="minimum box size in cubic meters",
-)
-args = parser.parse_args()
+_, args = initialize_argparser()
 
 # Higher resolution for example THE_720_P makes better results but drastically lowers FPS
 RESOLUTION = dai.MonoCameraProperties.SensorResolution.THE_400_P
 
-device = dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     calib_data = device.readCalibration()
@@ -82,6 +68,17 @@ with dai.Pipeline(device) as pipeline:
     box_measurement.inputs["color"].setMaxSize(4)
     box_measurement.inputs["depth"].setBlocking(False)
     box_measurement.inputs["depth"].setMaxSize(4)
+    
+    # Configure visualizer to display box measurements
+    visualizer.addTopic("Box Measurement", box_measurement.output, "images")
+    visualizer.addTopic("Dimensions", box_measurement.dimensions_output, "text")
 
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

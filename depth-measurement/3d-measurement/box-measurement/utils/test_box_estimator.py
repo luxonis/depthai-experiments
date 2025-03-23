@@ -3,7 +3,7 @@ import time
 
 import box_estimator
 
-PATH = "./example_pcls/example_4.ply"
+PATH = "../media/example_pcls/example_4.ply"
 
 # Read the pointcloud
 raw_pcl = o3d.io.read_point_cloud(PATH)

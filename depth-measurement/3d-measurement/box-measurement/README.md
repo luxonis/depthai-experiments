@@ -8,11 +8,19 @@ _For a more accurate version of multi-cam box measurement check out the [demo he
 
 ## Installation
 
-```
-python3 -m pip install -r requirements.txt
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
+
+```bash
+pip install -r requirements.txt
 ```
 
-Running the command above also tries to install open3D which is required for this example.
+> Running the command above also tries to install open3D which is required for this example.
 open3D is not supported by all platforms, but is required for pointcloud visualization. Installing open3D on [Python 3.12 is not yet supported](https://stackoverflow.com/questions/62352767/cant-install-open3d-libraries-errorcould-not-find-a-version-that-satisfies-th).
 
 ## Usage
