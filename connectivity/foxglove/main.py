@@ -80,8 +80,17 @@ async def main():
             stereo.initialConfig.censusTransform.enableMeanMode = True
             stereo.initialConfig.costMatching.linearEquationParameters.alpha = 0
             stereo.initialConfig.costMatching.linearEquationParameters.beta = 2
+
+            if not args.no_color:
+                img_align = pipeline.create(dai.node.ImageAlign)
+                color_out.link(img_align.inputAlignTo)
+                stereo.depth.link(img_align.input)
+                depth_out = img_align.outputAligned
+            else:
+                depth_out = stereo.depth
+
             point_cloud = pipeline.create(dai.node.PointCloud)
-            stereo.depth.link(point_cloud.inputDepth)
+            depth_out.link(point_cloud.inputDepth)
             pcl_q = point_cloud.outputPointCloud.createOutputQueue(
                 blocking=False, maxSize=8
             )
