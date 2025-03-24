@@ -230,6 +230,7 @@ async def send_pointcloud(server, pcl_data, sec, nsec, channel):
 def process_pointcloud(pcl_points, downsample_pcl):
     pts = pcl_points
     pts = pts / 1000.0
+    pts[:, 0] = -pts[:, 0]
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pts)
     pcd.remove_non_finite_points()
