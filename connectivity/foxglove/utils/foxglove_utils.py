@@ -1,9 +1,10 @@
-import json
-import cv2
 import base64
+import json
 import time
-import struct
 
+import cv2
+import numpy as np
+import open3d as o3d
 from foxglove_websocket.server import FoxgloveServer, FoxgloveServerListener
 from foxglove_websocket.types import ChannelId
 
@@ -193,12 +194,9 @@ async def send_frame(server, frame, sec, nsec, channel):
     )
 
 
-async def send_pointcloud(server, pcl_data, sec, nsec, channel, seq):
-    buf = bytes()
-    for point in pcl_data:
-        buf += struct.pack("f", float(point[0]))
-        buf += struct.pack("f", float(point[1]))
-        buf += struct.pack("f", float(point[2]))
+async def send_pointcloud(server, pcl_data, sec, nsec, channel):
+    buf = np.asarray(pcl_data)[:, :3].astype(np.float32).tobytes()
+
     # Data needs to be encoded in base64
     data = base64.b64encode(buf).decode("ascii")
 
@@ -209,7 +207,6 @@ async def send_pointcloud(server, pcl_data, sec, nsec, channel, seq):
         json.dumps(
             {
                 "header": {
-                    "seq": seq,
                     "stamp": {"sec": sec, "nsec": nsec},
                     "frame_id": "front",
                 },
@@ -228,3 +225,14 @@ async def send_pointcloud(server, pcl_data, sec, nsec, channel, seq):
             }
         ).encode("utf8"),
     )
+
+
+def process_pointcloud(pcl_points, downsample_pcl):
+    pts = pcl_points
+    pts = pts / 1000.0
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(pts)
+    pcd.remove_non_finite_points()
+    if downsample_pcl:
+        pcd = pcd.voxel_down_sample(voxel_size=0.03)
+    return pcd.points
