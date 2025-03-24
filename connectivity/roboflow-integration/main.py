@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node.parsing_neural_network import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.roboflow_node import RoboflowNode
 from utils.roboflow_uploader import RoboflowUploader
@@ -65,6 +65,7 @@ with dai.Pipeline(device) as pipeline:
 
     while pipeline.isRunning():
         key = visualizer.waitKey(1)
+        pipeline.processTasks()
         if key == ord("q"):
             print("Got q key from the remote connection!")
             break
