@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node.parsing_neural_network import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.snaps_producer import SnapsProducer
 
