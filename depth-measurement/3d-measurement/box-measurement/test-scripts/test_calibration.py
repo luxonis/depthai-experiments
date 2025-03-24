@@ -1,10 +1,24 @@
 import open3d as o3d
 import time
+import os
+import sys
+
+root_dir = os.path.dirname(os.path.abspath(os.path.join(__file__, '..')))
+sys.path.append(root_dir)
 
 from utils.box_estimator import BoxEstimator
 
-PATH_CALIB = "../media/example_pcls/calibration/calibration.ply"
-PATH_BOX = "../media/example_pcls/calibration/box.ply"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+PATH_CALIB = os.path.join(script_dir, "..", "media/example_pcls/calibration/calibration.ply")
+PATH_BOX = os.path.join(script_dir, "..", "media/example_pcls/calibration/box.ply")
+
+if not os.path.exists(PATH_CALIB):
+    print(f"Calibration file not found at {PATH_CALIB}")
+    exit(1)
+if not os.path.exists(PATH_BOX):
+    print(f"Box file not found at {PATH_BOX}")
+    exit(1)
 
 # Read the pointcloud
 calib_pcl = o3d.io.read_point_cloud(PATH_CALIB)

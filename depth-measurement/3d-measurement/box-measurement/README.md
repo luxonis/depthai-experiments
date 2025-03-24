@@ -43,6 +43,7 @@ optional arguments:
 Run the box_estimation and calibration showcases
 
 ```
+cd test-scripts
 python3 test_box_estimator.py
 python3 test_calibration.py
 ```
@@ -54,6 +55,24 @@ python3 test_calibration.py
 | ![example_5_out](https://user-images.githubusercontent.com/47612463/177592137-169290fb-a359-4663-9030-050a661b5196.png) | ![example_5](https://user-images.githubusercontent.com/47612463/177592142-bead0286-8934-4c4f-b14f-12e162ff3330.png) |
 | ![example_3_out](https://user-images.githubusercontent.com/47612463/177592144-faba302c-4bf6-42f2-9d32-7f69a4a0db02.png) | ![example_3](https://user-images.githubusercontent.com/47612463/177592146-02c191ae-fde7-4790-98ea-2da3da5579a3.png) |
 | ![example_1_out](https://user-images.githubusercontent.com/47612463/177592149-045326d6-cc7b-4751-b34e-0fefd951a3d8.png) | ![example_1](https://user-images.githubusercontent.com/47612463/177592151-3cced47a-9a18-4a15-8ff2-1ecbdecaba7b.png) |
+
+### Standalone Mode
+
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
 
 ## Idea of the approach
 
