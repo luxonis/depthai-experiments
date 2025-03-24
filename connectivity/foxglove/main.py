@@ -24,7 +24,7 @@ downsample_pcl = True
 
 
 async def main():
-    device = dai.Device()
+    device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
     with dai.Pipeline(device) as pipeline:
         print("Creating pipeline...")
 
@@ -36,14 +36,18 @@ async def main():
             color_cam = pipeline.create(dai.node.Camera).build(
                 dai.CameraBoardSocket.CAM_A
             )
-            color_out = color_cam.requestOutput(resolution, type=dai.ImgFrame.Type.NV12)
+            color_out = color_cam.requestOutput(
+                resolution, type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+            )
             color_q = color_out.createOutputQueue(blocking=False, maxSize=1)
 
         if args.pointcloud or args.left:
             left_cam = pipeline.create(dai.node.Camera).build(
                 dai.CameraBoardSocket.CAM_B
             )
-            left_out = left_cam.requestOutput(resolution, type=dai.ImgFrame.Type.NV12)
+            left_out = left_cam.requestOutput(
+                resolution, type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+            )
 
             if args.left:
                 left_q = left_out.createOutputQueue(blocking=False, maxSize=1)
@@ -52,7 +56,9 @@ async def main():
             right_cam = pipeline.create(dai.node.Camera).build(
                 dai.CameraBoardSocket.CAM_C
             )
-            right_out = right_cam.requestOutput(resolution, type=dai.ImgFrame.Type.NV12)
+            right_out = right_cam.requestOutput(
+                resolution, type=dai.ImgFrame.Type.NV12, fps=args.fps_limit
+            )
 
             if args.right:
                 right_q = right_out.createOutputQueue(blocking=False, maxSize=1)
