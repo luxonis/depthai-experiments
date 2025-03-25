@@ -59,12 +59,17 @@ def test_experiment_runs(experiment_dir, test_args):
         venv_dir = experiment_dir / ".test-venv"
         env_exe = venv_dir / "bin" / "python3"
 
-        setup_virtual_env(venv_dir, requirements_file, test_args["depthai_version"])
+        setup_virtual_env(
+            venv_dir=venv_dir,
+            requirements_file=requirements_file,
+            depthai_version=test_args["depthai_version"],
+            depthai_nodes_version=test_args["depthai_nodes_version"],
+        )
 
         success = run_experiment(
-            env_exe,
-            experiment_dir,
-            test_args,
+            env_exe=env_exe,
+            experiment_dir=experiment_dir,
+            args=test_args,
         )
         shutil.rmtree(venv_dir, ignore_errors=True)
         assert success, f"Test failed for {experiment_dir}"
@@ -97,7 +102,14 @@ def setup_virtual_display():
         )
 
 
-def setup_virtual_env(venv_dir, requirements_file, depthai_version):
+def setup_virtual_env(
+    venv_dir,
+    requirements_file,
+    depthai_version,
+    depthai_nodes_version,
+    install_dai=True,
+    install_dai_nodes=True,
+):
     """Creates and sets up a virtual environment with the required dependencies."""
     logger.debug(f"Setting up virtual environment for {venv_dir.parent}...")
     EnvBuilder(clear=True, with_pip=True).create(venv_dir)
@@ -106,13 +118,43 @@ def setup_virtual_env(venv_dir, requirements_file, depthai_version):
     # Modify requirements.txt if depthai version is specified
     with open(requirements_file, "r") as f:
         requirements = f.readlines()
-    if depthai_version:
-        requirements = [
-            f"depthai=={depthai_version}\n" if "depthai==" in line else line
-            for line in requirements
-        ]
 
-    with open(venv_dir / "requirements.txt", "w") as f:
+    if depthai_version and install_dai:
+        try:
+            parsed_dai_version = version.parse(depthai_version)
+            requirements = [
+                f"depthai=={depthai_version}\n"
+                if ("depthai" in line and "depthai-nodes" not in line)
+                else line
+                for line in requirements
+            ]
+
+            if parsed_dai_version.is_devrelease:
+                requirements.insert(
+                    0,
+                    "--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/\n",
+                )
+
+        except version.InvalidVersion:
+            # DAI can't be installed directly from GH repo like e.g. depthai-nodes
+            logger.errro("Can't parse DepthAI version")
+
+    if depthai_nodes_version and install_dai_nodes:
+        try:
+            _ = version.parse(depthai_nodes_version)
+            requirements = [
+                f"depthai-nodes=={depthai_nodes_version}\n"
+                if "depthai-nodes" in line
+                else line
+                for line in requirements
+            ]
+        except version.InvalidVersion:
+            requirements = [
+                f"{depthai_nodes_version}\n" if "depthai-nodes" in line else line
+                for line in requirements
+            ]
+
+    with open(venv_dir / "requirements_modified.txt", "w") as f:
         f.writelines(requirements)
 
     # Install dependencies
@@ -124,7 +166,7 @@ def setup_virtual_env(venv_dir, requirements_file, depthai_version):
                 "pip",
                 "install",
                 "-r",
-                str(venv_dir / "requirements.txt"),
+                str(venv_dir / "requirements_modified.txt"),
                 "--timeout=60",
             ],
             check=True,
@@ -136,6 +178,8 @@ def setup_virtual_env(venv_dir, requirements_file, depthai_version):
     except subprocess.CalledProcessError as e:
         shutil.rmtree(venv_dir)
         pytest.fail(f"Failed to install dependencies for {venv_dir.parent}: {e.stderr}")
+    finally:
+        os.remove(venv_dir / "requirements_modified.txt")
 
 
 def run_experiment(env_exe, experiment_dir, args, max_retries=3):
@@ -162,29 +206,49 @@ def run_experiment(env_exe, experiment_dir, args, max_retries=3):
     try:
         for attempt in range(1, max_retries + 1):
             try:
-                # Run the experiment script (main.py)
-                result = subprocess.run(
+                # Start subprocess using Popen
+                process = subprocess.Popen(
                     [env_exe, str(main_script)],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
                     env=env,
-                    timeout=timeout,
                 )
 
-                if result.returncode == 0:
+                # Use timer to wait for timeout
+                try:
+                    stdout, stderr = process.communicate(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    stdout, stderr = process.communicate()
+                    logger.info(
+                        f"{experiment_dir} ran for {timeout} seconds before timeout."
+                    )
+
+                    if args["strict_mode"]:
+                        all_output = stdout.splitlines() + stderr.splitlines()
+                        dai_warnings = filter_warnings(
+                            all_output, args["experiments_metadata"]["known_warnings"]
+                        )
+                        if len(dai_warnings) > 0:
+                            logger.error(f"Unexpected DepthAI warnings: {dai_warnings}")
+                            return False
+
+                    return True  # Success case — ran full duration
+
+                # If it finishes early (not ideal), check exit code and logs
+                if process.returncode == 0:
                     logger.error(
-                        f"{experiment_dir} ran for {timeout} seconds before terminating (exit code 0)."
+                        f"{experiment_dir} ran for less than {timeout} seconds before terminating (exit code 0)."
                     )
                     return False
 
                 if (
-                    "No internet connection available." in result.stderr
-                    or "There was an error while sending a request to the Hub"
-                    in result.stderr
+                    "No internet connection available." in stderr
+                    or "There was an error while sending a request to the Hub" in stderr
                 ):
                     logger.warning(
-                        f"Retryable error in {experiment_dir}: {result.stderr.strip()}"
+                        f"Retryable error in {experiment_dir}: {stderr.strip()}"
                     )
                     if attempt < max_retries:
                         time.sleep(5)
@@ -193,15 +257,13 @@ def run_experiment(env_exe, experiment_dir, args, max_retries=3):
                         logger.error("Max retries reached.")
                         return False
 
-                # Any other error, treat as failure
-                logger.error(f"Error in {experiment_dir}:\n{result.stderr}")
+                # Handle other early errors
+                logger.error(f"Error in {experiment_dir}:\n{stderr}")
                 return False
 
-            except subprocess.TimeoutExpired:
-                logger.info(
-                    f"{experiment_dir} ran for {timeout} seconds before timeout."
-                )
-                return True
+            except Exception as e:
+                logger.error(f"Unexpected exception in {experiment_dir}: {e}")
+                return False
 
         return False
 
@@ -305,6 +367,19 @@ def check_dai(have, failing):
 
     # If no operator is found, assume exact match
     return not (have_version == version.parse(failing_version))
+
+
+def filter_warnings(output, ignored_warnings):
+    """Filter out warnings that are from DAI and shouldn't be ignored"""
+    dai_warnings = [
+        line for line in output if "[warning]" in line or "DeprecationWarning" in line
+    ]
+    unexpected = []
+    for line in dai_warnings:
+        if not any(ignored in line for ignored in ignored_warnings):
+            unexpected.append(line)
+
+    return unexpected
 
 
 def get_installed_packages(env_exe):

@@ -28,6 +28,12 @@ def pytest_addoption(parser):
         help="Specify a depthai version to override requirements.txt.",
     )
     parser.addoption(
+        "--depthai-nodes-version",
+        type=str,
+        default="",
+        help="Specify a depthai-nodes version to override requirements.txt. Can be either released version or branch from GH.",
+    )
+    parser.addoption(
         "--environment-variables",
         type=str,
         help="List of additional environment variables (format: VAR1=VAL1 VAR2=VAL2).",
@@ -51,6 +57,13 @@ def pytest_addoption(parser):
         choices=["3.8", "3.10", "3.12"],
         help="Specify a python version this is tested with (3.8, 3.10 or 3.12). Only used for filtering test examples.",
     )
+    parser.addoption(
+        "--strict-mode",
+        default="no",
+        type=str,
+        choices=["yes", "no"],
+        help="If set to 'yes', tests will fail on DepthAI warnings.",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -59,11 +72,16 @@ def test_args(request):
         "root_dir": request.config.getoption("--root-dir"),
         "timeout": request.config.getoption("--timeout"),
         "depthai_version": request.config.getoption("--depthai-version"),
+        "depthai_nodes_version": request.config.getoption("--depthai-nodes-version"),
         "environment_variables": request.config.getoption("--environment-variables"),
         "virtual_display": request.config.getoption("--virtual-display"),
         "platform": request.config.getoption("--platform"),
         "python_version": request.config.getoption("--python-version"),
+        "strict_mode": True
+        if request.config.getoption("--strict-mode") == "yes"
+        else False,
     }
+
     logger.info(f"Test arguments: {args}")
 
     script_dir = Path(__file__).parent
