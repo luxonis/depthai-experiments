@@ -51,6 +51,7 @@ with dai.Pipeline(device) as pipeline:
     if pipeline.getDefaultDevice().getPlatform() == dai.Platform.RVC4:
         interleaved_manip = pipeline.create(dai.node.ImageManipV2)
         interleaved_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+        tile_manager.out.link(interleaved_manip.inputImage)
         nn_input = interleaved_manip.out
 
     nn = pipeline.create(ParsingNeuralNetwork).build(nn_input, nn_archive)
