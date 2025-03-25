@@ -159,8 +159,8 @@
     },
     "known_warnings": [
         "The issued warnings are orientative, based on optimal settings for a single network, if multiple networks are running in parallel the optimal settings may vary",
-        "[Script",
-        "[warning] Did not get the input image sizes from the imageIn input. Defaulting to 416 x 416'"
+        "Did not get the input image sizes from the imageIn input. Defaulting to 416 x 416",
+        "Network compiled for 8 shaves, maximum available"
     ],
     "experimental_subset": [
         "neural-networks/counting/crowdcounting",

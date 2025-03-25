@@ -371,7 +371,9 @@ def check_dai(have, failing):
 
 def filter_warnings(output, ignored_warnings):
     """Filter out warnings that are from DAI and shouldn't be ignored"""
-    dai_warnings = [line for line in output if "[warning]" in line]
+    dai_warnings = [
+        line for line in output if "[warning]" in line or "DeprecationWarning" in line
+    ]
     unexpected = []
     for line in dai_warnings:
         if not any(ignored in line for ignored in ignored_warnings):
