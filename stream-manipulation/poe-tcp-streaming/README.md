@@ -1,4 +1,4 @@
-# Generic Example
+# PoE TCP Streaming
 
 This example demonstrates, how to stream video from the device to the host computer using TCP protocol. It establishes bidirectional communication between the device and the host.
 
