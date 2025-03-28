@@ -65,27 +65,10 @@ async def main():
 
         if args.pointcloud:
             stereo = pipeline.create(dai.node.StereoDepth).build(
-                left=left_out, right=right_out
+                left=left_out,
+                right=right_out,
+                presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
             )
-            stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-            stereo.setLeftRightCheck(True)
-            stereo.setExtendedDisparity(False)
-            stereo.setSubpixel(True)
-            stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout
-
-            # In-place post-processing configuration for a stereo depth node
-            # The best combo of filters is application specific. Hard to say there is a one size fits all.
-            # They also are not free. Even though they happen on device, you pay a penalty in fps.
-            stereo.initialConfig.postProcessing.speckleFilter.enable = True
-            stereo.initialConfig.postProcessing.speckleFilter.speckleRange = 60
-            stereo.initialConfig.postProcessing.temporalFilter.enable = True
-            stereo.initialConfig.postProcessing.spatialFilter.holeFillingRadius = 2
-            stereo.initialConfig.postProcessing.spatialFilter.numIterations = 1
-            stereo.initialConfig.postProcessing.thresholdFilter.minRange = 700  # mm
-            stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 4000  # mm
-            stereo.initialConfig.censusTransform.enableMeanMode = True
-            stereo.initialConfig.costMatching.linearEquationParameters.alpha = 0
-            stereo.initialConfig.costMatching.linearEquationParameters.beta = 2
 
             if not args.no_color:
                 img_align = pipeline.create(dai.node.ImageAlign)
