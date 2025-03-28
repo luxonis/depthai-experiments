@@ -26,7 +26,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     model_description = dai.NNModelDescription(model)
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
     model_description.platform = platform
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(

@@ -14,7 +14,7 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
     model_description = dai.NNModelDescription(
         "luxonis/yolov6-nano:r2-coco-512x288", platform=platform
     )
