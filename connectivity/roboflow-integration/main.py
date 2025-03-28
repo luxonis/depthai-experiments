@@ -34,9 +34,7 @@ with dai.Pipeline(device) as pipeline:
             args.fps_limit = None  # only want to set it once
         replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
 
-    input_node = (
-        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
-    )
+    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
 
     nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
         input_node, nn_archive, fps=args.fps_limit
