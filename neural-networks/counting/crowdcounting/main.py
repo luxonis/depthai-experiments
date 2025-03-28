@@ -1,7 +1,7 @@
 from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
-from depthai_nodes.node import OverlayFrames
+from depthai_nodes.node import ImgFrameOverlay
 from depthai_nodes.node import ApplyColormap
 
 from utils.arguments import initialize_argparser
@@ -51,13 +51,13 @@ with dai.Pipeline(device) as pipeline:
     density_map_transform_node = pipeline.create(ApplyColormap).build(nn.out)
 
     # Overlay Frames Node
-    overlay_frames = pipeline.create(OverlayFrames).build(
+    overlay_frames = pipeline.create(ImgFrameOverlay).build(
         nn.passthrough,
         density_map_transform_node.out,
     )
 
     # Visualizer
-    visualizer.addTopic("VideoOverlay", overlay_frames.output)
+    visualizer.addTopic("VideoOverlay", overlay_frames.out)
     visualizer.addTopic("Count", crowd_counter_node.output)
 
     print("Pipeline created.")
