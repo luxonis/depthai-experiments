@@ -17,7 +17,7 @@ if not device.setIrLaserDotProjectorIntensity(1):
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    platform = pipeline.getDefaultDevice().getPlatform()
+    platform = device.getPlatform()
     FPS = 10 if platform == dai.Platform.RVC2 else 30
 
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -30,7 +30,7 @@ with dai.Pipeline(device) as pipeline:
     stereo = pipeline.create(dai.node.StereoDepth).build(
         left=left.requestOutput(OUTPUT_SHAPE, type=dai.ImgFrame.Type.NV12, fps=FPS),
         right=right.requestOutput(OUTPUT_SHAPE, type=dai.ImgFrame.Type.NV12, fps=FPS),
-        presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
     stereo.setLeftRightCheck(True)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)

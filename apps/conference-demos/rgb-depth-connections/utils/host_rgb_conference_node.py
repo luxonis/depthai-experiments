@@ -1,3 +1,4 @@
+from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
@@ -9,7 +10,9 @@ JET_CUSTOM = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 JET_CUSTOM = JET_CUSTOM[::-1]
 JET_CUSTOM[0] = [0, 0, 0]
 
-LOGO = cv2.imread("./media/logo.jpeg")
+logo_path = Path(__file__).parent.parent / "media" / "logo.jpeg"
+
+LOGO = cv2.imread(str(logo_path))
 LOGO = cv2.resize(LOGO, (250, 67))
 
 # Tiny yolo v3/4 label texts
@@ -152,52 +155,11 @@ class CombineOutputs(dai.node.HostNode):
         resized_frame = cv2.resize(combined_frame, (1920, 1080))
         height, width = resized_frame.shape[:2]
 
-        adjusted_detections = dai.SpatialImgDetections()
-        adjusted_detections.detections = []
-
-        # for detection in detections:
-        #     # Denormalize bounding box
-        #     detection.xmin = 1 - detection.xmin
-        #     detection.xmax = 1 - detection.xmax
-        #     x1 = int(detection.xmin * width)
-        #     x2 = int(detection.xmax * width)
-        #     y1 = int(detection.ymin * height)
-        #     y2 = int(detection.ymax * height)
-        #
-        #     try:
-        #         label = labelMap[detection.label]
-        #     except KeyError:
-        #         label = detection.label
-        #
-        #     self.text.putText(resized_frame, str(label), (x2 + 10, y1 + 20))
-        #     self.text.putText(
-        #         resized_frame,
-        #         "{:.0f}%".format(detection.confidence * 100),
-        #         (x2 + 10, y1 + 40),
-        #     )
-        #     self.text.rectangle(resized_frame, (x1, y1), (x2, y2), detection.label)
-        #     if detection.spatialCoordinates.z != 0:
-        #         self.text.putText(
-        #             resized_frame,
-        #             "X: {:.2f} m".format(detection.spatialCoordinates.x / 1000),
-        #             (x2 + 10, y1 + 60),
-        #         )
-        #         self.text.putText(
-        #             resized_frame,
-        #             "Y: {:.2f} m".format(detection.spatialCoordinates.y / 1000),
-        #             (x2 + 10, y1 + 80),
-        #         )
-        #         self.text.putText(
-        #             resized_frame,
-        #             "Z: {:.2f} m".format(detection.spatialCoordinates.z / 1000),
-        #             (x2 + 10, y1 + 100),
-        #         )
-
         annotation_helper = AnnotationHelper()
         for detection in detections:
             # Use normalized coordinates adjusted for the flipped image
-            left = detection.xmax  # After flip, xmax is the left edge
-            right = detection.xmin  # After flip, xmin is the right edge
+            left = 1 - detection.xmax  # After flip, xmax is the left edge
+            right = 1 - detection.xmin  # After flip, xmin is the right edge
             top = detection.ymin
             bottom = detection.ymax
             # Draw bounding box (green outline)
@@ -207,7 +169,6 @@ class CombineOutputs(dai.node.HostNode):
                 outline_color=(0, 255, 0, 255),  # RGBA: green, fully opaque
                 thickness=2
             )
-            # Optionally add label and confidence as text
             try:
                 label = labelMap[detection.label]
             except KeyError:
@@ -220,13 +181,6 @@ class CombineOutputs(dai.node.HostNode):
                 color=(255, 255, 255, 255),  # White text
                 size=32
             )
-
-        # Build and send the ImgAnnotations message
-        annotations_msg = annotation_helper.build(
-            timestamp=color_frame.getTimestamp(),
-            sequence_num=color_frame.getSequenceNum()
-        )
-        self.detections_output.send(annotations_msg)
 
         self.title.putText(resized_frame, "DEPTH", (30, 50))
         self.title.putText(resized_frame, "RGB", (width // 2 + 30, 50))
@@ -251,4 +205,10 @@ class CombineOutputs(dai.node.HostNode):
         output_frame.setCvFrame(
             resized_frame, dai.ImgFrame.Type.BGR888i
         )  # TODO: first resize then add birdframe and logo
+
+        annotations_msg = annotation_helper.build(
+            timestamp=output_frame.getTimestamp(),
+            sequence_num=output_frame.getSequenceNum()
+        )
+        self.detections_output.send(annotations_msg)
         self.output.send(output_frame)
