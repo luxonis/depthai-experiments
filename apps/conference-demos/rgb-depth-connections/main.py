@@ -12,7 +12,9 @@ device = dai.Device()
 OUTPUT_SHAPE = (512, 288)
 
 if not device.setIrLaserDotProjectorIntensity(1):
-    print("Failed to set IR laser projector intensity. Maybe your device does not support this feature.")
+    print(
+        "Failed to set IR laser projector intensity. Maybe your device does not support this feature."
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")

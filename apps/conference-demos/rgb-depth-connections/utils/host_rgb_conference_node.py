@@ -167,7 +167,7 @@ class CombineOutputs(dai.node.HostNode):
                 (left, top),
                 (right, bottom),
                 outline_color=(0, 255, 0, 255),  # RGBA: green, fully opaque
-                thickness=2
+                thickness=2,
             )
             try:
                 label = labelMap[detection.label]
@@ -179,7 +179,7 @@ class CombineOutputs(dai.node.HostNode):
                 f"{label} {detection.confidence:.2f}",
                 (text_x, text_y),
                 color=(255, 255, 255, 255),  # White text
-                size=32
+                size=32,
             )
 
         self.title.putText(resized_frame, "DEPTH", (30, 50))
@@ -208,7 +208,7 @@ class CombineOutputs(dai.node.HostNode):
 
         annotations_msg = annotation_helper.build(
             timestamp=output_frame.getTimestamp(),
-            sequence_num=output_frame.getSequenceNum()
+            sequence_num=output_frame.getSequenceNum(),
         )
         self.detections_output.send(annotations_msg)
         self.output.send(output_frame)

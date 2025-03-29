@@ -14,13 +14,17 @@ STEREO_RESOLUTION = (800, 600)
 NN_DIMENSIONS = (512, 288)
 
 if not device.setIrLaserDotProjectorIntensity(1):
-    print("Failed to set IR laser projector intensity. Maybe your device does not support this feature.")
+    print(
+        "Failed to set IR laser projector intensity. Maybe your device does not support this feature."
+    )
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    model_description = dai.NNModelDescription(f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}")
+    model_description = dai.NNModelDescription(
+        f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}"
+    )
     platform = pipeline.getDefaultDevice().getPlatform()
     platform_str = pipeline.getDefaultDevice().getPlatformAsString()
-    model_description.platform = platform_str 
+    model_description.platform = platform_str
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(
             model_description,
@@ -45,7 +49,7 @@ with dai.Pipeline(device) as pipeline:
     h264Encoder = pipeline.create(dai.node.VideoEncoder)
     encoding = (
         dai.VideoEncoderProperties.Profile.MJPEG
-        if platform == dai.Platform.RVC2 
+        if platform == dai.Platform.RVC2
         else dai.VideoEncoderProperties.Profile.H264_MAIN
     )
     h264Encoder.setDefaultProfilePreset(30, encoding)
