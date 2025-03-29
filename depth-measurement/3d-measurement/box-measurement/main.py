@@ -33,7 +33,7 @@ with dai.Pipeline(device) as pipeline:
     stereo = pipeline.create(dai.node.StereoDepth).build(
         left=left_output,
         right=right_output,
-        presetMode=dai.node.StereoDepth.PresetMode.HIGH_ACCURACY,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
     stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
     stereo.setLeftRightCheck(True)

@@ -1,10 +1,15 @@
+from pathlib import Path
 import depthai as dai
 from pathlib import Path
 import numpy as np
 
-from host_pointcloud_display import PointcloudDisplay
+from depthai_nodes.node import ParsingNeuralNetwork 
+from utils.host_pointcloud_display import PointcloudDisplay
+from utils.arguments import initialize_argparser
 
-depth_shape = (640, 400)
+_, args = initialize_argparser()
+
+DEPTH_SHAPE = (640, 400)
 
 
 def create_xyz(width, height, camera_matrix):
@@ -33,27 +38,36 @@ def create_xyz(width, height, camera_matrix):
     return np.pad(xyz, ((0, 0), (0, 0), (0, 1)), "constant", constant_values=1.0)
 
 
-device = dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setIspScale(1, 3)
+    platform = device.getPlatform()
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cam_out = cam.requestOutput(
+        DEPTH_SHAPE,
+        type=dai.ImgFrame.Type.BGR888i if platform == dai.Platform.RVC4 else dai.ImgFrame.Type.BGR888p,
+    )
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    left_out = left.requestOutput(DEPTH_SHAPE)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+    right_out = right.requestOutput(DEPTH_SHAPE)
+
+    stereo = pipeline.create(dai.node.StereoDepth).build(
+        left=left_out,
+        right=right_out,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
+    )
     stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(True)
     stereo.setRectifyEdgeFillColor(0)  # Black, to better see the cutout
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+    stereo.setOutputSize(DEPTH_SHAPE[0], DEPTH_SHAPE[1])
 
     """ In-place post-processing configuration for a stereo depth node
     The best combo of filters is application specific. Hard to say there is a one size fits all.
@@ -69,29 +83,57 @@ with dai.Pipeline(device) as pipeline:
     stereo.initialConfig.costMatching.linearEquationParameters.alpha = 0
     stereo.initialConfig.costMatching.linearEquationParameters.beta = 2
 
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath(Path("model/pointcloud_640x400.blob").resolve().absolute())
-    stereo.depth.link(nn.inputs["depth"])
-    # Only send xyz data once, and always reuse the message
-    nn.inputs["xyz"].setReusePreviousMessage(True)
-
-    # Get xyz data and send it to the device - to the pointcloud neural network
     calibration = device.readCalibration()
+    nn_blob_path = Path(__file__).parent / "model/pointcloud_640x400.blob"
+    nn_blob_path = nn_blob_path.resolve().absolute()
+    if not nn_blob_path.exists():
+        raise FileNotFoundError(f"Blob file not found at {nn_blob_path}")
+
+    try:
+        nn_archive = dai.NNArchive(str(nn_blob_path))
+        
+        parser = pipeline.create(ParsingNeuralNetwork).build(
+            input=stereo.depth,
+            nn_source=nn_archive
+        )
+    except Exception as e:
+        print(f"Failed to load blob file: {e}")
+        print("Possible solutions:")
+        print("1. Verify the blob file is not corrupted")
+        print("2. Recompile the model with the latest depthai version")
+        print("3. Check the blob was compiled for the correct MyriadX version")
+        raise
+    
+    # Only send xyz data once, and always reuse the message
+    parser.inputs["xyz"].setReusePreviousMessage(True)
+    # Get xyz data and send it to the device - to the pointcloud neural network
     M_right = calibration.getCameraIntrinsics(
-        dai.CameraBoardSocket.CAM_C, dai.Size2f(depth_shape[0], depth_shape[1])
+        dai.CameraBoardSocket.CAM_C, dai.Size2f(DEPTH_SHAPE[0], DEPTH_SHAPE[1])
     )
-    xyz = create_xyz(depth_shape[0], depth_shape[1], np.array(M_right))
+    xyz = create_xyz(DEPTH_SHAPE[0], DEPTH_SHAPE[1], np.array(M_right))
     buffer = dai.NNData()
     buffer.addTensor("0", xyz)
-    xyz_queue = nn.inputs["xyz"].createInputQueue()
+    xyz_queue = parser.inputs["xyz"].createInputQueue()
     xyz_queue.send(buffer)
 
     display = pipeline.create(PointcloudDisplay).build(
-        preview=cam.isp, pointcloud=nn.out, depth_shape=depth_shape
+        preview=cam_out,
+        pointcloud=parser.out,
+        depth_shape=DEPTH_SHAPE,
     )
     display.inputs["preview"].setBlocking(False)
     display.inputs["pointcloud"].setBlocking(False)
     display.inputs["pointcloud"].setMaxSize(8)
 
+    visualizer.addTopic("Main Stream", display.passthrough, "images")
+    # visualizer.addTopic("Pointcloud", display.annotation_output, "images")
+
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
