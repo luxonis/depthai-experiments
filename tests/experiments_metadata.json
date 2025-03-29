@@ -62,6 +62,12 @@
                 "rvc4"
             ]
         },
+        "neural-networks/object-tracking/people-tracker": {
+            "reason": "ObjectTracker node not available on RVC4",
+            "platform": [
+                "rvc4"
+            ]
+        },
         "neural-networks/counting/cumulative-object-counting": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
             "platform": [
@@ -151,6 +157,11 @@
             ]
         }
     },
+    "known_warnings": [
+        "The issued warnings are orientative, based on optimal settings for a single network, if multiple networks are running in parallel the optimal settings may vary",
+        "Did not get the input image sizes from the imageIn input. Defaulting to 416 x 416",
+        "Network compiled for 8 shaves, maximum available"
+    ],
     "experimental_subset": [
         "neural-networks/counting/crowdcounting",
         "neural-networks/counting/people-counter",

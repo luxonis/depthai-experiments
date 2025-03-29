@@ -6,6 +6,9 @@ on:
       depthai_version:
         description: 'Version of DepthAI to install for the test run. If specified the version will override version specified in requirements.txt'
         required: false
+      depthai_nodes_version:
+        description: 'Version of depthai-nodes to install for the test run. If specified the version will override version specified in requirements.txt'
+        required: false
       python_version:
         description: 'Python version to use. By default 3.8, 3.10 and 3.12 are used but you can use only one by passing only `3.8`, `3.10` or `3.12`.'
         default: "all"
@@ -26,6 +29,14 @@ on:
       root_dir:
         decription: 'Root directory of the experiments you want to test. Defaults to all experiments.'
         default: "."
+        required: false
+      strict_mode:
+        description: "If set to 'yes', tests will fail on DepthAI warnings."
+        type: choice
+        options:
+          - "yes"
+          - "no"
+        default: "no"
         required: false
 
 jobs:
@@ -96,11 +107,13 @@ jobs:
           ENV_VARS="\
             --env PLATFORM=${{ matrix.platform }} \
             --env DAI_VERSION=${{ github.event.inputs.depthai_version }} \
+            --env DAI_NODES_VERSION=${{ github.event.inputs.depthai_nodes_version }} \
             --env PYTHON_VERSION_ENV=${{ matrix.python-version }} \
             --env LOG_LEVEL=${{ github.event.inputs.log_level }} \
-            --env ROOT_DIR=${{ github.event.inputs.root_dir }}"
+            --env ROOT_DIR=${{ github.event.inputs.root_dir }} \
+            --env STRICT_MODE=${{ github.event.inputs.strict_mode }} "
 
-          hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
+          exec hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
               --dockerfile ./tests/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
               --docker-run-args "$ENV_VARS"
