@@ -1,47 +1,55 @@
 import depthai as dai
-import asyncio
 import rerun as rr
+from utils.arguments import initialize_argparser
+from utils.host_rerun import Rerun
 
-from host_rerun import Rerun
+_, args = initialize_argparser()
 
 
-async def main():
-    device = dai.Device()
+resolution = (640, 400)
+
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
+
+def main():
     with dai.Pipeline(device) as pipeline:
         print("Creating pipeline...")
-        device.setIrLaserDotProjectorIntensity(1)
 
         rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-        right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-
-        stereo = pipeline.create(dai.node.StereoDepth).build(
-            left=left.requestOutput(size=(640, 400)),
-            right=right.requestOutput(size=(640, 400)),
+        rgb_out = rgb.requestOutput(
+            resolution, fps=args.fps_limit, type=dai.ImgFrame.Type.NV12
         )
-        stereo.setOutputSize(1920, 1080)
-        stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-        stereo.setLeftRightCheck(True)
-        stereo.setExtendedDisparity(False)
-        stereo.setSubpixel(True)
 
-        stereo.initialConfig.setSubpixelFractionalBits(5)
-        stereo.initialConfig.postProcessing.speckleFilter.enable = False
-        stereo.initialConfig.postProcessing.speckleFilter.speckleRange = 50
-        stereo.initialConfig.postProcessing.temporalFilter.enable = True
-        stereo.initialConfig.postProcessing.spatialFilter.enable = True
-        stereo.initialConfig.postProcessing.spatialFilter.holeFillingRadius = 2
-        stereo.initialConfig.postProcessing.spatialFilter.numIterations = 1
-        stereo.initialConfig.postProcessing.thresholdFilter.minRange = 400
-        stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 200000
-        stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
+        left_out = None
+        right_out = None
+        pcl_out = None
+        if args.left or args.pointcloud:
+            left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+            left_out = left.requestOutput(resolution, fps=args.fps_limit)
+        if args.right or args.pointcloud:
+            right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+            right_out = right.requestOutput(resolution, fps=args.fps_limit)
 
-        pcl = pipeline.create(dai.node.PointCloud)
-        stereo.depth.link(pcl.inputDepth)
+        if args.pointcloud:
+            stereo = pipeline.create(dai.node.StereoDepth).build(
+                left=left_out,
+                right=right_out,
+                presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
+            )
+
+            img_align = pipeline.create(dai.node.ImageAlign)
+            rgb_out.link(img_align.inputAlignTo)
+            stereo.depth.link(img_align.input)
+
+            pcl = pipeline.create(dai.node.PointCloud)
+            img_align.outputAligned.link(pcl.inputDepth)
+            pcl_out = pcl.outputPointCloud
 
         pipeline.create(Rerun).build(
-            color=rgb.requestOutput((1920, 1080)), pcl=pcl.outputPointCloud
+            color=rgb_out,
+            left=left_out if args.left else None,
+            right=right_out if args.right else None,
+            pointcloud=pcl_out if args.pointcloud else None,
         )
 
         print("Pipeline created.")
@@ -50,5 +58,9 @@ async def main():
 
 if __name__ == "__main__":
     rr.init("Rerun")
-    rr.spawn(memory_limit="2GB")
-    asyncio.run(main())
+
+    if args.serve is not None:
+        rr.serve(open_browser=False, web_port=args.serve, server_memory_limit="2GB")
+    else:
+        rr.spawn(memory_limit="2GB")
+    main()

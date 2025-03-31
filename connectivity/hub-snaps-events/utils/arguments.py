@@ -17,8 +17,8 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-        "-api",
-        "--api_key",
+        "-key",
+        "--api-key",
         help="HubAI API key of your team. Not required if 'DEPTHAI_HUB_API_KEY' environment variable is set.",
         required=False,
         default="",

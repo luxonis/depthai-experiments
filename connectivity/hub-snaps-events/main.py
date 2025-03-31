@@ -1,9 +1,10 @@
-import depthai as dai
+import os
 from pathlib import Path
-from depthai_nodes.node import ParsingNeuralNetwork
+
+import depthai as dai
+from depthai_nodes.node.parsing_neural_network import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.snaps_producer import SnapsProducer
-import os
 
 _, args = initialize_argparser()
 
@@ -27,29 +28,28 @@ with dai.Pipeline(device) as pipeline:
     model_description = dai.NNModelDescription(model)
     platform = device.getPlatformAsString()
     model_description.platform = platform
-    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
-    label_map = nn_archive.getConfigV1().model.heads[0].metadata.classes
+    nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(
+            model_description,
+            apiKey=args.api_key,
+        )
+    )
 
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
         replay.setLoop(True)
-        imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            nn_archive.getInputWidth(), nn_archive.getInputHeight()
-        )
-        imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-        if platform == "RVC4":
-            imageManip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
-        replay.out.link(imageManip.inputImage)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
 
-    input_node = (
-        imageManip.out if args.media_path else pipeline.create(dai.node.Camera).build()
-    )
+    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
 
     nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
         input_node, nn_archive, fps=args.fps_limit
@@ -59,7 +59,9 @@ with dai.Pipeline(device) as pipeline:
     visualizer.addTopic("Visualizations", nn_with_parser.out, "images")
 
     snaps_producer = pipeline.create(SnapsProducer).build(
-        nn_with_parser.passthrough, nn_with_parser.out, label_map=label_map
+        nn_with_parser.passthrough,
+        nn_with_parser.out,
+        label_map=nn_archive.getConfigV1().model.heads[0].metadata.classes,
     )
 
     print("Pipeline created.")
