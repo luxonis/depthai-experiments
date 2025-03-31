@@ -1,4 +1,4 @@
-identifier = "com.luxonis.host-rgb-conference-node"
+identifier = "com.luxonis.rgb-depth-connections"
 app_version = "1.0.0"
 
 prepare_container = [
