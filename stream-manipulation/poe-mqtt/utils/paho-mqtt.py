@@ -16,18 +16,20 @@
 *******************************************************************
 """
 
-import socket
-import select
-import os
-import errno
-import collections
-import time
-import threading
-import string
-import logging
-import hashlib
 import base64
+import collections
+import errno
+import hashlib
+import logging
+import os
+import select
+import socket
+import string
 import struct
+import threading
+import time
+from urllib import parse as urllib_dot_parse
+from urllib import request as urllib_dot_request
 
 
 class MQTTException(Exception):
@@ -1002,15 +1004,6 @@ try:
 except ImportError:
     pass
 
-# try:
-#     # Python 3
-#     from urllib import parse as urllib_dot_parse
-#     from urllib import request as urllib_dot_request
-# except ImportError:
-#     # Python 2
-#     import urllib as urllib_dot_request
-#     import urlparse as urllib_dot_parse  # type: ignore
-
 
 try:
     # Use monotonic clock if available
@@ -1028,11 +1021,6 @@ else:
 
 EAGAIN = errno.EAGAIN
 
-# Python 2.7 does not have BlockingIOError.  Fall back to IOError
-try:
-    BlockingIOError
-except NameError:
-    BlockingIOError = IOError
 
 MQTTv31 = 3
 MQTTv311 = 4
