@@ -22,8 +22,8 @@ with dai.Pipeline(device) as pipeline:
     model_description = dai.NNModelDescription(
         f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}"
     )
-    platform = pipeline.getDefaultDevice().getPlatform()
-    platform_str = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatform()
+    platform_str = device.getPlatformAsString()
     model_description.platform = platform_str
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(

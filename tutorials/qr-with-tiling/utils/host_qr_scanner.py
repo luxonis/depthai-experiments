@@ -3,6 +3,7 @@ from datetime import timedelta
 import depthai as dai
 import numpy as np
 from pyzbar.pyzbar import decode
+
 from utils.qr_detections import QRDetection, QRDetections
 
 DECODE = True
