@@ -15,7 +15,7 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
 
     model_description = dai.NNModelDescription(
         "luxonis/scrfd-person-detection:25g-640x640", platform=platform

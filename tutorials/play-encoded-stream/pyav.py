@@ -21,7 +21,7 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
 
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
