@@ -14,6 +14,10 @@ pip install -r requirements.txt
 
 Create a Roboflow account, workspace and dataset and get your API key from [Roboflow](https://app.roboflow.com/) -> `settings` -> `API Keys` -> Copy private API key.
 
+## Demo
+
+https://github.com/user-attachments/assets/a07070a8-6267-4348-8342-ddf77c9ddd8b
+
 ## Usage
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode). `STANDALONE` mode is only supported on RVC4. The experiment will show a preview of the camera input and will upload detections to Roboflow dataset when `space` key is pressed. You can also set `--auto-interval` to automatically upload detections every `<SECONDS>` seconds.
