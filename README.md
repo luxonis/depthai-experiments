@@ -9,7 +9,7 @@ Click on any category below to explore detailed examples for that specific domai
 
 ## Categories
 
-### [📱 Apps](apps/) (🚧 In progress)
+### [📱 Apps](apps/) (✅ Complete)
 
 Ready-to-use applications built with DepthAI, demonstrating real-world use cases and implementations. Here are also demos that we present at different conferences showing advanced use cases.
 
