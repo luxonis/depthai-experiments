@@ -12,6 +12,6 @@ This section contains step-by-step guides and educational content to help you ge
 | [full-fov-nn](full-fov-nn/)                 | ✅   | ✅                | 🚧                | [gen2-full-fov-nn](https://github.com/luxonis/depthai-experiments/tree/master/gen2-full-fov-nn)                 | Example showing neural inference on full camera FOV   |
 | [multiple-devices](multiple-devices/)       | ✅   | ✅                | 🚧                | [gen2-multiple-devices](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices)       | Tutorial on working with multiple OAK devices         |
 | [play-encoded-stream](play-encoded-stream/) | ✅   | ✅                | 🚧                | [gen2-play-encoded-stream](https://github.com/luxonis/depthai-experiments/tree/master/gen2-play-encoded-stream) | Guide on playing back encoded video streams           |
-| [qr-with-tiling](qr-with-tiling/)           | ✅   | 🚧                | 🚧                |                                                                                                                 | Tutorial on QR code detection using camera tiling     |
+| [qr-with-tiling](qr-with-tiling/)           | ✅   | ✅                | ✅                |                                                                                                                 | Tutorial on QR code detection using camera tiling     |
 
 ✅: available; ❌: not available; 🚧: work in progress
