@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
@@ -15,30 +17,12 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 with dai.Pipeline(device) as pipeline:
     platform = device.getPlatformAsString()
 
+    connected_cameras = device.getConnectedCameras()
+
     cam_rgb = pipeline.create(dai.node.Camera).build(
         boardSocket=dai.CameraBoardSocket.CAM_A
     )
-    cam_left = pipeline.create(dai.node.Camera).build(
-        boardSocket=dai.CameraBoardSocket.CAM_B
-    )
-    cam_right = pipeline.create(dai.node.Camera).build(
-        boardSocket=dai.CameraBoardSocket.CAM_C
-    )
 
-    cam_left_out = cam_left.requestOutput(
-        size=NN_CONCAT_SIZE,
-        type=dai.ImgFrame.Type.BGR888i
-        if platform == "RVC4"
-        else dai.ImgFrame.Type.BGR888p,
-        fps=args.fps_limit,
-    )
-    cam_right_out = cam_right.requestOutput(
-        size=NN_CONCAT_SIZE,
-        type=dai.ImgFrame.Type.BGR888i
-        if platform == "RVC4"
-        else dai.ImgFrame.Type.BGR888p,
-        fps=args.fps_limit,
-    )
     cam_rgb_out = cam_rgb.requestOutput(
         size=NN_CONCAT_SIZE,
         type=dai.ImgFrame.Type.BGR888i
@@ -54,27 +38,61 @@ with dai.Pipeline(device) as pipeline:
         fps=args.fps_limit,
     )
 
+    if (
+        dai.CameraBoardSocket.CAM_B in connected_cameras
+        and dai.CameraBoardSocket.CAM_C in connected_cameras
+    ):
+        cam_left = pipeline.create(dai.node.Camera).build(
+            boardSocket=dai.CameraBoardSocket.CAM_B
+        )
+        cam_right = pipeline.create(dai.node.Camera).build(
+            boardSocket=dai.CameraBoardSocket.CAM_C
+        )
+
+        cam_left_out = cam_left.requestOutput(
+            size=NN_CONCAT_SIZE,
+            type=dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p,
+            fps=args.fps_limit,
+        )
+        cam_right_out = cam_right.requestOutput(
+            size=NN_CONCAT_SIZE,
+            type=dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p,
+            fps=args.fps_limit,
+        )
+
+        # CONCAT
+        concat_nn_archive = dai.NNArchive(
+            archivePath=str(
+                Path(__file__).parent / f"models/concat.{platform.lower()}.tar.xz"
+            )
+        )
+        nn_concat = pipeline.create(ParsingNeuralNetwork)
+        nn_concat.setNNArchive(concat_nn_archive)
+        cam_rgb_out.link(nn_concat.inputs["img1"])
+        cam_left_out.link(nn_concat.inputs["img2"])
+        cam_right_out.link(nn_concat.inputs["img3"])
+
+        visualizer.addTopic("Concat", nn_concat.out, "images")
+
     # BLUR
     blur_nn_archive = dai.NNArchive(
-        archivePath=f"models/blur.{platform.lower()}.tar.xz"
+        archivePath=str(
+            Path(__file__).parent / f"models/blur.{platform.lower()}.tar.xz"
+        )
     )
     nn_blur = pipeline.create(ParsingNeuralNetwork).build(cam_rgb_out, blur_nn_archive)
 
     # EDGE
     edge_nn_archive = dai.NNArchive(
-        archivePath=f"models/edge.{platform.lower()}.tar.xz"
+        archivePath=str(
+            Path(__file__).parent / f"models/edge.{platform.lower()}.tar.xz"
+        )
     )
     nn_edge = pipeline.create(ParsingNeuralNetwork).build(cam_rgb_out, edge_nn_archive)
-
-    # CONCAT
-    concat_nn_archive = dai.NNArchive(
-        archivePath=f"models/concat.{platform.lower()}.tar.xz"
-    )
-    nn_concat = pipeline.create(ParsingNeuralNetwork)
-    nn_concat.setNNArchive(concat_nn_archive)
-    cam_rgb_out.link(nn_concat.inputs["img1"])
-    cam_left_out.link(nn_concat.inputs["img2"])
-    cam_right_out.link(nn_concat.inputs["img3"])
 
     script = pipeline.create(dai.node.Script)
     script.setScript("""
@@ -89,7 +107,9 @@ with dai.Pipeline(device) as pipeline:
 
     # DIFF
     diff_nn_archive = dai.NNArchive(
-        archivePath=f"models/diff.{platform.lower()}.tar.xz"
+        archivePath=str(
+            Path(__file__).parent / f"models/diff.{platform.lower()}.tar.xz"
+        )
     )
     nn_diff = pipeline.create(dai.node.NeuralNetwork)
     nn_diff.setNNArchive(diff_nn_archive)
@@ -99,7 +119,6 @@ with dai.Pipeline(device) as pipeline:
 
     visualizer.addTopic("Blur", nn_blur.out, "images")
     visualizer.addTopic("Edge", nn_edge.out, "images")
-    visualizer.addTopic("Concat", nn_concat.out, "images")
     visualizer.addTopic("Diff", diff_color.out, "images")
 
     print("Pipeline created.")
