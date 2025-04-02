@@ -2,6 +2,10 @@
 
 This experiment demonstrates how to stream frames via RTSP server using H265 stream.
 
+## Demo
+
+![rtsp_stream](media/rtsp_stream.gif)
+
 ## Installation
 
 ### Ubuntu 20.04
