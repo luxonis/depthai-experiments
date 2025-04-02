@@ -2,7 +2,6 @@ import argparse
 import cv2
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, ApplyColormap
-from utils.host_depth_color_transform import DepthColorTransform
 
 device = dai.Device()
 platform = device.getPlatform()
