@@ -7,6 +7,7 @@ This example publishes a message containing the average number of objects detect
 By default, the messages are published to a public broker `test.mosquitto.org` on port `1883`. They are published to the topic `test_topic/detections`. This can be changed with available CLI arguments (see Usage section below).
 
 ## Demo
+
 ![mqtt-client](media/mqtt_client.gif)
 For the demo https://testclient-cloud.mqtt.cool/ was used.
 
