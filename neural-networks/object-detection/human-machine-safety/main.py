@@ -4,9 +4,9 @@ from depthai_nodes.node import (
     MPPalmDetectionParser,
     DepthMerger,
     ImgDetectionsFilter,
+    ImgDetectionsBridge,
 )
 from utils.arguments import initialize_argparser
-from utils.adapter import ParserBridge
 from utils.annotation_node import AnnotationNode
 from utils.detection_merger import DetectionMerger
 
@@ -113,8 +113,9 @@ with dai.Pipeline(device) as pipeline:
     parser: MPPalmDetectionParser = palm_detection_nn.getParser(0)
     parser.setConfidenceThreshold(0.7)
 
-    adapter = pipeline.create(ParserBridge)
-    palm_detection_nn.out.link(adapter.palm_detection_input)
+    adapter = pipeline.create(ImgDetectionsBridge).build(
+        palm_detection_nn.out, ignore_angle=True
+    )
 
     detection_depth_merger = pipeline.create(DepthMerger).build(
         output_2d=object_detection_nn.out,
