@@ -29,7 +29,7 @@ Demonstrations of depth perception capabilities, including spatial calculations,
 
 Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
 
-### [🔄 Stream Manipulation](stream-manipulation/) (🚧 In progress)
+### [🔄 Stream Manipulation](stream-manipulation/) (✅ Complete)
 
 Examples showing different ways to stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
 
