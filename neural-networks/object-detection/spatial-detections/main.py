@@ -44,7 +44,9 @@ with dai.Pipeline(device) as pipeline:
         fps=float(args.fps_limit),
     )
     if platform == "RVC2":
-        nn.setNNArchive(nn_archive, numShaves=7)
+        nn.setNNArchive(
+            nn_archive, numShaves=7
+        )  # TODO: change to numShaves=4 if running on OAK-D Lite
     nn.setBoundingBoxScaleFactor(0.7)
 
     annotation_node = pipeline.create(AnnotationNode).build(

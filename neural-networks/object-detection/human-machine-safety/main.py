@@ -90,7 +90,7 @@ with dai.Pipeline(device) as pipeline:
     if platform == "RVC2":
         object_detection_nn.setNNArchive(
             object_detection_nn_archive, numShaves=7
-        )  # TODO: change to numShaves=4
+        )  # TODO: change to numShaves=4 if running on OAK-D Lite
 
     palm_detection_manip = pipeline.create(dai.node.ImageManipV2)
     palm_detection_manip.initialConfig.setOutputSize(
@@ -108,7 +108,7 @@ with dai.Pipeline(device) as pipeline:
     if platform == "RVC2":
         palm_detection_nn.setNNArchive(
             palm_detection_nn_archive, numShaves=7
-        )  # TODO: change to numShaves=4
+        )  # TODO: change to numShaves=4 if running on OAK-D Lite
 
     parser: MPPalmDetectionParser = palm_detection_nn.getParser(0)
     parser.setConfidenceThreshold(0.7)
