@@ -67,4 +67,5 @@ oakctl app run .
 This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
 
 ### Notes
+
 If running on **OAK-D Lite**, make sure to set the `numShaves=4` when calling the `.setNNArchive()` method on the spatial detection node.
