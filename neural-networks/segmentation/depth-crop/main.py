@@ -13,6 +13,8 @@ model_reference_rvc4 = "luxonis/deeplab-v3-plus:512x288"
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
+CAMERA_RESOLUTION = (640, 400)
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
@@ -28,20 +30,20 @@ with dai.Pipeline(device) as pipeline:
 
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_output = color.requestOutput(
-        (640, 480), dai.ImgFrame.Type.NV12, fps=FPS_LIMIT
+        CAMERA_RESOLUTION, dai.ImgFrame.Type.NV12, fps=FPS_LIMIT
     )
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left.requestOutput((640, 400), fps=FPS_LIMIT),
-        right=right.requestOutput((640, 400), fps=FPS_LIMIT),
+        left=left.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
+        right=right.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
     )
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     if platform == "RVC2":
-        stereo.setOutputSize(640, 480)
+        stereo.setOutputSize(*CAMERA_RESOLUTION)
 
     manip = pipeline.create(dai.node.ImageManipV2)
     manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
