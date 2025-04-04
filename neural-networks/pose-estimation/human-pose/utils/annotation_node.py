@@ -42,7 +42,6 @@ class AnnotationNode(dai.node.HostNode):
         assert isinstance(detected_recognitions, DetectedRecognitions)
 
         detections_list: List[dai.ImgDetection] = detected_recognitions.img_detections.detections
-        # print("detected_recognitions.nn_data",detected_recognitions.nn_data)
         img_detections_exteded = ImgDetectionsExtended()
 
         annotations = (
@@ -71,7 +70,7 @@ class AnnotationNode(dai.node.HostNode):
             img_detection_extended.label = detection.label
             img_detection_extended.confidence = detection.confidence
 
-            keypoints_msg = detected_recognitions.nn_data[ix]
+            keypoints_msg = detected_recognitions.recognitions_data[ix]
 
             slope_x = (detection.xmax + padding) - (detection.xmin - padding)
             slope_y = (detection.ymax + padding) - (detection.ymin - padding)

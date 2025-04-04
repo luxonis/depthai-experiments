@@ -98,7 +98,10 @@ with dai.Pipeline(device) as pipeline:
     detection_recognitions_sync = pipeline.create(DetectionsRecognitionsSync).build()
     detection_nn.out.link(detection_recognitions_sync.input_detections)
     pose_nn.out.link(detection_recognitions_sync.input_recognitions)
-    detection_recognitions_sync.set_camera_fps(6 if platform == "RVC2" else 20)
+    if args.media_path: 
+        detection_recognitions_sync.set_camera_fps(6 if platform == "RVC2" else 20)
+    else:
+        detection_recognitions_sync.set_camera_fps(args.fps_limit)
     
     annotation_node = pipeline.create(AnnotationNode).build(
         detected_recognitions=detection_recognitions_sync.out,
