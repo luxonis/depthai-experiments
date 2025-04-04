@@ -22,6 +22,14 @@ frame_type = (
 )
 
 with dai.Pipeline(device) as pipeline:
+    # Check if the device has color, left and right cameras
+    available_cameras = device.getConnectedCameras()
+
+    if len(available_cameras) < 3:
+        raise ValueError(
+            "Device must have 3 cameras (color, left and right) in order to run this experiment."
+        )
+
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
     left_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
