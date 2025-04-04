@@ -40,7 +40,8 @@ with dai.Pipeline(device) as pipeline:
     )
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-    stereo.setOutputSize(640, 480)
+    if platform == "RVC2":
+        stereo.setOutputSize(640, 480)
 
     manip = pipeline.create(dai.node.ImageManipV2)
     manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
