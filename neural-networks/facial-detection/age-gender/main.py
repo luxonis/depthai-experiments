@@ -31,7 +31,7 @@ with dai.Pipeline(device) as pipeline:
 
         video_resize_node = pipeline.create(dai.node.ImageManipV2)
         video_resize_node.initialConfig.setOutputSize(1280, 960)
-        # video_resize_node.setMaxOutputFrameSize(3686500)
+        video_resize_node.setMaxOutputFrameSize(3686500)
         video_resize_node.initialConfig.setFrameType(frame_type)
 
         replay_node.out.link(video_resize_node.inputImage)
@@ -43,7 +43,6 @@ with dai.Pipeline(device) as pipeline:
 
     resize_node = pipeline.create(dai.node.ImageManipV2)
     resize_node.initialConfig.setOutputSize(640, 480)
-    # resize_node.setMaxOutputFrameSize(3686500)
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
     input_node.link(resize_node.inputImage)
@@ -61,10 +60,10 @@ with dai.Pipeline(device) as pipeline:
     config_sender_node.setScriptPath(
         Path(__file__).parent / "utils/config_sender_script.py"
     )
-    config_sender_node.inputs["frame_input"].setBlocking(True)
-    config_sender_node.inputs["config_input"].setBlocking(True)
-    # config_sender_node.inputs["frame_input"].setBlocking(False)
-    # config_sender_node.inputs["config_input"].setBlocking(False)
+    # config_sender_node.inputs["frame_input"].setBlocking(True)
+    # config_sender_node.inputs["config_input"].setBlocking(True)
+    config_sender_node.inputs["frame_input"].setBlocking(False)
+    config_sender_node.inputs["config_input"].setBlocking(False)
     config_sender_node.inputs["frame_input"].setMaxSize(30)
     config_sender_node.inputs["config_input"].setMaxSize(30)
 
@@ -72,7 +71,6 @@ with dai.Pipeline(device) as pipeline:
     detection_process_node.config_output.link(config_sender_node.inputs["config_input"])
 
     crop_node = pipeline.create(dai.node.ImageManipV2)
-    # crop_node.setMaxOutputFrameSize(3686500)
     crop_node.initialConfig.setReusePreviousImage(False)
     crop_node.inputConfig.setReusePreviousMessage(False)
     crop_node.inputImage.setReusePreviousMessage(False)
