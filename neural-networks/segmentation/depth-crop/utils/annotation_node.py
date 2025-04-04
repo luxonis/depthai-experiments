@@ -11,19 +11,16 @@ JET_CUSTOM[0] = [0, 0, 0]
 class AnnotationNode(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-
         self.output_segmentation = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-
         self.output_cutout = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-
         self.output_depth = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
@@ -60,12 +57,10 @@ class AnnotationNode(dai.node.HostNode):
         mask_overlay = cv2.addWeighted(frame, 1, mask, 0.5, 0)
 
         disp_frame = (disparity.getFrame() * self.disp_multiplier).astype(np.uint8)
-        depth_frame = cv2.applyColorMap(disp_frame, JET_CUSTOM)  # (480, 640, 3)
+        depth_frame = cv2.applyColorMap(disp_frame, JET_CUSTOM)
 
         # cut out the mask from the depth frame
-        mask_data = np.where(mask_data == self.person_class, 1, 0).astype(
-            np.uint8
-        )  # (480, 640)
+        mask_data = np.where(mask_data == self.person_class, 1, 0).astype(np.uint8)
         cutout_frame = depth_frame * mask_data[:, :, np.newaxis]
 
         mask_overlay_msg = dai.ImgFrame()

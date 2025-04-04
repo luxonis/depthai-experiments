@@ -22,6 +22,14 @@ with dai.Pipeline(device) as pipeline:
     FPS_LIMIT = 10 if platform == "RVC2" else 20
     print(f"Platform: {platform}")
 
+    # Check if the device has color, left and right cameras
+    available_cameras = device.getConnectedCameras()
+
+    if len(available_cameras) <= 3:
+        raise ValueError(
+            "Device must have 3 cameras (color, left and right) in order to run this experiment."
+        )
+
     model_description = dai.NNModelDescription(
         model=model_reference_rvc2 if platform == "RVC2" else model_reference_rvc4,
     )
@@ -58,8 +66,6 @@ with dai.Pipeline(device) as pipeline:
     nn = pipeline.create(ParsingNeuralNetwork).build(
         nn_source=nn_archive, input=manip.out
     )
-
-    # nn.setNNArchive(nn_archive, numShaves=6)
 
     annotation_node = pipeline.create(AnnotationNode).build(
         preview=color_output,
