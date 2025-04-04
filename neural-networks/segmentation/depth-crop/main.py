@@ -28,7 +28,7 @@ with dai.Pipeline(device) as pipeline:
 
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_output = color.requestOutput(
-        (640, 480), dai.ImgFrame.Type.BGR888p, fps=FPS_LIMIT
+        (640, 480), dai.ImgFrame.Type.NV12, fps=FPS_LIMIT
     )
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
@@ -45,7 +45,9 @@ with dai.Pipeline(device) as pipeline:
 
     manip = pipeline.create(dai.node.ImageManipV2)
     manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
-    manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    manip.initialConfig.setFrameType(
+        dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+    )
     manip.setMaxOutputFrameSize(
         nn_archive.getInputSize()[0] * nn_archive.getInputSize()[1] * 3
     )
