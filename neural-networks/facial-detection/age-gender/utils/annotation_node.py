@@ -21,8 +21,8 @@ class AnnotationNode(dai.node.HostNode):
 
         detections_list: List[dai.ImgDetection] = det_age_recognitions.img_detections.detections
 
-        age_msg = det_age_recognitions.nn_data
-        genders_msg = det_gender_recognitions.nn_data
+        age_msg = det_age_recognitions.recognitions_data
+        genders_msg = det_gender_recognitions.recognitions_data
 
         annotation = dai.ImgAnnotation()
         img_annotations = dai.ImgAnnotations()
