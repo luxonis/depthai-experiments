@@ -3,7 +3,7 @@ import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
-from utils.host_sync import DetectionsAgeGenderSync
+from depthai_nodes.node import DetectionsRecognitionsSync
 from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
@@ -31,6 +31,7 @@ with dai.Pipeline(device) as pipeline:
 
         video_resize_node = pipeline.create(dai.node.ImageManipV2)
         video_resize_node.initialConfig.setOutputSize(1280, 960)
+        # video_resize_node.setMaxOutputFrameSize(3686500)
         video_resize_node.initialConfig.setFrameType(frame_type)
 
         replay_node.out.link(video_resize_node.inputImage)
@@ -42,6 +43,7 @@ with dai.Pipeline(device) as pipeline:
 
     resize_node = pipeline.create(dai.node.ImageManipV2)
     resize_node.initialConfig.setOutputSize(640, 480)
+    # resize_node.setMaxOutputFrameSize(3686500)
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
     input_node.link(resize_node.inputImage)
@@ -61,6 +63,8 @@ with dai.Pipeline(device) as pipeline:
     )
     config_sender_node.inputs["frame_input"].setBlocking(True)
     config_sender_node.inputs["config_input"].setBlocking(True)
+    # config_sender_node.inputs["frame_input"].setBlocking(False)
+    # config_sender_node.inputs["config_input"].setBlocking(False)
     config_sender_node.inputs["frame_input"].setMaxSize(30)
     config_sender_node.inputs["config_input"].setMaxSize(30)
 
@@ -68,6 +72,7 @@ with dai.Pipeline(device) as pipeline:
     detection_process_node.config_output.link(config_sender_node.inputs["config_input"])
 
     crop_node = pipeline.create(dai.node.ImageManipV2)
+    # crop_node.setMaxOutputFrameSize(3686500)
     crop_node.initialConfig.setReusePreviousImage(False)
     crop_node.inputConfig.setReusePreviousMessage(False)
     crop_node.inputImage.setReusePreviousMessage(False)
@@ -78,17 +83,25 @@ with dai.Pipeline(device) as pipeline:
     age_gender_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, "luxonis/age-gender-recognition:62x62"
     )
+    
+    # Detection-Age sync
+    detections_age_sync = pipeline.create(DetectionsRecognitionsSync)
+    face_detection_node.out.link(detections_age_sync.input_detections)
+    age_gender_node.getOutput(0).link(detections_age_sync.input_recognitions)
+    detections_age_sync.set_camera_fps(FPS)
+    # Detection-Gender Input
+    detections_gender_sync = pipeline.create(DetectionsRecognitionsSync)
+    face_detection_node.out.link(detections_gender_sync.input_detections)
+    age_gender_node.getOutput(1).link(detections_gender_sync.input_recognitions)
+    detections_gender_sync.set_camera_fps(FPS)
 
-    sync_node = pipeline.create(DetectionsAgeGenderSync)
-    input_node.link(sync_node.passthrough_input)
-    face_detection_node.out.link(sync_node.detections_input)
-    age_gender_node.getOutput(0).link(sync_node.age_input)
-    age_gender_node.getOutput(1).link(sync_node.gender_input)
+    annotation_node = pipeline.create(AnnotationNode).build(
+        det_age_recognitions=detections_age_sync.out,
+        det_gender_recognitions=detections_gender_sync.out
+    )
 
-    annotation_node = pipeline.create(AnnotationNode)
-    sync_node.out.link(annotation_node.input)
-
-    visualizer.addTopic("Video", sync_node.out_frame)
+    # visualizer.addTopic("Video", sync_node.out_frame)
+    visualizer.addTopic("Video", input_node)
     visualizer.addTopic("Text", annotation_node.output)
 
     print("Pipeline created.")

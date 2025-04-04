@@ -4,6 +4,8 @@ from depthai_nodes.node import ParsingNeuralNetwork, HRNetParser
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 from utils.script import generate_script_content
+from depthai_nodes.node import DetectionsRecognitionsSync
+
 
 _, args = initialize_argparser()
 
@@ -93,14 +95,18 @@ with dai.Pipeline(device) as pipeline:
         0.0
     )  # to get all keypoints so we can draw skeleton. We will filter them later.
 
+    detection_recognitions_sync = pipeline.create(DetectionsRecognitionsSync).build()
+    detection_nn.out.link(detection_recognitions_sync.input_detections)
+    pose_nn.out.link(detection_recognitions_sync.input_recognitions)
+    detection_recognitions_sync.set_camera_fps(6 if platform == "RVC2" else 20)
+    
     annotation_node = pipeline.create(AnnotationNode).build(
-        input_detections=detection_nn.out,
+        detected_recognitions=detection_recognitions_sync.out,
         connection_pairs=connection_pairs,
         valid_labels=valid_labels,
         padding=padding,
         confidence_threshold=confidence_threshold,
     )
-    pose_nn.out.link(annotation_node.input_keypoints)
 
     visualizer.addTopic("Video", detection_nn.passthrough, "images")
     visualizer.addTopic("Detections", annotation_node.out_detections, "images")

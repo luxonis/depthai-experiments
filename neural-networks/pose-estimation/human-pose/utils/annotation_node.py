@@ -6,12 +6,12 @@ from depthai_nodes import (
     OUTLINE_COLOR,
 )
 from typing import List
+from depthai_nodes import DetectedRecognitions
 
 
 class AnnotationNode(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self.input_keypoints = self.createInput()
         self.out_detections = self.createOutput()
         self.out_pose_annotations = self.createOutput(
             possibleDatatypes=[
@@ -25,7 +25,7 @@ class AnnotationNode(dai.node.HostNode):
 
     def build(
         self,
-        input_detections: dai.Node.Output,
+        detected_recognitions: dai.Node.Output,
         connection_pairs: List[List[int]],
         valid_labels: List[int],
         padding: float,
@@ -35,14 +35,14 @@ class AnnotationNode(dai.node.HostNode):
         self.valid_labels = valid_labels
         self.padding = padding
         self.confidence_threshold = confidence_threshold
-        self.link_args(input_detections)
+        self.link_args(detected_recognitions)
         return self
 
-    def process(self, detections_message: dai.Buffer) -> None:
-        assert isinstance(detections_message, dai.ImgDetections)
+    def process(self, detected_recognitions: dai.Buffer) -> None:
+        assert isinstance(detected_recognitions, DetectedRecognitions)
 
-        detections_list: List[dai.ImgDetection] = detections_message.detections
-
+        detections_list: List[dai.ImgDetection] = detected_recognitions.img_detections.detections
+        # print("detected_recognitions.nn_data",detected_recognitions.nn_data)
         img_detections_exteded = ImgDetectionsExtended()
 
         annotations = (
@@ -71,7 +71,7 @@ class AnnotationNode(dai.node.HostNode):
             img_detection_extended.label = detection.label
             img_detection_extended.confidence = detection.confidence
 
-            keypoints_msg: Keypoints = self.input_keypoints.get()
+            keypoints_msg = detected_recognitions.nn_data[ix]
 
             slope_x = (detection.xmax + padding) - (detection.xmin - padding)
             slope_y = (detection.ymax + padding) - (detection.ymin - padding)
@@ -111,9 +111,9 @@ class AnnotationNode(dai.node.HostNode):
             img_detections_exteded.detections.append(img_detection_extended)
             annotations.annotations.append(annotation)
 
-        annotations.setTimestamp(detections_message.getTimestamp())
-        img_detections_exteded.setTimestamp(detections_message.getTimestamp())
-        img_detections_exteded.transformation = detections_message.getTransformation()
+        annotations.setTimestamp(detected_recognitions.getTimestamp())
+        img_detections_exteded.setTimestamp(detected_recognitions.getTimestamp())
+        img_detections_exteded.transformation = detected_recognitions.img_detections.getTransformation()
 
         self.out_detections.send(img_detections_exteded)
         self.out_pose_annotations.send(annotations)
