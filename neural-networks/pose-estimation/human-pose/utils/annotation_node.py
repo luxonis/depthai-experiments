@@ -42,7 +42,7 @@ class AnnotationNode(dai.node.HostNode):
         assert isinstance(detected_recognitions, DetectedRecognitions)
 
         detections_list: List[dai.ImgDetection] = detected_recognitions.img_detections.detections
-        img_detections_exteded = ImgDetectionsExtended()
+        img_detections_extended = ImgDetectionsExtended()
 
         annotations = (
             dai.ImgAnnotations()
@@ -107,12 +107,12 @@ class AnnotationNode(dai.node.HostNode):
                     pointsAnnotation.thickness = 1.0
                     annotation.points.append(pointsAnnotation)
 
-            img_detections_exteded.detections.append(img_detection_extended)
+            img_detections_extended.detections.append(img_detection_extended)
             annotations.annotations.append(annotation)
 
         annotations.setTimestamp(detected_recognitions.getTimestamp())
-        img_detections_exteded.setTimestamp(detected_recognitions.getTimestamp())
-        img_detections_exteded.transformation = detected_recognitions.img_detections.getTransformation()
+        img_detections_extended.setTimestamp(detected_recognitions.getTimestamp())
+        img_detections_extended.transformation = detected_recognitions.img_detections.getTransformation()
 
-        self.out_detections.send(img_detections_exteded)
+        self.out_detections.send(img_detections_extended)
         self.out_pose_annotations.send(annotations)
