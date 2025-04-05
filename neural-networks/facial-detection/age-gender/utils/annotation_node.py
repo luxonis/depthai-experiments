@@ -32,7 +32,6 @@ class AnnotationNode(dai.node.HostNode):
         annotation = dai.ImgAnnotation()
         img_annotations = dai.ImgAnnotations()
         for detection, gender, age in zip(detections_list, genders_msg, age_msg):
-            print("gender", type(gender), "age", type(age))
             points = detection.rotated_rect.getPoints()
 
             points_annotation = dai.PointsAnnotation()
@@ -47,7 +46,6 @@ class AnnotationNode(dai.node.HostNode):
             text_annotation.text = (
                 f"{gender.classes[0]} {int(age.predictions[0].prediction * 100)}"
             )
-            print(f"{gender.classes[0]} {int(age.predictions[0].prediction * 100)}")
             text_annotation.fontSize = 50
             text_annotation.textColor = TEXT_COLOR
             annotation.texts.append(text_annotation)

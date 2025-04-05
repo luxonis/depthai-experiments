@@ -40,7 +40,9 @@ class AnnotationNode(dai.node.HostNode):
     def process(self, detected_recognitions: dai.Buffer) -> None:
         assert isinstance(detected_recognitions, DetectedRecognitions)
 
-        detections_list: List[dai.ImgDetection] = detected_recognitions.img_detections.detections
+        detections_list: List[
+            dai.ImgDetection
+        ] = detected_recognitions.img_detections.detections
         img_detections_extended = ImgDetectionsExtended()
 
         annotations = (
@@ -111,7 +113,9 @@ class AnnotationNode(dai.node.HostNode):
 
         annotations.setTimestamp(detected_recognitions.getTimestamp())
         img_detections_extended.setTimestamp(detected_recognitions.getTimestamp())
-        img_detections_extended.transformation = detected_recognitions.img_detections.getTransformation()
+        img_detections_extended.transformation = (
+            detected_recognitions.img_detections.getTransformation()
+        )
 
         self.out_detections.send(img_detections_extended)
         self.out_pose_annotations.send(annotations)

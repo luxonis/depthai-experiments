@@ -96,12 +96,12 @@ with dai.Pipeline(device) as pipeline:
     )  # to get all keypoints so we can draw skeleton. We will filter them later.
 
     fps = args.fps_limit
-    if args.media_path: 
+    if args.media_path:
         fps = 6 if platform == "RVC2" else 20
     detection_recognitions_sync = pipeline.create(TwoStageSync).build(camera_fps=fps)
     detection_nn.out.link(detection_recognitions_sync.input_detections)
     pose_nn.out.link(detection_recognitions_sync.input_recognitions)
-    
+
     annotation_node = pipeline.create(AnnotationNode).build(
         detected_recognitions=detection_recognitions_sync.out,
         connection_pairs=connection_pairs,
