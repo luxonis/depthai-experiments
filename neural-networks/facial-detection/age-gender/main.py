@@ -3,7 +3,7 @@ import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
-from depthai_nodes.node import DetectionsRecognitionsSync
+from depthai_nodes.node import TwoStageSync
 from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
@@ -60,8 +60,6 @@ with dai.Pipeline(device) as pipeline:
     config_sender_node.setScriptPath(
         Path(__file__).parent / "utils/config_sender_script.py"
     )
-    # config_sender_node.inputs["frame_input"].setBlocking(True)
-    # config_sender_node.inputs["config_input"].setBlocking(True)
     config_sender_node.inputs["frame_input"].setBlocking(False)
     config_sender_node.inputs["config_input"].setBlocking(False)
     config_sender_node.inputs["frame_input"].setMaxSize(30)
@@ -81,24 +79,21 @@ with dai.Pipeline(device) as pipeline:
     age_gender_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, "luxonis/age-gender-recognition:62x62"
     )
-    
+
     # Detection-Age sync
-    detections_age_sync = pipeline.create(DetectionsRecognitionsSync)
+    detections_age_sync = pipeline.create(TwoStageSync).build(camera_fps=FPS)
     face_detection_node.out.link(detections_age_sync.input_detections)
     age_gender_node.getOutput(0).link(detections_age_sync.input_recognitions)
-    detections_age_sync.set_camera_fps(FPS)
     # Detection-Gender Input
-    detections_gender_sync = pipeline.create(DetectionsRecognitionsSync)
+    detections_gender_sync = pipeline.create(TwoStageSync).build(camera_fps=FPS)
     face_detection_node.out.link(detections_gender_sync.input_detections)
     age_gender_node.getOutput(1).link(detections_gender_sync.input_recognitions)
-    detections_gender_sync.set_camera_fps(FPS)
 
     annotation_node = pipeline.create(AnnotationNode).build(
         det_age_recognitions=detections_age_sync.out,
-        det_gender_recognitions=detections_gender_sync.out
+        det_gender_recognitions=detections_gender_sync.out,
     )
 
-    # visualizer.addTopic("Video", sync_node.out_frame)
     visualizer.addTopic("Video", input_node)
     visualizer.addTopic("Text", annotation_node.output)
 

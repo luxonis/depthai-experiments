@@ -2,6 +2,7 @@ import depthai as dai
 from depthai_nodes import TEXT_COLOR, OUTLINE_COLOR, DetectedRecognitions
 from typing import List
 
+
 class AnnotationNode(dai.node.HostNode):
     def __init__(self):
         super().__init__()
@@ -15,20 +16,22 @@ class AnnotationNode(dai.node.HostNode):
         self.link_args(det_age_recognitions, det_gender_recognitions)
         return self
 
-    def process(self, det_age_recognitions: dai.Buffer, det_gender_recognitions: dai.Buffer) -> None:
+    def process(
+        self, det_age_recognitions: dai.Buffer, det_gender_recognitions: dai.Buffer
+    ) -> None:
         assert isinstance(det_age_recognitions, DetectedRecognitions)
         assert isinstance(det_gender_recognitions, DetectedRecognitions)
 
-        detections_list: List[dai.ImgDetection] = det_age_recognitions.img_detections.detections
+        detections_list: List[
+            dai.ImgDetection
+        ] = det_age_recognitions.img_detections.detections
 
         age_msg = det_age_recognitions.recognitions_data
         genders_msg = det_gender_recognitions.recognitions_data
 
         annotation = dai.ImgAnnotation()
         img_annotations = dai.ImgAnnotations()
-        for detection, gender, age in zip(
-            detections_list, genders_msg, age_msg
-        ):
+        for detection, gender, age in zip(detections_list, genders_msg, age_msg):
             print("gender", type(gender), "age", type(age))
             points = detection.rotated_rect.getPoints()
 

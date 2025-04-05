@@ -2,7 +2,6 @@ import depthai as dai
 from depthai_nodes import (
     ImgDetectionsExtended,
     ImgDetectionExtended,
-    Keypoints,
     OUTLINE_COLOR,
 )
 from typing import List
