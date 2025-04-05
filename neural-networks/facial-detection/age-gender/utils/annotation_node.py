@@ -22,9 +22,9 @@ class AnnotationNode(dai.node.HostNode):
         assert isinstance(det_age_recognitions, DetectedRecognitions)
         assert isinstance(det_gender_recognitions, DetectedRecognitions)
 
-        detections_list: List[
-            dai.ImgDetection
-        ] = det_age_recognitions.img_detections.detections
+        detections_list: List[dai.ImgDetection] = (
+            det_age_recognitions.img_detections.detections
+        )
 
         age_msg = det_age_recognitions.recognitions_data
         genders_msg = det_gender_recognitions.recognitions_data

@@ -40,9 +40,9 @@ class AnnotationNode(dai.node.HostNode):
     def process(self, detected_recognitions: dai.Buffer) -> None:
         assert isinstance(detected_recognitions, DetectedRecognitions)
 
-        detections_list: List[
-            dai.ImgDetection
-        ] = detected_recognitions.img_detections.detections
+        detections_list: List[dai.ImgDetection] = (
+            detected_recognitions.img_detections.detections
+        )
         img_detections_extended = ImgDetectionsExtended()
 
         annotations = (
