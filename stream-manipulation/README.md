@@ -4,6 +4,10 @@ This section contains examples showing different ways to manipulate and stream d
 
 ## Platform Compatibility
 
+|                                    POE MQTT                                     |                                       RTSP Streaming                                        |
+| :-----------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------: |
+| <img src="poe-mqtt/media/mqtt_client.gif" alt="poe mqtt" style="height:250px;"> | <img src="rtsp-streaming/media/rtsp_stream.gif" alt="rtsp streaming" style="height:250px;"> |
+
 | Name                                      | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2                                                                                                          | Notes                                                  |
 | ----------------------------------------- | ---- | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | [mjpeg-streaming](mjpeg-streaming/)       | ✅   | ✅                | ✅                | [gen2-mjpeg-streaming](https://github.com/luxonis/depthai-experiments/tree/master/gen2-mjpeg-streaming)       | Example of MJPEG video streaming implementation        |

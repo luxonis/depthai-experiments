@@ -31,7 +31,7 @@ with dai.Pipeline(device) as pipeline:
     print(f"Platform: {platform}")
     detection_model_description.platform = platform
     detection_nn_archive = dai.NNArchive(
-        dai.getModelFromZoo(detection_model_description)
+        dai.getModelFromZoo(detection_model_description, useCached=False)
     )
     classes = detection_nn_archive.getConfig().model.heads[0].metadata.classes
 
@@ -43,7 +43,7 @@ with dai.Pipeline(device) as pipeline:
     connection_pairs = (
         pose_nn_archive.getConfig()
         .model.heads[0]
-        .metadata.extraParams["connection_pairs"]
+        .metadata.extraParams["skeleton_edges"]
     )
 
     frame_type = (
