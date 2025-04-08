@@ -224,9 +224,9 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 | :----------------------------------------------------------------------------------------: |
 | <img src="feature-detection/xfeat/media/xfeat_demo.gif" alt="xfeat" style="height:250px;"> |
 
-| Name                              | HubAI Model                                                                               | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes                                  |
-| --------------------------------- | ----------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ---- | -------------------------------------- |
-| [xfeat](feature-detection/xfeat/) | [xfeat](https://hub.luxonis.com/ai/models/6c2790a1-bf68-4e89-a4b3-5c9ae68183b5?view=page) | ✅   | ✅                | ✅                |      | You need a device with stereo cameras. |
+| Name                              | HubAI Model                                                                               | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes                                                  |
+| --------------------------------- | ----------------------------------------------------------------------------------------- | ---- | ----------------- | ----------------- | ---- | ------------------------------------------------------ |
+| [xfeat](feature-detection/xfeat/) | [xfeat](https://hub.luxonis.com/ai/models/6c2790a1-bf68-4e89-a4b3-5c9ae68183b5?view=page) | ✅   | ✅                | ✅                |      | `stereo` mode requires stereo cameras (left and right) |
 
 ## Speech Recognition
 

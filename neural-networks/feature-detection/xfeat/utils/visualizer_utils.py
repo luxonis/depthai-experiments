@@ -15,6 +15,10 @@ def calc_warp_corners_and_matches(
         maxIters=1_000,
         confidence=0.8,
     )
+
+    if H is None:
+        return None
+
     mask = mask.flatten()
 
     h, w = image1.shape[:2]
@@ -46,6 +50,9 @@ def xfeat_visualizer(image1, image2, features, draw_warp_corners=True):
         mkpts1,
         image1,
     )
+
+    if result is None:
+        return image2
 
     warped_corners = result[0]
     keypoints1 = result[1][0]
