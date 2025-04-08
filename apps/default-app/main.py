@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import cv2
 import depthai as dai
-from depthai_nodes.node import DepthColorTransform
+from depthai_nodes.node import ApplyColormap
 from typing import Optional
 from utils.arguments import initialize_argparser
 
@@ -80,13 +80,12 @@ with dai.Pipeline(device) as pipeline:
             left=left_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
             right=right_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
             presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
-            presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
         )
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
         if platform == dai.Platform.RVC2:
             stereo.setOutputSize(*STEREO_RESOLUTION)
 
-        coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
+        coloredDepth = pipeline.create(ApplyColormap).build(stereo.disparity)
         coloredDepth.setColormap(cv2.COLORMAP_JET)
         visualizer.addTopic("Depth", coloredDepth.out)
 
