@@ -1,10 +1,15 @@
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork, MPPalmDetectionParser, DepthMerger
+from depthai_nodes.node import (
+    ParsingNeuralNetwork,
+    MPPalmDetectionParser,
+    DepthMerger,
+    ImgDetectionsFilter,
+    ImgDetectionsBridge,
+)
 from utils.arguments import initialize_argparser
-from utils.adapter import ParserBridge
 from utils.annotation_node import AnnotationNode
 from utils.detection_merger import DetectionMerger
-from utils.detection_label_filter import DetectionLabelFilter
+
 from utils.measure_object_distance import MeasureObjectDistance
 from utils.visualize_object_distances import VisualizeObjectDistances
 from utils.show_alert import ShowAlert
@@ -83,7 +88,9 @@ with dai.Pipeline(device) as pipeline:
         object_detection_nn_archive,
     )
     if platform == "RVC2":
-        object_detection_nn.setNNArchive(object_detection_nn_archive, numShaves=7)
+        object_detection_nn.setNNArchive(
+            object_detection_nn_archive, numShaves=7
+        )  # TODO: change to numShaves=4 if running on OAK-D Lite
 
     palm_detection_manip = pipeline.create(dai.node.ImageManipV2)
     palm_detection_manip.initialConfig.setOutputSize(
@@ -99,13 +106,16 @@ with dai.Pipeline(device) as pipeline:
         palm_detection_nn_archive,
     )
     if platform == "RVC2":
-        palm_detection_nn.setNNArchive(palm_detection_nn_archive, numShaves=7)
+        palm_detection_nn.setNNArchive(
+            palm_detection_nn_archive, numShaves=7
+        )  # TODO: change to numShaves=4 if running on OAK-D Lite
 
     parser: MPPalmDetectionParser = palm_detection_nn.getParser(0)
     parser.setConfidenceThreshold(0.7)
 
-    adapter = pipeline.create(ParserBridge)
-    palm_detection_nn.out.link(adapter.palm_detection_input)
+    adapter = pipeline.create(ImgDetectionsBridge).build(
+        palm_detection_nn.out, ignore_angle=True
+    )
 
     detection_depth_merger = pipeline.create(DepthMerger).build(
         output_2d=object_detection_nn.out,
@@ -132,12 +142,12 @@ with dai.Pipeline(device) as pipeline:
     merged_labels = classes + ["palm"]
     filter_labels = [merged_labels.index(i) for i in DANGEROUS_OBJECTS]
     filter_labels.append(merged_labels.index("palm"))
-    detection_filter = pipeline.create(DetectionLabelFilter).build(
-        merge_detections.output, filter_labels
+    detection_filter = pipeline.create(ImgDetectionsFilter).build(
+        merge_detections.output, labels_to_keep=filter_labels
     )
 
     measure_object_distance = pipeline.create(MeasureObjectDistance).build(
-        nn=detection_filter.output
+        nn=detection_filter.out
     )
 
     visualize_distances = pipeline.create(VisualizeObjectDistances).build(
@@ -151,7 +161,7 @@ with dai.Pipeline(device) as pipeline:
     )
 
     annotation_node = pipeline.create(AnnotationNode)
-    detection_filter.output.link(annotation_node.detections_input)
+    detection_filter.out.link(annotation_node.detections_input)
     stereo.depth.link(annotation_node.depth_input)
 
     visualizer.addTopic("Color", camera_output)

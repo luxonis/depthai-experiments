@@ -1,8 +1,7 @@
 import argparse
 import cv2
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
-from utils.host_depth_color_transform import DepthColorTransform
+from depthai_nodes.node import ParsingNeuralNetwork, ApplyColormap
 
 device = dai.Device()
 platform = device.getPlatform()
@@ -86,10 +85,10 @@ with dai.Pipeline(device) as pipeline:
     demux.outputs["left"].link(nn.inputs["left"])
     demux.outputs["right"].link(nn.inputs["right"])
 
-    disparity_coloring = pipeline.create(DepthColorTransform).build(stereo.disparity)
+    disparity_coloring = pipeline.create(ApplyColormap).build(stereo.disparity)
     disparity_coloring.setColormap(cv2.COLORMAP_PLASMA)
 
-    visualizer.addTopic("Stereo Disparity", disparity_coloring.output)
+    visualizer.addTopic("Stereo Disparity", disparity_coloring.out)
     visualizer.addTopic("NN", nn.out)
 
     print("Pipeline created.")
