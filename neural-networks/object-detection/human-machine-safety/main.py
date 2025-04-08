@@ -30,6 +30,14 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
+    # Check if the device has color, left and right cameras
+    available_cameras = device.getConnectedCameras()
+
+    if len(available_cameras) < 3:
+        raise ValueError(
+            "Device must have 3 cameras (color, left and right) in order to run this experiment."
+        )
+
     object_detection_model_description = dai.NNModelDescription(
         object_detection_model_slug
     )
