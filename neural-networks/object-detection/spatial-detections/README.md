@@ -4,6 +4,8 @@ This experiment shows how to use DepthAI and OAK camera to detect object with th
 
 You can read more about spatial detection network in our [documentation](https://docs.luxonis.com/software/depthai-components/nodes/yolo_spatial_detection_network/). It combines the bounding boxes with the depth information into spatial image detections.
 
+> **Note:** This example requires a device with at least 3 cameras (color, left and right) since it utilizes the `StereoDepth` node.
+
 ## Demo
 
 ![Exampe](media/spatial-detections.gif)

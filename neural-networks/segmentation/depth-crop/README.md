@@ -2,7 +2,7 @@
 
 This example shows how to run the [Deeplabv3+](https://hub.luxonis.com/ai/models/1189a661-fd0a-44fd-bc9e-64b94d60cb49?view=page) model from our HubAI along with the [StereoDepth](https://rvc4.docs.luxonis.com/software/depthai-components/nodes/stereo_depth/) node and crop the depth image based on the models output.
 
-For running this example you need a device with at least 3 cameras (color, left and right) because we are using the `StereoDepth` node.
+> **Note:** This example requires a device with at least 3 cameras (color, left and right) since it utilizes the `StereoDepth` node.
 
 ## Demo
 

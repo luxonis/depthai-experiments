@@ -7,6 +7,8 @@ The model used in the example is available in our HubAI Model ZOO [here](https:/
 We offer two modes of operation: `mono` and `stereo`. In `mono` mode we use a single camera as an input and match the frames to the reference image. In `stereo` mode we use two cameras to match the frames to each other.
 In `mono` mode we visualize the matches between the frames and the reference frame which can be set by pressing `s` key in the visualizer. In `stereo` mode we visualize the matches between the frames from the left and right camera.
 
+> **Note:** If you want to run the example in `stereo` mode, you need a device with at least 2 cameras (left and right).
+
 ## Demo
 
 ![XFeat Mono Demo on OAK](media/xfeat_demo.gif)
