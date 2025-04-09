@@ -1,58 +1,89 @@
 from pathlib import Path
+
 import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
 
-# Change the IP to your MQTT broker!
-MQTT_BROKER = "test.mosquitto.org"
-MQTT_BROKER_PORT = 1883
-MQTT_TOPIC = "test_topic/detections"
+_, args = initialize_argparser()
 
-model_description = dai.NNModelDescription(
-    modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300"
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-with dai.Pipeline() as pipeline:
-    camRgb = pipeline.create(dai.node.ColorCamera)
-    camRgb.setPreviewSize(300, 300)
-    camRgb.setFps(10)
-    camRgb.setInterleaved(False)
+with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
+    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    model_description = dai.NNModelDescription(
+        "luxonis/yolov6-nano:r2-coco-512x288", platform=platform
+    )
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    nn.setConfidenceThreshold(0.5)
-    # nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=6))
-    nn.setNNArchive(nn_archive)
-    camRgb.preview.link(nn.input)
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
+
+    input_node = (
+        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
+    )
+
+    nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, nn_archive, fps=args.fps_limit
+    )
 
     script = pipeline.create(dai.node.Script)
     script.setProcessor(dai.ProcessorType.LEON_CSS)
 
-    nn.out.link(script.inputs["detections"])
+    nn_with_parser.out.link(script.inputs["detections"])
     script_text = f"""
     import time
 
     mqttc = Client()
-    node.warn('Connecting to MQTT broker...')
-    mqttc.connect("{MQTT_BROKER}", {MQTT_BROKER_PORT}, 60)
+    if "{args.username}" != "" and "{args.password}" != "":
+        mqttc.username_pw_set("{args.username}", "{args.password}")
+    node.warn('Connecting to MQTT broker {args.broker}:{args.port}...')
+    success = mqttc.connect("{args.broker}", {args.port}, 60) 
     node.warn('Successfully connected to MQTT broker!')
 
     mqttc.loop_start()
-    cnt = 0
     total = 0
+    frame_count = 0
+    last_msg = time.time()
     while True:
         dets = node.io['detections'].get()
-        total+=len(dets.detections)
-        cnt+=1
-        if cnt > 20:
-            avrg = str(total / 20)
-            cnt = 0
+        total += len(dets.detections)
+        frame_count += 1
+        if time.time() - last_msg > 10: # Send every 10 seconds
+            last_msg = time.time()
+            avrg = str(round(total / frame_count, 2))
+            frame_count = 0
             total = 0
-            node.warn(avrg)
-            (ok, id) = mqttc.publish("{MQTT_TOPIC}", avrg, qos=2)
+            node.warn('Sending ' + avrg)
+            (ok, id) = mqttc.publish("{args.topic}", avrg, qos=2)
     """
-
-    with open(Path(__file__).parent / "paho-mqtt.py", "r") as f:
+    with open(Path(__file__).parent / "utils/paho-mqtt.py", "r") as f:
         paho_script = f.read()
         script.setScript(f"{paho_script}\n{script_text}")
-    print("Connected to OAK")
-    pipeline.run()
+
+    visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
+    visualizer.addTopic("Detections", nn_with_parser.out, "detections")
+
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

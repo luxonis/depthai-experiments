@@ -4,6 +4,8 @@ This experiment demonstates how we can use DepthAI to monitor social distancing.
 
 Below you can see 3 people in a scene. If they get closer than the threshold of 2 meters, the application will display `Too Close` and the distance between them.
 
+> **Note:** This example requires a device with at least 3 cameras (color, left and right) since it utilizes the `StereoDepth` node.
+
 ## Demo
 
 [![COVID-19 Social Distancing with DepthAI](https://user-images.githubusercontent.com/5244214/90741333-73f89500-e2cf-11ea-919b-b1f47dc55c4a.gif)](https://www.youtube.com/watch?v=-Ut9TemGZ8I "DepthAI Social Distancing Proof of Concept")

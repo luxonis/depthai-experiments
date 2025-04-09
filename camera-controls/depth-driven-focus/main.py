@@ -1,7 +1,6 @@
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, ApplyColormap
 from util.arguments import initialize_argparser
-from util.depth_color_transform import DepthColorTransform
 from util.depth_driven_focus import DepthDrivenFocus
 from util.depth_merger import DepthMerger
 
@@ -15,7 +14,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     model_description = dai.NNModelDescription("luxonis/yunet:640x480")
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
     model_description.platform = platform
     nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
@@ -44,8 +43,8 @@ with dai.Pipeline(device) as pipeline:
     depth_merger = pipeline.create(DepthMerger).build(
         face_det_nn.out, stereo.depth, device.readCalibration2()
     )
-    depth_color_transform = pipeline.create(DepthColorTransform).build(stereo.disparity)
-    depth_color_transform.setMaxDisparity(stereo.initialConfig.getMaxDisparity())
+    depth_color_transform = pipeline.create(ApplyColormap).build(stereo.disparity)
+    depth_color_transform.setMaxValue(int(stereo.initialConfig.getMaxDisparity()))
 
     depth_driven_focus = pipeline.create(DepthDrivenFocus).build(
         control_queue=cam.inputControl.createInputQueue(),
@@ -54,7 +53,7 @@ with dai.Pipeline(device) as pipeline:
 
     visualizer.addTopic("Video", color_out, "images")
     visualizer.addTopic("Visualizations", face_det_nn.out, "images")
-    visualizer.addTopic("Depth", depth_color_transform.output, "images")
+    visualizer.addTopic("Depth", depth_color_transform.out, "images")
     visualizer.addTopic("Focus distance", depth_driven_focus.output, "images")
 
     print("Pipeline created.")

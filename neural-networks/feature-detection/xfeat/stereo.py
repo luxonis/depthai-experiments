@@ -24,9 +24,9 @@ def stereo_mode(
             camera.name for camera in device.getConnectedCameraFeatures()
         ]
 
-        if len(available_cameras) != 3:
+        if len(available_cameras) < 2:
             raise RuntimeError(
-                f"Expected 3 cameras, but found {len(available_cameras)} cameras: {available_cameras}"
+                f"Expected at least 2 cameras, but found {len(available_cameras)} cameras: {available_cameras}. You need at least 2 cameras (left and right) to run this example in stereo mode."
             )
 
         try:

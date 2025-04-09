@@ -138,12 +138,6 @@
             "reason": "PyCairo installation issues",
             "platform": "all"
         },
-        "stream-manipulation/poe-mqtt": {
-            "reason": "Loaded model is for RVC2, but the device is RVC4",
-            "platform": [
-                "rvc4"
-            ]
-        },
         "tutorials/multiple-devices/spatial-detection-fusion": {
             "reason": "No devices found after filtering (also has RVC2 model)",
             "platform": [

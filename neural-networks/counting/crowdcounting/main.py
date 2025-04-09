@@ -1,11 +1,11 @@
 from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ImgFrameOverlay
+from depthai_nodes.node import ApplyColormap
 
 from utils.arguments import initialize_argparser
 from utils.counter import CrowdCounter
-from utils.density_map_transform import DensityMapToFrame
-from utils.overlay import OverlayFrames
 
 _, args = initialize_argparser()
 
@@ -48,21 +48,16 @@ with dai.Pipeline(device) as pipeline:
     # Counter Node
     crowd_counter_node = pipeline.create(CrowdCounter).build(nn.out)
 
-    # Density Map Transform and Resize Nodes
-    density_map_transform_node = pipeline.create(DensityMapToFrame).build(nn.out)
-    density_map_resize_node = pipeline.create(dai.node.ImageManipV2)
-    density_map_resize_node.setMaxOutputFrameSize(INPUT_WIDTH * INPUT_HEIGHT * 3)
-    density_map_resize_node.initialConfig.setOutputSize(INPUT_WIDTH, INPUT_HEIGHT)
-    density_map_resize_node.initialConfig.setFrameType(frame_type)
-    density_map_transform_node.output.link(density_map_resize_node.inputImage)
+    density_map_transform_node = pipeline.create(ApplyColormap).build(nn.out)
 
     # Overlay Frames Node
-    overlay_frames = pipeline.create(OverlayFrames).build(
-        nn.passthrough, density_map_resize_node.out
+    overlay_frames = pipeline.create(ImgFrameOverlay).build(
+        nn.passthrough,
+        density_map_transform_node.out,
     )
 
     # Visualizer
-    visualizer.addTopic("VideoOverlay", overlay_frames.output)
+    visualizer.addTopic("VideoOverlay", overlay_frames.out)
     visualizer.addTopic("Count", crowd_counter_node.output)
 
     print("Pipeline created.")

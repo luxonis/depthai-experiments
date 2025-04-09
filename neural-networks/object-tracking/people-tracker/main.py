@@ -1,9 +1,8 @@
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, ImgDetectionsBridge
 from utils.arguments import initialize_argparser
-from utils.parser_bridge import ParserBridge
 from utils.people_counter import PeopleCounter
 from utils.tracklet_visualizer import TrackletVisualizer
 
@@ -15,7 +14,7 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
 
     model_description = dai.NNModelDescription(
         "luxonis/scrfd-person-detection:25g-640x640", platform=platform
@@ -41,7 +40,7 @@ with dai.Pipeline(device) as pipeline:
         input_node, nn_archive, fps=args.fps_limit
     )
 
-    bridge = pipeline.create(ParserBridge).build(nn=nn.out)
+    bridge = pipeline.create(ImgDetectionsBridge).build(nn.out, ignore_angle=True)
 
     tracker = pipeline.create(dai.node.ObjectTracker)
     tracker.setDetectionLabelsToTrack([0])
@@ -50,7 +49,7 @@ with dai.Pipeline(device) as pipeline:
     tracker.setTrackerThreshold(0.4)
     nn.passthrough.link(tracker.inputTrackerFrame)
     nn.passthrough.link(tracker.inputDetectionFrame)
-    bridge.output.link(tracker.inputDetections)
+    bridge.out.link(tracker.inputDetections)
 
     tracklet_visualizer = pipeline.create(TrackletVisualizer).build(
         tracklets=tracker.out,

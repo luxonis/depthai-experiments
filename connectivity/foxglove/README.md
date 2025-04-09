@@ -1,48 +1,74 @@
-## Foxglove
+# Foxglove Connection
 
-This example shows you how to use OAK camera for streaming to `Foxglove Studio`. Example uses `Foxglove`'s `websocket` to stream frames or point clouds.
-The example only works on versions of python where the open3d library is supported.
+This example demonstrates how to use a **Luxonis device** for streaming to [Foxglove Studio](https://foxglove.dev/). Example uses `Foxglove`'s `websocket` to stream frames or point clouds.
 
-# Installation
+## Demo
 
+![example](media/example.png)
+
+## Installation
+
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+
+Install required packages by running:
+
+```bash
+pip install -r requirements.txt
 ```
-python3 -m pip install -r requirements.txt
-```
-
-Running the command above also tries to install open3D which is required for this example.
-open3D is not supported by all platforms, but is required for pointcloud visualization. Installing open3D on [Python 3.12 is not yet supported](https://stackoverflow.com/questions/62352767/cant-install-open3d-libraries-errorcould-not-find-a-version-that-satisfies-th).
 
 ## Usage
 
-Run the application
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+Here is a list of all available parameters:
 
 ```
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect
+                      to. (default: None)
+-fps FPS_LIMIT, --fps-limit FPS_LIMIT
+                      FPS limit. (default: None)
+-l, --left            Enable left camera stream. (default: False)
+-r, --right           Enable right camera stream. (default: False)
+-pc, --pointcloud     Enable pointcloud stream. (default: False)
+-nc, --no-color       Disable color camera stream. (default: False)
+
+```
+
+To see the streams, open [Foxglove Studio](https://app.foxglove.dev/), choose `Open connection` and `Foxglove WebSocket`.
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer. Below are some examples of how to run the example.
+
+#### Examples
+
+```bash
 python3 main.py
 ```
 
-By default, the program will stream `Color` stream only. To enable other streams use next flags:
+This will run the experiment with the color camera stream only.
 
-```
-optional arguments:
-  -h, --help            show this help message and exit
-  -l, --left            enable left camera stream
-  -r, --right           enable right camera stream
-  -pc, --pointcloud     enable pointcloud stream
-  -nc, --no-color       disable color camera stream
+```bash
+python3 main.py --pointcloud
 ```
 
-and open `Foxglove Studio`. When you open up the studio you will be prompted with the connection type. Chose `Open connection`
+This will run the experiment with the color camera stream and point cloud stream.
 
-![pic1](https://user-ixmages.githubusercontent.com/82703447/161803788-3d0e15e9-df24-430b-8f73-4fdc82626c06.png)
+### Standalone Mode
 
-And after that chose `Foxglove websocket`.
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
 
-![pic2](https://user-images.githubusercontent.com/82703447/161803642-a91e31af-18d0-4e53-babf-4268323e1255.png)
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
 
-When you are successfully connected, chose `Image` panel and your studio should look something like this:
+The app can then be run with:
 
-![pic3](https://user-images.githubusercontent.com/82703447/161803876-f3b168ed-4ca5-4059-84a5-daee22ae9db6.png)
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
 
-Studio should now be displaying your `point cloud`, if you open it up in the `3D` panel. You might need to toggle its visibility in the web app.
-
-![pic4](https://user-images.githubusercontent.com/82703447/161804066-2f736ca3-07cd-413b-bb80-e8f71f2e53e7.png)
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

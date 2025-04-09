@@ -1,82 +1,71 @@
-import argparse
-import blobconverter
+from pathlib import Path
+
 import depthai as dai
-from host_roboflow import Roboflow
-from uploader import RoboflowUploader
+from depthai_nodes.node.parsing_neural_network import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.roboflow_node import RoboflowNode
+from utils.roboflow_uploader import RoboflowUploader
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-key",
-    "--api-key",
-    help="private API key copied from app.roboflow.com",
-    required=True,
-)
-parser.add_argument(
-    "--workspace", help="name of the workspace in app.roboflow.com", required=True
-)
-parser.add_argument(
-    "--dataset", help="name of the project in app.roboflow.com", required=True
-)
-parser.add_argument(
-    "-ai",
-    "--autoupload-interval",
-    help="automatically upload annotations every [SECONDS] seconds (when used with --autoupload-threshold)",
-    default=0,
-    type=float,
-)
-parser.add_argument(
-    "-at",
-    "--autoupload-threshold",
-    help="automatically upload annotations with confidence above [THRESHOLD] (when used with --autoupload-interval)",
-    default=0,
-    type=float,
-)
-parser.add_argument(
-    "-res",
-    "--upload-res",
-    help="upload annotated images in [WIDTHxHEIGHT] resolution, which can be useful to create dataset with high-resolution images",
-    default="300x300",
-    type=str,
-)
-args = parser.parse_args()
+_, args = initialize_argparser()
 
-target_res = [int(x) for x in args.upload_res.split("x")]
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(target_res[0], target_res[1])
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_12_MP)
-    cam.setInterleaved(False)
-    cam.setFps(30)
-    cam.setPreviewKeepAspectRatio(False)
 
-    manip = pipeline.create(dai.node.ImageManip)
-    manip.initialConfig.setKeepAspectRatio(False)
-    manip.initialConfig.setResize(300, 300)
-    cam.preview.link(manip.inputImage)
+    platform = device.getPlatformAsString()
+    model_description = dai.NNModelDescription(
+        "luxonis/yolov6-nano:r2-coco-512x288", platform=platform
+    )
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
-    nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
-    nn.setConfidenceThreshold(0.5)
-    nn.setBlobPath(blobconverter.from_zoo(name="mobilenet-ssd", shaves=5))
-    nn.setNumInferenceThreads(2)
-    nn.input.setBlocking(False)
-    manip.out.link(nn.input)
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
+
+    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
+
+    nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, nn_archive, fps=args.fps_limit
+    )
 
     uploader = RoboflowUploader(
         api_key=args.api_key, workspace_name=args.workspace, dataset_name=args.dataset
     )
 
-    roboflow = pipeline.create(Roboflow).build(
-        preview=cam.preview,
-        nn=nn.out,
+    roboflow = pipeline.create(RoboflowNode).build(
+        preview=nn_with_parser.passthrough,
+        nn=nn_with_parser.out,
         uploader=uploader,
-        target_resolution=target_res,
-        auto_interval=args.autoupload_interval,
-        auto_threshold=args.autoupload_threshold,
+        auto_interval=args.auto_interval,
+        auto_threshold=args.auto_threshold,
+        labels=nn_archive.getConfigV1().model.heads[0].metadata.classes,
     )
-    roboflow.inputs["preview"].setBlocking(False)
-    roboflow.inputs["preview"].setMaxSize(5)
+
+    visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
+    visualizer.addTopic("Detections", nn_with_parser.out, "detections")
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        pipeline.processTasks()
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
+        else:
+            roboflow.handle_key(key)
