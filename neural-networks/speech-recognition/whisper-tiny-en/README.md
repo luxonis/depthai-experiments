@@ -44,7 +44,7 @@ or using oakctl tool
 oakctl run-script python3 main.py --device_ip <device_ip> --audio_file <audio_file>
 ```
 
-> \[!WARNING\]
+> [!WARNING]
 > The `--device_ip` and `--audio_file` arguments are mandatory. The `device_ip` is the IP address of the device you are connecting to. The `audio_file` is the path to the audio file you want to use for the inference.
 
 To see the output in visualizer open browser at http://localhost:8000.
@@ -85,7 +85,7 @@ Run the `oakctl` app from the `whisper-tiny-en` directory as
 oakctl app run .
 ```
 
-> \[!NOTE\]
+> [!NOTE]
 > To test the application with a different audio file, place the new file in the `whisper-tiny-en/assets/audio_files` directory. Then, update the `--audio_file` argument in the `entrypoint` field of the `oakapp.toml` file to specify the new file.
 
 To see the output in visualizer open browser at http://192.168.0.10:8000, if `192.168.0.10` is IP of your camera.

@@ -41,7 +41,7 @@ python3 test_calibration.py
 
 ## Examples
 
-|                                                         Outputs                                                         | Inputs                                                                                                              |
+| Outputs | Inputs |
 | :---------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------ |
 | ![example_5_out](https://user-images.githubusercontent.com/47612463/177592137-169290fb-a359-4663-9030-050a661b5196.png) | ![example_5](https://user-images.githubusercontent.com/47612463/177592142-bead0286-8934-4c4f-b14f-12e162ff3330.png) |
 | ![example_3_out](https://user-images.githubusercontent.com/47612463/177592144-faba302c-4bf6-42f2-9d32-7f69a4a0db02.png) | ![example_3](https://user-images.githubusercontent.com/47612463/177592146-02c191ae-fde7-4790-98ea-2da3da5579a3.png) |

@@ -4,7 +4,7 @@ This experiment demonstrates how to create a simple application that sends snaps
 
 ## Demo
 
-|             Visualizer view              |         Snap on Hub         |
+| Visualizer view | Snap on Hub |
 | :--------------------------------------: | :-------------------------: |
 | ![visualizer_view](media/visualizer.png) | ![hub_view](media/snap.png) |
 
