@@ -6,9 +6,9 @@ This example demonstrates multiple Luxonis OAK cameras tracking objects and show
 
 ## Controls
 
-| key | action |
+| key | action            |
 | :-- | :---------------- |
-| `q` | quit |
+| `q` | quit              |
 | `d` | toggle depth view |
 
 ## Usage

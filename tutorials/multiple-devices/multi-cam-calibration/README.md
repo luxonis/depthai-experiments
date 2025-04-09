@@ -4,11 +4,11 @@ This example demonstrates how to compute extrinsic parameters (pose of the camer
 
 ## Controls
 
-| key | action |
+| key         | action                                                       |
 | :---------- | :----------------------------------------------------------- |
-| `1` ... `9` | select camera |
-| `q` | quit |
-| `p` | compute the pose of the selected camera and save the results |
+| `1` ... `9` | select camera                                                |
+| `q`         | quit                                                         |
+| `p`         | compute the pose of the selected camera and save the results |
 
 ## Configuration
 

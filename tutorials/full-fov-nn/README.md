@@ -42,11 +42,11 @@ This experiment contains 4 different scripts.
 
 This is the main script that runs the experiment and lets you choose the resize mode during runtime by using the following keybinds:
 
-| Key | Mode |
+| Key | Mode         |
 | --- | ------------ |
-| a | Letterboxing |
-| s | Crop |
-| d | Stretch |
+| a   | Letterboxing |
+| s   | Crop         |
+| d   | Stretch      |
 
 ### `letterboxing.py`, `cropping.py` and `stretch.py`
 
