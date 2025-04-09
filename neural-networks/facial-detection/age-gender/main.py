@@ -28,15 +28,8 @@ with dai.Pipeline(device) as pipeline:
         replay_node.setReplayVideoFile(Path(args.media_path))
         replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay_node.setLoop(True)
-
-        video_resize_node = pipeline.create(dai.node.ImageManipV2)
-        video_resize_node.initialConfig.setOutputSize(1280, 960)
-        video_resize_node.setMaxOutputFrameSize(3686500)
-        video_resize_node.initialConfig.setFrameType(frame_type)
-
-        replay_node.out.link(video_resize_node.inputImage)
-
-        input_node = video_resize_node.out
+        replay_node.setSize(1280, 960)
+        input_node = replay_node.out
     else:
         camera_node = pipeline.create(dai.node.Camera).build()
         input_node = camera_node.requestOutput((1280, 960), frame_type, fps=FPS)
