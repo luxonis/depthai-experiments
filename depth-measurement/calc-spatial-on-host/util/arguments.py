@@ -6,9 +6,7 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = (
-        "Calcualte spatial coordinates of a ROI on the host and gets depth frames from the device"
-    )
+    parser.description = "Calcualte spatial coordinates of a ROI on the host and gets depth frames from the device"
 
     parser.add_argument(
         "-d",

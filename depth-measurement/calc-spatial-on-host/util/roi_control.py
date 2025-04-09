@@ -62,12 +62,24 @@ class ROIControl(dai.node.HostNode):
             thickness=1,
         )
 
-        x = (self._roi.xmax)
-        y = (self._roi.ymin)
+        x = self._roi.xmax
+        y = self._roi.ymin
 
-        text_x = f"X: {depth.spatials.x / 1000:.1f}m" if not math.isnan(depth.spatials.x) else "X: --"
-        text_y = f"Y: {depth.spatials.y / 1000:.1f}m" if not math.isnan(depth.spatials.y) else "Y: --"
-        text_z = f"Z: {depth.spatials.z / 1000:.1f}m" if not math.isnan(depth.spatials.z) else "Z: --"
+        text_x = (
+            f"X: {depth.spatials.x / 1000:.1f}m"
+            if not math.isnan(depth.spatials.x)
+            else "X: --"
+        )
+        text_y = (
+            f"Y: {depth.spatials.y / 1000:.1f}m"
+            if not math.isnan(depth.spatials.y)
+            else "Y: --"
+        )
+        text_z = (
+            f"Z: {depth.spatials.z / 1000:.1f}m"
+            if not math.isnan(depth.spatials.z)
+            else "Z: --"
+        )
 
         text_offset_x = 2
         text_offset_y_1 = 4
@@ -93,10 +105,11 @@ class ROIControl(dai.node.HostNode):
             size=4,
         )
 
-        annotations = annotations_builder.build(disparity.getTimestamp(), disparity.getSequenceNum())
+        annotations = annotations_builder.build(
+            disparity.getTimestamp(), disparity.getSequenceNum()
+        )
         self.annotation_output.send(annotations)
         self.passthrough.send(disparity)
-
 
     def handle_key_press(self, key: int) -> None:
         if key == -1:

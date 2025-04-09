@@ -2,7 +2,7 @@
 
 import cv2
 import depthai as dai
-from util.roi_control import ROIControl 
+from util.roi_control import ROIControl
 from util.arguments import initialize_argparser
 from depthai_nodes.node import ApplyColormap
 from host_node.measure_distance import MeasureDistance
