@@ -1,6 +1,6 @@
 import cv2
 import depthai as dai
-from depthai_nodes.node import DepthColorTransform
+from depthai_nodes.node import ApplyColormap
 from utils.arguments import initialize_argparser
 from utils.stereo_config_controller import StereoConfigController
 
@@ -36,9 +36,7 @@ with dai.Pipeline(device) as pipeline:
     stereo_controller = pipeline.create(StereoConfigController).build(preview=preview)
     stereo_controller.out_cfg.link(stereo.inputConfig)
 
-    depth_color = pipeline.create(DepthColorTransform).build(
-        disparity_frames=stereo.disparity
-    )
+    depth_color = pipeline.create(ApplyColormap).build(arr=stereo.disparity)
     depth_color.setColormap(cv2.COLORMAP_JET)
 
     sync = pipeline.create(dai.node.Sync)
