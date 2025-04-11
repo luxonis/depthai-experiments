@@ -96,18 +96,6 @@
             "reason": "Can't run without arguments (e.g. roboflow api-key)",
             "platform": "all"
         },
-        "connectivity/rerun": {
-            "reason": "Failed loading `libxkbcommon-x11.so.0",
-            "platform": [
-                "rvc4"
-            ]
-        },
-        "connectivity/foxglove": {
-            "reason": "Loaded model is for RVC2, but the device is RVC4",
-            "platform": [
-                "rvc4"
-            ]
-        },
         "connectivity/hub-snaps-events": {
             "reason": "Missing token, please set DEPTHAI_HUB_API_KEY environment variable or use setToken method - Needs to be set by the user.",
             "platform": "all"
@@ -124,19 +112,11 @@
             "reason": "Open3D causes some memory segfault",
             "platform": "all"
         },
-        "depth-measurement/qt-gui": {
-            "reason": "PyQT installation issues",
-            "platform": "all"
-        },
         "depth-measurement/stereo-on-host": {
             "reason": "Extrinsic connection between the requested cameraId's doesn't exist. Please recalibrate or modify your calibration data",
             "platform": [
                 "rvc4"
             ]
-        },
-        "stream-manipulation/rtsp-streaming": {
-            "reason": "PyCairo installation issues",
-            "platform": "all"
         },
         "tutorials/multiple-devices/spatial-detection-fusion": {
             "reason": "No devices found after filtering (also has RVC2 model)",
