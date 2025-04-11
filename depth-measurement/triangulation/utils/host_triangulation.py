@@ -7,6 +7,7 @@ from depthai_nodes import (
 )
 from typing import Tuple, List
 from utility import TextHelper
+from .annotation_helper import AnnotationHelper
 from stereo_inference import StereoInference
 
 

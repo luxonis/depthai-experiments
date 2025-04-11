@@ -1,15 +1,17 @@
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 from typing import Tuple
-from host_triangulation import Triangulation
-from host_display import Display
+from utils.host_triangulation import Triangulation
+from utils.arguments import initialize_argparser
 
+_, args = initialize_argparser()
 
-device = dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
 device_platform = device.getPlatform()
-
 rvc2 = device_platform == dai.Platform.RVC2
-model_dimension = (320, 240) if rvc2 else (640, 480)
+model_dimension = (320, 240) if rvc2 else (640, 400)
 faceDet_modelDescription = dai.NNModelDescription(
     modelSlug="yunet",
     platform=device.getPlatform().name,
@@ -22,7 +24,7 @@ faceDet_nnarchive = dai.NNArchive(faceDet_archivePath)
 # Creates and connects nodes, once for the left camera and once for the right camera
 def populate_pipeline(
     p: dai.Pipeline, left: bool, resolution: Tuple[int, int]
-) -> Tuple[dai.Node.Output, dai.Node.Output, dai.Node.Output]:
+) -> Tuple[dai.Node.Output, dai.Node.Output]:
     socket = dai.CameraBoardSocket.CAM_B if left else dai.CameraBoardSocket.CAM_C
     cam = p.create(dai.node.Camera).build(socket)
     fps = 25 if rvc2 else 3
@@ -48,9 +50,16 @@ with dai.Pipeline(device) as pipeline:
         resolution_number=model_dimension,
     )
 
-    display = pipeline.create(Display).build(triangulation.output)
-    display.setName("Combined frame")
+    visualizer.addTopic("Face left", face_left)
+    visualizer.addTopic("Face right", face_right)
 
     print("Pipeline created.")
-    pipeline.run()
-    print("Pipeline finished.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
