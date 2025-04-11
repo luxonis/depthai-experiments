@@ -6,12 +6,7 @@ If you already have depth frames and ROI (Region-Of-Interest, eg. bounding box o
 to the device.
 
 > **Note**: Using single points / tiny ROIs (eg. 3x3) should be avoided, as depth frame can be noisy, so you should use **at least 10x10 depth pixels
-> \<\<\<\<\<\<\< HEAD
 > ROI**. Also note that to maximize spatial coordinates accuracy, you should define min and max threshold accurately.
-> \=======
-> ROI\*\*. Also note that to maximize spatial coordinates accuracy, you should define min and max threshold accurately.
->
-> > > > > > > 9f415997 (refactoring spatial calculation on host)
 
 ## Demo
 
@@ -44,11 +39,7 @@ Here is a list of all available parameters:
 
 ### Peripheral Mode
 
-# \<\<\<\<\<\<\< HEAD Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. You can run the example with the following command:
-
 Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. You can run the example with the following command:
-
-> > > > > > > 9f415997 (refactoring spatial calculation on host)
 
 ```bash
 python3 main.py
@@ -70,6 +61,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-# This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file. \<\<\<\<\<\<\< HEAD
-
-> > > > > > > 9f415997 (refactoring spatial calculation on host)
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

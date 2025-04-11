@@ -1,7 +1,7 @@
 import math
 import depthai as dai
-from host_node.measure_distance import SpatialDistance
-from host_node.measure_distance import RegionOfInterest
+from util.measure_distance import SpatialDistance
+from util.measure_distance import RegionOfInterest
 from .img_annotation_helper import AnnotationHelper
 
 

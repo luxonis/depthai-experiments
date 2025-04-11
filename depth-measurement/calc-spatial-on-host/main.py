@@ -5,7 +5,7 @@ import depthai as dai
 from util.roi_control import ROIControl
 from util.arguments import initialize_argparser
 from depthai_nodes.node import ApplyColormap
-from host_node.measure_distance import MeasureDistance
+from util.measure_distance import MeasureDistance
 
 
 _, args = initialize_argparser()
@@ -16,12 +16,12 @@ with dai.Pipeline(device) as pipeline:
     monoLeft = (
         pipeline.create(dai.node.Camera)
         .build(dai.CameraBoardSocket.CAM_B)
-        .requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
+        .requestOutput((640, 400), type=dai.ImgFrame.Type.NV12)
     )
     monoRight = (
         pipeline.create(dai.node.Camera)
         .build(dai.CameraBoardSocket.CAM_C)
-        .requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
+        .requestOutput((640, 400), type=dai.ImgFrame.Type.NV12)
     )
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
