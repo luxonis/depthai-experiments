@@ -1,6 +1,5 @@
 import depthai as dai
 
-import depthai as dai
 from util.arguments import initialize_argparser
 from util.host_stereo_sgbm import StereoSGBM
 from util.host_ssim import SSIM
@@ -10,15 +9,6 @@ import cv2
 RESOLUTION_SIZE = (640, 400)
 
 _, args = initialize_argparser()
-
-def calculateDispScaleFactor(device: dai.Device, stereo):
-    calib = device.readCalibration()
-    baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
-    intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.CAM_C, RESOLUTION_SIZE)
-    focalLength = intrinsics[0][0]
-    disp_levels = stereo.initialConfig.getMaxDisparity() / 95
-    dispScaleFactor = baseline * focalLength * disp_levels
-    return dispScaleFactor
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device()
@@ -58,29 +48,23 @@ with dai.Pipeline(device) as pipeline:
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(True)
 
-    dispScaleFactor = calculateDispScaleFactor(device, stereo)
-
-    ssim = pipeline.create(SSIM).build(
-        disp=stereo.disparity, depth=stereo.depth
-    )
-    ssim.setDispScaleFactor(dispScaleFactor)
-
     depth_parser = pipeline.create(ApplyColormap).build(stereo.disparity)
     depth_parser.setMaxValue(int(stereo.initialConfig.getMaxDisparity()))
     depth_parser.setColormap(cv2.COLORMAP_JET)
 
-    # visualizer.addTopic("SSIM Disparity", ssim.passthrough_disp, "ssim")
-    # visualizer.addTopic("SSIM Stereo Depth", ssim.passthrough_depth, "ssim")
-    visualizer.addTopic("SSIM score", ssim.output, "ssim")
+    ssim = pipeline.create(SSIM).build(
+        disp_generated=stereo.disparity, disp_calculated=stereoSGBM.raw_disparity_out
+    )
+    ssim.setMaxDisparity(int(stereo.initialConfig.getMaxDisparity()))
 
-    visualizer.addTopic("Depth test", depth_parser.out, "images")
+    visualizer.addTopic("Left Cam", stereoSGBM.mono_left)
+    visualizer.addTopic("Right Cam", stereoSGBM.mono_right)
+    visualizer.addTopic("Rectified Left", stereoSGBM.rectified_left)
+    visualizer.addTopic("Rectified Right", stereoSGBM.rectified_right)
 
-    visualizer.addTopic("Left Cam", stereoSGBM.mono_left, "left")
-    visualizer.addTopic("Right Cam", stereoSGBM.mono_right, "right")
-    visualizer.addTopic("Disparity SGBM", stereoSGBM.disparity_out, "disparity")
-    visualizer.addTopic("Rectified Left", stereoSGBM.rectified_left, "left")
-    visualizer.addTopic("Rectified Right", stereoSGBM.rectified_right, "right")
-    
+    visualizer.addTopic("Depth generated", depth_parser.out, "depth")
+    visualizer.addTopic("Depth SGBM", stereoSGBM.disparity_out, "depth")
+    visualizer.addTopic("SSIM score", ssim.output, "depth")
 
     print("Pipeline created.")
 

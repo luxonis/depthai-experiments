@@ -18,17 +18,22 @@ class StereoSGBM(dai.node.HostNode):
         )
         super().__init__()
 
+        self.disparity_out = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
+        self.raw_disparity_out = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
         self.mono_left = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
         self.mono_right = self.createOutput(
-            possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
-            ]
-        )
-        self.disparity_out = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
@@ -151,11 +156,16 @@ class StereoSGBM(dai.node.HostNode):
 
         disparity_colour_mapped = cv2.applyColorMap(
             (disparity_scaled * (256.0 / self.max_disparity)).astype(np.uint8),
-            cv2.COLORMAP_HOT,
+            cv2.COLORMAP_JET,
         )
 
         self.disparity_out.send(
             self._create_img_frame(disparity_colour_mapped, dai.ImgFrame.Type.BGR888i)
+        )
+        self.raw_disparity_out.send(
+            self._create_img_frame(
+                self.disparity.astype(np.uint16), dai.ImgFrame.Type.RAW16
+            )
         )
         self.rectified_left.send(
             self._create_img_frame(left_img_rect, dai.ImgFrame.Type.NV12)
