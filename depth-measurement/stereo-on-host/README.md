@@ -1,5 +1,3 @@
-[中文文档](README.zh-CN.md)
-
 # Gen3 Stereo on host
 
 The `main.py` demonstrates how [stereo pipeline works](https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/#internal-block-diagram-of-stereodepth-node) on the OAK device (using depthai). It rectifies mono frames (receives from the OAK camera) and then
