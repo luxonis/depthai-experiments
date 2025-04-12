@@ -4,22 +4,8 @@ from typing import Tuple
 from utils.host_triangulation import Triangulation
 from utils.arguments import initialize_argparser
 
+
 _, args = initialize_argparser()
-
-visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-
-device_platform = device.getPlatform()
-rvc2 = device_platform == dai.Platform.RVC2
-model_dimension = (320, 240) if rvc2 else (640, 400)
-faceDet_modelDescription = dai.NNModelDescription(
-    modelSlug="yunet",
-    platform=device.getPlatform().name,
-    modelVersionSlug=f"{model_dimension[0]}x{model_dimension[1]}",
-)
-faceDet_archivePath = dai.getModelFromZoo(faceDet_modelDescription)
-faceDet_nnarchive = dai.NNArchive(faceDet_archivePath)
-
 
 # Creates and connects nodes, once for the left camera and once for the right camera
 def populate_pipeline(
@@ -34,9 +20,21 @@ def populate_pipeline(
 
     return cam_output, face_nn.out
 
-
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
+    device_platform = device.getPlatform()
+    rvc2 = device_platform == dai.Platform.RVC2
+    model_dimension = (320, 240) if rvc2 else (640, 480)
+    # faceDet_modelDescription = dai.NNModelDescription(f"luxonis/yunet:{model_dimension[0]}x{model_dimension[1]}")
+    faceDet_modelDescription = dai.NNModelDescription(
+        modelSlug="yunet",
+        platform=device.getPlatform().name,
+        modelVersionSlug=f"{model_dimension[0]}x{model_dimension[1]}",
+    )
+    # faceDet_modelDescription.platform = device.getPlatformAsString()
+    faceDet_nnarchive = dai.NNArchive(dai.getModelFromZoo(faceDet_modelDescription))
 
     face_left, face_nn_left = populate_pipeline(pipeline, True, model_dimension)
     face_right, face_nn_right = populate_pipeline(pipeline, False, model_dimension)
@@ -50,8 +48,12 @@ with dai.Pipeline(device) as pipeline:
         resolution_number=model_dimension,
     )
 
-    visualizer.addTopic("Face left", face_left)
-    visualizer.addTopic("Face right", face_right)
+    visualizer.addTopic("Face Left", face_left, "left")
+    visualizer.addTopic("Left Detections", triangulation.annot_left, "left")
+    visualizer.addTopic("Face Right", face_right, "right")
+    visualizer.addTopic("Right Detections", triangulation.annot_right, "right")
+    visualizer.addTopic("Combined", triangulation.combined_frame, "combined")
+    visualizer.addTopic("Keypoints", triangulation.combined_keypoints, "combined")
 
     print("Pipeline created.")
 

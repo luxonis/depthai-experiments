@@ -8,22 +8,35 @@ from depthai_nodes import (
 from typing import Tuple, List
 from utility import TextHelper
 from .annotation_helper import AnnotationHelper
-from stereo_inference import StereoInference
+from .stereo_inference import StereoInference
 
 
 class Triangulation(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self._leftColor = (255, 0, 0)
-        self._rightColor = (0, 255, 0)
+        self._leftColor = (1, 0, 0, 1)
+        self._rightColor = (0, 1, 0, 1)
         self._textHelper = TextHelper()
-        self.output = self.createOutput(
+        self.combined_frame = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-        self._display_detections = True
-        self.sendProcessingToPipeline(True)
+        self.combined_keypoints = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
+            ]
+        )
+        self.annot_left = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
+            ]
+        )
+        self.annot_right = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
+            ]
+        )
 
     def build(
         self,
@@ -39,9 +52,6 @@ class Triangulation(dai.node.HostNode):
 
         return self
 
-    def set_display_detections(self, display_detections: bool) -> None:
-        self._display_detections = display_detections
-
     def process(
         self,
         face_left: dai.ImgFrame,
@@ -55,23 +65,61 @@ class Triangulation(dai.node.HostNode):
         left_frame = face_left.getCvFrame()
         right_frame = face_right.getCvFrame()
 
-        if self._display_detections:
-            self._displayDetections(
-                left_frame, nn_face_left.detections, self._leftColor
+        bbox_annot_left = AnnotationHelper()
+        for detection in nn_face_left.detections:
+            rect = detection.rotated_rect
+            x = int(rect.center.x * left_frame.shape[1])
+            y = int(rect.center.y * left_frame.shape[0])
+            w = int(rect.size.width * left_frame.shape[1])
+            h = int(rect.size.height * left_frame.shape[0])
+            top_left = (x - w/2, y - h/2)
+            bottom_right = (x + w/2, y + h/2)
+            
+            bbox_annot_left.draw_rectangle(
+                top_left=top_left,
+                bottom_right=bottom_right,
+                outline_color=self._leftColor,
+                thickness=2
             )
-            self._displayDetections(
-                right_frame, nn_face_right.detections, self._rightColor
+
+        bbox_annot_left_msg = bbox_annot_left.build(
+            timestamp=face_left.getTimestamp(), sequence_num=face_left.getSequenceNum()
+        )
+        self.annot_left.send(bbox_annot_left_msg)
+
+        bbox_annot_right = AnnotationHelper()
+        for detection in nn_face_right.detections:
+            rect = detection.rotated_rect
+            x = int(rect.center.x * right_frame.shape[1])
+            y = int(rect.center.y * right_frame.shape[0])
+            w = int(rect.size.width * right_frame.shape[1])
+            h = int(rect.size.height * right_frame.shape[0])
+            top_left = (x - w/2, y - h/2)
+            bottom_right = (x + w/2, y + h/2)
+            
+            bbox_annot_right.draw_rectangle(
+                top_left=top_left,
+                bottom_right=bottom_right,
+                outline_color=self._rightColor,
+                thickness=2
             )
+
+        bbox_annot_right_msg = bbox_annot_right.build(
+            timestamp=face_right.getTimestamp(), sequence_num=face_right.getSequenceNum()
+        )
+        self.annot_right.send(bbox_annot_right_msg)
 
         combined = cv2.addWeighted(left_frame, 0.5, right_frame, 0.5, 0)
+        y_dimension, x_dimension = combined.shape[:2]
 
+        annotation_helper = AnnotationHelper()
         if nn_face_left.detections and nn_face_right.detections:
             spatials = []
             keypoints = zip(
                 nn_face_left.detections[0].keypoints,
                 nn_face_right.detections[0].keypoints,
             )
-            y_dimension, x_dimension = left_frame.shape[:2]
+            
             for i, (keypoint_left, keypoint_right) in enumerate(keypoints):
                 coords_left = (
                     int(keypoint_left.x * x_dimension),
@@ -82,14 +130,38 @@ class Triangulation(dai.node.HostNode):
                     int(keypoint_right.y * y_dimension),
                 )
 
-                self._draw_keypoint(left_frame, coords_left, self._leftColor)
-                self._draw_keypoint(right_frame, coords_right, self._rightColor)
-                self._draw_keypoint(combined, coords_left, self._leftColor)
-                self._draw_keypoint(combined, coords_right, self._rightColor)
+                rel_coords_left = (
+                    coords_left[0] / x_dimension,
+                    coords_left[1] / y_dimension,
+                )
+                rel_coords_right = (
+                    coords_right[0] / x_dimension,
+                    coords_right[1] / y_dimension,
+                )
 
-                # Visualize disparity line frame
-                self._draw_disparity_line(combined, coords_left, coords_right)
+                # Visualize keypoints
+                annotation_helper.draw_circle(
+                    center=rel_coords_left,
+                    radius=3 / x_dimension,
+                    outline_color=self._leftColor,
+                    thickness=1,
+                )
+                annotation_helper.draw_circle(
+                    center=rel_coords_right,
+                    radius=3 / x_dimension, 
+                    outline_color=self._rightColor,
+                    thickness=1,
+                )
 
+                # Visualize disparity line
+                annotation_helper.draw_line(
+                    pt1=rel_coords_left,
+                    pt2=rel_coords_right,
+                    color=self._leftColor,
+                    thickness=1,
+                )
+
+                # Calculate spatial data
                 disparity = self._stereoInference.calculate_distance(
                     coords_left, coords_right
                 )
@@ -107,28 +179,23 @@ class Triangulation(dai.node.HostNode):
                         "Z: {:.2f} m".format(spatial[2] / 1000),
                     ]
                     for s in strings:
+                        annotation_helper.draw_text(
+                            text=s,
+                            position=(10, y),
+                            color=(1.0, 1.0, 1.0, 1.0),
+                            background_color=(0.0, 0.0, 0.0, 0.7),
+                            size=6
+                        )
                         y += y_delta
-                        self._textHelper.putText(combined, s, (10, y))
 
-        combined = np.concatenate((left_frame, combined, right_frame), axis=1)
         output_frame = self._create_output_frame(face_left, combined)
-        self.output.send(output_frame)
 
-    def _draw_disparity_line(
-        self,
-        combined: np.ndarray,
-        coords_left: Tuple[int, int],
-        coords_right: Tuple[int, int],
-    ) -> None:
-        cv2.line(combined, coords_right, coords_left, (0, 0, 255), 1)
+        self.combined_frame.send(output_frame)
 
-    def _draw_keypoint(
-        self,
-        left_frame: np.ndarray,
-        coords_left: Tuple[int, int],
-        color: Tuple[int, int, int],
-    ) -> None:
-        cv2.circle(left_frame, coords_left, 3, color)
+        annotations_msg = annotation_helper.build(
+            timestamp=face_left.getTimestamp(), sequence_num=face_left.getSequenceNum()
+        )
+        self.combined_keypoints.send(annotations_msg)
 
     def _create_output_frame(
         self, face_left: dai.ImgFrame, combined: np.ndarray
