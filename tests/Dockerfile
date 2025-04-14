@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     xorg \
     ffmpeg \
     libzbar-dev \
+    libgirepository1.0-dev \
     && rm -rf /var/lib/apt/lists/*
 ENV DISPLAY=:99
 
