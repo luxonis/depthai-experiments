@@ -1,7 +1,8 @@
 import argparse
+from typing import Optional
 
 
-def range_limited_float_type(min: float, max: float | None):
+def range_limited_float_type(min: float, max: Optional[float]):
     if max is None:
         max = float("inf")
 

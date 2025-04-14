@@ -1,6 +1,7 @@
 from datetime import timedelta
 from enum import Enum
-from typing import Tuple
+from typing import Optional, Tuple
+
 import cv2
 import depthai as dai
 
@@ -64,7 +65,7 @@ class ManualCameraControl(dai.node.HostNode):
         self._af_mode: dai.CameraControl.AutoFocusMode = (
             dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO
         )
-        self._selected_control: OtherControls | None = None
+        self._selected_control: Optional[OtherControls] = None
         self._capture = False
 
         self.output = self.createOutput(
