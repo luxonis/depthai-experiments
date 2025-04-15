@@ -1,5 +1,5 @@
 import depthai as dai
-from .frontend_server import FrontendServer
+from frontend_server import FrontendServer
 from pathlib import Path
 
 
