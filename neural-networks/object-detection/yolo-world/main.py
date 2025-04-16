@@ -2,8 +2,8 @@ import numpy as np
 import onnxruntime
 from transformers import AutoTokenizer
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
-from depthai_nodes.ml.messages import ImgDetectionsExtended
+from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.message import ImgDetectionsExtended
 import argparse
 import os
 
@@ -11,8 +11,8 @@ import os
 from utils import download_model
 
 MAX_NUM_CLASSES = 80
-QUANT_ZERO_POINT = 89.0
-QUANT_SCALE = 0.003838143777
+QUANT_ZERO_POINT = 90.0
+QUANT_SCALE = 0.003925696481
 IMAGE_SIZE = (640, 640)
 
 
@@ -51,6 +51,7 @@ class DetectionLabelCustomizer(dai.node.HostNode):
         img_detections.detections = filtered_detections
         img_detections.setTimestamp(detections.getTimestamp())
         img_detections.setSequenceNum(detections.getSequenceNum())
+        img_detections.transformation = detections.transformation
         self.output.send(img_detections)
 
 
@@ -127,7 +128,6 @@ def main(args):
             platform="RVC4",
         )
         archive_path = dai.getModelFromZoo(model_description, useCached=True)
-        #archive_path = "yolo_world_l_multi_input_wordnet_flickr8k.tar.xz"
         nn_archive = dai.NNArchive(archive_path)
 
         nn_with_parser = pipeline.create(ParsingNeuralNetwork)
