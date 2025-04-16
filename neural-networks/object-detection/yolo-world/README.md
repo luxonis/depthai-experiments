@@ -41,6 +41,7 @@ python main.py --device <DEVICE> --class_names <CLASS_NAMES> [OPTIONS]
 ### Example (with a depthai visualizer)
 
 Running with a depthai visualizer:
+
 ```bash
 python main.py --device 192.168.1.100 --class_names person car dog --video_path input.mp4 --confidence_threshold 0.2
 ```
