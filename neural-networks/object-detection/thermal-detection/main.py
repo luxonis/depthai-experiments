@@ -1,6 +1,6 @@
 import depthai as dai
 from pathlib import Path
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.yuv2bgr import YUV2BGR
 
@@ -19,7 +19,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     model_description = dai.NNModelDescription(args.model)
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
     model_description.platform = platform
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(model_description, apiKey=args.api_key)
@@ -58,7 +58,7 @@ with dai.Pipeline(device) as pipeline:
     )
 
     parser = nn_with_parser.getParser()
-    parser.setConfidenceThreshold(0.5)  # NOTE: Adjust if needed
+    parser.setConfidenceThreshold(0.6)  # NOTE: Adjust if needed
 
     visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
     visualizer.addTopic("Visualizations", nn_with_parser.out, "images")

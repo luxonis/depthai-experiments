@@ -1,36 +1,56 @@
-#!/usr/bin/env python3
+from pathlib import Path
 
-### trick to solve problem with ffmpeg on linux
-import cv2
-import numpy as np
+import depthai as dai
+from utils.arguments import initialize_argparser
+from utils.decode_video_av import DecodeVideoAv
+from utils.encoder_profiles import ENCODER_PROFILES
 
-cv2.imshow("bugfix", np.zeros((10, 10, 3), dtype=np.uint8))
-cv2.destroyWindow("bugfix")
-###
+_, args = initialize_argparser()
 
-import depthai as dai  # noqa: E402
 
-from hostnodes.host_decode_video import DecodeVideoAv  # noqa: E402
-from hostnodes.host_display import Display  # noqa: E402
+PYAV_CODECS = {
+    "h264": "h264",
+    "h265": "hevc",
+    "mjpeg": "mjpeg",
+}
 
-FPS = 30.0
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
-with dai.Pipeline() as pipeline:
-    camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    video = camRgb.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=FPS)
 
-    videoEnc = pipeline.create(dai.node.VideoEncoder)
-    videoEnc.setDefaultProfilePreset(FPS, dai.VideoEncoderProperties.Profile.H264_MAIN)
+with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
 
-    video.link(videoEnc.input)
+    platform = device.getPlatformAsString()
 
-    decoded = pipeline.create(DecodeVideoAv).build(
-        enc_out=videoEnc.bitstream, codec="h264"
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        cam_out = replay.out
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+        cam_out = cam.requestOutput((1920, 1440), type=dai.ImgFrame.Type.NV12)
+
+    encoder = pipeline.create(dai.node.VideoEncoder).build(
+        input=cam_out,
+        frameRate=args.fps_limit,
+        profile=ENCODER_PROFILES[args.encode],
     )
 
-    color = pipeline.create(Display).build(frame=decoded.output)
-    color.setName("Color")
+    decoder = pipeline.create(DecodeVideoAv).build(
+        enc_out=encoder.bitstream, codec=PYAV_CODECS[args.encode]
+    )
 
-    print("pipeline created")
-    pipeline.run()
-    print("pipeline finished")
+    visualizer.addTopic("Video", decoder.out)
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

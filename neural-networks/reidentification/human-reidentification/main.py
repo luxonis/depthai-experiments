@@ -1,6 +1,6 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 
 from utils.arguments import initialize_argparser
 from utils.process import ProcessDetections
@@ -9,8 +9,14 @@ from utils.sync import AnnotationSyncNode
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device_id)) if args.device_id else dai.Device()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+
+if "RVC2" in str(platform):
+    raise RuntimeError(
+        f"This demo is currently only supported on RVC4, got `{platform}`"
+    )
+
 frame_type = (
     dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
 )
@@ -32,23 +38,19 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
             args.fps_limit = None  # only want to set it once
-        imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            det_nn_archive.getInputWidth() * det_nn_archive.getInputHeight() * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            det_nn_archive.getInputWidth(), det_nn_archive.getInputHeight()
-        )
-        imageManip.initialConfig.setFrameType(frame_type)
-        replay.out.link(imageManip.inputImage)
+        replay.setSize(det_nn_archive.getInputWidth(), det_nn_archive.getInputHeight())
     else:
         cam = pipeline.create(dai.node.Camera).build()
-    input_node = imageManip.out if args.media_path else cam
+    input_node = replay.out if args.media_path else cam
 
     # Detection Model Node
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
@@ -56,11 +58,10 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # Detections Processing Node
-    det_process_node = pipeline.create(ProcessDetections)
+    det_process_node = pipeline.create(ProcessDetections).build(det_nn.out)
     det_process_node.set_target_size(
         rec_nn_archive.getInputWidth(), rec_nn_archive.getInputHeight()
     )
-    det_nn.out.link(det_process_node.detections_input)
 
     # Crop Configuration Sender Node
     config_sender_node = pipeline.create(dai.node.Script)
@@ -78,16 +79,13 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # Crop Node
-    if platform == "RVC2":
-        crop_node = pipeline.create(dai.node.ImageManip)
-    elif platform == "RVC4":
-        crop_node = pipeline.create(dai.node.ImageManipV2)
-        crop_node.initialConfig.setReusePreviousImage(False)
-        crop_node.inputConfig.setReusePreviousMessage(False)
-        crop_node.inputImage.setReusePreviousMessage(False)
-        crop_node.inputConfig.setMaxSize(30)
-        crop_node.inputImage.setMaxSize(30)
-        crop_node.setNumFramesPool(30)
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setReusePreviousImage(False)
+    crop_node.inputConfig.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(False)
+    crop_node.inputConfig.setMaxSize(30)
+    crop_node.inputImage.setMaxSize(30)
+    crop_node.setNumFramesPool(30)
     crop_node.inputConfig.setWaitForMessage(True)
 
     config_sender_node.outputs["output_config"].link(crop_node.inputConfig)

@@ -3,7 +3,9 @@ import argparse
 
 def initialize_argparser():
     """Initialize the argument parser for the script."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.description = "OCR example script to show text and show it on a white background. \
         All you need is an OAK device and access to HubAI. Optionally, you can also run the model on a media file."
 

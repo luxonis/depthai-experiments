@@ -1,27 +1,39 @@
 import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
 
-from host_nodes.host_edge import ReshapeNNOutputEdge, EDGE_SHAPE
-from host_nodes.host_display import Display
+_, args = initialize_argparser()
 
-with dai.Pipeline() as pipeline:
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
+
+
+with dai.Pipeline(device) as pipeline:
+    platform = device.getPlatformAsString()
+
     cam_rgb = pipeline.create(dai.node.Camera).build(
         boardSocket=dai.CameraBoardSocket.CAM_A
     )
-    preview = cam_rgb.requestOutput(
-        size=(EDGE_SHAPE, EDGE_SHAPE), type=dai.ImgFrame.Type.BGR888p
+
+    # EDGE
+    edge_nn_archive = dai.NNArchive(
+        archivePath=f"models/edge.{platform.lower()}.tar.xz"
+    )
+    nn_edge = pipeline.create(ParsingNeuralNetwork).build(
+        cam_rgb, edge_nn_archive, fps=args.fps_limit
     )
 
-    # NN that detects edges in the image
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath("models/edge_simplified_openvino_2021.4_6shave.blob")
-    preview.link(nn.input)
+    visualizer.addTopic("Edge", nn_edge.out, "images")
+    visualizer.addTopic("Passthrough", nn_edge.passthrough, "images")
 
-    reshape = pipeline.create(ReshapeNNOutputEdge).build(nn_out=nn.out)
+    print("Pipeline created.")
 
-    color = pipeline.create(Display).build(frame=preview)
-    color.setName("Color")
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
 
-    edge = pipeline.create(Display).build(frame=reshape.output)
-    edge.setName("Edge")
-
-    pipeline.run()
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

@@ -3,13 +3,16 @@ import argparse
 
 def initialize_argparser():
     """Initialize the argument parser for the script."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     parser.add_argument(
         "-det",
         "--det_model",
         help="Detection model HubAI reference.",
-        required=True,
+        default="luxonis/scrfd-person-detection:25g-640x640",
+        required=False,
         type=str,
     )
 
@@ -17,7 +20,8 @@ def initialize_argparser():
         "-rec",
         "--rec_model",
         help="Recognition model HubAI reference.",
-        required=True,
+        default="luxonis/osnet:imagenet-128x256",
+        required=False,
         type=str,
     )
 
@@ -49,8 +53,8 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-        "-device",
-        "--device_id",
+        "-d",
+        "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
         required=False,
         default=None,

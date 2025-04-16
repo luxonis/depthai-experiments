@@ -1,10 +1,12 @@
-## Text blurring on DepthAI
+# Text Blur
 
-This example shows an implementation of [Text Detection](https://hub.luxonis.com/ai/models/131d855c-60b1-4634-a14d-1269bb35dcd2?view=page) on DepthAI in the Gen3 API system with additional text blurring.
+This example demonstrates how to detect text on the image and then perform blurring inside the detected region. For text detection we are using [Paddle Text Detection](https://hub.luxonis.com/ai/models/131d855c-60b1-4634-a14d-1269bb35dcd2?view=page) model.
 
-![Image example](imgs/output.gif)
+## Demo
 
-# Instalation
+![Image example](media/output.gif)
+
+## Instalation
 
 Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
@@ -18,25 +20,30 @@ Install requirements:
 python3 -m pip install -r requirements.txt
 ```
 
-# Usage
+## Usage
 
-The inference is ran using a simple CLI call:
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-```bash
-python3 main.py \
-    --device ... \
-    --media ...
+Here is a list of all available parameters:
+
+```
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                      Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```
 
-The relevant arguments:
+### Peripheral Mode
 
-- **--device** \[OPTIONAL\]: DeviceID or IP of the camera to connect to.
-  By default, the first locally available device is used;
-- **--media** \[OPTIONAL\]: Path to the media file to be used as input.
-  Currently, only video files are supported but we plan to add support for more formats (e.g. images) in the future.
-  By default, camera input is used;
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
-Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results in a web browser using **Depthai Visualizer**.
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run the human-machine safety experiment with the default device.
 
 ### Standalone Mode
 
@@ -49,6 +56,8 @@ bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 The app can then be run with:
 
 ```bash
-oakctl connect <device-ip>
+oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

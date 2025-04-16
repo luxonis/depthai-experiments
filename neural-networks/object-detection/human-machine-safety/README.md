@@ -2,11 +2,11 @@
 
 This example demonstrates how to detect dangerous objects and calculates distance to a human hand (palm). In our case the dangerous objects are cups and bottles. The experiment uses 2 detection models: [YOLOv6 Nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page) for dangerous objects detection and [MediaPipe Palm Detection](https://hub.luxonis.com/ai/models/9531aba9-ef45-4ad3-ae03-808387d61bf3?view=page) for palm detection. It also uses depth information from our OAK cameras and combines that information with the detections to get the spatial coordinates of the objects and the palm. This way we can calculate the distance between the detected objects and the palm and warn the user if the distance is too close.
 
+> **Note:** This example requires a device with at least 3 cameras (color, left and right) since it utilizes the `StereoDepth` node.
+
 ## Demo:
 
 ![Demo](media/hms.gif)
-
-<!-- [![Watch the demo](https://user-images.githubusercontent.com/18037362/121198687-a1202f00-c872-11eb-949a-df9f1167494f.gif)](https://www.youtube.com/watch?v=BcjZLaCYGi4) -->
 
 ## Installation
 
@@ -20,13 +20,16 @@ pip install -r requirements.txt
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE>
+```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
 ```
 
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
 #### Examples
 
@@ -51,3 +54,9 @@ The app can then be run with:
 oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
+
+### Notes
+
+If running on **OAK-D Lite**, make sure to set the `numShaves=4` when calling the `.setNNArchive()` method on the detection nodes.

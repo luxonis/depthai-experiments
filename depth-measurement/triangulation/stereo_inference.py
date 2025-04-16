@@ -1,10 +1,11 @@
 import math
 import depthai as dai
 import numpy as np
+from typing import Tuple
 
 
 class StereoInference:
-    def __init__(self, device: dai.Device, resolution: tuple[int, int]) -> None:
+    def __init__(self, device: dai.Device, resolution: Tuple[int, int]) -> None:
         calibData = device.readCalibration()
         baseline = calibData.getBaselineDistance(useSpecTranslation=True) * 10  # mm
 

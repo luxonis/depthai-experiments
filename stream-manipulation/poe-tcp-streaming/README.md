@@ -1,21 +1,109 @@
-# OAK PoE TCP streaming
+# PoE TCP Streaming
 
-This example shows how you can stream frames (and other data) with OAK PoE via TCP protocol from the Script node.
+This example demonstrates, how to stream video from the device to the host computer using TCP protocol. It establishes bidirectional communication between the device and the host.
 
-## Run this example
+## Installation
 
-1. Run `oak.py`, which will upload the pipeline to the OAK PoE. You will receive a log similar to `[192.168.1.66] [25.797] [Script(2)] [warning] Server up`.
-1. Copy the IP of your OAK PoE camera (in my case `192.168.1.66`).
-1. Edit the `OAK_IP` variable inside `host.py` with the IP of your OAK PoE camera.
-1. Start `host.py` script, which will connect to the OAK PoE. Connection will be initialized and OAK PoE will start streaming encoded frames to the host computer.
-1. Host computer will decode MJPEG encoded frames and show them to the user.
+Running this example requires a PoE capable **Luxonis device**. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 
-### OAK PoE as client
+Install dependencies by running:
 
-In this case, OAK PoE camera acts as a server, and host computer connects to it. You could also do it vice-verca, so the server would run on the host computer and OAK PoE would connect to it and start streaming frames. For that, see [PoE Client demo](poe-client).
+```bash
+pip install -r requirements.txt
+```
 
-## Install project requirements
+## Usage
+
+This example contains two scripts: `host.py` and `oak.py`. `oak.py` is the script responsible for setting up the DepthAI pipeline and running it on the device and `host.py` is the script that runs on the host computer. Both scripts support two modes: `server` and `client`. When running in `server` mode the script will act as a server and wait for a connection. When running in `client` mode the script will attempt to connect to the server. The script running in `server` mode needs to be started first and then the `client` script can be run.
+
+You can use the following keys to control the script:
+
+- `q` to quit the application.
+- `.` to increase the manual focus.
+- `,` to decrease the manual focus.
+- `a` to set to autofocus.
+
+You can run the `oak.py` script fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+Here is a list of all available parameters:
 
 ```
-python3 -m pip install -r requirements.txt
+positional arguments:
+  {server,client}       Mode of the script.
+    server              Run in server mode.
+    client              Run in client mode.
+
+options:
+  -d DEVICE, --device DEVICE
+                        Optional name, DeviceID or IP of the camera to connect
+                        to. (default: None)
+  -media MEDIA_PATH, --media_path MEDIA_PATH
+                        Path to the media file you aim to run the model on. If
+                        not set, the model will run on the camera input.
+                        (default: None)
+  -fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                        FPS limit. (default: 30)
+```
+
+The `host.py` script accepts runs on the host computer and shows the video stream. It accepts the following parameters:
+
+```
+positional arguments:
+  {server,client}  Mode of the script.
+    server         Run in server mode.
+    client         Run in client mode.
+```
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer. Below are some examples of how to run the example.
+
+#### Examples
+
+##### OAK PoE as server
+
+```bash
+python3 oak.py server
+```
+
+```bash
+python3 host.py client <OAK_DEVICE_IP>
+```
+
+This will run a server on the device and a client on the host computer.
+
+##### Host computer as server
+
+```bash
+python3 host.py server
+```
+
+```bash
+python3 oak.py client <HOST_IP>
+```
+
+This will run a server on the host computer and a client on the device.
+
+### Standalone Mode
+
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
+
+By default, in standalone mode, the oak will run in `server` mode. To see the video stream on the host computer, you need to run the `host.py` script in `client` mode:
+
+```bash
+python3 host.py client <OAK_DEVICE_IP>
 ```

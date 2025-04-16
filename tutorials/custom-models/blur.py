@@ -1,28 +1,39 @@
 import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
 
-from host_nodes.host_display import Display
-from host_nodes.host_blur import ReshapeNNOutputBlur, BLUR_SHAPE
+_, args = initialize_argparser()
+
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
 
 
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
+    platform = device.getPlatformAsString()
+
     cam_rgb = pipeline.create(dai.node.Camera).build(
         boardSocket=dai.CameraBoardSocket.CAM_A
     )
-    preview = cam_rgb.requestOutput(
-        size=(BLUR_SHAPE, BLUR_SHAPE), type=dai.ImgFrame.Type.BGR888p
+
+    # BLUR
+    blur_nn_archive = dai.NNArchive(
+        archivePath=f"models/blur.{platform.lower()}.tar.xz"
+    )
+    nn_blur = pipeline.create(ParsingNeuralNetwork).build(
+        cam_rgb, blur_nn_archive, fps=args.fps_limit
     )
 
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setBlobPath("models/blur_simplified_openvino_2021.4_6shave.blob")
+    visualizer.addTopic("Blur", nn_blur.out, "images")
+    visualizer.addTopic("Passthrough", nn_blur.passthrough, "images")
 
-    preview.link(nn.input)
+    print("Pipeline created.")
 
-    reshape = pipeline.create(ReshapeNNOutputBlur).build(nn_out=nn.out)
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
 
-    color_display = pipeline.create(Display).build(preview)
-    color_display.setName("Color Display")
-
-    nn_display = pipeline.create(Display).build(reshape.output)
-    nn_display.setName("Blur Display")
-
-    pipeline.run()
+    while pipeline.isRunning():
+        pipeline.processTasks()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

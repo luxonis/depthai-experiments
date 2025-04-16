@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.helpers.constants import TEXT_COLOR, OUTLINE_COLOR
+from depthai_nodes import TEXT_COLOR, OUTLINE_COLOR
 
 
 class AnnotationNode(dai.node.ThreadedHostNode):

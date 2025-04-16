@@ -1,94 +1,57 @@
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import ThreadingMixIn
-from time import sleep
+from pathlib import Path
+
 import depthai as dai
-import cv2
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.mjpeg_streamer import MJPEGStreamer
 
-from host_stream_output import StreamOutput
-
-HTTP_SERVER_PORT = 8090
-
-modelDescription = dai.NNModelDescription(
-    modelSlug="mobilenet-ssd", platform="RVC2", modelVersionSlug="300x300"
-)
-archivePath = dai.getModelFromZoo(modelDescription)
-nn_archive = dai.NNArchive(archivePath)
+_, args = initialize_argparser()
 
 
-# HTTPServer MJPEG
-class VideoStreamHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header(
-            "Content-type", "multipart/x-mixed-replace; boundary=--jpgboundary"
-        )
-        self.end_headers()
-        while True:
-            sleep(0.1)
-            if hasattr(self.server, "frametosend"):
-                ok, encoded = cv2.imencode(".jpg", self.server.frametosend)
-                self.wfile.write("--jpgboundary".encode())
-                self.send_header("Content-type", "image/jpeg")
-                self.send_header("Content-length", str(len(encoded)))
-                self.end_headers()
-                self.wfile.write(encoded)
-                self.end_headers()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
 
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """Handle requests in a separate thread."""
-
-    pass
-
-
-# start MJPEG HTTP Server
-server = ThreadedHTTPServer(("localhost", HTTP_SERVER_PORT), VideoStreamHandler)
-th = threading.Thread(target=server.serve_forever)
-th.daemon = True
-th.start()
-
-with dai.Pipeline() as pipeline:
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    model_description = dai.NNModelDescription("luxonis/yolov6-nano:r2-coco-512x288")
+    platform = device.getPlatformAsString()
+    model_description.platform = platform
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        replay.setSize(1920, 1080)
+        image_manip = pipeline.create(dai.node.ImageManipV2)
+        image_manip.setMaxOutputFrameSize(
+            nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
+        )
+        image_manip.initialConfig.setOutputSize(
+            nn_archive.getInputWidth(), nn_archive.getInputHeight()
+        )
+        image_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+        if platform == "RVC4":
+            image_manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
+        replay.out.link(image_manip.inputImage)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.initialConfig.setConfidenceThreshold(255)
-    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-
-    nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-    # nn.setBlobPath(blobconverter.from_zoo("mobilenet-ssd", shaves=5))
-    nn.setNNArchive(nn_archive)
-    nn.setConfidenceThreshold(0.5)
-    nn.input.setBlocking(False)
-    nn.setBoundingBoxScaleFactor(0.5)
-    nn.setDepthLowerThreshold(100)
-    nn.setDepthUpperThreshold(5000)
-    cam.preview.link(nn.input)
-    stereo.depth.link(nn.inputDepth)
-
-    output = pipeline.create(StreamOutput).build(
-        preview=cam.preview, depth=nn.passthroughDepth, nn=nn.out, server=server
+    input_node = (
+        image_manip.out if args.media_path else pipeline.create(dai.node.Camera).build()
     )
-    output.inputs["preview"].setBlocking(False)
-    output.inputs["preview"].setMaxSize(4)
-    output.inputs["depth"].setBlocking(False)
-    output.inputs["depth"].setMaxSize(4)
-    output.inputs["nn"].setBlocking(False)
-    output.inputs["nn"].setMaxSize(4)
 
-    print(
-        f"Pipeline created. Navigate to 'localhost:{str(HTTP_SERVER_PORT)}' with Chrome to see the mjpeg stream"
+    nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, nn_archive, fps=args.fps_limit
     )
+
+    mjpeg_streamer = pipeline.create(MJPEGStreamer).build(
+        preview=nn_with_parser.passthrough,
+        nn=nn_with_parser.out,
+        labels=nn_archive.getConfigV1().model.heads[0].metadata.classes,
+    )
+
     pipeline.run()

@@ -4,5 +4,6 @@ depthai-nodes>=0.2.1
 numpy
 onnxruntime
 transformers
-opencv-python>=4.0.0
+opencv-python~=4.10.0
+numpy>=1.22
 requests

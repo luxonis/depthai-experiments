@@ -2,10 +2,11 @@ import depthai as dai
 import threading
 import cv2
 from utility import filter_internal_cameras, run_pipeline
+from typing import Callable, List
 
 
 class OpencvManager:
-    def __init__(self, keys: list[int]):
+    def __init__(self, keys: List[int]):
         self.newFrameEvent = threading.Event()
         self.lock = threading.Lock()
         self.frames = self._init_frames(keys)
@@ -25,7 +26,7 @@ class OpencvManager:
             self.frames[dx_id] = frame
             self.newFrameEvent.set()
 
-    def _init_frames(self, keys: list[int]) -> dict:
+    def _init_frames(self, keys: List[int]) -> dict:
         dic = dict()
         for key in keys:
             dic[key] = None
@@ -33,7 +34,7 @@ class OpencvManager:
 
 
 class Display(dai.node.HostNode):
-    def __init__(self, frameCallback: callable, dx_id: int) -> None:
+    def __init__(self, frameCallback: Callable, dx_id: int) -> None:
         super().__init__()
         self.callback = frameCallback
         self.dx_id = dx_id
@@ -47,7 +48,7 @@ class Display(dai.node.HostNode):
         self.callback(in_frame.getCvFrame(), self.dx_id)
 
 
-def getPipeline(dev: dai.Device, callback: callable) -> dai.Pipeline:
+def getPipeline(dev: dai.Device, callback: Callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(dev)
     cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
@@ -59,7 +60,7 @@ def getPipeline(dev: dai.Device, callback: callable) -> dai.Pipeline:
 
 
 def pair_device_with_pipeline(
-    dev_info: dai.DeviceInfo, pipelines: list, callback: callable
+    dev_info: dai.DeviceInfo, pipelines: List, callback: Callable
 ) -> None:
     device: dai.Device = dai.Device(dev_info)
 
@@ -78,8 +79,8 @@ devices = filter_internal_cameras(dai.Device.getAllAvailableDevices())
 print(f"Found {len(devices)} internal devices")
 
 
-pipelines: list[dai.Pipeline] = []
-threads: list[threading.Thread] = []
+pipelines: List[dai.Pipeline] = []
+threads: List[threading.Thread] = []
 manager = OpencvManager([device.getMxId() for device in devices])
 
 for dev in devices:

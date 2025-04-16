@@ -1,6 +1,10 @@
 # RTSP Streaming
 
-This example allows you to stream frames via RTSP
+This experiment demonstrates how to stream frames via RTSP server using H265 stream.
+
+## Demo
+
+![rtsp_stream](media/rtsp_stream.gif)
 
 ## Installation
 
@@ -22,16 +26,28 @@ python3 -m pip install -r requirements.txt
 
 ### Windows
 
-I'd suggest using WSL2 and installing Ubuntu on there. You can use the command apt-get command from Ubuntu above to install necessary dependencies.
+We'd suggest using WSL2 and installing Ubuntu on there. You can use the command apt-get command from Ubuntu above to install necessary dependencies.
 
 ## Usage
 
-Run the application
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+Here is a list of all available parameters:
 
 ```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30)
+```
+
+#### Examples
+
+```bash
 python3 main.py
 ```
 
+This will run the RTSP Streaming experiment with the default device and camera input.
 To see the streamed frames, use a RTSP Client (e.g. VLC Network Stream) with the following link
 
 ```
@@ -43,3 +59,14 @@ On Ubuntu or Mac OS, you can use `ffplay` (part of `ffmpeg` library) to preview 
 ```
 ffplay -fflags nobuffer -fflags discardcorrupt -flags low_delay -framedrop rtsp://localhost:8554/preview
 ```
+
+### Standalone Mode
+
+Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+# TODO: add instructions for standalone mode once oakctl supports CLI arguments

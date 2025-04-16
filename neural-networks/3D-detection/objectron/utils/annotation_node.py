@@ -1,9 +1,9 @@
 import depthai as dai
-from depthai_nodes.ml.helpers.constants import OUTLINE_COLOR
-from depthai_nodes.ml.messages import (
+from depthai_nodes import (
     ImgDetectionsExtended,
     ImgDetectionExtended,
     Keypoints,
+    OUTLINE_COLOR,
 )
 from typing import List
 

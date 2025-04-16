@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages.img_detections import ImgDetectionsExtended
+from depthai_nodes import ImgDetectionsExtended
 
 
 class ParserBridge(dai.node.HostNode):
@@ -8,7 +8,7 @@ class ParserBridge(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
 
-        self._out = self.createOutput(
+        self.output = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgDetections, True)
             ]
@@ -27,26 +27,14 @@ class ParserBridge(dai.node.HostNode):
 
         for detection in detections.detections:
             trans_det = dai.ImgDetection()
-            if detection.label == -1:
-                trans_det.label = 0
-            else:
-                trans_det.label = detection.label
+            trans_det.label = detection.label
             trans_det.confidence = detection.confidence
-            xmin, ymin, xmax, ymax = detection.rotated_rect.getOuterRect()
-            trans_det.xmin = xmin
-            trans_det.ymin = ymin
-            trans_det.xmax = xmax
-            trans_det.ymax = ymax
+            trans_det.xmin = detection.xmin
+            trans_det.ymin = detection.ymin
+            trans_det.xmax = detection.xmax
+            trans_det.ymax = detection.ymax
 
             dets_list.append(trans_det)
 
         transformed_dets.detections = dets_list
-        self._out.send(transformed_dets)
-
-    @property
-    def out(self) -> dai.Node.Output:
-        return self._out
-
-    @property
-    def output(self) -> dai.Node.Output:
-        return self._out
+        self.output.send(transformed_dets)

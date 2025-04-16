@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages import (
+from depthai_nodes import (
     ImgDetectionExtended,
     ImgDetectionsExtended,
     Keypoints,

@@ -1,9 +1,9 @@
-# Overview
+# Generic Example
 
 We provide here an example for running inference with a **single model** on a **single-image input** with a **single-head output**.
 The example is generic and can be used for various single-image input models from the [HubAI Model ZOO](https://hub.luxonis.com/ai/models).
 
-# Installation
+## Installation
 
 Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
@@ -17,52 +17,60 @@ You can simply install them by running:
 pip install -r requirements.txt
 ```
 
-# Usage
+## Usage
 
-## Peripheral Mode
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-Running the example in the **peripheral mode** offloads some tasks to a host computer.
-The example can be ran in this mode as:
+Here is a list of all available parameters:
+
+```
+-m MODEL, --model MODEL
+                      HubAI model reference. (default: luxonis/yolov6-nano:r2-coco-512x288)
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                      FPS limit for the model runtime. (default: None)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                      Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-api API_KEY, --api_key API_KEY
+                      HubAI API key to access private model. (default: )
+-overlay OVERLAY_MODE, --overlay_mode
+                      If passed, overlays model output on the input image when the output is an array (e.g., depth maps, segmentation maps). Otherwise, displays outputs separately.
+```
+
+**Note:**
+
+If you want to visualize segmentation model output as an overlay you should use `-ann segmentation`. Similarly, if you are using an instance segmentation model and want to visualize its output as overlay you should use `-ann segmentation_with_annotation`.
+
+### Peripheral Mode
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
+
+#### Examples
+
+```bash
+python3 main.py
+```
+
+This will run a simple YOLOv6 object detection model (`luxonis/yolov6-nano:r2-coco-512x288`) on your camera input.
 
 ```bash
 python3 main.py \
-    --model <Model> \
-    --device <Device> \
-    --annotation_mode <Mode> \
-    --fps_limit <FPS> \
-    --media <Media> \
-    --api_key <API KEY>
+    --model luxonis/mediapipe-selfie-segmentation:256x144 \
+    --ann segmentation
 ```
 
-Relevant arguments:
-
-- `<Model>`: A unique HubAI identifier of the model;
-- `<Device>` \[OPTIONAL\]: DeviceID or IP of the camera to connect to.
-  By default, the first locally available device is used;
-- `<Mode>` \[OPTIONAL\]: Annotation mode. Set to 'segmentation' to overlay segmentation masks over the model inputs, or 'segmentation_with_annotation' to visualize the additional annotations. Leave empty to use the default visualization.
-- `<FPS>` \[OPTIONAL\]: The upper limit for camera captures in frames per second (FPS).
-  Beware that if providing a video file with higher FPS, a slowed-down video will be shown (and vice-versa if providing a video file with lower FPS).
-  By default, the FPS is not limited.
-  If using OAK-D Lite, make sure to set it under 28.5;
-- `<Media>` \[OPTIONAL\]: Path to the media file to be used as input.
-  Currently, only video files are supported but we plan to add support for more formats (e.g. images) in the future.
-  By default, camera input is used;
-- `<API>` \[OPTIONAL\]: HubAI API key to access private model;
-
-Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results by **DepthAI visualizer**
-The latter runs in the browser at `http://localhost:8082`.
-In case of a different client, replace `localhost` with the correct hostname.
-
-### Example
-
-To try it out, let's run a simple YOLOv6 object detection model on your camera input:
+This will run a selfie segmentation model.
 
 ```bash
 python3 main.py \
-    --model luxonis/yolov6-nano:r2-coco-512x288
+    --model luxonis/yolov8-instance-segmentation-nano:coco-512x288 \
+    --ann segmentation_with_annotation
 ```
 
-## Standalone Mode
+And this will run an instance segmentation model.
+
+### Standalone Mode
 
 Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
@@ -71,26 +79,11 @@ To run the example in this mode, first install the [oakctl](https://rvc4.docs.lu
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-and run the example using the `run_standalone.sh` script:
+The app can then be run with:
 
 ```bash
-bash run_standalone.sh \
-    --model <Model> \
-    --device <Device> \
-    --annotation_mode <Mode> \
-    --fps_limit <FPS> \
-    --media <Media> \
-    --api_key <API_KEY>
+oakctl connect <DEVICE_IP>
+oakctl app run .
 ```
 
-The arguments are the same as in the Peripheral mode.
-Note, however, that when specifying a media file to be used as input, it must be located within the `generic-example` folder.
-This way it will get automatically transferred to the device.
-Therefore, make sure to provide the file's path relative to the `generic-example` folder.
-
-### Example
-
-```bash
-bash run_standalone.sh \
-    --model luxonis/yolov6-nano:r2-coco-512x288
-```
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

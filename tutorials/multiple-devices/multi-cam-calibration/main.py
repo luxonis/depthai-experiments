@@ -6,6 +6,7 @@ import config
 import numpy as np
 import time
 from utility import filter_internal_cameras, run_pipeline
+from typing import List, Callable
 
 
 class OpencvManager:
@@ -239,8 +240,8 @@ class OpencvManager:
 class Display(dai.node.HostNode):
     def __init__(
         self,
-        callback_frame: callable,
-        callback_params: callable,
+        callback_frame: Callable,
+        callback_params: Callable,
         window_name: str,
         device: dai.Device,
         friendly_id: int,
@@ -281,8 +282,8 @@ class Display(dai.node.HostNode):
 
 def get_pipelines(
     device: dai.Device,
-    callback_frame: callable,
-    callback_params: callable,
+    callback_frame: Callable,
+    callback_params: Callable,
     friendly_id: int,
 ) -> dai.Pipeline:
     pipeline = dai.Pipeline(device)
@@ -310,9 +311,9 @@ def get_pipelines(
 
 def pair_device_with_pipeline(
     dev_info: dai.DeviceInfo,
-    pipelines: list,
-    callback_frame: callable,
-    callback_params: callable,
+    pipelines: List,
+    callback_frame: Callable,
+    callback_params: Callable,
     friendly_id: int,
 ) -> None:
     device: dai.Device = dai.Device(dev_info)
@@ -329,8 +330,8 @@ else:
     print("Found", len(devices), "devices")
 
 
-pipelines: list[dai.Pipeline] = []
-threads: list[threading.Thread] = []
+pipelines: List[dai.Pipeline] = []
+threads: List[threading.Thread] = []
 manager = OpencvManager()
 
 for friendly_id, dev in enumerate(devices):

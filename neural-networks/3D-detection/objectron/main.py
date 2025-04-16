@@ -1,6 +1,6 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 from utils.script import generate_script_content
@@ -40,7 +40,9 @@ with dai.Pipeline(device) as pipeline:
         dai.getModelFromZoo(pose_model_description, useCached=False)
     )
     connection_pairs = (
-        pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["lines"]
+        pose_nn_archive.getConfig()
+        .model.heads[0]
+        .metadata.extraParams["skeleton_edges"]
     )
 
     frame_type = (
@@ -53,21 +55,9 @@ with dai.Pipeline(device) as pipeline:
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
         replay.setFps(12 if platform == "RVC2" else 20)
-        imageManip = pipeline.create(dai.node.ImageManipV2)
-        imageManip.setMaxOutputFrameSize(
-            detection_nn_archive.getInputWidth()
-            * detection_nn_archive.getInputHeight()
-            * 3
-        )
-        imageManip.initialConfig.setOutputSize(
-            detection_nn_archive.getInputWidth(), detection_nn_archive.getInputHeight()
-        )
-        imageManip.initialConfig.setFrameType(frame_type)
-        replay.out.link(imageManip.inputImage)
-
     else:
         cam = pipeline.create(dai.node.Camera).build()
-    input_node = imageManip.out if args.media_path else cam
+    input_node = replay if args.media_path else cam
 
     detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, detection_nn_archive, args.fps_limit
@@ -77,7 +67,6 @@ with dai.Pipeline(device) as pipeline:
     detection_nn.out.link(script.inputs["det_in"])
     detection_nn.passthrough.link(script.inputs["preview"])
     script_content = generate_script_content(
-        platform=platform.lower(),
         resize_width=pose_nn_archive.getInputWidth(),
         resize_height=pose_nn_archive.getInputHeight(),
         padding=padding,
@@ -85,18 +74,12 @@ with dai.Pipeline(device) as pipeline:
     )
     script.setScript(script_content)
 
-    if platform == "RVC2":
-        pose_manip = pipeline.create(dai.node.ImageManip)
-        pose_manip.initialConfig.setResize(
-            pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight()
-        )
-        pose_manip.inputConfig.setWaitForMessage(True)
-    elif platform == "RVC4":
-        pose_manip = pipeline.create(dai.node.ImageManipV2)
-        pose_manip.initialConfig.setOutputSize(
-            pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight()
-        )
-        pose_manip.inputConfig.setWaitForMessage(True)
+    pose_manip = pipeline.create(dai.node.ImageManipV2)
+    pose_manip.initialConfig.setOutputSize(
+        pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight()
+    )
+    pose_manip.inputConfig.setWaitForMessage(True)
+
     script.outputs["manip_cfg"].link(pose_manip.inputConfig)
     script.outputs["manip_img"].link(pose_manip.inputImage)
 

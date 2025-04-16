@@ -1,57 +1,52 @@
 import depthai as dai
-from host_node.normalize_bbox import NormalizeBbox
-from host_node.draw_detections import DrawDetections
-from host_node.host_display import Display
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
 
+_, args = initialize_argparser()
 
-device = dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform()
-if platform == dai.Platform.RVC4:
-    raise RuntimeError("ImgResizeMode.LETTERBOX is not yet supported on RVC4 platform")
 
-model_description = dai.NNModelDescription(
-    modelSlug="yolov6-nano", platform=platform.name, modelVersionSlug="r2-coco-512x288"
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
 
 with dai.Pipeline(device) as pipeline:
-    print("Creating pipeline...")
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    cam_isp = cam.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.NV12, fps=25)
-    cam_letterbox = cam.requestOutput(
-        size=(512, 288),
-        type=dai.ImgFrame.Type.BGR888i
+    cam_out = cam.requestOutput(
+        size=(812, 608), fps=args.fps_limit, type=dai.ImgFrame.Type.NV12
+    )
+
+    model_description = dai.NNModelDescription(
+        "luxonis/yolov6-nano:r2-coco-512x288", platform=platform.name
+    )
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+
+    output_type = (
+        dai.ImgFrame.Type.BGR888i
         if platform == dai.Platform.RVC4
-        else dai.ImgFrame.Type.BGR888p,
-        resizeMode=dai.ImgResizeMode.LETTERBOX,
-        fps=25,
+        else dai.ImgFrame.Type.BGR888p
     )
 
-    nn = pipeline.create(dai.node.DetectionNetwork).build(
-        cam_letterbox, nn_archive, confidenceThreshold=0.5
+    img_manip = pipeline.create(dai.node.ImageManipV2)
+    img_manip.initialConfig.setOutputSize(
+        nn_archive.getInputWidth(),
+        nn_archive.getInputHeight(),
+        dai.ImageManipConfigV2.ResizeMode.LETTERBOX,
     )
-    nn_classes = nn.getClasses()
+    img_manip.initialConfig.setFrameType(output_type)
+    cam_out.link(img_manip.inputImage)
 
-    norm_isp = pipeline.create(NormalizeBbox).build(
-        frame=cam_isp, nn=nn.out, manip_mode=dai.ImgResizeMode.LETTERBOX
-    )
-    dets_isp = pipeline.create(DrawDetections).build(
-        frame=cam_isp, nn=norm_isp.output, label_map=nn_classes
-    )
+    nn = pipeline.create(ParsingNeuralNetwork).build(img_manip.out, nn_archive)
 
-    norm_letterbox = pipeline.create(NormalizeBbox).build(
-        frame=cam_letterbox, nn=nn.out, manip_mode=dai.ImgResizeMode.LETTERBOX
-    )
-    dets_letterbox = pipeline.create(DrawDetections).build(
-        frame=cam_letterbox, nn=norm_letterbox.output, label_map=nn_classes
-    )
-
-    display_isp = pipeline.create(Display).build(frames=dets_isp.output)
-    display_isp.setName("ISP")
-
-    display_letterbox = pipeline.create(Display).build(frames=dets_letterbox.output)
-    display_letterbox.setName("Letterboxed")
+    visualizer.addTopic("Resized", nn.passthrough, "images")
+    visualizer.addTopic("Visualizations", nn.out, "images")
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
