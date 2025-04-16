@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libzbar-dev \
     libgirepository1.0-dev \
+    libcairo2-dev \
+    gstreamer-1.0 \
+    gir1.2-gst-rtsp-server-1.0 \
     && rm -rf /var/lib/apt/lists/*
 ENV DISPLAY=:99
 
