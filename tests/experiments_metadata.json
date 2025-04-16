@@ -112,6 +112,10 @@
             "reason": "Open3D causes some memory segfault",
             "platform": "all"
         },
+        "depth-measurement/calc-spatial-on-host": {
+            "reason": "Not refactored yet",
+            "platform": "all"
+        },
         "depth-measurement/stereo-on-host": {
             "reason": "Extrinsic connection between the requested cameraId's doesn't exist. Please recalibrate or modify your calibration data",
             "platform": [
