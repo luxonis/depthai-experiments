@@ -21,33 +21,27 @@ ENV DISPLAY=:99
 
 # Copy your project files into the container
 # NOTE: If ran inside GH workflow or with HIL --sync-workspace this is not needed
-COPY . /tmp/depthai-experiments
+# COPY . /tmp/depthai-experiments
 
 # Setup Test Command
 WORKDIR /tmp/depthai-experiments
 
-# COPY run.sh run.sh
-RUN apt-get update && apt-get install -y tree
-RUN tree .
-RUN chmod +x tests/run.sh
-ENTRYPOINT ["/tests/run.sh"]
-
 # Define the entrypoint script
-# ENTRYPOINT ["sh", "-c", "\
-#     set -e && \
-#     if [ -z \"$PLATFORM\" ]; then \
-#     echo 'Error: PLATFORM environment variable is required' && exit 1; \
-#     fi && \
-#     echo 'Installing dependencies...' && \
-#     pip install -r tests/requirements.txt && \
-#     echo 'Running tests...' && \
-#     pytest -v -r a --log-cli-level=${LOG_LEVEL} --log-file=out.log --color=yes \
-#     --root-dir=${ROOT_DIR} \
-#     --depthai-version=${DAI_VERSION} \
-#     --depthai-nodes-version=${DAI_NODES_VERSION} \
-#     --environment-variables=DEPTHAI_PLATFORM=${PLATFORM} \
-#     --virtual-display \
-#     --platform=${PLATFORM} \
-#     --python-version=${PYTHON_VERSION_ENV} \
-#     --strict-mode=${STRICT_MODE} \
-#     tests/"]
+ENTRYPOINT ["sh", "-c", "\
+    set -e && \
+    if [ -z \"$PLATFORM\" ]; then \
+    echo 'Error: PLATFORM environment variable is required' && exit 1; \
+    fi && \
+    echo 'Installing dependencies...' && \
+    pip install -r tests/requirements.txt && \
+    echo 'Running tests...' && \
+    pytest -v -r a --log-cli-level=${LOG_LEVEL} --log-file=out.log --color=yes \
+    --root-dir=${ROOT_DIR} \
+    --depthai-version=${DAI_VERSION} \
+    --depthai-nodes-version=${DAI_NODES_VERSION} \
+    --environment-variables=DEPTHAI_PLATFORM=${PLATFORM} \
+    --virtual-display \
+    --platform=${PLATFORM} \
+    --python-version=${PYTHON_VERSION_ENV} \
+    --strict-mode=${STRICT_MODE} \
+    tests/"]
