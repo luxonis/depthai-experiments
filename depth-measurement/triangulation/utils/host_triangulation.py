@@ -3,9 +3,8 @@ import numpy as np
 import depthai as dai
 from depthai_nodes import (
     ImgDetectionsExtended,
-    ImgDetectionExtended,
 )
-from typing import Tuple, List
+from typing import Tuple
 from .annotation_helper import AnnotationHelper
 from .stereo_inference import StereoInference
 
@@ -13,9 +12,9 @@ from .stereo_inference import StereoInference
 class Triangulation(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self._combinedColor = (1, 0, 0, 1) # red
-        self._leftColor = (0, 1, 0, 1) # green
-        self._rightColor = (0, 0, 1, 1) # blue
+        self._combinedColor = (1, 0, 0, 1)  # red
+        self._leftColor = (0, 1, 0, 1)  # green
+        self._rightColor = (0, 0, 1, 1)  # blue
         self.combined_frame = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
@@ -82,18 +81,18 @@ class Triangulation(dai.node.HostNode):
         bbox_annot_left = AnnotationHelper()
         for detection in nn_face_left.detections:
             rect = detection.rotated_rect
-            x = rect.center.x 
+            x = rect.center.x
             y = rect.center.y
             w = rect.size.width
             h = rect.size.height
-            top_left = (x - w/2, y - h/2)
-            bottom_right = (x + w/2, y + h/2)
+            top_left = (x - w / 2, y - h / 2)
+            bottom_right = (x + w / 2, y + h / 2)
 
             bbox_annot_left.draw_rectangle(
                 top_left=top_left,
                 bottom_right=bottom_right,
                 outline_color=self._leftColor,
-                thickness=1
+                thickness=1,
             )
 
         bbox_annot_left_msg = bbox_annot_left.build(
@@ -104,22 +103,23 @@ class Triangulation(dai.node.HostNode):
         bbox_annot_right = AnnotationHelper()
         for detection in nn_face_right.detections:
             rect = detection.rotated_rect
-            x = rect.center.x 
+            x = rect.center.x
             y = rect.center.y
             w = rect.size.width
             h = rect.size.height
-            top_left = (x - w/2, y - h/2)
-            bottom_right = (x + w/2, y + h/2)
+            top_left = (x - w / 2, y - h / 2)
+            bottom_right = (x + w / 2, y + h / 2)
 
             bbox_annot_right.draw_rectangle(
                 top_left=top_left,
                 bottom_right=bottom_right,
                 outline_color=self._rightColor,
-                thickness=1
+                thickness=1,
             )
 
         bbox_annot_right_msg = bbox_annot_right.build(
-            timestamp=face_right.getTimestamp(), sequence_num=face_right.getSequenceNum()
+            timestamp=face_right.getTimestamp(),
+            sequence_num=face_right.getSequenceNum(),
         )
         self.bbox_right.send(bbox_annot_right_msg)
 
@@ -203,7 +203,7 @@ class Triangulation(dai.node.HostNode):
                             position=(0.05, y),
                             color=(1.0, 1.0, 1.0, 1.0),
                             background_color=(0.0, 0.0, 0.0, 0.7),
-                            size=4
+                            size=4,
                         )
                         y += y_delta
 
@@ -213,7 +213,8 @@ class Triangulation(dai.node.HostNode):
         self.keypoints_left.send(keypoints_left_helper_msg)
 
         keypoint_rights_helper_msg = keypoint_rights_helper.build(
-            timestamp=face_right.getTimestamp(), sequence_num=face_right.getSequenceNum()
+            timestamp=face_right.getTimestamp(),
+            sequence_num=face_right.getSequenceNum(),
         )
         self.keypoints_right.send(keypoint_rights_helper_msg)
 

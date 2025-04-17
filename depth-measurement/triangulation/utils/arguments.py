@@ -6,9 +6,7 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = (
-        "This DepthAI example uses stereo cameras for face detection with YuNet, calculating 3D spatial coordinates via triangulation. It visualizes bounding boxes, keypoints, and disparity in real-time."
-    )
+    parser.description = "This DepthAI example uses stereo cameras for face detection with YuNet, calculating 3D spatial coordinates via triangulation. It visualizes bounding boxes, keypoints, and disparity in real-time."
 
     parser.add_argument(
         "-d",

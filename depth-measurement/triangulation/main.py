@@ -7,6 +7,7 @@ from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
 
+
 # Creates and connects nodes, once for the left camera and once for the right camera
 def populate_pipeline(
     p: dai.Pipeline, left: bool, resolution: Tuple[int, int]
@@ -19,6 +20,7 @@ def populate_pipeline(
     face_nn = p.create(ParsingNeuralNetwork).build(cam, faceDet_nnarchive, fps)
 
     return cam_output, face_nn.out
+
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
@@ -59,10 +61,16 @@ with dai.Pipeline(device) as pipeline:
     visualizer.addTopic("Combined", triangulation.combined_frame, "combined")
     visualizer.addTopic("Left Face Detections", triangulation.bbox_left, "combined")
     visualizer.addTopic("Right Face Detections", triangulation.bbox_right, "combined")
-    visualizer.addTopic("Left Keypoints Combined", triangulation.keypoints_left, "combined")
-    visualizer.addTopic("Right Keypoints Combined", triangulation.keypoints_right, "combined")
+    visualizer.addTopic(
+        "Left Keypoints Combined", triangulation.keypoints_left, "combined"
+    )
+    visualizer.addTopic(
+        "Right Keypoints Combined", triangulation.keypoints_right, "combined"
+    )
     visualizer.addTopic("Disparity line", triangulation.disparity_line, "combined")
-    visualizer.addTopic("Measurements Info", triangulation.measurements_info, "combined")
+    visualizer.addTopic(
+        "Measurements Info", triangulation.measurements_info, "combined"
+    )
 
     print("Pipeline created.")
 

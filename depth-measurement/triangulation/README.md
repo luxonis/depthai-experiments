@@ -57,4 +57,3 @@ oakctl app run .
 ```
 
 This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
-
