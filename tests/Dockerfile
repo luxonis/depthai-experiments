@@ -26,7 +26,7 @@ ENV DISPLAY=:99
 # Setup Test Command
 WORKDIR /tmp/depthai-experiments
 
-RUN chmod +x /run.sh
+RUN chmod +x tests/run.sh
 ENTRYPOINT ["/run.sh"]
 
 # Define the entrypoint script
