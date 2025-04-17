@@ -1,13 +1,14 @@
 from datetime import timedelta
+from typing import List, Optional, Tuple
 
 import depthai as dai
 import numpy as np
 
-Point = tuple[float, float]
-ColorRGBA = tuple[float, float, float, float]
+Point = Tuple[float, float]
+ColorRGBA = Tuple[float, float, float, float]
 
 
-class AnnotationBuilderV3:
+class AnnotationHelper:
     """Simplifies `dai.ImgAnnotation` creation.
 
     After calling the desired drawing methods, call the `build` method to create the `ImgAnnotations` message.
@@ -18,7 +19,7 @@ class AnnotationBuilderV3:
 
     def draw_line(
         self, pt1: Point, pt2: Point, color: ColorRGBA, thickness: float
-    ) -> "AnnotationBuilderV3":
+    ) -> "AnnotationHelper":
         """Draws a line between two points.
 
         @param pt1: Start of the line
@@ -30,7 +31,7 @@ class AnnotationBuilderV3:
         @param thickness: Line thickness
         @type thickness: float
         @return: self
-        @rtype: AnnotationBuilderV3
+        @rtype: AnnotationHelper
         """
         line = dai.PointsAnnotation()
         c = self._create_color(color)
@@ -44,12 +45,12 @@ class AnnotationBuilderV3:
 
     def draw_polyline(
         self,
-        points: list[Point],
+        points: List[Point],
         outline_color: ColorRGBA,
-        fill_color: ColorRGBA | None = None,
+        fill_color: Optional[ColorRGBA] = None,
         thickness: float = 1,
         closed: bool = False,
-    ) -> "AnnotationBuilderV3":
+    ) -> "AnnotationHelper":
         """Draws a polyline.
 
         @param points: List of points of the polyline
@@ -63,7 +64,7 @@ class AnnotationBuilderV3:
         @param closed: Creates polygon, instead of polyline if True, defaults to False
         @type closed: bool, optional
         @return: self
-        @rtype: AnnotationBuilderV3
+        @rtype: AnnotationHelper
         """
         points_type = (
             dai.PointsAnnotationType.LINE_STRIP
@@ -77,11 +78,25 @@ class AnnotationBuilderV3:
         self.annotation.points.append(points_annot)
         return self
 
-    def draw_points(self, points: list[Point], color: ColorRGBA):
+    def draw_points(
+        self, points: List[Point], color: ColorRGBA, thickness: float = 2
+    ) -> "AnnotationHelper":
+        """Draws points.
+
+        @param points: List of points to draw
+        @type points: list[Point]
+        @param color: Color of the points
+        @type color: ColorRGBA
+        @param thickness: Size of the points, defaults to 2
+        @type thickness: float, optional
+        @return: self
+        @rtype: AnnotationHelper
+        """
         # TODO: Visualizer currently does not show dai.PointsAnnotationType.POINTS
         points_annot = self._create_points_annotation(
             points, color, None, dai.PointsAnnotationType.POINTS
         )
+        points_annot.thickness = thickness
         self.annotation.points.append(points_annot)
         return self
 
@@ -90,9 +105,9 @@ class AnnotationBuilderV3:
         center: Point,
         radius: float,
         outline_color: ColorRGBA,
-        fill_color: ColorRGBA | None = None,
+        fill_color: Optional[ColorRGBA] = None,
         thickness: float = 1,
-    ) -> "AnnotationBuilderV3":
+    ) -> "AnnotationHelper":
         """Draws a circle.
 
         @param center: Center of the circle
@@ -106,7 +121,7 @@ class AnnotationBuilderV3:
         @param thickness: Outline thickness, defaults to 1
         @type thickness: float, optional
         @return: self
-        @rtype: AnnotationBuilderV3
+        @rtype: AnnotationHelper
         """
         circle = dai.CircleAnnotation()
         circle.outlineColor = self._create_color(outline_color)
@@ -123,9 +138,9 @@ class AnnotationBuilderV3:
         top_left: Point,
         bottom_right: Point,
         outline_color: ColorRGBA,
-        fill_color: ColorRGBA | None = None,
+        fill_color: Optional[ColorRGBA] = None,
         thickness: float = 1,
-    ) -> "AnnotationBuilderV3":
+    ) -> "AnnotationHelper":
         """Draws a rectangle.
 
         @param top_left: Top left corner of the rectangle
@@ -139,7 +154,7 @@ class AnnotationBuilderV3:
         @param thickness: Outline thickness, defaults to 1
         @type thickness: float, optional
         @return: self
-        @rtype: AnnotationBuilderV3
+        @rtype: AnnotationHelper
         """
         points = [
             top_left,
@@ -155,9 +170,9 @@ class AnnotationBuilderV3:
         text: str,
         position: Point,
         color: ColorRGBA,
-        background_color: ColorRGBA | None = None,
+        background_color: Optional[ColorRGBA] = None,
         size: float = 32,
-    ) -> "AnnotationBuilderV3":
+    ) -> "AnnotationHelper":
         """Draws text.
 
         @param text: Text string
@@ -172,7 +187,7 @@ class AnnotationBuilderV3:
         @param size: Text size, defaults to 32
         @type size: float, optional
         @return: self
-        @rtype: AnnotationBuilderV3
+        @rtype: AnnotationHelper
         """
         text_annot = dai.TextAnnotation()
         text_annot.position = dai.Point2f(position[0], position[1])
@@ -187,12 +202,12 @@ class AnnotationBuilderV3:
     def draw_rotated_rect(
         self,
         center: Point,
-        size: tuple[float, float],
+        size: Tuple[float, float],
         angle: float,
         outline_color: ColorRGBA,
-        fill_color: ColorRGBA | None = None,
+        fill_color: Optional[ColorRGBA] = None,
         thickness: float = 1,
-    ) -> "AnnotationBuilderV3":
+    ) -> "AnnotationHelper":
         """Draws a rotated rectangle.
 
         @param center: Center of the rectangle
@@ -208,7 +223,7 @@ class AnnotationBuilderV3:
         @param thickness: Outline thickness, defaults to 1
         @type thickness: float, optional
         @return: self
-        @rtype: AnnotationBuilderV3
+        @rtype: AnnotationHelper
         """
         points = self._get_rotated_rect_points(center, size, angle)
         self.draw_polyline(points, outline_color, fill_color, thickness, True)
@@ -232,9 +247,9 @@ class AnnotationBuilderV3:
 
     def _create_points_annotation(
         self,
-        points: list[Point],
+        points: List[Point],
         color: ColorRGBA,
-        fill_color: ColorRGBA | None,
+        fill_color: Optional[ColorRGBA],
         type: dai.PointsAnnotationType,
     ) -> dai.PointsAnnotation:
         points_annot = dai.PointsAnnotation()
@@ -254,8 +269,8 @@ class AnnotationBuilderV3:
         return c
 
     def _get_rotated_rect_points(
-        self, center: Point, size: tuple[float, float], angle: float
-    ) -> list[Point]:
+        self, center: Point, size: Tuple[float, float], angle: float
+    ) -> List[Point]:
         cx, cy = center
         width, height = size
         angle_rad = np.radians(angle)
@@ -282,5 +297,5 @@ class AnnotationBuilderV3:
         # Convert to list of tuples
         return translated_corners.tolist()
 
-    def _create_points_vector(self, points: list[Point]) -> dai.VectorPoint2f:
+    def _create_points_vector(self, points: List[Point]) -> dai.VectorPoint2f:
         return dai.VectorPoint2f([dai.Point2f(pt[0], pt[1]) for pt in points])

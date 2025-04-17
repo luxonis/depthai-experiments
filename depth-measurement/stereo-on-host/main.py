@@ -1,6 +1,6 @@
 import depthai as dai
 
-from host_node.host_display import Display
+from host_display import Display
 from host_stereo_sgbm import StereoSGBM
 
 RESOLUTION_SIZE = (640, 480)

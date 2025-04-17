@@ -2,24 +2,26 @@
 
 import cv2
 import depthai as dai
-from calc import HostSpatialsCalc
+from util.roi_control import ROIControl
+from util.arguments import initialize_argparser
 from depthai_nodes.node import ApplyColormap
-from host_node.measure_distance import MeasureDistance
-from host_node.host_display import Display
-from host_node.keyboard_reader import KeyboardReader
+from util.measure_distance import MeasureDistance
 
 
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
     monoLeft = (
         pipeline.create(dai.node.Camera)
         .build(dai.CameraBoardSocket.CAM_B)
-        .requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
+        .requestOutput((640, 400), type=dai.ImgFrame.Type.NV12)
     )
     monoRight = (
         pipeline.create(dai.node.Camera)
         .build(dai.CameraBoardSocket.CAM_C)
-        .requestOutput((640, 480), type=dai.ImgFrame.Type.NV12)
+        .requestOutput((640, 400), type=dai.ImgFrame.Type.NV12)
     )
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
@@ -29,24 +31,28 @@ with dai.Pipeline(device) as pipeline:
     depth_color_transform = pipeline.create(ApplyColormap).build(stereo.disparity)
     depth_color_transform.setColormap(cv2.COLORMAP_JET)
 
-    keyboard_reader = pipeline.create(KeyboardReader).build(depth_color_transform.out)
-
     measure_distance = pipeline.create(MeasureDistance).build(
-        stereo.depth, device.readCalibration(), HostSpatialsCalc.INITIAL_ROI
+        stereo.depth, device.readCalibration(), ROIControl.INITIAL_ROI
     )
 
     calibdata = device.readCalibration()
-    spatials = pipeline.create(HostSpatialsCalc).build(
+    spatials = pipeline.create(ROIControl).build(
         disparity_frames=depth_color_transform.out,
         measured_depth=measure_distance.output,
-        keyboard_input=keyboard_reader.output,
     )
     spatials.output_roi.link(measure_distance.roi_input)
 
-    display = pipeline.create(Display).build(spatials.output)
-    display.setName("Depth")
-    display.setKeyboardInput(keyboard_reader.output)
+    visualizer.addTopic("Disparity", spatials.passthrough)
+    visualizer.addTopic("Spatial Calculations", spatials.annotation_output)
 
-    print("pipeline created")
-    pipeline.run()
-    print("pipeline finished")
+    print("Pipeline created.")
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
+        else:
+            spatials.handle_key_press(key)
