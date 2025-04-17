@@ -49,11 +49,20 @@ with dai.Pipeline(device) as pipeline:
     )
 
     visualizer.addTopic("Face Left", face_left, "left")
-    visualizer.addTopic("Left Detections", triangulation.annot_left, "left")
+    visualizer.addTopic("Left Detections", triangulation.bbox_left, "left")
+    visualizer.addTopic("Left Keypoints", triangulation.keypoints_left, "left")
+
     visualizer.addTopic("Face Right", face_right, "right")
-    visualizer.addTopic("Right Detections", triangulation.annot_right, "right")
+    visualizer.addTopic("Right Detections", triangulation.bbox_right, "right")
+    visualizer.addTopic("Right Keypoints", triangulation.keypoints_right, "right")
+
     visualizer.addTopic("Combined", triangulation.combined_frame, "combined")
-    visualizer.addTopic("Keypoints", triangulation.combined_keypoints, "combined")
+    visualizer.addTopic("Left Face Detections", triangulation.bbox_left, "combined")
+    visualizer.addTopic("Right Face Detections", triangulation.bbox_right, "combined")
+    visualizer.addTopic("Left Keypoints Combined", triangulation.keypoints_left, "combined")
+    visualizer.addTopic("Right Keypoints Combined", triangulation.keypoints_right, "combined")
+    visualizer.addTopic("Disparity line", triangulation.disparity_line, "combined")
+    visualizer.addTopic("Measurements Info", triangulation.measurements_info, "combined")
 
     print("Pipeline created.")
 

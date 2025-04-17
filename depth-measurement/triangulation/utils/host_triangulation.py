@@ -6,7 +6,6 @@ from depthai_nodes import (
     ImgDetectionExtended,
 )
 from typing import Tuple, List
-from utility import TextHelper
 from .annotation_helper import AnnotationHelper
 from .stereo_inference import StereoInference
 
@@ -14,25 +13,40 @@ from .stereo_inference import StereoInference
 class Triangulation(dai.node.HostNode):
     def __init__(self) -> None:
         super().__init__()
-        self._leftColor = (1, 0, 0, 1)
-        self._rightColor = (0, 1, 0, 1)
-        self._textHelper = TextHelper()
+        self._combinedColor = (1, 0, 0, 1) # red
+        self._leftColor = (0, 1, 0, 1) # green
+        self._rightColor = (0, 0, 1, 1) # blue
         self.combined_frame = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-        self.combined_keypoints = self.createOutput(
+        self.disparity_line = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
             ]
         )
-        self.annot_left = self.createOutput(
+        self.measurements_info = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
             ]
         )
-        self.annot_right = self.createOutput(
+        self.bbox_left = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
+            ]
+        )
+        self.keypoints_left = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
+            ]
+        )
+        self.bbox_right = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
+            ]
+        )
+        self.keypoints_right = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
             ]
@@ -68,58 +82,64 @@ class Triangulation(dai.node.HostNode):
         bbox_annot_left = AnnotationHelper()
         for detection in nn_face_left.detections:
             rect = detection.rotated_rect
-            x = int(rect.center.x * left_frame.shape[1])
-            y = int(rect.center.y * left_frame.shape[0])
-            w = int(rect.size.width * left_frame.shape[1])
-            h = int(rect.size.height * left_frame.shape[0])
+            x = rect.center.x 
+            y = rect.center.y
+            w = rect.size.width
+            h = rect.size.height
             top_left = (x - w/2, y - h/2)
             bottom_right = (x + w/2, y + h/2)
-            
+
             bbox_annot_left.draw_rectangle(
                 top_left=top_left,
                 bottom_right=bottom_right,
                 outline_color=self._leftColor,
-                thickness=2
+                thickness=1
             )
 
         bbox_annot_left_msg = bbox_annot_left.build(
             timestamp=face_left.getTimestamp(), sequence_num=face_left.getSequenceNum()
         )
-        self.annot_left.send(bbox_annot_left_msg)
+        self.bbox_left.send(bbox_annot_left_msg)
 
         bbox_annot_right = AnnotationHelper()
         for detection in nn_face_right.detections:
             rect = detection.rotated_rect
-            x = int(rect.center.x * right_frame.shape[1])
-            y = int(rect.center.y * right_frame.shape[0])
-            w = int(rect.size.width * right_frame.shape[1])
-            h = int(rect.size.height * right_frame.shape[0])
+            x = rect.center.x 
+            y = rect.center.y
+            w = rect.size.width
+            h = rect.size.height
             top_left = (x - w/2, y - h/2)
             bottom_right = (x + w/2, y + h/2)
-            
+
             bbox_annot_right.draw_rectangle(
                 top_left=top_left,
                 bottom_right=bottom_right,
                 outline_color=self._rightColor,
-                thickness=2
+                thickness=1
             )
 
         bbox_annot_right_msg = bbox_annot_right.build(
             timestamp=face_right.getTimestamp(), sequence_num=face_right.getSequenceNum()
         )
-        self.annot_right.send(bbox_annot_right_msg)
+        self.bbox_right.send(bbox_annot_right_msg)
 
         combined = cv2.addWeighted(left_frame, 0.5, right_frame, 0.5, 0)
+        output_frame = self._create_output_frame(face_left, combined)
+        self.combined_frame.send(output_frame)
+
         y_dimension, x_dimension = combined.shape[:2]
 
-        annotation_helper = AnnotationHelper()
+        disparity_line_helper = AnnotationHelper()
+        text_helper = AnnotationHelper()
+        keypoints_left_helper = AnnotationHelper()
+        keypoint_rights_helper = AnnotationHelper()
         if nn_face_left.detections and nn_face_right.detections:
             spatials = []
             keypoints = zip(
                 nn_face_left.detections[0].keypoints,
                 nn_face_right.detections[0].keypoints,
             )
-            
+
             for i, (keypoint_left, keypoint_right) in enumerate(keypoints):
                 coords_left = (
                     int(keypoint_left.x * x_dimension),
@@ -140,24 +160,23 @@ class Triangulation(dai.node.HostNode):
                 )
 
                 # Visualize keypoints
-                annotation_helper.draw_circle(
+                keypoints_left_helper.draw_circle(
                     center=rel_coords_left,
                     radius=3 / x_dimension,
                     outline_color=self._leftColor,
                     thickness=1,
                 )
-                annotation_helper.draw_circle(
+                keypoint_rights_helper.draw_circle(
                     center=rel_coords_right,
-                    radius=3 / x_dimension, 
+                    radius=3 / x_dimension,
                     outline_color=self._rightColor,
                     thickness=1,
                 )
-
                 # Visualize disparity line
-                annotation_helper.draw_line(
+                disparity_line_helper.draw_line(
                     pt1=rel_coords_left,
                     pt2=rel_coords_right,
-                    color=self._leftColor,
+                    color=self._combinedColor,
                     thickness=1,
                 )
 
@@ -170,54 +189,48 @@ class Triangulation(dai.node.HostNode):
                 spatials.append(spatial)
 
                 if i == 0:
-                    y = 0
-                    y_delta = 18
                     strings = [
                         "Disparity: {:.0f} pixels".format(disparity),
                         "X: {:.2f} m".format(spatial[0] / 1000),
                         "Y: {:.2f} m".format(spatial[1] / 1000),
                         "Z: {:.2f} m".format(spatial[2] / 1000),
                     ]
+                    y = 0.05
+                    y_delta = 0.02
                     for s in strings:
-                        annotation_helper.draw_text(
+                        text_helper.draw_text(
                             text=s,
-                            position=(10, y),
+                            position=(0.05, y),
                             color=(1.0, 1.0, 1.0, 1.0),
                             background_color=(0.0, 0.0, 0.0, 0.7),
-                            size=6
+                            size=4
                         )
                         y += y_delta
 
-        output_frame = self._create_output_frame(face_left, combined)
-
-        self.combined_frame.send(output_frame)
-
-        annotations_msg = annotation_helper.build(
+        keypoints_left_helper_msg = keypoints_left_helper.build(
             timestamp=face_left.getTimestamp(), sequence_num=face_left.getSequenceNum()
         )
-        self.combined_keypoints.send(annotations_msg)
+        self.keypoints_left.send(keypoints_left_helper_msg)
+
+        keypoint_rights_helper_msg = keypoint_rights_helper.build(
+            timestamp=face_right.getTimestamp(), sequence_num=face_right.getSequenceNum()
+        )
+        self.keypoints_right.send(keypoint_rights_helper_msg)
+
+        disp_line_msg = disparity_line_helper.build(
+            timestamp=face_left.getTimestamp(), sequence_num=face_left.getSequenceNum()
+        )
+        self.disparity_line.send(disp_line_msg)
+
+        text_helper_msg = text_helper.build(
+            timestamp=face_left.getTimestamp(), sequence_num=face_left.getSequenceNum()
+        )
+        self.measurements_info.send(text_helper_msg)
 
     def _create_output_frame(
-        self, face_left: dai.ImgFrame, combined: np.ndarray
+        self, msg: dai.ImgFrame, frame: np.ndarray
     ) -> dai.ImgFrame:
         output_frame = dai.ImgFrame()
-        output_frame.setCvFrame(combined, dai.ImgFrame.Type.BGR888i)
-        output_frame.setTimestamp(face_left.getTimestamp())
+        output_frame.setCvFrame(frame, dai.ImgFrame.Type.BGR888i)
+        output_frame.setTimestamp(msg.getTimestamp())
         return output_frame
-
-    def _displayDetections(
-        self, frame: np.ndarray, detections: List[ImgDetectionExtended], color
-    ) -> None:
-        for detection in detections:
-            rect = detection.rotated_rect
-            x = int(rect.center.x * frame.shape[1])
-            y = int(rect.center.y * frame.shape[0])
-            w = int(rect.size.width * frame.shape[1])
-            h = int(rect.size.height * frame.shape[0])
-            cv2.rectangle(
-                frame,
-                (x - (w // 2), y - (h // 2)),
-                ((x + (w // 2), y + (h // 2))),
-                color,
-                2,
-            )
