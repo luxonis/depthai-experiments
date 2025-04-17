@@ -12,20 +12,6 @@ to the device.
 
 ![Demo](https://user-images.githubusercontent.com/18037362/146296930-9e7071f5-33b9-45f9-af21-cace7ffffc0f.gif)
 
-## Installation
-
-Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
-Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
-
-- [DepthAI](https://pypi.org/project/depthai/),
-- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
-
-You can simply install them by running:
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Usage
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
@@ -39,7 +25,20 @@ Here is a list of all available parameters:
 
 ### Peripheral Mode
 
-Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. You can run the example with the following command:
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. 
+You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
+
+```bash
+pip install -r requirements.txt
+```
+
+You can run the example with the following command:
 
 ```bash
 python3 main.py
