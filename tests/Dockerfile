@@ -21,16 +21,16 @@ ENV DISPLAY=:99
 
 # Copy your project files into the container
 # NOTE: If ran inside GH workflow or with HIL --sync-workspace this is not needed
-# COPY . /tmp/depthai-experiments
+COPY . /tmp/depthai-experiments
 
 # Setup Test Command
 WORKDIR /tmp/depthai-experiments
 
-COPY run.sh run.sh
+# COPY run.sh run.sh
 RUN apt-get update && apt-get install -y tree
 RUN tree .
-RUN chmod +x run.sh
-ENTRYPOINT ["/run.sh"]
+RUN chmod +x tests/run.sh
+ENTRYPOINT ["/tests/run.sh"]
 
 # Define the entrypoint script
 # ENTRYPOINT ["sh", "-c", "\
