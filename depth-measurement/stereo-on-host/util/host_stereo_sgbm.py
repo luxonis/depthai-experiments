@@ -163,12 +163,9 @@ class StereoSGBM(dai.node.HostNode):
             self._create_img_frame(disparity_colour_mapped, dai.ImgFrame.Type.BGR888i)
         )
 
-        self.disparity = np.clip(self.disparity, 16, self.max_disparity * 16).astype(np.uint16)
-        print("max disparity:", self.disparity.max()) # 26112 (96 * 16)
+        self.disparity = np.clip(self.disparity / 16, 0, self.max_disparity).astype(np.uint16)
         self.raw_disparity_out.send(
-            self._create_img_frame(
-                self.disparity, dai.ImgFrame.Type.RAW16
-            )
+            self._create_img_frame(self.disparity, dai.ImgFrame.Type.RAW16)
         )
         self.rectified_left.send(
             self._create_img_frame(left_img_rect, dai.ImgFrame.Type.NV12)
@@ -177,9 +174,13 @@ class StereoSGBM(dai.node.HostNode):
             self._create_img_frame(right_img_rect, dai.ImgFrame.Type.NV12)
         )
 
-    def _create_img_frame(
-        self, frame: np.ndarray, type: dai.ImgFrame.Type
-    ) -> dai.ImgFrame:
+    def _create_img_frame(self, frame: np.ndarray, type: dai.ImgFrame.Type) -> dai.ImgFrame:
         img_frame = dai.ImgFrame()
-        img_frame.setCvFrame(frame, type)
+        if type == dai.ImgFrame.Type.RAW16:
+            img_frame.setFrame(frame)
+            img_frame.setWidth(frame.shape[1])
+            img_frame.setHeight(frame.shape[0])
+            img_frame.setType(type)
+        else:
+            img_frame.setCvFrame(frame, type)
         return img_frame

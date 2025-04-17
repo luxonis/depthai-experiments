@@ -6,21 +6,7 @@ This experiment demonstrates how [stereo pipeline works](https://docs.luxonis.co
 
 [SSIM score](https://en.wikipedia.org/wiki/Structural_similarity) is used to comapre the similarity between the disparity map calculated using `cv2.StereoSGBM` and the disparity map generated on the OAK camera.
 
-> While SSIM can provide a general measure of structural similarity, it might not perfectly capture the accuracy of depth maps, as small absolute differences in depth can lead to lower scores even if the overall structure is similar.
-
-## Installation
-
-Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
-Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
-
-- [DepthAI](https://pypi.org/project/depthai/),
-- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
-
-You can simply install them by running:
-
-```bash
-pip install -r requirements.txt
-```
+> While SSIM can provide a general measure of structural similarity, it might not perfectly capture the similarity of depth maps, as small absolute differences in depth can lead to lower scores even if the overall structure is similar. You can visually evaluate the depth maps in the Visualizer.
 
 ## Usage
 
@@ -35,7 +21,19 @@ Here is a list of all available parameters:
 
 ### Peripheral Mode
 
-Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. You can run the app using the following command:
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
+
+```bash
+pip install -r requirements.txt
+```
+
+You can run the app using the following command:
 
 ```bash
 python3 main.py
