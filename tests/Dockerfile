@@ -28,6 +28,7 @@ WORKDIR /tmp/depthai-experiments
 
 # Define the entrypoint script
 ENTRYPOINT ["sh", "-c", "\
+    set -e && \
     if [ -z \"$PLATFORM\" ]; then \
     echo 'Error: PLATFORM environment variable is required' && exit 1; \
     fi && \
