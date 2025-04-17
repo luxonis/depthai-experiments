@@ -1,7 +1,6 @@
 import depthai as dai
 from host_wls_filter import WLSFilter
-
-from host_node.host_display import Display
+from host_display import Display
 
 LR_CHECK = False  # Better handling for occlusions
 
