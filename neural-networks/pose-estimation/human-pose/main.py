@@ -1,6 +1,11 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork, HRNetParser
+from depthai_nodes.node import (
+    ParsingNeuralNetwork,
+    HRNetParser,
+    GatherData,
+    ImgDetectionsFilter,
+)
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 from utils.script import generate_script_content
@@ -11,8 +16,7 @@ detection_model_slug: str = "luxonis/yolov6-nano:r2-coco-512x288"
 pose_model_slug: str = args.model
 
 padding = 0.1
-valid_labels = [0]
-confidence_threshold = 0.5
+valid_labels = [0]  # people
 
 if args.fps_limit and args.media_path:
     args.fps_limit = None
@@ -55,7 +59,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        replay.setFps(6 if platform == "RVC2" else 20)
+        replay.setFps(args.fps_limit)
 
     else:
         cam = pipeline.create(dai.node.Camera).build()
@@ -93,17 +97,22 @@ with dai.Pipeline(device) as pipeline:
         0.0
     )  # to get all keypoints so we can draw skeleton. We will filter them later.
 
+    detections_filter = pipeline.create(ImgDetectionsFilter).build(
+        detection_nn.out, labels_to_keep=valid_labels
+    )
+
+    gather_data_node = pipeline.create(GatherData).build(camera_fps=args.fps_limit)
+    pose_nn.out.link(gather_data_node.input_data)
+    detections_filter.out.link(gather_data_node.input_reference)
+
     annotation_node = pipeline.create(AnnotationNode).build(
-        input_detections=detection_nn.out,
+        gather_data_node.out,
         connection_pairs=connection_pairs,
         valid_labels=valid_labels,
-        padding=padding,
-        confidence_threshold=confidence_threshold,
     )
-    pose_nn.out.link(annotation_node.input_keypoints)
 
     visualizer.addTopic("Video", detection_nn.passthrough, "images")
-    visualizer.addTopic("Detections", annotation_node.out_detections, "images")
+    visualizer.addTopic("Detections", detections_filter.out, "images")
     visualizer.addTopic("Pose", annotation_node.out_pose_annotations, "images")
 
     print("Pipeline created.")
