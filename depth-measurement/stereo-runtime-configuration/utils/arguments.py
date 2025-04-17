@@ -19,28 +19,10 @@ def initialize_argparser():
     parser.add_argument(
         "-fps",
         "--fps_limit",
-        help="FPS limit for the model runtime.",
+        help="FPS limit.",
         required=False,
-        default=30,
+        default=20,
         type=int,
-    )
-
-    parser.add_argument(
-        "-c",
-        "--codec",
-        choices=["h264", "h265", "mjpeg"],
-        default="h264",
-        type=str,
-        help="Video encoding",
-    )
-
-    parser.add_argument(
-        "-o",
-        "--output",
-        help="Path to the output file.",
-        required=False,
-        default="video.mp4",
-        type=str,
     )
 
     args = parser.parse_args()
