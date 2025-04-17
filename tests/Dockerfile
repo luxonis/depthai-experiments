@@ -26,10 +26,10 @@ ENV DISPLAY=:99
 # Setup Test Command
 WORKDIR /tmp/depthai-experiments
 
-COPY . .
+COPY tests/run.sh run.sh
 RUN apt-get update && apt-get install -y tree
 RUN tree .
-RUN chmod +x tests/run.sh
+RUN chmod +x run.sh
 ENTRYPOINT ["/run.sh"]
 
 # Define the entrypoint script
