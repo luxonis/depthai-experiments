@@ -104,8 +104,8 @@ def pytest_generate_tests(metafunc):
             if "main.py" in filenames and "requirements.txt" in filenames:
                 exp_dirs.append(Path(dirpath))
             elif "main.py" in filenames and "requirements.txt" not in filenames:
-                logger.error(f"Skipping {dirpath} because it has no requirements.txt")
+                logger.info(f"Skipping {dirpath} because it has no requirements.txt")
             elif "main.py" not in filenames and "requirements.txt" in filenames:
-                logger.error(f"Skipping {dirpath} because it has no main.py")
+                logger.info(f"Skipping {dirpath} because it has no main.py")
 
         metafunc.parametrize("experiment_dir", exp_dirs, ids=[str(p) for p in exp_dirs])

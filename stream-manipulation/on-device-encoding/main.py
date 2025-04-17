@@ -35,8 +35,8 @@ with dai.Pipeline(device) as pipeline:
         output_path=args.output,
     )
 
-    # Visualizer doesn't support H265, so we need to use camera stream for H265 videos
-    if args.codec == "h265":
+    # Visualizer currently doesn't support H265 or any encoded videos in RVC4 standalone mode - use non-encoded streams instead
+    if args.codec == "h265" or device.getPlatform() == dai.Platform.RVC4:
         visualizer.addTopic("Video", cam_out, "images")
     else:
         visualizer.addTopic("Video", video_enc.out, "images")

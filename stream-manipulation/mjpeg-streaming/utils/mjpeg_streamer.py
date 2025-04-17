@@ -1,8 +1,10 @@
 import threading
 from typing import List
+
 import cv2
 import depthai as dai
 import numpy as np
+
 from utils.server import ThreadedHTTPServer, VideoStreamHandler
 
 HTTP_SERVER_PORT = 8083
@@ -24,7 +26,7 @@ class MJPEGStreamer(dai.node.HostNode):
 
         # Start server
         self.server = ThreadedHTTPServer(
-            ("localhost", HTTP_SERVER_PORT), VideoStreamHandler
+            ("0.0.0.0", HTTP_SERVER_PORT), VideoStreamHandler
         )
         self.labels = labels
         th = threading.Thread(target=self.server.serve_forever)
