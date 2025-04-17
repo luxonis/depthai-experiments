@@ -22,10 +22,14 @@ class SSIM(dai.node.HostNode):
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-        self.max_disparity_subpixel = None
+        self.max_generated_disparity_subpixel = None
+        self.max_calculated_disparity_subpixel = None
 
-    def setMaxDisparity(self, max_disparity_subpixel):
-        self.max_disparity_subpixel = max_disparity_subpixel
+    def setMaxGenDisparity(self, max_generated_disparity_subpixel):
+        self.max_generated_disparity_subpixel = max_generated_disparity_subpixel
+
+    def setMaxCalDisparity(self, max_calculated_disparity_subpixel):
+        self.max_calculated_disparity_subpixel = max_calculated_disparity_subpixel 
 
     def build(
         self, disp_generated: dai.Node.Output, disp_calculated: dai.Node.Output
@@ -35,20 +39,35 @@ class SSIM(dai.node.HostNode):
         return self
 
     def process(self, disp_generated: dai.ImgFrame, disp_calculated: dai.ImgFrame):
-        if self.max_disparity_subpixel is None:
-            print("Warning: max_disparity_subpixel not set in SSIM node.")
+        if self.max_generated_disparity_subpixel is None:
+            print("Warning: max_generated_disparity_subpixel not set in SSIM node.")
+            return
+        if self.max_calculated_disparity_subpixel is None:
+            print("Warning: max_calculated_disparity_subpixel not set in SSIM node.")
             return
 
         disp1_subpixel = np.array(disp_generated.getFrame()).astype(np.float32)
-        disp1 = disp1_subpixel / 16.0
+        disp1 = disp1_subpixel / 16
 
-        disp2_subpixel = np.array(disp_calculated.getFrame()).astype(np.float32)
+        disp2_subpixel = np.array(disp_calculated.getFrame())
+        print("max disp2_subpixel", disp2_subpixel.max())
+        # Handle RAW8 for StereoSGBM (rescale to subpixel units)
+        # if disp_calculated.getType() == dai.ImgFrame.Type.RAW8:
+        #     disp2_subpixel = disp2_subpixel * (1536.0 / 255.0)
         disp2 = disp2_subpixel / 16.0
 
-        max_disp = self.max_disparity_subpixel / 16.0
+        max_disp1 = self.max_generated_disparity_subpixel / 16.0
+        max_disp2 = self.max_calculated_disparity_subpixel / 16.0
 
-        disp1_normalized = disp1 / max_disp
-        disp2_normalized = disp2 / max_disp
+        disp1_normalized = disp1 / max_disp1
+        disp2_normalized = disp2 / max_disp2
+
+        # print(disp1_normalized.max())
+        # print(disp2_normalized.max())
+
+        # Normalize by maximum values
+        # disp1_normalized = disp1_subpixel / max_disp1
+        # disp2_normalized = disp2_subpixel / max_disp2
 
         # Note: SSIM calculation is quite slow.
         ssim_noise = ssim(

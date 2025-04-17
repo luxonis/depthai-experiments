@@ -55,7 +55,8 @@ with dai.Pipeline(device) as pipeline:
     ssim = pipeline.create(SSIM).build(
         disp_generated=stereo.disparity, disp_calculated=stereoSGBM.raw_disparity_out
     )
-    ssim.setMaxDisparity(int(stereo.initialConfig.getMaxDisparity()))
+    ssim.setMaxGenDisparity(int(stereo.initialConfig.getMaxDisparity()) * 16)
+    ssim.setMaxCalDisparity(int(stereoSGBM.max_disparity) * 16)
 
     visualizer.addTopic("Left Cam", stereoSGBM.mono_left)
     visualizer.addTopic("Right Cam", stereoSGBM.mono_right)

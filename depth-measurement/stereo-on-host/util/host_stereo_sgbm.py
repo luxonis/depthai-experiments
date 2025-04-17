@@ -162,9 +162,12 @@ class StereoSGBM(dai.node.HostNode):
         self.disparity_out.send(
             self._create_img_frame(disparity_colour_mapped, dai.ImgFrame.Type.BGR888i)
         )
+
+        self.disparity = np.clip(self.disparity, 16, self.max_disparity * 16).astype(np.uint16)
+        print("max disparity:", self.disparity.max()) # 26112 (96 * 16)
         self.raw_disparity_out.send(
             self._create_img_frame(
-                self.disparity.astype(np.uint16), dai.ImgFrame.Type.RAW16
+                self.disparity, dai.ImgFrame.Type.RAW16
             )
         )
         self.rectified_left.send(
