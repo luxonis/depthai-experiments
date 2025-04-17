@@ -18,14 +18,9 @@ pose_model_slug: str = args.model
 padding = 0.1
 valid_labels = [0]  # people
 
-if args.fps_limit and args.media_path:
-    args.fps_limit = None
-    print(
-        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
-    )
-
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatformAsString()
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -50,20 +45,21 @@ with dai.Pipeline(device) as pipeline:
         .metadata.extraParams["skeleton_edges"]
     )
 
-    frame_type = (
-        dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
-    )
-
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
         replay.setLoop(True)
-        replay.setFps(args.fps_limit)
-
-    else:
-        cam = pipeline.create(dai.node.Camera).build()
-    input_node = replay if args.media_path else cam
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+    input_node = (
+        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
+    )
 
     detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, detection_nn_archive, fps=args.fps_limit
