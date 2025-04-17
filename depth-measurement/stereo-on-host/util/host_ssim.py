@@ -29,7 +29,7 @@ class SSIM(dai.node.HostNode):
         self.max_generated_disparity = max_generated_disparity
 
     def setMaxCalDisparity(self, max_calculated_disparity):
-        self.max_calculated_disparity = max_calculated_disparity 
+        self.max_calculated_disparity = max_calculated_disparity
 
     def build(
         self, disp_generated: dai.Node.Output, disp_calculated: dai.Node.Output
