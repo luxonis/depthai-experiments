@@ -4,9 +4,9 @@ import cv2
 import depthai as dai
 from calc import HostSpatialsCalc
 from depthai_nodes.node import ApplyColormap
-from host_node.measure_distance import MeasureDistance
-from host_node.host_display import Display
-from host_node.keyboard_reader import KeyboardReader
+from measure_distance import MeasureDistance
+from host_display import Display
+from keyboard_reader import KeyboardReader
 
 
 device = dai.Device()
