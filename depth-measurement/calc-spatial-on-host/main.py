@@ -2,10 +2,10 @@
 
 import cv2
 import depthai as dai
-from util.roi_control import ROIControl
-from util.arguments import initialize_argparser
+from utils.roi_control import ROIControl
+from utils.arguments import initialize_argparser
 from depthai_nodes.node import ApplyColormap
-from util.measure_distance import MeasureDistance
+from utils.measure_distance import MeasureDistance
 
 
 _, args = initialize_argparser()
