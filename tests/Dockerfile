@@ -26,7 +26,7 @@ ENV DISPLAY=:99
 # Setup Test Command
 WORKDIR /tmp/depthai-experiments
 
-COPY tests/run.sh run.sh
+COPY run.sh run.sh
 RUN apt-get update && apt-get install -y tree
 RUN tree .
 RUN chmod +x run.sh
