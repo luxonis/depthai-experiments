@@ -4,7 +4,6 @@ from depthai_nodes.node import ParsingNeuralNetwork, ImgFrameOverlay, ApplyColor
 
 from utils.arguments import initialize_argparser
 
-exit()
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
