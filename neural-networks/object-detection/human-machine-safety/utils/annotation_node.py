@@ -1,9 +1,5 @@
 import depthai as dai
-from depthai_nodes import (
-    OUTLINE_COLOR,
-    TEXT_COLOR,
-    BACKGROUND_COLOR,
-)
+from depthai_nodes import PRIMARY_COLOR, SECONDARY_COLOR
 import cv2
 
 
@@ -39,7 +35,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                 pointsAnnotation = dai.PointsAnnotation()
                 pointsAnnotation.type = dai.PointsAnnotationType.LINE_LOOP
                 pointsAnnotation.points = dai.VectorPoint2f(points)
-                pointsAnnotation.outlineColor = OUTLINE_COLOR
+                pointsAnnotation.outlineColor = PRIMARY_COLOR
                 pointsAnnotation.thickness = 2.0
                 annotation.points.append(pointsAnnotation)
 
@@ -47,8 +43,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                 text.position = points[0]
                 text.text = f"{detection.label} {int(detection.confidence * 100)}%"
                 text.fontSize = 15
-                text.textColor = TEXT_COLOR
-                text.backgroundColor = BACKGROUND_COLOR
+                text.textColor = SECONDARY_COLOR
                 annotation.texts.append(text)
 
             depth_map = depth_msg.getFrame()

@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes import OUTLINE_COLOR
+from depthai_nodes import PRIMARY_COLOR
 from typing import List
 
 
@@ -50,7 +50,7 @@ class AnnotationNode(dai.node.HostNode):
             pointsAnnotation = dai.PointsAnnotation()
             pointsAnnotation.type = dai.PointsAnnotationType.LINE_LOOP
             pointsAnnotation.points = dai.VectorPoint2f(points)
-            pointsAnnotation.outlineColor = OUTLINE_COLOR
+            pointsAnnotation.outlineColor = PRIMARY_COLOR
             pointsAnnotation.thickness = 2.0
             annotation.points.append(pointsAnnotation)
 

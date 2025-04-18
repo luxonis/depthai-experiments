@@ -3,7 +3,7 @@ from depthai_nodes import (
     ImgDetectionsExtended,
     ImgDetectionExtended,
     Keypoints,
-    OUTLINE_COLOR,
+    PRIMARY_COLOR,
 )
 from typing import List
 
@@ -93,7 +93,7 @@ class AnnotationNode(dai.node.HostNode):
                             dai.Point2f(x=x2, y=y2, normalized=True),
                         ]
                     )
-                    pointsAnnotation.outlineColor = OUTLINE_COLOR
+                    pointsAnnotation.outlineColor = PRIMARY_COLOR
                     pointsAnnotation.thickness = 1.0
                     annotation.points.append(pointsAnnotation)
 
