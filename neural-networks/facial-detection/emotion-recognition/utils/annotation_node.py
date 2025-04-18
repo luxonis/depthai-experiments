@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes import TEXT_COLOR, OUTLINE_COLOR
+from depthai_nodes import PRIMARY_COLOR, SECONDARY_COLOR
 
 
 class AnnotationNode(dai.node.ThreadedHostNode):
@@ -23,7 +23,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                 points_annotation = dai.PointsAnnotation()
                 points_annotation.type = dai.PointsAnnotationType.LINE_LOOP
                 points_annotation.points = dai.VectorPoint2f(points)
-                points_annotation.outlineColor = OUTLINE_COLOR
+                points_annotation.outlineColor = PRIMARY_COLOR
                 points_annotation.thickness = 3
                 annotation.points.append(points_annotation)
 
@@ -31,7 +31,7 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                 text_annotation.position = points[0]
                 text_annotation.text = f"{emotions_message.classes[i]} {int(emotions_message.scores[i] * 100)}%"
                 text_annotation.fontSize = 50
-                text_annotation.textColor = TEXT_COLOR
+                text_annotation.textColor = SECONDARY_COLOR
                 annotation.texts.append(text_annotation)
 
             img_annotations.annotations.append(annotation)

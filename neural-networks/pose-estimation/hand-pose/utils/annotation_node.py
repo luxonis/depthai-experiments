@@ -5,7 +5,7 @@ from depthai_nodes import (
     Keypoints,
     Keypoint,
     Predictions,
-    OUTLINE_COLOR,
+    PRIMARY_COLOR,
 )
 from typing import List
 from utils.gesture_recognition import recognize_gesture
@@ -114,7 +114,7 @@ class AnnotationNode(dai.node.HostNode):
                         dai.Point2f(x=xs[pt2_ix], y=ys[pt2_ix], normalized=True),
                     ]
                 )
-                points_ann.outlineColor = OUTLINE_COLOR
+                points_ann.outlineColor = PRIMARY_COLOR
                 points_ann.thickness = 2.0
                 annotation.points.append(points_ann)
 
@@ -127,7 +127,7 @@ class AnnotationNode(dai.node.HostNode):
             text_ann.text = "Left" if handness < 0.5 else "Right"
             text_ann.text += f" {gesture}"
             text_ann.fontSize = 32
-            text_ann.textColor = OUTLINE_COLOR
+            text_ann.textColor = PRIMARY_COLOR
             annotation.texts.append(text_ann)
 
             annotations.annotations.append(annotation)
