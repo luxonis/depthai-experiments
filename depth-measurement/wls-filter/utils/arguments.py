@@ -6,7 +6,7 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = "Calcualte spatial coordinates of a ROI on the host and gets depth frames from the device"
+    parser.description = "This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI Gen3 API."
 
     parser.add_argument(
         "-d",

@@ -11,8 +11,6 @@ class Filter:
         self._lambda = _lambda
         self._sigma = _sigma
         self.wlsFilter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
-        self._disparity_fract_bits = 4
-        self._disparity_scale = 2.0**self._disparity_fract_bits
 
     def increase_lambda(self) -> None:
         if self._lambda < 255*100:
@@ -83,13 +81,15 @@ class WLSFilter(dai.node.HostNode):
         disparity: dai.Node.Output,
         rectified_right: dai.Node.Output,
         max_disparity: float,
+        baseline
     ) -> "WLSFilter":
         self.link_args(disparity, rectified_right)
         self._disp_multiplier = 255 / max_disparity
+        self._baseline = baseline * 10  # mm
         return self
 
     def process(self, disparity: dai.ImgFrame, right: dai.ImgFrame) -> None:
-        disparity_frame = disparity.getCvFrame()
+        disparity_frame = disparity.getFrame()
         right_frame = right.getFrame()
         focal = disparity_frame.shape[1] / (2.0 * math.tan(math.radians(self._fov / 2)))
         depthScaleFactor = self._baseline * focal
@@ -99,11 +99,22 @@ class WLSFilter(dai.node.HostNode):
         filteredDisp = (filteredDisp * self._disp_multiplier).astype(np.uint8)
         coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_JET)
 
-        img = cv2.cvtColor(disparity.getCvFrame(), cv2.COLOR_GRAY2BGR)
-        depth_fr = dai.ImgFrame()
-        depth_fr.setCvFrame(img, dai.ImgFrame.Type.BGR888p)
+        max_value = depthFrame.max()
+        if max_value == 0:
+            color_arr = np.zeros(
+                (depthFrame.shape[0], depthFrame.shape[1], 3),
+                dtype=np.uint8,
+            )
+        else:
+            color_arr = cv2.cvtColor(
+                ((depthFrame / max_value) * 255).astype(np.uint8),
+                cv2.COLOR_GRAY2BGR,
+            )
 
+        depth_fr = dai.ImgFrame()
+        depth_fr.setCvFrame(color_arr, dai.ImgFrame.Type.BGR888i)
         self.depth_frame.send(depth_fr)
+
         self.filtered_disp.send(
             self.create_img_frame(filteredDisp, dai.ImgFrame.Type.RAW8)
         )

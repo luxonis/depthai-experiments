@@ -30,10 +30,13 @@ with dai.Pipeline(device) as pipeline:
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_C)
 
+    calib = device.readCalibration()
+    baseline = calib.getBaselineDistance()
     wls_filter = pipeline.create(WLSFilter).build(
         disparity=stereo.disparity,
         rectified_right=stereo.rectifiedRight,
         max_disparity=stereo.initialConfig.getMaxDisparity(),
+        baseline=baseline,
     )
 
     disp_colored = pipeline.create(ApplyColormap).build(stereo.disparity)
