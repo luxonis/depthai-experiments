@@ -12,8 +12,6 @@ export default defineConfig({
 		format: "es",
 	},
 	build: {
-		outDir: '../encoded-stream/frontend/dist',
-		emptyOutDir: true,
 		rollupOptions: {
 			output: {
 				format: "esm",
