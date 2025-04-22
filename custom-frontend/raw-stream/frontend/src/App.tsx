@@ -1,9 +1,11 @@
 
 import {css} from "../styled-system/css/css.mjs";
-import {Streams} from "@luxonis/depthai-viewer-common";
+import {Streams, useConnection} from "@luxonis/depthai-viewer-common";
+import {MessageInput} from "./MessageInput.tsx";
 
 
 function App() {
+    const connection = useConnection();
 
     return (
         <main className={css({
@@ -19,6 +21,8 @@ function App() {
             <h1 className={css({fontSize: '2xl', fontWeight: 'bold'})}>Local Frontend for Visualizer Example</h1>
 
             <Streams />
+
+            {connection.connected && <MessageInput />}
         </main>
     );
 }

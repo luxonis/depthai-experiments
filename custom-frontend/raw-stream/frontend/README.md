@@ -86,3 +86,13 @@ well.
 It's highly recommended to check out [PandaCSS docs](https://panda-css.com/docs/overview/getting-started).
 
 TLDR: use `css()` function imported from `styled-system/css/css.mjs` like we do in [App.tsx](./src/App.tsx).
+
+## Known issues
+
+### `vite` running out of memory during build
+
+Depending on your machine, you might run into `vite` running out of memory during build. To fix this, try increasing the Node.js memory limit by modifying your build command:
+
+```
+NODE_OPTIONS=--max-old-space-size=8192 npm run build
+```
