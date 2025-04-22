@@ -62,5 +62,3 @@ with dai.Pipeline(device) as pipeline:
             break
         else:
             wls_filter.handle_key(key)
-
-

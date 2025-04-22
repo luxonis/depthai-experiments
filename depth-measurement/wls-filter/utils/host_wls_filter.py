@@ -13,7 +13,7 @@ class Filter:
         self.wlsFilter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
 
     def increase_lambda(self) -> None:
-        if self._lambda < 255*100:
+        if self._lambda < 255 * 100:
             self._lambda += 100
 
     def decrease_lambda(self) -> None:
@@ -81,7 +81,7 @@ class WLSFilter(dai.node.HostNode):
         disparity: dai.Node.Output,
         rectified_right: dai.Node.Output,
         max_disparity: float,
-        baseline
+        baseline,
     ) -> "WLSFilter":
         self.link_args(disparity, rectified_right)
         self._disp_multiplier = 255 / max_disparity
@@ -169,9 +169,7 @@ class WLSFilter(dai.node.HostNode):
         elif key == ord("S"):
             self._filter_window.increase_sigma()
 
-    def create_img_frame(
-        self, frame, type: dai.ImgFrame.Type
-    ) -> dai.ImgFrame:
+    def create_img_frame(self, frame, type: dai.ImgFrame.Type) -> dai.ImgFrame:
         img_frame = dai.ImgFrame()
         img_frame.setWidth(frame.shape[1])
         img_frame.setHeight(frame.shape[0])
