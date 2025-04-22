@@ -23,12 +23,12 @@ class Filter:
     def increase_sigma(self) -> None:
         if self._sigma < 10:
             self._sigma += 0.1
+            self._sigma = round(self._sigma, 2)
 
     def decrease_sigma(self) -> None:
-        if self._sigma > 0.01:
+        if self._sigma > 0:
             self._sigma -= 0.1
-            if self._sigma < 0.01:
-                self._sigma = 0.01
+            self._sigma = round(self._sigma, 2)
 
     def filter(
         self, disparity, right, depthScaleFactor
