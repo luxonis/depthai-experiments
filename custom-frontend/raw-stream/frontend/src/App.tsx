@@ -20,7 +20,7 @@ function App() {
         })}>
             <h1 className={css({fontSize: '2xl', fontWeight: 'bold'})}>Local Frontend for Visualizer Example</h1>
 
-            <Streams />
+            <Streams hideToolbar />
 
             {connection.connected && <MessageInput />}
         </main>
