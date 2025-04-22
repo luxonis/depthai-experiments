@@ -44,14 +44,7 @@ class Filter:
         # Compute depth from disparity (32 levels)
         with np.errstate(divide="ignore"):  # Should be safe to ignore div by zero here
             # raw depth values
-            # depthFrame = (depthScaleFactor / filteredDisp).astype(np.uint16)
-            disparity_float = filteredDisp.astype(np.float32) / self._disparity_scale
-            depth_float = depthScaleFactor / disparity_float
-
-        depth_float[np.isinf(depth_float)] = 0
-        depth_float[np.isnan(depth_float)] = 0
-
-        depthFrame = depth_float.astype(np.uint16)
+            depthFrame = (depthScaleFactor / filteredDisp).astype(np.uint16)
 
         return filteredDisp, depthFrame
 
@@ -96,7 +89,7 @@ class WLSFilter(dai.node.HostNode):
         return self
 
     def process(self, disparity: dai.ImgFrame, right: dai.ImgFrame) -> None:
-        disparity_frame = disparity.getFrame()
+        disparity_frame = disparity.getCvFrame()
         right_frame = right.getFrame()
         focal = disparity_frame.shape[1] / (2.0 * math.tan(math.radians(self._fov / 2)))
         depthScaleFactor = self._baseline * focal
@@ -106,9 +99,11 @@ class WLSFilter(dai.node.HostNode):
         filteredDisp = (filteredDisp * self._disp_multiplier).astype(np.uint8)
         coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_JET)
 
-        self.depth_frame.send(
-            self.create_img_frame(depthFrame, dai.ImgFrame.Type.RAW16)
-        )
+        img = cv2.cvtColor(disparity.getCvFrame(), cv2.COLOR_GRAY2BGR)
+        depth_fr = dai.ImgFrame()
+        depth_fr.setCvFrame(img, dai.ImgFrame.Type.BGR888p)
+
+        self.depth_frame.send(depth_fr)
         self.filtered_disp.send(
             self.create_img_frame(filteredDisp, dai.ImgFrame.Type.RAW8)
         )
