@@ -3,7 +3,15 @@
 This example project shows how to use `@luxonis/depthai-viewer-common` package to build custom front-end app
 for DepthAI.
 
-## Get started
+## Running the example
+
+1. Install FE dependencies - `cd frontend/ && npm i`
+1. Build the FE - `npm run build`
+1. Install Python dependencies - `cd ../ && pip install -r ./requirements.txt`
+1. Run the example script - `python3 ./main.py`
+1. In your browser open `http://localhost:8080`
+
+## Get started with your own custom Front-End
 
 ### Prepare your project
 
@@ -36,12 +44,17 @@ export {};
 
 ### Edit `vite.config.ts`
 
-To use this lib you also have to edit `vite.config.ts` for everything to work properly:
+To use this lib, you also have to edit `vite.config.ts` for everything to work properly:
 
-1. For [FoxGlove](https://foxglove.dev/) to work, we have to define globals like this: `define: {
-		global: {},
-	},`
-2. Use `esm` for workers and bundling
+- For [FoxGlove](https://foxglove.dev/) to work, we have to define globals like this:
+
+```
+define: {
+    global: {},
+},
+```
+
+- Use `esm` for workers and bundling
 
 ```
 	worker: {
@@ -60,7 +73,7 @@ Example vite.config.ts can be found in [this repository](./vite.config.ts).
 
 ### Import library styles
 
-In your application entrypoint (e.g. `main.tsx`) import following styles:
+In your application entrypoint (e.g. `main.tsx`) import the following styles:
 
 ```
 import '@luxonis/depthai-viewer-common/styles';
@@ -70,7 +83,7 @@ import '@luxonis/depthai-pipeline-lib/styles';
 
 ### Insert @luxonis/depthai-viewer-common component
 
-To use streams from our library best aprpoach is to use `<DepthAIEntrypoint />` component (see [App.tsx](./src/App.tsx)
+To use streams from our library, best aprpoach is to use `<DepthAIEntrypoint />` component (see [App.tsx](./src/App.tsx)
 for example usage)
 
 ## Usage
@@ -91,7 +104,8 @@ TLDR: use `css()` function imported from `styled-system/css/css.mjs` like we do 
 
 ### `vite` running out of memory during build
 
-Depending on your machine, you might run into `vite` running out of memory during build. To fix this, try increasing the Node.js memory limit by modifying your build command:
+Depending on your machine, you might run into `vite` running out of memory during build. To fix this, try increasing the
+Node.js memory limit by modifying your build command:
 
 ```
 NODE_OPTIONS=--max-old-space-size=8192 npm run build
