@@ -12,7 +12,6 @@ class AnnotationNode(dai.node.HostNode):
         self.valid_labels = [0]
         self.padding = 0.1
         self.keypoint_conf_threshold = 0.5
-        self.color = [255, 255, 255, 1.0]
 
     def build(
         self,
@@ -21,7 +20,6 @@ class AnnotationNode(dai.node.HostNode):
         valid_labels: List[int],
         padding: Optional[float] = None,
         keypoint_conf_threshold: Optional[float] = None,
-        color: Optional[List[int]] = None,
     ) -> "AnnotationNode":
         self.connection_pairs = connection_pairs
         self.valid_labels = valid_labels
@@ -29,8 +27,6 @@ class AnnotationNode(dai.node.HostNode):
             self.padding = padding
         if keypoint_conf_threshold:
             self.keypoint_conf_threshold = keypoint_conf_threshold
-        if color:
-            self.color = color
         self.link_args(gather_data_msg)
         return self
 
@@ -83,13 +79,9 @@ class AnnotationNode(dai.node.HostNode):
                     x1, y1 = xs[pt1_idx], ys[pt1_idx]
                     x2, y2 = xs[pt2_idx], ys[pt2_idx]
 
-                    annotations.draw_line([x1, y1], [x2, y2], self.color, thickness=1)
-                    annotations.draw_circle(
-                        center=[x1, y1], radius=0.005, outline_color=self.color
-                    )
-                    annotations.draw_circle(
-                        center=[x2, y2], radius=0.005, outline_color=self.color
-                    )
+                    annotations.draw_line([x1, y1], [x2, y2], thickness=1)
+                    annotations.draw_circle(center=[x1, y1], radius=0.005)
+                    annotations.draw_circle(center=[x2, y2], radius=0.005)
 
         img_annotations_msg = annotations.build(
             timestamp=img_detections_msg.getTimestamp(),
