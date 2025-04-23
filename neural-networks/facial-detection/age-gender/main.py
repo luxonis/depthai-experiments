@@ -27,10 +27,12 @@ def return_one(reference):
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
+    # face detection model
     det_model_description = dai.NNModelDescription(DET_MODEL)
     det_model_description.platform = platform
     det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
 
+    # age-gender recognition model
     rec_model_description = dai.NNModelDescription(REC_MODEL)
     rec_model_description.platform = platform
     rec_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
@@ -55,12 +57,11 @@ with dai.Pipeline(device) as pipeline:
         replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
     )
 
-    # face detection model
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, det_model_nn_archive, fps=args.fps_limit
     )
 
-    # detection processing; TODO: utilize generate_script_content
+    # detection processing
     detection_process_node = pipeline.create(ProcessDetections)
     detection_process_node.set_source_size(
         det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
@@ -73,7 +74,8 @@ with dai.Pipeline(device) as pipeline:
 
     config_sender_node = pipeline.create(dai.node.Script)
     config_sender_node.setScriptPath(
-        Path(__file__).parent / "utils/config_sender_script.py"
+        Path(__file__).parent
+        / "utils/config_sender_script.py"  # TODO: utilize generate_script_content
     )
     config_sender_node.inputs["frame_input"].setBlocking(True)
     config_sender_node.inputs["config_input"].setBlocking(True)
@@ -91,19 +93,18 @@ with dai.Pipeline(device) as pipeline:
     config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
     config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
 
-    # age-gender recognition model
     rec_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, rec_model_nn_archive
     )
 
-    # gather age-gender info
-    rec_gathered = pipeline.create(GatherData).build(fps, wait_count_fn=return_one)
-    rec_nn.getOutput(0).link(rec_gathered.input_data)  # gender
-    rec_nn.getOutput(1).link(rec_gathered.input_reference)  # age
+    # recognitions sync
+    gather_rec = pipeline.create(GatherData).build(fps, wait_count_fn=return_one)
+    rec_nn.getOutput(0).link(gather_rec.input_data)  # gender
+    rec_nn.getOutput(1).link(gather_rec.input_reference)  # age
 
-    # gather face detections and age-gender info
+    # detections and recognitions sync
     gather_data_node = pipeline.create(GatherData).build(fps)
-    rec_gathered.out.link(gather_data_node.input_data)
+    gather_rec.out.link(gather_data_node.input_data)
     det_nn.out.link(gather_data_node.input_reference)
 
     # annotation
@@ -111,7 +112,7 @@ with dai.Pipeline(device) as pipeline:
 
     # visualization
     visualizer.addTopic("Video", det_nn.passthrough, "images")
-    visualizer.addTopic("Annotations", annotation_node.out, "images")
+    visualizer.addTopic("AgeGender", annotation_node.out, "images")
 
     print("Pipeline created.")
     pipeline.start()
