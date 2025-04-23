@@ -108,10 +108,10 @@ def main(args):
             IMAGE_SIZE[0], IMAGE_SIZE[1], dai.ImageManipConfigV2.ResizeMode.LETTERBOX
         )
 
-        if args.video_path is not None:
+        if args.media_path is not None:
             replayNode = pipeline.create(dai.node.ReplayVideo)
             replayNode.setOutFrameType(dai.ImgFrame.Type.BGR888i)
-            replayNode.setReplayVideoFile(args.video_path)
+            replayNode.setReplayVideoFile(args.media_path)
 
             replayNode.out.link(manip.inputImage)
         else:
@@ -136,7 +136,7 @@ def main(args):
             {"runtime": "dsp", "performance_profile": "default"}
         )
         nn_with_parser.setNumInferenceThreads(1)
-        nn_with_parser.getParser(0).setConfidenceThreshold(args.confidence_threshold)
+        nn_with_parser.getParser(0).setConfidenceThreshold(args.confidence_thresh)
 
         manip.out.link(nn_with_parser.inputs["images"])
 
@@ -174,15 +174,16 @@ def parse_args():
         "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
         required=False,
-        default="",
+        default=None,
         type=str,
     )
     parser.add_argument(
-        "-v",
-        "--video_path",
-        type=str,
+        "-media",
+        "--media_path",
+        help="Path to the media file you aim to run the model on. If not set, the model will run on the camera input.",
+        required=False,
         default=None,
-        help="The path to the video file",
+        type=str,
     )
     parser.add_argument(
         "-c",
@@ -193,11 +194,11 @@ def parse_args():
         help="Class names to be detected",
     )
     parser.add_argument(
-        "-t",
-        "--confidence_threshold",
-        type=float,
+        "-conf",
+        "--confidence_thresh",
+        help="Sets the confidence threshold",
         default=0.1,
-        help="Confidence threshold for detections",
+        type=float,
     )
     return parser.parse_args()
 
@@ -207,10 +208,10 @@ def check_args(args):
         raise ValueError(
             f"Number of classes exceeds the maximum number of classes: {MAX_NUM_CLASSES}"
         )
-    if args.video_path is not None and not os.path.exists(args.video_path):
-        raise FileNotFoundError(f"Video file not found at {args.video_path}")
+    if args.media_path is not None and not os.path.exists(args.media_path):
+        raise FileNotFoundError(f"Video file not found at {args.media_path}")
 
-    if args.video_path is None:
+    if args.media_path is None:
         print("No video file provided. Using camera input.")
 
 
