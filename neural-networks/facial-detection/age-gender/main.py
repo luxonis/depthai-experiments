@@ -9,46 +9,53 @@ from utils.annotation_node import AnnotationNode
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatform()
+platform = device.getPlatformAsString()
 
-FPS = 20
-frame_type = dai.ImgFrame.Type.BGR888p
-if "RVC4" in str(platform):
-    frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 30
-else:
-    raise RuntimeError(
-        f"This demo is currently only supported on RVC4, got `{platform}`"
-    )
+DET_MODEL = "luxonis/yunet:640x480"
+REC_MODEL = "luxonis/age-gender-recognition:62x62"
+
+fps = args.fps_limit
+
+
+def return_one(reference):
+    return 1
+
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
+    det_model_description = dai.NNModelDescription(DET_MODEL)
+    det_model_description.platform = platform
+    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+
+    rec_model_description = dai.NNModelDescription(REC_MODEL)
+    rec_model_description.platform = platform
+    rec_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
+
+    # media/camera source
     if args.media_path:
-        replay_node = pipeline.create(dai.node.ReplayVideo)
-        replay_node.setReplayVideoFile(Path(args.media_path))
-        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
-        replay_node.setLoop(True)
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        replay.setSize(
+            det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+        )
+    input_node = (
+        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
+    )
 
-        video_resize_node = pipeline.create(dai.node.ImageManipV2)
-        video_resize_node.initialConfig.setOutputSize(1280, 960)
-        video_resize_node.initialConfig.setFrameType(frame_type)
-
-        replay_node.out.link(video_resize_node.inputImage)
-
-        input_node = video_resize_node.out
-    else:
-        camera_node = pipeline.create(dai.node.Camera).build()
-        input_node = camera_node.requestOutput((1280, 960), frame_type, fps=FPS)
-
-    resize_node = pipeline.create(dai.node.ImageManipV2)
-    resize_node.initialConfig.setOutputSize(640, 480)
-    resize_node.initialConfig.setReusePreviousImage(False)
-    resize_node.inputImage.setBlocking(True)
-    input_node.link(resize_node.inputImage)
-
-    face_detection_node: ParsingNeuralNetwork = pipeline.create(
-        ParsingNeuralNetwork
-    ).build(resize_node.out, "luxonis/yunet:640x480")
+    # face detection model
+    det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, det_model_nn_archive, fps=args.fps_limit
+    )
 
     detection_process_node = pipeline.create(ProcessDetections)
     detection_process_node.set_source_size(1280, 960)
