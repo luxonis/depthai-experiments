@@ -189,7 +189,7 @@ def parse_args():
         "--class_names",
         type=str,
         nargs="+",
-        required=True,
+        default=["person", "chair", "TV"],
         help="Class names to be detected",
     )
     parser.add_argument(
