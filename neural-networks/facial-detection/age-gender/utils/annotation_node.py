@@ -22,7 +22,6 @@ class AnnotationNode(dai.node.HostNode):
         return self
 
     def process(self, gather_data_msg: dai.Buffer) -> None:
-
         img_detections_extended_msg: ImgDetectionsExtended = (
             gather_data_msg.reference_data
         )
@@ -43,7 +42,6 @@ class AnnotationNode(dai.node.HostNode):
         for img_detection_extended_msg, age_gender_gather_data_msg in zip(
             img_detections_extended_msg.detections, age_gender_gather_data_msg_list
         ):
-
             gender_msg: Classifications = age_gender_gather_data_msg.reference_data
             assert isinstance(gender_msg, Classifications)
             age_msg_list = age_gender_gather_data_msg.gathered
