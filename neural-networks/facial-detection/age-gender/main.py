@@ -1,11 +1,13 @@
 from pathlib import Path
 import depthai as dai
+
 from depthai_nodes.node import ParsingNeuralNetwork
 from depthai_nodes.node import GatherData
+
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
-from utils.host_sync import DetectionsAgeGenderSync
 from utils.annotation_node import AnnotationNode
+
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
@@ -104,11 +106,12 @@ with dai.Pipeline(device) as pipeline:
     rec_gathered.out.link(gather_data_node.input_data)
     det_nn.out.link(gather_data_node.input_reference)
 
-    annotation_node = pipeline.create(AnnotationNode)
-    sync_node.out.link(annotation_node.input)
+    # annotation
+    annotation_node = pipeline.create(AnnotationNode).build(gather_data_node.out)
 
-    visualizer.addTopic("Video", sync_node.out_frame)
-    visualizer.addTopic("Text", annotation_node.output)
+    # visualization
+    visualizer.addTopic("Video", det_nn.passthrough, "images")
+    visualizer.addTopic("Annotations", annotation_node.out, "images")
 
     print("Pipeline created.")
     pipeline.start()
