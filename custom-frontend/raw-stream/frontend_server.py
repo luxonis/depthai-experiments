@@ -18,12 +18,15 @@ class FrontendServer:
     def _ensure_directory(self):
         if os.path.exists(self._directory / self.FILE):
             return
-        raise FileNotFoundError(f"Failed to start the HTTP server. File {self.FILE} not found in the {self._directory} folder.")
+        raise FileNotFoundError(
+            f"Failed to start the HTTP server. File {self.FILE} not found in the {self._directory} folder."
+        )
 
     def _get_handler(self):
         class CustomHandler(SimpleHTTPRequestHandler):
             def __init__(handler_self, *args, **kwargs):
                 super().__init__(*args, directory=self._directory, **kwargs)
+
         return CustomHandler
 
     def start(self):
@@ -36,7 +39,7 @@ class FrontendServer:
     @property
     def ip(self):
         return self._ip
-    
+
     @property
     def port(self):
         return self._port

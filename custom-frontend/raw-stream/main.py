@@ -19,6 +19,7 @@ with dai.Pipeline() as pipeline:
 
     def custom_service(message):
         print("Received message:", message)
+
     visualizer.registerService("Custom Service", custom_service)
     print("Running pipeline...")
     pipeline.run()
