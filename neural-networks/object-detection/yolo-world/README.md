@@ -35,13 +35,13 @@ python main.py --device <DEVICE> --class_names <CLASS_NAMES> [OPTIONS]
 
 ### Optional Arguments
 
-- `--video_path`: Path to the video file for processing. If omitted, live camera input is used.
-- `--confidence_threshold`: Confidence threshold for detections (default: 0.1).
+- `--media_path`: Path to the video file for processing. If omitted, live camera input is used.
+- `--confidence_thresh`: Confidence threshold for detections (default: 0.1).
 
 ### Example
 
 Running with a depthai visualizer:
 
 ```bash
-python main.py --class_names person car dog --confidence_threshold 0.2
+python main.py --class_names person car dog --confidence_thresh 0.2
 ```
