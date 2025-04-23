@@ -1,6 +1,7 @@
 from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import GatherData
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
 from utils.host_sync import DetectionsAgeGenderSync
@@ -57,10 +58,16 @@ with dai.Pipeline(device) as pipeline:
         input_node, det_model_nn_archive, fps=args.fps_limit
     )
 
+    # detection processing; TODO: utilize generate_script_content
     detection_process_node = pipeline.create(ProcessDetections)
-    detection_process_node.set_source_size(1280, 960)
-    detection_process_node.set_target_size(62, 62)
-    face_detection_node.out.link(detection_process_node.detections_input)
+    detection_process_node.set_source_size(
+        det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+    )
+    detection_process_node.set_target_size(
+        rec_model_nn_archive.getInputWidth(),
+        rec_model_nn_archive.getInputHeight(),
+    )
+    det_nn.out.link(detection_process_node.detections_input)
 
     config_sender_node = pipeline.create(dai.node.Script)
     config_sender_node.setScriptPath(
@@ -82,15 +89,20 @@ with dai.Pipeline(device) as pipeline:
     config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
     config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
 
-    age_gender_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        crop_node.out, "luxonis/age-gender-recognition:62x62"
+    # age-gender recognition model
+    rec_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        crop_node.out, rec_model_nn_archive
     )
 
-    sync_node = pipeline.create(DetectionsAgeGenderSync)
-    input_node.link(sync_node.passthrough_input)
-    face_detection_node.out.link(sync_node.detections_input)
-    age_gender_node.getOutput(0).link(sync_node.age_input)
-    age_gender_node.getOutput(1).link(sync_node.gender_input)
+    # gather age-gender info
+    rec_gathered = pipeline.create(GatherData).build(fps, wait_count_fn=return_one)
+    rec_nn.getOutput(0).link(rec_gathered.input_data)  # gender
+    rec_nn.getOutput(1).link(rec_gathered.input_reference)  # age
+
+    # gather face detections and age-gender info
+    gather_data_node = pipeline.create(GatherData).build(fps)
+    rec_gathered.out.link(gather_data_node.input_data)
+    det_nn.out.link(gather_data_node.input_reference)
 
     annotation_node = pipeline.create(AnnotationNode)
     sync_node.out.link(annotation_node.input)
