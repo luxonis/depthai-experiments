@@ -3,6 +3,7 @@ depthai>=3.0.0a15
 depthai-nodes>=0.2.1
 numpy
 onnxruntime
+torch
 transformers
 opencv-python~=4.10.0
 numpy>=1.22
