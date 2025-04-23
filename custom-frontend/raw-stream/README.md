@@ -3,6 +3,10 @@
 This example project shows how to use `@luxonis/depthai-viewer-common` package to build custom front-end app
 for DepthAI.
 
+## Demo
+
+[![Custom Request](media/message_sending.gif)](media/message_sending.gif)
+
 ## Running the example
 
 1. Install FE dependencies - `cd frontend/ && npm i`
