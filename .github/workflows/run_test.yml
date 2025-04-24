@@ -63,8 +63,19 @@ jobs:
             echo "python=[\"$INPUT_PYTHON\"]" >> $GITHUB_OUTPUT
           fi
   
-  test:
+  update-hil:
+    runs-on: ["self-hosted", "testbed-runner"]
     needs: setup
+    steps:
+      - name: Update HIL
+        run: |
+          cd /home/$USER/hil_framework
+          git pull https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git
+          git fetch
+          git checkout main
+
+  test:
+    needs: [setup, update-hil]
     runs-on: ["self-hosted", "testbed-runner"]
 
     strategy:
@@ -77,13 +88,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Update HIL
-        run: |
-          cd /home/$USER/hil_framework
-          git pull https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git
-          git fetch
-          git checkout main
 
       - name: Add HIL Tools to Path
         run: |
