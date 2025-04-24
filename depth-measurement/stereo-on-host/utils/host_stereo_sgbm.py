@@ -54,13 +54,16 @@ class StereoSGBM(dai.node.HostNode):
         monoLeftOut: dai.Node.Output,
         monoRightOut: dai.Node.Output,
         calibObj: dai.CalibrationHandler,
+        device: dai.Device,
         resolution: Tuple[int, int],
     ) -> "StereoSGBM":
         self.link_args(monoLeftOut, monoRightOut)
 
         self.baseline = calibObj.getBaselineDistance() * 10  # mm
         self.focal_length = self.count_focal_length(calibObj, resolution)
-        self.H1, self.H2 = self.count_h(calibObj, resolution)  # for left, right camera
+        self.H1, self.H2 = self.count_h(
+            calibObj, device, resolution
+        )  # for left, right camera
 
         return self
 
@@ -77,17 +80,20 @@ class StereoSGBM(dai.node.HostNode):
 
         self.create_disparity_map(monoLeftFrame, monoRightFrame)
 
-    def count_h(self, calibObj: dai.CalibrationHandler, resolution: Tuple[int, int]):
+    def count_h(
+        self,
+        calibObj: dai.CalibrationHandler,
+        device: dai.Device,
+        resolution: Tuple[int, int],
+    ):
         width, height = resolution
 
         M_left = np.array(
-            calibObj.getCameraIntrinsics(
-                calibObj.getStereoLeftCameraId(), width, height
-            )
+            calibObj.getCameraIntrinsics(device.getStereoPairs()[0].left, width, height)
         )
         M_right = np.array(
             calibObj.getCameraIntrinsics(
-                calibObj.getStereoRightCameraId(), width, height
+                device.getStereoPairs()[0].right, width, height
             )
         )
 

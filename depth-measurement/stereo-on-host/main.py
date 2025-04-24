@@ -1,8 +1,8 @@
 import depthai as dai
 
-from util.arguments import initialize_argparser
-from util.host_stereo_sgbm import StereoSGBM
-from util.host_ssim import SSIM
+from utils.arguments import initialize_argparser
+from utils.host_stereo_sgbm import StereoSGBM
+from utils.host_ssim import SSIM
 from depthai_nodes.node import ApplyColormap
 import cv2
 
@@ -36,6 +36,7 @@ with dai.Pipeline(device) as pipeline:
         monoLeftOut=left,
         monoRightOut=right,
         calibObj=calibObj,
+        device=device,
         resolution=RESOLUTION_SIZE,
     )
     stereoSGBM.inputs["monoLeft"].setBlocking(False)
