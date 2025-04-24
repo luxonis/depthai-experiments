@@ -13,7 +13,7 @@ class StereoSGBM(dai.node.HostNode):
             numDisparities=96,
             blockSize=self.blockSize,
             P1=80,
-            P2=800, 
+            P2=800,
             disp12MaxDiff=5,
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY,
         )
