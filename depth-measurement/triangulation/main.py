@@ -10,12 +10,14 @@ _, args = initialize_argparser()
 
 # Creates and connects nodes, once for the left camera and once for the right camera
 def populate_pipeline(
-    p: dai.Pipeline, left: bool, resolution: Tuple[int, int]
+    p: dai.Pipeline, left: bool, archive: dai.NNArchive
 ) -> Tuple[dai.Node.Output, dai.Node.Output]:
     socket = dai.CameraBoardSocket.CAM_B if left else dai.CameraBoardSocket.CAM_C
     cam = p.create(dai.node.Camera).build(socket)
-    fps = 25 if rvc2 else 3
-    cam_output = cam.requestOutput(resolution, type=dai.ImgFrame.Type.NV12, fps=fps)
+    fps = 25
+    cam_output = cam.requestOutput(
+        archive.getInputSize(), type=dai.ImgFrame.Type.NV12, fps=fps
+    )
 
     face_nn = p.create(ParsingNeuralNetwork).build(cam, faceDet_nnarchive, fps)
 
@@ -29,17 +31,14 @@ with dai.Pipeline(device) as pipeline:
     device_platform = device.getPlatform()
     rvc2 = device_platform == dai.Platform.RVC2
     model_dimension = (320, 240) if rvc2 else (640, 480)
-    # faceDet_modelDescription = dai.NNModelDescription(f"luxonis/yunet:{model_dimension[0]}x{model_dimension[1]}")
     faceDet_modelDescription = dai.NNModelDescription(
-        modelSlug="yunet",
+        modelSlug=f"yunet:{model_dimension[0]}x{model_dimension[1]}",
         platform=device.getPlatform().name,
-        modelVersionSlug=f"{model_dimension[0]}x{model_dimension[1]}",
     )
-    # faceDet_modelDescription.platform = device.getPlatformAsString()
     faceDet_nnarchive = dai.NNArchive(dai.getModelFromZoo(faceDet_modelDescription))
 
-    face_left, face_nn_left = populate_pipeline(pipeline, True, model_dimension)
-    face_right, face_nn_right = populate_pipeline(pipeline, False, model_dimension)
+    face_left, face_nn_left = populate_pipeline(pipeline, True, faceDet_nnarchive)
+    face_right, face_nn_right = populate_pipeline(pipeline, False, faceDet_nnarchive)
 
     triangulation = pipeline.create(Triangulation).build(
         face_left=face_left,
