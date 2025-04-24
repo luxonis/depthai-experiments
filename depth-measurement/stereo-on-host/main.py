@@ -45,7 +45,7 @@ with dai.Pipeline(device) as pipeline:
     stereoSGBM.inputs["monoRight"].setMaxSize(2)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(left=left, right=right)
-    stereo.setLeftRightCheck(False)
+    stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(True)
 

@@ -7,12 +7,13 @@ from typing import Tuple
 class StereoSGBM(dai.node.HostNode):
     def __init__(self):
         self.max_disparity = 96
+        self.blockSize = 5
         self.stereoProcessor = cv2.StereoSGBM_create(
             minDisparity=1,
             numDisparities=96,
-            blockSize=5,
-            P1=250,  # 50
-            P2=500,  # 800
+            blockSize=self.blockSize,
+            P1=80,
+            P2=800, 
             disp12MaxDiff=5,
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY,
         )
