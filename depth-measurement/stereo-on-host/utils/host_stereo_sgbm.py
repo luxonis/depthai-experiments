@@ -7,28 +7,34 @@ from typing import Tuple
 class StereoSGBM(dai.node.HostNode):
     def __init__(self):
         self.max_disparity = 96
+        self.blockSize = 5
         self.stereoProcessor = cv2.StereoSGBM_create(
             minDisparity=1,
             numDisparities=96,
-            blockSize=5,
-            P1=250,  # 50
-            P2=500,  # 800
+            blockSize=self.blockSize,
+            P1=80,
+            P2=800,
             disp12MaxDiff=5,
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY,
         )
         super().__init__()
 
+        self.disparity_out = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
+        self.raw_disparity_out = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
+            ]
+        )
         self.mono_left = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
         self.mono_right = self.createOutput(
-            possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
-            ]
-        )
-        self.disparity_out = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
@@ -49,13 +55,16 @@ class StereoSGBM(dai.node.HostNode):
         monoLeftOut: dai.Node.Output,
         monoRightOut: dai.Node.Output,
         calibObj: dai.CalibrationHandler,
+        device: dai.Device,
         resolution: Tuple[int, int],
     ) -> "StereoSGBM":
         self.link_args(monoLeftOut, monoRightOut)
 
         self.baseline = calibObj.getBaselineDistance() * 10  # mm
         self.focal_length = self.count_focal_length(calibObj, resolution)
-        self.H1, self.H2 = self.count_h(calibObj, resolution)  # for left, right camera
+        self.H1, self.H2 = self.count_h(
+            calibObj, device, resolution
+        )  # for left, right camera
 
         return self
 
@@ -72,17 +81,20 @@ class StereoSGBM(dai.node.HostNode):
 
         self.create_disparity_map(monoLeftFrame, monoRightFrame)
 
-    def count_h(self, calibObj: dai.CalibrationHandler, resolution: Tuple[int, int]):
+    def count_h(
+        self,
+        calibObj: dai.CalibrationHandler,
+        device: dai.Device,
+        resolution: Tuple[int, int],
+    ):
         width, height = resolution
 
         M_left = np.array(
-            calibObj.getCameraIntrinsics(
-                calibObj.getStereoLeftCameraId(), width, height
-            )
+            calibObj.getCameraIntrinsics(device.getStereoPairs()[0].left, width, height)
         )
         M_right = np.array(
             calibObj.getCameraIntrinsics(
-                calibObj.getStereoRightCameraId(), width, height
+                device.getStereoPairs()[0].right, width, height
             )
         )
 
@@ -151,11 +163,18 @@ class StereoSGBM(dai.node.HostNode):
 
         disparity_colour_mapped = cv2.applyColorMap(
             (disparity_scaled * (256.0 / self.max_disparity)).astype(np.uint8),
-            cv2.COLORMAP_HOT,
+            cv2.COLORMAP_JET,
         )
 
         self.disparity_out.send(
             self._create_img_frame(disparity_colour_mapped, dai.ImgFrame.Type.BGR888i)
+        )
+
+        self.disparity = np.clip(self.disparity / 16, 0, self.max_disparity).astype(
+            np.uint16
+        )
+        self.raw_disparity_out.send(
+            self._create_img_frame(self.disparity, dai.ImgFrame.Type.RAW16)
         )
         self.rectified_left.send(
             self._create_img_frame(left_img_rect, dai.ImgFrame.Type.NV12)
@@ -168,5 +187,11 @@ class StereoSGBM(dai.node.HostNode):
         self, frame: np.ndarray, type: dai.ImgFrame.Type
     ) -> dai.ImgFrame:
         img_frame = dai.ImgFrame()
-        img_frame.setCvFrame(frame, type)
+        if type == dai.ImgFrame.Type.RAW16:
+            img_frame.setFrame(frame)
+            img_frame.setWidth(frame.shape[1])
+            img_frame.setHeight(frame.shape[0])
+            img_frame.setType(type)
+        else:
+            img_frame.setCvFrame(frame, type)
         return img_frame
