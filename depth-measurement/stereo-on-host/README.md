@@ -6,7 +6,7 @@ This experiment demonstrates how [stereo pipeline works](https://docs.luxonis.co
 
 [SSIM score](https://en.wikipedia.org/wiki/Structural_similarity) is used to comapre the similarity between the disparity map calculated using `cv2.StereoSGBM` and the disparity map generated on the OAK camera.
 
-> While SSIM can provide a general measure of structural similarity, it might not perfectly capture the similarity of depth maps, as small absolute differences in depth can lead to lower scores even if the overall structure is similar. You can visually evaluate the depth maps in the Visualizer.
+> You can play around with the settings for both methods and use the SSIM score to compare them.
 
 ## Usage
 
