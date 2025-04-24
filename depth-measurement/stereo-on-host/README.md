@@ -8,6 +8,9 @@ This experiment demonstrates how [stereo pipeline works](https://docs.luxonis.co
 
 > You can play around with the settings for both methods and use the SSIM score to compare them.
 
+## Demo
+<img width="1193" alt="Screenshot 2025-04-24 at 11 43 55" src="https://github.com/user-attachments/assets/4eba827b-7515-432d-b89e-c0c993922313" />
+
 ## Usage
 
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
