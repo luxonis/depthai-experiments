@@ -21,5 +21,12 @@ with dai.Pipeline() as pipeline:
         print("Received message:", message)
 
     visualizer.registerService("Custom Service", custom_service)
+    pipeline.start()
     print("Running pipeline...")
-    pipeline.run()
+
+    while pipeline.isRunning():
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            break
+
+    pipeline.stop()
