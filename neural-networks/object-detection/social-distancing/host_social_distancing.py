@@ -1,6 +1,8 @@
 import depthai as dai
 from typing import List, Tuple
 from utils.measure_object_distance import ObjectDistances, DetectionDistance
+from depthai_nodes.utils import AnnotationHelper
+from depthai_nodes import PRIMARY_COLOR, SECONDARY_COLOR
 
 ALERT_THRESHOLD = 0.5
 STATE_QUEUE_LENGTH = 15
@@ -38,71 +40,60 @@ class SocialDistancing(dai.node.HostNode):
         self.output.send(annotations)
 
     def _create_annotations(self, distances: ObjectDistances):
-        annotations = dai.ImgAnnotations()
-        annotation = dai.ImgAnnotation()
+        annotation_helper = AnnotationHelper()
 
         if self._should_alert:
-            self._add_alert_annotation(annotation)
+            self._add_alert_annotation(annotation_helper)
 
         for distance in distances.distances:
-            self._add_distance_annotation(annotation, distance)
+            self._add_distance_annotation(annotation_helper, distance)
 
-        annotations.annotations.append(annotation)
-        annotations.setTimestamp(distances.getTimestamp())
+        annotations = annotation_helper.build(
+            timestamp=distances.getTimestamp(), sequence_num=distances.getSequenceNum()
+        )
+
         return annotations
 
-    def _add_alert_annotation(self, annotation: dai.ImgAnnotation):
-        pointsAnnotation = dai.PointsAnnotation()
-        pointsAnnotation.type = dai.PointsAnnotationType.LINE_LOOP
-        pointsAnnotation.outlineColor = dai.Color(1, 0, 0, 1)
-        pointsAnnotation.thickness = 10
-        pointsAnnotation.points = dai.VectorPoint2f(
-            [
-                dai.Point2f(0, 0, normalized=True),
-                dai.Point2f(1, 0, normalized=True),
-                dai.Point2f(1, 1, normalized=True),
-                dai.Point2f(0, 1, normalized=True),
-            ]
+    def _add_alert_annotation(self, annotation_helper: AnnotationHelper):
+        annotation_helper.draw_rectangle(
+            top_left=(0, 0),
+            bottom_right=(1, 1),
+            outline_color=dai.Color(1, 0, 0, 1),
+            fill_color=dai.Color(1, 0, 0, 0.1),
+            thickness=10,
         )
-        annotation.points.append(pointsAnnotation)
-
-        text = dai.TextAnnotation()
-        text.position = dai.Point2f(0.4, 0.5, True)
-        text.text = "Too close!"
-        text.fontSize = 64
-        text.textColor = dai.Color(1, 1, 1, 1)
-        text.backgroundColor = dai.Color(1, 0, 0, 1)
-        annotation.texts.append(text)
+        annotation_helper.draw_text(
+            text="Too close!",
+            position=(0.3, 0.5),
+            color=dai.Color(1, 0, 0, 1),
+            size=64,
+        )
 
     def _add_distance_annotation(
-        self, annotation: dai.ImgAnnotation, distance: DetectionDistance
+        self, annotation_helper: AnnotationHelper, distance: DetectionDistance
     ):
         det1 = distance.detection1
         det2 = distance.detection2
-        pointsAnnotation = dai.PointsAnnotation()
-        pointsAnnotation.type = dai.PointsAnnotationType.LINE_STRIP
         x_start = (det1.xmin + det1.xmax) / 2
         y_start = (det1.ymin + det1.ymax) / 2
         x_end = (det2.xmin + det2.xmax) / 2
         y_end = (det2.ymin + det2.ymax) / 2
-        points = [
-            dai.Point2f(x_start, y_start, normalized=True),
-            dai.Point2f(x_end, y_end, normalized=True),
-        ]
-        pointsAnnotation.points = dai.VectorPoint2f(points)
-        pointsAnnotation.outlineColor = dai.Color(0, 0, 1, 1)
-        pointsAnnotation.thickness = 2
-        annotation.points.append(pointsAnnotation)
+        annotation_helper.draw_line(
+            pt1=(x_start, y_start),
+            pt2=(x_end, y_end),
+            color=PRIMARY_COLOR,
+            thickness=2,
+        )
 
         text = f"{round(distance.distance / 1000, 1)} m"
         label_x = (x_start + x_end) / 2
         label_y = (y_start + y_end) / 2 - 0.02
-        textAnnotation = dai.TextAnnotation()
-        textAnnotation.position = dai.Point2f(label_x, label_y, normalized=True)
-        textAnnotation.text = text
-        textAnnotation.fontSize = 24
-        textAnnotation.textColor = dai.Color(0, 0, 1, 1)
-        annotation.texts.append(textAnnotation)
+        annotation_helper.draw_text(
+            text=text,
+            position=(label_x, label_y),
+            color=SECONDARY_COLOR,
+            size=24,
+        )
 
     @property
     def _should_alert(self) -> bool:
