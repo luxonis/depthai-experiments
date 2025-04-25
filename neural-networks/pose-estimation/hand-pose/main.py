@@ -106,6 +106,7 @@ with dai.Pipeline(device) as pipeline:
 
     annotation_node = pipeline.create(AnnotationNode).build(
         input_detections=detection_nn.out,
+        video=video_output,
         padding_factor=PADDING,
         confidence_threshold=CONFIDENCE_THRESHOLD,
         connections_pairs=connection_pairs,
