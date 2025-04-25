@@ -2,6 +2,7 @@ import depthai as dai
 
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
+from depthai_nodes.node import ApplyColormap
 
 _, args = initialize_argparser()
 
@@ -59,11 +60,16 @@ with dai.Pipeline(device) as pipeline:
 
     annotation_node = pipeline.create(AnnotationNode).build(
         input_detections=nn.out,
+        depth=stereo.depth,
         labels=nn_archive.getConfig().model.heads[0].metadata.classes,
     )
 
+    apply_colormap = pipeline.create(ApplyColormap).build(stereo.depth)
+
     visualizer.addTopic("Camera", nn.passthrough)
     visualizer.addTopic("Detections", annotation_node.out_annotations)
+    visualizer.addTopic("Depth", apply_colormap.out)
+
     print("Pipeline created.")
     pipeline.start()
     visualizer.registerPipeline(pipeline)
