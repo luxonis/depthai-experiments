@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.messages import ImgDetectionExtended
+from depthai_nodes.message import ImgDetectionExtended
 
 
 class ProcessDetections(dai.node.ThreadedHostNode):
@@ -43,11 +43,9 @@ class ProcessDetections(dai.node.ThreadedHostNode):
 
             detections = [det for det in detections if det.confidence > 0.8]
             detections_msg.detections = detections
-            self.valid_detections.send(detections_msg)
 
             num_detections = len(detections)
             num_cfgs_message = dai.Buffer(num_detections)
-
             num_cfgs_message.setTimestamp(img_detections.getTimestamp())
             num_cfgs_message.setSequenceNum(img_detections.getSequenceNum())
             self.num_configs_output.send(num_cfgs_message)
@@ -64,6 +62,8 @@ class ProcessDetections(dai.node.ThreadedHostNode):
                 cfg.setTimestamp(img_detections.getTimestamp())
                 cfg.setSequenceNum(img_detections.getSequenceNum())
                 self.config_output.send(cfg)
+
+            self.valid_detections.send(detections_msg)
 
     def set_target_size(self, w: int, h: int):
         """Set the target size for the output image."""

@@ -1,9 +1,6 @@
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
-from utils.host_process_detections import ProcessDetections
-from utils.host_sync import DetectionsRecognitionsSync
-from utils.annotation_node import OCRAnnotationNode
-from utils.arguments import initialize_argparser
+from depthai_nodes.node import ParsingNeuralNetwork, GatherData
+from utils import OCRAnnotationNode, initialize_argparser, ProcessDetections
 from pathlib import Path
 
 _, args = initialize_argparser()
@@ -15,7 +12,7 @@ platform = device.getPlatform()
 FPS = 5
 if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 25
+    FPS = 30
 else:
     frame_type = dai.ImgFrame.Type.BGR888p
 
@@ -82,33 +79,22 @@ with dai.Pipeline(device) as pipeline:
     ocr_node.setNumPoolFrames(30)
     ocr_node.input.setMaxSize(30)
 
-    sync_node = pipeline.create(DetectionsRecognitionsSync)
-    sync_node.recognitions_input.setMaxSize(30)
-
-    ocr_node.out.link(sync_node.recognitions_input)
-    detection_node.passthrough.link(sync_node.passthrough_input)
-    detection_process_node.valid_detections.link(sync_node.detections_input)
+    sync_node = pipeline.create(GatherData).build(FPS)
+    detection_process_node.valid_detections.link(sync_node.input_reference)
+    ocr_node.out.link(sync_node.input_data)
 
     annotation_node = pipeline.create(OCRAnnotationNode)
     sync_node.out.link(annotation_node.input)
+    detection_node.passthrough.link(annotation_node.passthrough)
 
-    visualizer.addTopic("Video", resize_node.out)
-    visualizer.addTopic("OCR", annotation_node.white_frame_output)
-    # visualizer.addTopic("Text", annotation_node.text_annotations_output)
-
-    # q = annotation_node.text_annotations_output.createOutputQueue()
-    # white_q = annotation_node.white_frame_output.createOutputQueue()
+    visualizer.addTopic("Video", annotation_node.frame_output)
+    visualizer.addTopic("Text", annotation_node.text_annotations_output)
 
     print("Pipeline created.")
     pipeline.start()
     visualizer.registerPipeline(pipeline)
-    total_num_dets = 0
+
     while pipeline.isRunning():
-        #     msg = q.get()
-        #     white_q.get()
-        #     print(f"[Main {msg.getSequenceNum()}] got text annotations with ts {msg.getTimestamp()}")
-        #     total_num_dets = total_num_dets + len(msg.annotations[0].texts)
-        #     print(f"[Main {msg.getSequenceNum()}] Total number of detections: {total_num_dets}")
         key = visualizer.waitKey(1)
         if key == ord("q"):
             print("Got q key. Exiting...")

@@ -1,62 +1,66 @@
 import depthai as dai
-import numpy as np
-import cv2
+from depthai_nodes.utils import AnnotationHelper
 
 
 class OCRAnnotationNode(dai.node.ThreadedHostNode):
     def __init__(self):
         super().__init__()
-        self.input = self.createInput()
 
-        self.white_frame_output = self.createOutput()
-        # self.text_annotations_output = self.createOutput()
+        self.input = self.createInput()
+        self.passthrough = self.createInput()
+
+        self.frame_output = self.createOutput()
+        self.text_annotations_output = self.createOutput()
 
     def run(self):
         while self.isRunning():
-            # print("[Ann] get annotation_node/text_descriptions")
             text_descriptions = self.input.get()
-            # print(f"[Ann {text_descriptions.getSequenceNum()}] got annotation_node/text_descriptions with ts {text_descriptions.getTimestamp()}")
-            frame = text_descriptions["passthrough"].getCvFrame()
-            detections_list = text_descriptions["detections"].detections
-            recognitions_message = text_descriptions["recognitions"].recognitions
+            passthrough_frame = self.passthrough.get()
 
-            white_frame = np.ones(frame.shape, dtype=np.uint8) * 255
+            detections_list = text_descriptions.reference_data.detections
+            recognitions_list = text_descriptions.gathered
 
-            for i, recognition in enumerate(recognitions_message):
-                detection = detections_list[i]
-                rotated_rect = detection.rotated_rect
-                rotated_rect = rotated_rect.denormalize(frame.shape[1], frame.shape[0])
-                points = rotated_rect.getPoints()
-                points = [[int(p.x), int(p.y)] for p in points]
-                cv2.putText(
-                    white_frame,
-                    "".join(recognition.classes),
-                    points[3],
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 0, 0),
-                    2,
+            if len(recognitions_list) >= 1:
+                annotation_helper = AnnotationHelper()
+
+                for i, recognition in enumerate(recognitions_list):
+                    detection = detections_list[i]
+                    points = detection.rotated_rect.getPoints()
+                    annotation_helper.draw_text(
+                        "".join(recognition.classes), [points[3].x, points[3].y]
+                    )
+
+                annotations = annotation_helper.build(
+                    text_descriptions.getTimestamp(), text_descriptions.getSequenceNum()
                 )
 
-            # annotation = dai.ImgAnnotation()
-            # img_annotations = dai.ImgAnnotations()
-            # for i, recognition in enumerate(recognitions_message.recognitions):
+            # white = np.ones_like(frame) * 255
+            # # seq_num = text_descriptions.getSequenceNum()
+
+            # # print(f"OCRAnnotation [{seq_num}] got {len(recognitions_list) } text_descriptions with ts {text_descriptions.getTimestamp()}")
+
+            # for i, recognition in enumerate(recognitions_list):
+            #     if any(recognition.scores) <= 0.75:
+            #         continue
             #     detection = detections_list[i]
-            #     points = detection.rotated_rect.getPoints()
+            #     rotated_rect = detection.rotated_rect
+            #     rotated_rect = rotated_rect.denormalize(frame.shape[1], frame.shape[0])
+            #     points = rotated_rect.getPoints()
+            #     points = [[int(p.x), int(p.y)] for p in points]
+            #     cv2.putText(
+            #         white,
+            #         "".join(recognition.classes),
+            #         points[3],
+            #         cv2.FONT_HERSHEY_SIMPLEX,
+            #         1,
+            #         (0, 0, 0),
+            #         2,
+            #     )
 
-            #     text_annotation = dai.TextAnnotation()
-            #     text_annotation.position = points[3]
-            #     text_annotation.text = "".join(recognition.classes)
-            #     text_annotation.fontSize = (points[3].y - points[0].y) * white_frame.shape[0]
-            #     text_annotation.textColor = TEXT_COLOR
-            #     annotation.texts.append(text_annotation)
+            # white_frame = dai.ImgFrame()
+            # white_frame.setCvFrame(white, dai.ImgFrame.Type.BGR888i)
+            # self.text_annotations_output.send(white_frame)
 
-            # img_annotations.annotations.append(annotation)
-            # img_annotations.setTimestamp(recognitions_message.getTimestamp())
-            output_frame = dai.ImgFrame()
-            # img_annotations.setSequenceNum(text_descriptions.getSequenceNum())
-
-            self.white_frame_output.send(
-                output_frame.setCvFrame(white_frame, dai.ImgFrame.Type.NV12)
-            )
-            # self.text_annotations_output.send(img_annotations)
+            self.frame_output.send(passthrough_frame)
+            if len(recognitions_list) >= 1:
+                self.text_annotations_output.send(annotations)
