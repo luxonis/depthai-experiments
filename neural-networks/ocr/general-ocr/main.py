@@ -1,6 +1,6 @@
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, GatherData
-from utils import OCRAnnotationNode, initialize_argparser, ProcessDetections
+from utils import OCRAnnotationNode, initialize_argparser, CropConfigsCreator
 from pathlib import Path
 
 _, args = initialize_argparser()
@@ -9,12 +9,12 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
 platform = device.getPlatform()
 
-FPS = 5
+FPS = 10
+frame_type = dai.ImgFrame.Type.BGR888p
+
 if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 30
-else:
-    frame_type = dai.ImgFrame.Type.BGR888p
+    FPS = 25
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -45,33 +45,19 @@ with dai.Pipeline(device) as pipeline:
     )
     detection_node.setNumPoolFrames(30)
 
-    detection_process_node = pipeline.create(ProcessDetections)
-    detection_node.out.link(detection_process_node.detections_input)
-
-    config_sender_node = pipeline.create(dai.node.Script)
-    config_sender_node.setScriptPath(
-        str(Path(__file__).parent / "utils/script_config_sender.py")
-    )
-    config_sender_node.inputs["frame_input"].setMaxSize(30)
-    config_sender_node.inputs["config_input"].setMaxSize(30)
-    config_sender_node.inputs["num_configs_input"].setMaxSize(30)
-
-    input_node.link(config_sender_node.inputs["frame_input"])
-    detection_process_node.config_output.link(config_sender_node.inputs["config_input"])
-    detection_process_node.num_configs_output.link(
-        config_sender_node.inputs["num_configs_input"]
-    )
+    detection_process_node = pipeline.create(CropConfigsCreator)
+    detection_process_node.build(detection_node.out, (1728, 960), (320, 48))
 
     crop_node = pipeline.create(dai.node.ImageManipV2)
     crop_node.initialConfig.setReusePreviousImage(False)
     crop_node.inputConfig.setReusePreviousMessage(False)
-    crop_node.inputImage.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(True)
     crop_node.inputConfig.setMaxSize(30)
     crop_node.inputImage.setMaxSize(30)
     crop_node.setNumFramesPool(30)
 
-    config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
-    config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
+    detection_process_node.config_output.link(crop_node.inputConfig)
+    input_node.link(crop_node.inputImage)
 
     ocr_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, "luxonis/paddle-text-recognition:320x48"
@@ -80,7 +66,7 @@ with dai.Pipeline(device) as pipeline:
     ocr_node.input.setMaxSize(30)
 
     sync_node = pipeline.create(GatherData).build(FPS)
-    detection_process_node.valid_detections.link(sync_node.input_reference)
+    detection_process_node.detections_output.link(sync_node.input_reference)
     ocr_node.out.link(sync_node.input_data)
 
     annotation_node = pipeline.create(OCRAnnotationNode)

@@ -1,9 +1,9 @@
-from .host_process_detections import ProcessDetections
+from .host_process_detections import CropConfigsCreator
 from .annotation_node import OCRAnnotationNode
 from .arguments import initialize_argparser
 
 __all__ = [
-    "ProcessDetections",
+    "CropConfigsCreator",
     "OCRAnnotationNode",
     "initialize_argparser",
 ]
