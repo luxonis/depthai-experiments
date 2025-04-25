@@ -168,9 +168,11 @@ with dai.Pipeline(device) as pipeline:
         dangerous_objects=[merged_labels.index(i) for i in DANGEROUS_OBJECTS],
     )
 
-    annotation_node = pipeline.create(AnnotationNode)
-    detection_filter.out.link(annotation_node.detections_input)
-    stereo.depth.link(annotation_node.depth_input)
+    annotation_node = pipeline.create(AnnotationNode).build(
+        detections=detection_filter.out,
+        video=camera_output,
+        depth=stereo.depth,
+    )
 
     visualizer.addTopic("Color", camera_output)
     visualizer.addTopic("Detections", annotation_node.out_detections)
