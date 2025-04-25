@@ -3,10 +3,10 @@ from depthai_nodes import (
     ImgDetectionsExtended,
     ImgDetectionExtended,
     Keypoints,
-    Keypoint,
     Predictions,
-    PRIMARY_COLOR,
+    SECONDARY_COLOR,
 )
+from depthai_nodes.utils import AnnotationHelper
 from typing import List
 from utils.gesture_recognition import recognize_gesture
 
@@ -30,6 +30,7 @@ class AnnotationNode(dai.node.HostNode):
     def build(
         self,
         input_detections: dai.Node.Output,
+        video: dai.Node.Output,
         confidence_threshold: float,
         padding_factor: float,
         connections_pairs: List[List[int]],
@@ -37,19 +38,20 @@ class AnnotationNode(dai.node.HostNode):
         self.confidence_threshold = confidence_threshold
         self.padding_factor = padding_factor
         self.connection_pairs = connections_pairs
-        self.link_args(input_detections)
+        self.link_args(input_detections, video)
         return self
 
-    def process(self, detections_message: dai.Buffer) -> None:
+    def process(
+        self, detections_message: dai.Buffer, video_message: dai.ImgFrame
+    ) -> None:
         assert isinstance(detections_message, ImgDetectionsExtended)
 
         detections_list: List[ImgDetectionExtended] = detections_message.detections
 
         new_dets = ImgDetectionsExtended()
-        new_dets.transformation = detections_message.transformation
+        new_dets.transformation = video_message.getTransformation()
 
-        annotations = dai.ImgAnnotations()
-        annotation = dai.ImgAnnotation()
+        annotation_helper = AnnotationHelper()
 
         for ix, detection in enumerate(detections_list):
             keypoints_msg: Keypoints = self.input_keypoints.get()
@@ -84,58 +86,54 @@ class AnnotationNode(dai.node.HostNode):
                 detection.rotated_rect.angle,
             )
             new_det.label = 0
+            new_det.label_name = "Hand"
             new_det.confidence = detection.confidence
+            new_dets.detections.append(new_det)
 
             xs = []
             ys = []
 
-            kpts = []
-
             for kp in keypoints_msg.keypoints:
                 x = min(max(xmin - padding + slope_x * kp.x, 0.0), 1.0)
                 y = min(max(ymin - padding + slope_y * kp.y, 0.0), 1.0)
-                new_kpt = Keypoint()
-                new_kpt.x = x
-                new_kpt.y = y
-                kpts.append(new_kpt)
                 xs.append(x)
                 ys.append(y)
 
-            new_det.keypoints = kpts
-            new_dets.detections.append(new_det)
-
             for connection in self.connection_pairs:
                 pt1_ix, pt2_ix = connection
-                points_ann = dai.PointsAnnotation()
-                points_ann.type = dai.PointsAnnotationType.LINE_STRIP
-                points_ann.points = dai.VectorPoint2f(
-                    [
-                        dai.Point2f(x=xs[pt1_ix], y=ys[pt1_ix], normalized=True),
-                        dai.Point2f(x=xs[pt2_ix], y=ys[pt2_ix], normalized=True),
-                    ]
+                annotation_helper.draw_line(
+                    pt1=(xs[pt1_ix], ys[pt1_ix]),
+                    pt2=(xs[pt2_ix], ys[pt2_ix]),
                 )
-                points_ann.outlineColor = PRIMARY_COLOR
-                points_ann.thickness = 2.0
-                annotation.points.append(points_ann)
 
-            gesture = recognize_gesture([[kpt.x, kpt.y] for kpt in kpts])
+            keypoints = [[kpt[0], kpt[1]] for kpt in zip(xs, ys)]
 
-            text_ann = dai.TextAnnotation()
+            gesture = recognize_gesture(keypoints)
+
+            text = "Left" if handness < 0.5 else "Right"
+            text += f" {gesture}"
+
             text_x = detection.rotated_rect.center.x - 0.05
             text_y = detection.rotated_rect.center.y - height / 2 - 0.10
-            text_ann.position = dai.Point2f(x=text_x, y=text_y, normalized=True)
-            text_ann.text = "Left" if handness < 0.5 else "Right"
-            text_ann.text += f" {gesture}"
-            text_ann.fontSize = 32
-            text_ann.textColor = PRIMARY_COLOR
-            annotation.texts.append(text_ann)
 
-            annotations.annotations.append(annotation)
+            annotation_helper.draw_text(
+                text=text,
+                position=(text_x, text_y),
+                color=SECONDARY_COLOR,
+                size=32,
+            )
+
+            annotation_helper.draw_points(
+                points=keypoints, color=SECONDARY_COLOR, thickness=2
+            )
 
         new_dets.setTimestamp(detections_message.getTimestamp())
         new_dets.setSequenceNum(detections_message.getSequenceNum())
         self.out_detections.send(new_dets)
 
-        annotations.setTimestamp(detections_message.getTimestamp())
-        annotations.setSequenceNum(detections_message.getSequenceNum())
+        annotations = annotation_helper.build(
+            timestamp=detections_message.getTimestamp(),
+            sequence_num=detections_message.getSequenceNum(),
+        )
+
         self.out_pose_annotations.send(annotations)
