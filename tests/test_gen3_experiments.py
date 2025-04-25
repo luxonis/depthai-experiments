@@ -157,13 +157,6 @@ def setup_virtual_env(
     with open(venv_dir / "requirements_modified.txt", "w") as f:
         f.writelines(requirements)
 
-    all_files = []
-    for root, dirs, files in os.walk(venv_dir):
-        for file in files:
-            if file.endswith(".txt"):
-                all_files.append(file)
-
-    logger.error(f"{all_files}")
     # Install dependencies
     try:
         subprocess.run(
@@ -184,17 +177,14 @@ def setup_virtual_env(
         logger.debug(f"Installed packages:\n{get_installed_packages(env_exe)}")
     except subprocess.CalledProcessError as e:
         shutil.rmtree(venv_dir)
-        logger.error("FAILED TO INSTALL print")
         pytest.fail(f"Failed to install dependencies for {venv_dir.parent}: {e.stderr}")
     finally:
-        all_files = []
-        for root, dirs, files in os.walk(venv_dir):
-            for file in files:
-                if file.endswith(".txt"):
-                    all_files.append(file)
-
-        logger.error(f"IN FINALLY: {all_files}")
-        os.remove(venv_dir / "requirements_modified.txt")
+        try:
+            os.remove(venv_dir / "requirements_modified.txt")
+        except FileNotFoundError:
+            logger.debug(
+                f"Couldn't delete {venv_dir / 'requirements_modified.txt'}, file not found."
+            )
 
 
 def run_experiment(env_exe, experiment_dir, args, max_retries=3):

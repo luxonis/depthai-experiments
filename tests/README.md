@@ -23,17 +23,24 @@ This will run all the experiments (i.e. folders that have `main.py` and `require
 You can also pass other custom options to the pytest command. Here is a list of all the custom ones:
 
 ```
---root-dir=ROOT_DIR   Path to the directory with projects or a single project.
---timeout=TIMEOUT     Timeout for script execution (default: 30s).
---depthai-version=DEPTHAI_VERSION
- Specify a depthai version to override requirements.txt.
---environment-variables=ENVIRONMENT_VARIABLES
- List of additional environment variables (format: VAR1=VAL1 VAR2=VAL2).
---virtual-display     Enable virtual display (sets DISPLAY=':99').
---platform={RVC2,RVC4}
- Specify a platform this is tested on (RVC2 or RVC4). Only used for filtering test examples.
---python-version={3.8,3.10,3.12}
- Specify a python version this is tested with (3.8, 3.10 or 3.12). Only used for filtering test examples.
+--root-dir 
+    Path to the directory with projects or a single project.
+--timeout
+    Timeout for script execution (default: 30s).
+--depthai-version
+    Specify a depthai version to override requirements.txt.
+--depthai-nodes-version=DEPTHAI_NODES_VERSION
+    Specify a depthai nodes version to override requirements.txt.
+--environment-variables
+    List of additional environment variables (format: VAR1=VAL1 VAR2=VAL2).
+--virtual-display     
+    Enable virtual display (sets DISPLAY=':99').
+--platform
+    Specify a platform this is tested on (RVC2 or RVC4). Only used for filtering test examples.
+--python-version
+    Specify a python version this is tested with (3.8, 3.10 or 3.12). Only used for filtering test examples.
+--strict-mode
+    If set to 'yes', tests will fail on DepthAI warnings (default: 'no')
 ```
 
 **Note:** The platform and Python values are only used for filtering examples that are known to fail on some combinations when run locally. When run through GitHub workflow on a HIL setup these are taken into account (we build an image with a specific Python version and take a device from the specified platform).
