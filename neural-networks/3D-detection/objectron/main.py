@@ -66,6 +66,7 @@ with dai.Pipeline(device) as pipeline:
         resize_height=pose_nn_archive.getInputHeight(),
         padding=padding,
         valid_labels=valid_labels,
+        resize_mode="STRETCH",
     )
     script.setScript(script_content)
 
