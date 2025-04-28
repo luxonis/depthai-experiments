@@ -45,10 +45,8 @@
             "platform": "all"
         },
         "neural-networks/ocr/general-ocr": {
-            "reason": "Loaded model is for RVC2, but the device is RVC4",
-            "platform": [
-                "rvc4"
-            ]
+            "reason": "Experiment not updated yet",
+            "platform": "all"
         },
         "neural-networks/object-tracking/kalman": {
             "reason": "Loaded model is for RVC2, but the device is RVC4",
@@ -91,6 +89,10 @@
             "platform": [
                 "rvc4"
             ]
+        },
+        "custom-frontend/raw-stream": {
+            "reason": "Failed to start the HTTP server. File index.html not found in the /tmp/depthai-experiments/custom-frontend/raw-stream/frontend/dist folder",
+            "platform": "all"
         },
         "connectivity/roboflow-integration": {
             "reason": "Can't run without arguments (e.g. roboflow api-key)",
