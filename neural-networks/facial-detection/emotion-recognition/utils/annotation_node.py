@@ -21,7 +21,6 @@ class AnnotationNode(dai.node.HostNode):
         return self
 
     def process(self, gather_data_msg: dai.Buffer) -> None:
-
         dets_msg: ImgDetectionsExtended = gather_data_msg.reference_data
         assert isinstance(dets_msg, ImgDetectionsExtended)
 
@@ -33,7 +32,6 @@ class AnnotationNode(dai.node.HostNode):
         annotations = AnnotationHelper()
 
         for det_msg, rec_msg in zip(dets_msg.detections, rec_msg_list):
-
             xmin, ymin, xmax, ymax = det_msg.rotated_rect.getOuterRect()
 
             annotations.draw_rectangle(

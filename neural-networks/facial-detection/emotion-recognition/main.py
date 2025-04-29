@@ -25,7 +25,7 @@ REQ_WIDTH, REQ_HEIGHT = (
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    # crowd counting model
+    # face detection model
     det_model_description = dai.NNModelDescription(DET_MODEL)
     det_model_description.platform = platform
     det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
