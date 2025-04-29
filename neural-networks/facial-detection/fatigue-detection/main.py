@@ -61,42 +61,40 @@ with dai.Pipeline(device) as pipeline:
     resize_node.inputImage.setBlocking(True)
     input_node.link(resize_node.inputImage)
 
-    face_detection_node: ParsingNeuralNetwork = pipeline.create(
-        ParsingNeuralNetwork
-    ).build(resize_node.out, "luxonis/yunet:640x480")
-
-    detection_process_node = pipeline.create(ProcessDetections)
-    detection_process_node.set_source_size(1280, 960)
-    detection_process_node.set_target_size(192, 192)
-    face_detection_node.out.link(detection_process_node.detections_input)
-
-    config_sender_node = pipeline.create(dai.node.Script)
-    config_sender_node.setScriptPath(
-        Path(__file__).parent / "utils/config_sender_script.py"
+    det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        resize_node.out, det_model_nn_archive
     )
 
-    input_node.link(config_sender_node.inputs["frame_input"])
-    detection_process_node.config_output.link(config_sender_node.inputs["config_input"])
+    # detection processing
+    det_bridge = pipeline.create(ImgDetectionsBridge).build(
+        det_nn.out
+    )  # TODO: remove once we have it working with ImgDetectionsExtended
+    script_node = pipeline.create(dai.node.Script)
+    det_bridge.out.link(script_node.inputs["det_in"])
+    input_node.link(script_node.inputs["preview"])
+    script_content = generate_script_content(
+        resize_width=rec_model_nn_archive.getInputWidth(),
+        resize_height=rec_model_nn_archive.getInputHeight(),
+    )
+    script_node.setScript(script_content)
 
     crop_node = pipeline.create(dai.node.ImageManipV2)
-    crop_node.initialConfig.setReusePreviousImage(False)
-    crop_node.inputConfig.setReusePreviousMessage(False)
-    crop_node.inputImage.setReusePreviousMessage(False)
+    crop_node.inputConfig.setWaitForMessage(True)
 
-    config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
-    config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
+    script_node.outputs["manip_cfg"].link(crop_node.inputConfig)
+    script_node.outputs["manip_img"].link(crop_node.inputImage)
 
-    landmark_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        crop_node.out, "luxonis/mediapipe-face-landmarker:192x192"
+    landmark_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        crop_node.out, REC_MODEL
     )
 
     fatigue_detection = pipeline.create(FatigueDetection)
-    face_detection_node.out.link(fatigue_detection.face_nn)
-    face_detection_node.passthrough.link(fatigue_detection.preview)
-    landmark_node.out.link(fatigue_detection.landmarks_nn)
-    landmark_node.passthrough.link(fatigue_detection.crop_face)
+    det_nn.out.link(fatigue_detection.face_nn)
+    det_nn.passthrough.link(fatigue_detection.preview)
+    landmark_nn.out.link(fatigue_detection.landmarks_nn)
+    landmark_nn.passthrough.link(fatigue_detection.crop_face)
 
-    visualizer.addTopic("Video", face_detection_node.passthrough, "images")
+    visualizer.addTopic("Video", det_nn.passthrough, "images")
     visualizer.addTopic("Text", fatigue_detection.out, "images")
 
     print("Pipeline created.")
