@@ -3,7 +3,7 @@ import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, ImgFrameOverlay, ApplyColormap
 
 from utils.arguments import initialize_argparser
-from utils.counter import CrowdCounter
+from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
 
@@ -38,18 +38,19 @@ with dai.Pipeline(device) as pipeline:
         input_node, cc_model_nn_archive, fps=args.fps_limit
     )
 
-    # crowd density processing
-    counter_node = pipeline.create(CrowdCounter).build(cc_nn.out)
-
+    # crowd density overlay
     color_transform_node = pipeline.create(ApplyColormap).build(cc_nn.out)
     overlay_node = pipeline.create(ImgFrameOverlay).build(
         cc_nn.passthrough,
         color_transform_node.out,
     )
 
+    # annotation
+    annotation_node = pipeline.create(AnnotationNode).build(cc_nn.out)
+
     # visualization
     visualizer.addTopic("VideoOverlay", overlay_node.out)
-    visualizer.addTopic("Count", counter_node.output)
+    visualizer.addTopic("Count", annotation_node.out)
 
     print("Pipeline created.")
 
