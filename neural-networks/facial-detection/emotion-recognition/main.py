@@ -3,8 +3,6 @@ import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, GatherData, ImgDetectionsBridge
 from depthai_nodes.node.utils import generate_script_content
 from utils.arguments import initialize_argparser
-from utils.host_process_detections import ProcessDetections
-from utils.host_sync import DetectionSyncNode
 from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
@@ -85,23 +83,21 @@ with dai.Pipeline(device) as pipeline:
     script_node.outputs["manip_cfg"].link(crop_node.inputConfig)
     script_node.outputs["manip_img"].link(crop_node.inputImage)
 
-    emotion_recognition_node: ParsingNeuralNetwork = pipeline.create(
-        ParsingNeuralNetwork
-    ).build(crop_node.out, rec_model_nn_archive)
+    rec_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        crop_node.out, rec_model_nn_archive
+    )
 
-    # sync detections and recognitions
-    sync_node = pipeline.create(DetectionSyncNode)
-    input_node.link(sync_node.passthrough_input)
-    det_nn.out.link(sync_node.detections_input)
-    emotion_recognition_node.out.link(sync_node.emotion_input)
+    # detections and recognitions sync
+    gather_data_node = pipeline.create(GatherData).build(args.fps_limit)
+    rec_nn.out.link(gather_data_node.input_data)
+    det_nn.out.link(gather_data_node.input_reference)
 
     # annotation
-    annotation_node = pipeline.create(AnnotationNode)
-    sync_node.out.link(annotation_node.input)
+    annotation_node = pipeline.create(AnnotationNode).build(gather_data_node.out)
 
     # visualization
-    visualizer.addTopic("Video", sync_node.out_frame)
-    visualizer.addTopic("Emotions", annotation_node.output)
+    visualizer.addTopic("Video", det_nn.passthrough, "images")
+    visualizer.addTopic("Emotions", annotation_node.out, "images")
 
     print("Pipeline created.")
     pipeline.start()
