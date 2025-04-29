@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import json
 import logging
+import time
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -109,3 +110,7 @@ def pytest_generate_tests(metafunc):
                 logger.warning(f"Skipping {dirpath} because it has no main.py")
 
         metafunc.parametrize("experiment_dir", exp_dirs, ids=[str(p) for p in exp_dirs])
+
+
+def pytest_runtest_teardown(item, nextitem):
+    time.sleep(10)  # Delay 2 seconds between tests
