@@ -1,47 +1,62 @@
+from pathlib import Path
 import depthai as dai
 from utils.host_fatigue_detection import FatigueDetection
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, ImgDetectionsBridge
+from depthai_nodes.node.utils import generate_script_content
 from utils.arguments import initialize_argparser
-from utils.host_process_detections import ProcessDetections
-from pathlib import Path
+
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatform()
+platform = device.getPlatform().name
 
-FPS = 20
-frame_type = dai.ImgFrame.Type.BGR888p
-if "RVC4" in str(platform):
-    frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 30
-else:
-    raise RuntimeError(
-        f"This demo is currently only supported on RVC4, got `{platform}`"
-    )
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
+
+DET_MODEL = "luxonis/yunet:640x480"
+REC_MODEL = "luxonis/mediapipe-face-landmarker:192x192"
+
+REQ_WIDTH, REQ_HEIGHT = (
+    1024,
+    768,
+)  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
+    # face detection model
+    det_model_description = dai.NNModelDescription(DET_MODEL)
+    det_model_description.platform = platform
+    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+
+    # face landmark model
+    rec_model_description = dai.NNModelDescription(REC_MODEL)
+    rec_model_description.platform = platform
+    rec_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
+
+    # media/camera input
     if args.media_path:
-        replay_node = pipeline.create(dai.node.ReplayVideo)
-        replay_node.setReplayVideoFile(Path(args.media_path))
-        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
-        replay_node.setLoop(True)
-
-        video_resize_node = pipeline.create(dai.node.ImageManipV2)
-        video_resize_node.initialConfig.setOutputSize(1280, 960)
-        video_resize_node.initialConfig.setFrameType(frame_type)
-
-        replay_node.out.link(video_resize_node.inputImage)
-
-        input_node = video_resize_node.out
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(frame_type)
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+        replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
-        camera_node = pipeline.create(dai.node.Camera).build()
-        input_node = camera_node.requestOutput((1280, 960), frame_type, fps=FPS)
+        cam = pipeline.create(dai.node.Camera).build()
+        cam = cam.requestOutput(
+            size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=args.fps_limit
+        )
+    input_node = replay.out if args.media_path else cam
 
+    # resize to det model input size
     resize_node = pipeline.create(dai.node.ImageManipV2)
-    resize_node.initialConfig.setOutputSize(640, 480)
+    resize_node.initialConfig.setOutputSize(
+        det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+    )
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
     input_node.link(resize_node.inputImage)
@@ -85,4 +100,11 @@ with dai.Pipeline(device) as pipeline:
     visualizer.addTopic("Text", fatigue_detection.out, "images")
 
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
+            break
