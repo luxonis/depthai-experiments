@@ -50,14 +50,12 @@ class FatigueDetection(dai.node.ThreadedHostNode):
 
                 print(percent_tilted, percent_closed_eyes)
                 if percent_tilted >= 0.75:
-                    print("tilted")
                     annotations.draw_text(
                         text="Head Tilted!",
                         position=(0.1, 0.1),
                     )
 
                 if percent_closed_eyes >= 0.75:
-                    print("closed")
                     annotations.draw_text(
                         text="Eyes Closed!",
                         position=(0.1, 0.2),
