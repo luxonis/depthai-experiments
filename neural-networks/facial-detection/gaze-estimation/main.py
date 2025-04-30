@@ -3,14 +3,14 @@ import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.process_keypoints import LandmarksProcessing
-from utils.node_creators import create_crop_node, create_gaze_estimation_model
+from utils.node_creators import create_crop_node
 from utils.host_sync import ImageLandmarkSync
 from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatform()
+platform = device.getPlatform().name
 
 FPS = 30
 frame_type = dai.ImgFrame.Type.BGR888i
@@ -19,41 +19,74 @@ if "RVC2" in str(platform):
         f"This demo is currently only supported on RVC4, got `{platform}`"
     )
 
+REQ_WIDTH, REQ_HEIGHT = (
+    1280,
+    1280,
+)  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
+
+DET_MODEL = "luxonis/scrfd-face-detection:10g-640x640"
+HEAD_POSE_MODEL = "luxonis/head-pose-estimation:60x60"
+GAZE_MODEL = "luxonis/gaze-estimation-adas:60x60"
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
+    # face detection model
+    det_model_description = dai.NNModelDescription(DET_MODEL)
+    det_model_description.platform = platform
+    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+
+    # head pose model
+    head_pose_model_description = dai.NNModelDescription(HEAD_POSE_MODEL)
+    head_pose_model_description.platform = platform
+    head_pose_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(head_pose_model_description)
+    )
+
+    # gaze estimation model
+    gaze_model_description = dai.NNModelDescription(GAZE_MODEL)
+    gaze_model_description.platform = platform
+    gaze_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(gaze_model_description))
+
+    # media/camera input
     if args.media_path:
-        replay_node = pipeline.create(dai.node.ReplayVideo)
-        replay_node.setReplayVideoFile(Path(args.media_path))
-        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
-        replay_node.setLoop(True)
-
-        video_resize_node = pipeline.create(dai.node.ImageManipV2)
-        video_resize_node.initialConfig.setOutputSize(1280, 1280)
-        video_resize_node.initialConfig.setFrameType(frame_type)
-
-        replay_node.out.link(video_resize_node.inputImage)
-
-        input_node = video_resize_node.out
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(frame_type)
+        replay.setLoop(True)
+        if FPS:
+            replay.setFps(FPS)
+        replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
-        camera_node = pipeline.create(dai.node.Camera).build()
-        input_node = camera_node.requestOutput((1280, 1280), frame_type, fps=FPS)
+        cam = pipeline.create(dai.node.Camera).build()
+        cam = cam.requestOutput(size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=FPS)
+    input_node = replay.out if args.media_path else cam
 
+    # resize to det model input size
     resize_node = pipeline.create(dai.node.ImageManipV2)
-    resize_node.initialConfig.setOutputSize(640, 640)
-    resize_node.setMaxOutputFrameSize(640 * 640 * 3)
+    resize_node.initialConfig.setOutputSize(
+        det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+    )
+    resize_node.setMaxOutputFrameSize(
+        det_model_nn_archive.getInputWidth() * det_model_nn_archive.getInputHeight() * 3
+    )
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
     input_node.link(resize_node.inputImage)
 
-    face_detection_node: ParsingNeuralNetwork = pipeline.create(
-        ParsingNeuralNetwork
-    ).build(resize_node.out, "luxonis/scrfd-face-detection:10g-640x640")
-    face_detection_node.input.setBlocking(True)
+    det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        resize_node.out, det_model_nn_archive
+    )
+    det_nn.input.setBlocking(True)
+
+    # detection processing
     detection_process_node = pipeline.create(LandmarksProcessing)
-    detection_process_node.set_source_size(1280, 1280)
-    detection_process_node.set_target_size(60, 60)
-    face_detection_node.out.link(detection_process_node.detections_input)
+    detection_process_node.set_source_size(REQ_WIDTH, REQ_HEIGHT)
+    detection_process_node.set_target_size(
+        head_pose_model_nn_archive.getInputWidth(),
+        head_pose_model_nn_archive.getInputHeight(),
+    )
+    det_nn.out.link(detection_process_node.detections_input)
 
     left_eye_crop_node = create_crop_node(
         pipeline, input_node, detection_process_node.left_config_output
@@ -65,29 +98,37 @@ with dai.Pipeline(device) as pipeline:
         pipeline, input_node, detection_process_node.face_config_output
     )
 
-    head_pose_node = pipeline.create(dai.node.NeuralNetwork)
-    head_pose_node.setFromModelZoo(
-        dai.NNModelDescription("luxonis/head-pose-estimation:60x60"), useCached=True
-    )
-    head_pose_node.input.setBlocking(True)
-    face_crop_node.out.link(head_pose_node.input)
+    # head pose estimation
+    head_pose_nn = pipeline.create(dai.node.NeuralNetwork)
+    head_pose_nn.setNNArchive(head_pose_model_nn_archive)
+    head_pose_nn.input.setBlocking(True)
+    face_crop_node.out.link(head_pose_nn.input)
 
     head_pose_script = pipeline.create(dai.node.Script)
     head_pose_script.setScriptPath(Path(__file__).parent / "utils/head_pose_script.py")
-    head_pose_node.out.link(head_pose_script.inputs["pose_input"])
+    head_pose_nn.out.link(head_pose_script.inputs["pose_input"])
     head_pose_script.inputs["pose_input"].setBlocking(True)
 
-    gaze_estimation_node = create_gaze_estimation_model(
-        pipeline,
-        head_pose_script.outputs["head_pose_output"],
-        left_eye_crop_node.out,
-        right_eye_crop_node.out,
+    # gaze estimation
+    gaze_estimation_node = pipeline.create(dai.node.NeuralNetwork)
+    gaze_estimation_node.setNNArchive(gaze_model_nn_archive)
+    head_pose_script.outputs["head_pose_output"].link(
+        gaze_estimation_node.inputs["head_pose_angles_yaw_pitch_roll"]
     )
+    left_eye_crop_node.out.link(gaze_estimation_node.inputs["left_eye_image"])
+    right_eye_crop_node.out.link(gaze_estimation_node.inputs["right_eye_image"])
+    gaze_estimation_node.inputs["head_pose_angles_yaw_pitch_roll"].setBlocking(True)
+    gaze_estimation_node.inputs["left_eye_image"].setBlocking(True)
+    gaze_estimation_node.inputs["right_eye_image"].setBlocking(True)
+    gaze_estimation_node.inputs["left_eye_image"].setMaxSize(5)
+    gaze_estimation_node.inputs["right_eye_image"].setMaxSize(5)
+    gaze_estimation_node.inputs["head_pose_angles_yaw_pitch_roll"].setMaxSize(5)
 
+    # sync
     host_sync_node = pipeline.create(ImageLandmarkSync)
     gaze_estimation_node.out.link(host_sync_node.gaze_input)
-    face_detection_node.out.link(host_sync_node.detections_input)
-    face_detection_node.passthrough.link(host_sync_node.frame_input)
+    det_nn.out.link(host_sync_node.detections_input)
+    det_nn.passthrough.link(host_sync_node.frame_input)
     host_sync_node.frame_input.setBlocking(True)
     host_sync_node.gaze_input.setBlocking(True)
     host_sync_node.detections_input.setBlocking(True)
@@ -95,9 +136,11 @@ with dai.Pipeline(device) as pipeline:
     host_sync_node.gaze_input.setMaxSize(5)
     host_sync_node.detections_input.setMaxSize(5)
 
+    # annotation
     annotation_node = pipeline.create(AnnotationNode)
     host_sync_node.out.link(annotation_node.input)
 
+    # visualization
     visualizer.addTopic("annotation", annotation_node.output)
     visualizer.addTopic("frame", host_sync_node.frame_out)
 
