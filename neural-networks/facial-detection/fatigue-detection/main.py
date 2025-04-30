@@ -1,10 +1,11 @@
 from pathlib import Path
 import depthai as dai
-from utils.host_fatigue_detection import FatigueDetection
+
 from depthai_nodes.node import ParsingNeuralNetwork, ImgDetectionsBridge
 from depthai_nodes.node.utils import generate_script_content
-from utils.arguments import initialize_argparser
 
+from utils.arguments import initialize_argparser
+from utils.host_fatigue_detection import FatigueDetection
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
@@ -88,14 +89,16 @@ with dai.Pipeline(device) as pipeline:
         crop_node.out, REC_MODEL
     )
 
+    # annotation
     fatigue_detection = pipeline.create(FatigueDetection)
     det_nn.out.link(fatigue_detection.face_nn)
     det_nn.passthrough.link(fatigue_detection.preview)
     landmark_nn.out.link(fatigue_detection.landmarks_nn)
     landmark_nn.passthrough.link(fatigue_detection.crop_face)
 
+    # visualization
     visualizer.addTopic("Video", det_nn.passthrough, "images")
-    visualizer.addTopic("Text", fatigue_detection.out, "images")
+    visualizer.addTopic("Fatigue", fatigue_detection.out, "images")
 
     print("Pipeline created.")
     pipeline.start()
