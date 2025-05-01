@@ -43,11 +43,16 @@ with dai.Pipeline(device) as pipeline:
     disp_colored.setMaxValue(int(stereo.initialConfig.getMaxDisparity()))
     disp_colored.setColormap(cv2.COLORMAP_JET)
 
+    filtered_disp_colored = pipeline.create(ApplyColormap).build(
+        wls_filter.filtered_disp
+    )
+    filtered_disp_colored.setColormap(cv2.COLORMAP_JET)
+
     visualizer.addTopic("Rectified Right", stereo.rectifiedRight)
     visualizer.addTopic("Disparity", disp_colored.out)
     visualizer.addTopic("WLS Raw Depth", wls_filter.depth_frame)
     visualizer.addTopic("WLS Filtered Disparity", wls_filter.filtered_disp)
-    visualizer.addTopic("WLS Colored Disparity", wls_filter.colored_disp)
+    visualizer.addTopic("WLS Colored Disparity", filtered_disp_colored.out)
     visualizer.addTopic("WLS Annotations", wls_filter.annotations)
 
     print("Pipeline created.")

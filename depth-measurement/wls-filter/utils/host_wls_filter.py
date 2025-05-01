@@ -67,11 +67,6 @@ class WLSFilter(dai.node.HostNode):
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
             ]
         )
-        self.colored_disp = self.createOutput(
-            possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgFrame, True)
-            ]
-        )
         self.annotations = self.createOutput(
             possibleDatatypes=[
                 dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImgAnnotations, True)
@@ -99,7 +94,6 @@ class WLSFilter(dai.node.HostNode):
             disparity_frame, right_frame, depthScaleFactor
         )
         filteredDisp = (filteredDisp * self._disp_multiplier).astype(np.uint8)
-        coloredDisp = cv2.applyColorMap(filteredDisp, cv2.COLORMAP_JET)
 
         max_value = depthFrame.max()
         if max_value == 0:
@@ -119,9 +113,6 @@ class WLSFilter(dai.node.HostNode):
 
         self.filtered_disp.send(
             self.create_img_frame(filteredDisp, dai.ImgFrame.Type.RAW8)
-        )
-        self.colored_disp.send(
-            self.create_img_frame(coloredDisp, dai.ImgFrame.Type.BGR888i)
         )
 
         annots = AnnotationHelper()

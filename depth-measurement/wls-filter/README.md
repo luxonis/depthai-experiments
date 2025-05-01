@@ -1,7 +1,5 @@
 ## Host-Side WLS Filtering
 
-## Background
-
 This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI Gen3 API.
 
 ## Demo
