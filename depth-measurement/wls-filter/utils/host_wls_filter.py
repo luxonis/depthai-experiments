@@ -42,7 +42,9 @@ class Filter:
         # Compute depth from disparity (32 levels)
         with np.errstate(divide="ignore"):  # Should be safe to ignore div by zero here
             # raw depth values
-            depthFrame = (depthScaleFactor / filteredDisp).astype(np.uint16)
+            depth = depthScaleFactor / filteredDisp
+        depth = np.nan_to_num(depth, nan=0.0, posinf=0.0, neginf=0.0)
+        depthFrame = depth.astype(np.uint16)
 
         return filteredDisp, depthFrame
 
