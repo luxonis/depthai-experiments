@@ -13,6 +13,14 @@ on:
         description: 'Python version to use. By default 3.8, 3.10 and 3.12 are used but you can use only one by passing only `3.8`, `3.10` or `3.12`.'
         default: "all"
         required: false
+      hold_reservation:
+        description: 'If this is set to true testbed will stay reserved after process is done - reccomended for CI use'
+        required: false
+        type: boolean
+      reservation_name:
+          description: 'Reservation name - usually usually unique identifier of root CI run'
+          required: false
+          type: string
       platform:
         description: 'Platform to use for testing. By default both RVC2 and RVC4 are used but you can use only one by passing only `rvc2` or `rvc4`(use lowercase).'
         default: "all"
@@ -117,7 +125,18 @@ jobs:
             --env ROOT_DIR=${{ github.event.inputs.root_dir }} \
             --env STRICT_MODE=${{ github.event.inputs.strict_mode }} "
 
-          exec hil --models $MODEL --reservation-name $RESERVATION_NAME --wait --sync-workspace \
+          if [[ -n "${{ github.event.inputs.reservation_name }}" ]]; then
+                RESERVATION_OPTION="--reservation-name ${{ github.event.inputs.reservation_name }}"
+            else
+                RESERVATION_OPTION="--reservation-name $RESERVATION_NAME"
+            fi
+
+          if [[ "${{ github.event.inputs.hold_reservation }}" == 'true' ]]; then
+                HOLD_RESERVATION="--hold-reservation"
+            fi
+            
+
+          exec hil --models $MODEL $RESERVATION_OPTION $HOLD_RESERVATION --wait --sync-workspace \
               --dockerfile ./tests/Dockerfile \
               --docker-build-args "--build-arg PYTHON_VERSION=${{ matrix.python-version }}" \
               --docker-run-args "$ENV_VARS"
