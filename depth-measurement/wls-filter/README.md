@@ -18,6 +18,21 @@ Here is a list of all available parameters:
                       Optional name, DeviceID or IP of the camera to connect to. (default: None)
 ```
 
+### Controls
+
+Use the following keyboard controls in the visualizer to adjust WLS filtering parameters:
+
+| Key | Action            |
+| --- | ----------------- |
+| `l` | Decrease lambda   |
+| `L` | Increase lambda   |
+| `s` | Decrease sigma    |
+| `S` | Increase sigma    |
+| `q` | Quit the pipeline |
+
+- **Lambda** controls the amount of smoothing (higher = smoother).
+- **Sigma** controls the edge sensitivity (higher = more edge-aware).
+
 ### Peripheral Mode
 
 Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app.
