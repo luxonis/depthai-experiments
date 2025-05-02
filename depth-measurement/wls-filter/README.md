@@ -3,6 +3,7 @@
 This gives an example of doing host-side WLS filtering using the `rectified_right` and `depth` stream from DepthAI Gen3 API.
 
 ## Demo
+
 <img width="1239" alt="Screenshot 2025-05-02 at 13 46 15" src="https://github.com/user-attachments/assets/57f2f66e-a0a3-44b3-bb88-a2ae4a8c6e93" />
 
 ## Usage
