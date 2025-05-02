@@ -31,15 +31,6 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-        "-ann",
-        "--annotation_mode",
-        help="Annotation mode. Can be either 'segmentation', 'segmentation_with_annotation', or None (default).",
-        required=False,
-        default=None,
-        type=str,
-    )
-
-    parser.add_argument(
         "-fps",
         "--fps_limit",
         help="FPS limit for the model runtime.",
@@ -64,6 +55,14 @@ def initialize_argparser():
         required=False,
         default="",
         type=str,
+    )
+
+    parser.add_argument(
+        "-overlay",
+        "--overlay_mode",
+        help="If passed, overlays model output on the input image when the output is an array (e.g., depth maps, segmentation maps). Otherwise, displays outputs separately.",
+        required=False,
+        action="store_true",
     )
 
     args = parser.parse_args()

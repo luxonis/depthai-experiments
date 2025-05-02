@@ -37,7 +37,9 @@ with dai.Pipeline(device) as pipeline:
         dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
     )
     connection_pairs = (
-        pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["connections"]
+        pose_nn_archive.getConfig()
+        .model.heads[0]
+        .metadata.extraParams["skeleton_edges"]
     )
 
     if args.media_path:

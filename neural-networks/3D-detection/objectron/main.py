@@ -40,7 +40,9 @@ with dai.Pipeline(device) as pipeline:
         dai.getModelFromZoo(pose_model_description, useCached=False)
     )
     connection_pairs = (
-        pose_nn_archive.getConfig().model.heads[0].metadata.extraParams["lines"]
+        pose_nn_archive.getConfig()
+        .model.heads[0]
+        .metadata.extraParams["skeleton_edges"]
     )
 
     frame_type = (

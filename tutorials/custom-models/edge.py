@@ -9,7 +9,7 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 
 
 with dai.Pipeline(device) as pipeline:
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
 
     cam_rgb = pipeline.create(dai.node.Camera).build(
         boardSocket=dai.CameraBoardSocket.CAM_A

@@ -2,6 +2,10 @@
 
 This experiment demonstrates how to stream frames via RTSP server using H265 stream.
 
+## Demo
+
+![rtsp_stream](media/rtsp_stream.gif)
+
 ## Installation
 
 ### Ubuntu 20.04
@@ -58,11 +62,18 @@ ffplay -fflags nobuffer -fflags discardcorrupt -flags low_delay -framedrop rtsp:
 
 ### Standalone Mode
 
-Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
 
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-# TODO: add instructions for standalone mode once oakctl supports CLI arguments
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

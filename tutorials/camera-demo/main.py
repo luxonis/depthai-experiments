@@ -1,7 +1,7 @@
 import cv2
 import depthai as dai
 from utils.arguments import initialize_argparser
-from utils.depth_color_transform import DepthColorTransform
+from depthai_nodes.node import ApplyColormap
 
 color_resolution = (1280, 720)
 
@@ -27,14 +27,14 @@ with dai.Pipeline(device) as pipeline:
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
 
-    depth_parser = pipeline.create(DepthColorTransform).build(stereo.disparity)
-    depth_parser.setMaxDisparity(stereo.initialConfig.getMaxDisparity())
+    depth_parser = pipeline.create(ApplyColormap).build(stereo.disparity)
+    depth_parser.setMaxValue(int(stereo.initialConfig.getMaxDisparity()))
     depth_parser.setColormap(cv2.COLORMAP_JET)
 
     visualizer.addTopic("Color", color_output, "images")
     visualizer.addTopic("Left", left_output, "images")
     visualizer.addTopic("Right", right_output, "images")
-    visualizer.addTopic("Depth", depth_parser.output, "images")
+    visualizer.addTopic("Depth", depth_parser.out, "images")
 
     print("Pipeline created.")
 

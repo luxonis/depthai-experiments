@@ -42,7 +42,7 @@ with dai.Pipeline(device) as pipeline:
     connection_pairs = (
         pose_nn_archive.getConfig()
         .model.heads[0]
-        .metadata.extraParams["connection_pairs"]
+        .metadata.extraParams["skeleton_edges"]
     )
 
     frame_type = (

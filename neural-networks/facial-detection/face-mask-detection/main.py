@@ -1,8 +1,7 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, ImgDetectionsFilter
 from utils.arguments import initialize_argparser
-from utils.filter import FilterDetections
 
 _, args = initialize_argparser()
 
@@ -20,7 +19,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     model_description = dai.NNModelDescription(args.model)
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
     model_description.platform = platform
     nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
@@ -46,11 +45,11 @@ with dai.Pipeline(device) as pipeline:
         input_node, nn_archive, fps=args.fps_limit
     )
 
-    det_process_node = pipeline.create(FilterDetections).build(nn_with_parser.out)
-    det_process_node.set_label_encoding(LABEL_ENCODING)
+    det_process_node = pipeline.create(ImgDetectionsFilter).build(nn_with_parser.out)
+    det_process_node.setLabels(list(LABEL_ENCODING.keys()), keep=True)
 
     visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
-    visualizer.addTopic("Detections", det_process_node.output, "detections")
+    visualizer.addTopic("Detections", det_process_node.out, "detections")
 
     print("Pipeline created.")
 

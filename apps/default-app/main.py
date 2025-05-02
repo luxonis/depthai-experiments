@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import cv2
 import depthai as dai
-from depthai_nodes.node import DepthColorTransform
+from depthai_nodes.node import ApplyColormap
 from typing import Optional
 from utils.arguments import initialize_argparser
 
@@ -22,8 +22,8 @@ with dai.Pipeline(device) as pipeline:
     model_description = dai.NNModelDescription(
         f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}"
     )
-    platform = pipeline.getDefaultDevice().getPlatform()
-    platform_str = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatform()
+    platform_str = device.getPlatformAsString()
     model_description.platform = platform_str
     nn_archive = dai.NNArchive(
         dai.getModelFromZoo(
@@ -73,6 +73,7 @@ with dai.Pipeline(device) as pipeline:
                 cam_mono_2 = feature.socket
                 break
     if cam_mono_1 and cam_mono_2:
+        device.setIrLaserDotProjectorIntensity(1)
         left_cam = pipeline.create(dai.node.Camera).build(cam_mono_1)
         right_cam = pipeline.create(dai.node.Camera).build(cam_mono_2)
         stereo = pipeline.create(dai.node.StereoDepth).build(
@@ -84,7 +85,7 @@ with dai.Pipeline(device) as pipeline:
         if platform == dai.Platform.RVC2:
             stereo.setOutputSize(*STEREO_RESOLUTION)
 
-        coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
+        coloredDepth = pipeline.create(ApplyColormap).build(stereo.disparity)
         coloredDepth.setColormap(cv2.COLORMAP_JET)
         visualizer.addTopic("Depth", coloredDepth.out)
 
