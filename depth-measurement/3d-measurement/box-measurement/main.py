@@ -19,9 +19,10 @@ with dai.Pipeline(device) as pipeline:
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     cam_out = cam.requestOutput(
         IMG_SHAPE,
-        type=dai.ImgFrame.Type.BGR888i
-        if platform == dai.Platform.RVC4
-        else dai.ImgFrame.Type.BGR888p,
+        dai.ImgFrame.Type.RGB888i,
+        # dai.ImgResizeMode.CROP, 30, True
+        # if platform == dai.Platform.RVC4
+        # else dai.ImgFrame.Type.BGR888p,
     )
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
@@ -35,48 +36,55 @@ with dai.Pipeline(device) as pipeline:
         right=right_output,
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
-    stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
-    stereo.setLeftRightCheck(True)
-    stereo.setExtendedDisparity(False)
-    stereo.setSubpixel(True)
-    stereo.setSubpixelFractionalBits(3)
-    stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+    # stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
+    # stereo.setLeftRightCheck(True)
+    # stereo.setExtendedDisparity(False)
+    # stereo.setSubpixel(True)
+    # stereo.setSubpixelFractionalBits(3)
+    # stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     stereo.setOutputSize(IMG_SHAPE[0], IMG_SHAPE[1])
 
     """ In-place post-processing configuration for a stereo depth node
     The best combo of filters is application specific. Hard to say there is a one size fits all.
     They also are not free. Even though they happen on device, you pay a penalty in fps. """
-    stereo.initialConfig.postProcessing.speckleFilter.enable = False
-    stereo.initialConfig.postProcessing.speckleFilter.speckleRange = 50
-    stereo.initialConfig.postProcessing.temporalFilter.enable = True
-    stereo.initialConfig.postProcessing.spatialFilter.enable = True
-    stereo.initialConfig.postProcessing.spatialFilter.holeFillingRadius = 2
-    stereo.initialConfig.postProcessing.spatialFilter.numIterations = 1
-    stereo.initialConfig.postProcessing.thresholdFilter.minRange = 400
-    stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 15000
-    stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
+    # stereo.initialConfig.postProcessing.speckleFilter.enable = False
+    # stereo.initialConfig.postProcessing.speckleFilter.speckleRange = 50
+    # stereo.initialConfig.postProcessing.temporalFilter.enable = True
+    # stereo.initialConfig.postProcessing.spatialFilter.enable = True
+    # stereo.initialConfig.postProcessing.spatialFilter.holeFillingRadius = 2
+    # stereo.initialConfig.postProcessing.spatialFilter.numIterations = 1
+    # stereo.initialConfig.postProcessing.thresholdFilter.minRange = 400
+    # stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 15000
+    # stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
 
     width, height = IMG_SHAPE 
     intrinsics = calib_data.getCameraIntrinsics(
         dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
     )
 
+    cam_out.link(stereo.inputAlignTo)
+    rgbd = pipeline.create(dai.node.RGBD).build()
+    rgbd.setDepthUnits(dai.StereoDepthConfig.AlgorithmControl.DepthUnit.METER)
+    stereo.depth.link(rgbd.inDepth)
+    cam_out.link(rgbd.inColor)
+
     box_measurement = pipeline.create(BoxMeasurement).build(
         color=cam_out,
-        depth=stereo.depth,
+        pcl=rgbd.pcl,
         cam_intrinsics=intrinsics,
         shape=IMG_SHAPE,
         max_dist=args.max_dist,
         min_box_size=args.min_box_size,
     )
-    box_measurement.inputs["color"].setBlocking(False)
-    box_measurement.inputs["color"].setMaxSize(4)
-    box_measurement.inputs["depth"].setBlocking(False)
-    box_measurement.inputs["depth"].setMaxSize(4)
+    box_measurement.color_input.setBlocking(False)
+    box_measurement.color_input.setMaxSize(4)
+    box_measurement.pcl_input.setBlocking(False)
+    box_measurement.pcl_input.setMaxSize(4)
 
     visualizer.addTopic("Main Stream", box_measurement.passthrough, "images")
     visualizer.addTopic("Box Detection", box_measurement.annotation_output, "images")
     visualizer.addTopic("Dimensions", box_measurement.measurements_output, "images")
+    visualizer.addTopic("Point Cloud", rgbd.pcl, "pcl")
 
     print("Pipeline created.")
     pipeline.start()

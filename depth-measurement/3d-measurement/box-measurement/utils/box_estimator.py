@@ -32,14 +32,22 @@ class BoxEstimator:
         self.bounding_box = None
         self.rotation_matrix = None
         self.translate_vector = np.array([0, 0, 0])
+        self.vis_started = False
 
         self.max_distance = max_distance
 
+        self.isstarted = False
+        self._pcd        = o3d.geometry.PointCloud()
+        self._box_pcd    = o3d.geometry.PointCloud()
+    
+    def init_visualization(self):
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window()
-        self.isstarted = False
+        self.vis_started = True
 
     def vizualise_box(self):
+        if not self.vis_started:
+            self.init_visualization()
         bounding_box = self.bounding_box
         points_floor = np.c_[bounding_box, np.zeros(4)]
         points_top = np.c_[bounding_box, self.height * np.ones(4)]
@@ -92,10 +100,10 @@ class BoxEstimator:
         inverse_translation = [-x for x in self.translate_vector]
         inverse_rot_mat = np.linalg.inv(self.rotation_matrix)
 
-        bbox_pcl = o3d.geometry.PointCloud()
-        bbox_pcl.points = o3d.utility.Vector3dVector(box_points)
-        bbox_pcl.translate(inverse_translation)
-        bbox_pcl.rotate(inverse_rot_mat, center=(0, 0, 0))
+        # bbox_pcl = o3d.geometry.PointCloud()
+        self._box_pcd.points = o3d.utility.Vector3dVector(box_points)
+        self._box_pcd.translate(inverse_translation)
+        self._box_pcd.rotate(inverse_rot_mat, center=(0, 0, 0))
 
         lines = [
             [0, 4],
@@ -117,7 +125,7 @@ class BoxEstimator:
         cord_change_mat = np.array(
             [[1.0, 0.0, 0.0], [0, -1.0, 0.0], [0.0, 0.0, -1.0]], dtype=np.float32
         )
-        box_points = np.array(bbox_pcl.points).dot(cord_change_mat.T)
+        box_points = np.array(self._box_pcd.points).dot(cord_change_mat.T)
         img_points, _ = cv2.projectPoints(
             box_points,
             (0, 0, 0),
@@ -131,9 +139,20 @@ class BoxEstimator:
             p2 = (float(img_points[line[1]][0][0]) / width, float(img_points[line[1]][0][1]) / height)
             annotation_helper.draw_line(p1, p2, (255, 0, 0, 255), 2)
 
-    def process_pcl(self, raw_pcl):
-        self.raw_pcl = raw_pcl
-        if len(raw_pcl.points) < 100:
+    def process_pcl(self, raw_pcl: dai.PointCloudData):
+        pts, cols = raw_pcl.getPointsRGB()
+        self._pcd.points = o3d.utility.Vector3dVector(pts.astype(np.float64))
+        rgb = (cols[:, :3] / 255.0).astype(np.float64)
+        self._pcd.colors = o3d.utility.Vector3dVector(rgb)
+        Rcw = np.array([[1,0,0],[0,-1,0],[0,0,-1]], dtype=np.float64)
+        self._pcd.rotate(Rcw, center=(0,0,0))
+
+        self._pcd = self._pcd.voxel_down_sample(voxel_size=0.005)
+        self._pcd, _ = self._pcd.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)
+
+        self.raw_pcl = self._pcd
+
+        if len(self._pcd.points) < 100:
             return 0, 0, 0  # No box
 
         self.crop_plc()
@@ -209,6 +228,7 @@ class BoxEstimator:
     def get_box_pcl(self, plane_eq, plane_inliers):
         plane_outliers = self.roi_pcl.select_by_index(plane_inliers, invert=True)
         labels = np.array(plane_outliers.cluster_dbscan(eps=0.02, min_points=10))
+        # labels = np.array(plane_outliers.cluster_dbscan(eps=0.035, min_points= 6))
 
         labels_short = labels[labels != -1]
         if len(labels_short) == 0:
