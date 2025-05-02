@@ -46,6 +46,7 @@ with dai.Pipeline(device) as pipeline:
     filtered_disp_colored = pipeline.create(ApplyColormap).build(
         wls_filter.filtered_disp
     )
+    filtered_disp_colored.setMaxValue(255)
     filtered_disp_colored.setColormap(cv2.COLORMAP_JET)
 
     visualizer.addTopic("Rectified Right", stereo.rectifiedRight)
