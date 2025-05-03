@@ -6,7 +6,10 @@ from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
 
-IMG_SHAPE = (640, 400) # higher resolution is possible, but it will slow down fps drastically
+IMG_SHAPE = (
+    640,
+    400,
+)  # higher resolution is possible, but it will slow down fps drastically
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
@@ -55,11 +58,13 @@ with dai.Pipeline(device) as pipeline:
     stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 15000
     stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
 
-    width, height = IMG_SHAPE 
+    width, height = IMG_SHAPE
     intrinsics = calib_data.getCameraIntrinsics(
         dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
     )
-    dist_coeffs = np.array(calib_data.getDistortionCoefficients(dai.CameraBoardSocket.CAM_A))
+    dist_coeffs = np.array(
+        calib_data.getDistortionCoefficients(dai.CameraBoardSocket.CAM_A)
+    )
 
     cam_out.link(stereo.inputAlignTo)
     rgbd = pipeline.create(dai.node.RGBD).build()

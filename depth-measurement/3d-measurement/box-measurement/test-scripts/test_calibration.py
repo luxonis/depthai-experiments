@@ -3,14 +3,16 @@ import time
 import os
 import sys
 
-root_dir = os.path.dirname(os.path.abspath(os.path.join(__file__, '..')))
+root_dir = os.path.dirname(os.path.abspath(os.path.join(__file__, "..")))
 sys.path.append(root_dir)
 
-from utils.box_estimator import BoxEstimator
+from utils.box_estimator import BoxEstimator  # noqa: E402
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-PATH_CALIB = os.path.join(script_dir, "..", "media/example_pcls/calibration/calibration.ply")
+PATH_CALIB = os.path.join(
+    script_dir, "..", "media/example_pcls/calibration/calibration.ply"
+)
 PATH_BOX = os.path.join(script_dir, "..", "media/example_pcls/calibration/box.ply")
 
 if not os.path.exists(PATH_CALIB):

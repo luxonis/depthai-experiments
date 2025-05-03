@@ -72,7 +72,9 @@ class BoxMeasurement(dai.node.ThreadedHostNode):
             if l * w * h > self.min_box_size:
                 # Create ImgAnnotations and draw lines
                 height, width, _ = color_frame.shape
-                self.box_estimator.add_visualization_2d(self.intrinsics, self.dist_coeffs, bbox_annot_builder, width, height)
+                self.box_estimator.add_visualization_2d(
+                    self.intrinsics, self.dist_coeffs, bbox_annot_builder, width, height
+                )
                 bbox_annot = bbox_annot_builder.build(
                     color_msg.getTimestamp(), color_msg.getSequenceNum()
                 )
@@ -80,9 +82,9 @@ class BoxMeasurement(dai.node.ThreadedHostNode):
                 measurement_annot_builder.draw_text(
                     text=f"Length: {l:.2f}m, Width: {w:.2f}m, Height: {h:.2f}m",
                     position=(0.05, 0.1),
-                    color=(0, 0, 0, 1), # black
-                    background_color=(1, 1, 1, 0.7), # white with 70% opacity 
-                    size=16
+                    color=(0, 0, 0, 1),  # black
+                    background_color=(1, 1, 1, 0.7),  # white with 70% opacity
+                    size=16,
                 )
                 measurement_annot = measurement_annot_builder.build(
                     color_msg.getTimestamp(), color_msg.getSequenceNum()
@@ -95,10 +97,10 @@ class BoxMeasurement(dai.node.ThreadedHostNode):
                 measurement_annot_builder.draw_text(
                     text="No box detected",
                     position=(0.05, 0.1),
-                    color=(0, 0, 0, 1), # black
-                    background_color=(1, 1, 1, 0.7), # white with 70% opacity 
-                    size=16
-                ) 
+                    color=(0, 0, 0, 1),  # black
+                    background_color=(1, 1, 1, 0.7),  # white with 70% opacity
+                    size=16,
+                )
                 measurement_annot = measurement_annot_builder.build(
                     color_msg.getTimestamp(), color_msg.getSequenceNum()
                 )

@@ -6,9 +6,7 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = (
-        "This demo uses a custom NN model approach to run custom logic - depth to pointcloud conversion - on the OAK camera itself."
-    )
+    parser.description = "This demo uses a custom NN model approach to run custom logic - depth to pointcloud conversion - on the OAK camera itself."
 
     parser.add_argument(
         "-d",

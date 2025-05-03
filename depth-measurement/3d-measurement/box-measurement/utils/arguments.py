@@ -6,9 +6,7 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = (
-        "This experiment showcases one possible approach for measuring the size of a box using DepthAI."
-    )
+    parser.description = "This experiment showcases one possible approach for measuring the size of a box using DepthAI."
 
     parser.add_argument(
         "-d",
@@ -20,11 +18,11 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-    "-maxd",
-    "--max-dist",
-    type=float,
-    default=2,
-    help="maximum distance between camera and object in space in meters",
+        "-maxd",
+        "--max-dist",
+        type=float,
+        default=2,
+        help="maximum distance between camera and object in space in meters",
     )
 
     parser.add_argument(

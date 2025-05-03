@@ -3,10 +3,10 @@ import time
 import os
 import sys
 
-root_dir = os.path.dirname(os.path.abspath(os.path.join(__file__, '..')))
+root_dir = os.path.dirname(os.path.abspath(os.path.join(__file__, "..")))
 sys.path.append(root_dir)
 
-from utils.box_estimator import BoxEstimator 
+from utils.box_estimator import BoxEstimator  # noqa: E402
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 

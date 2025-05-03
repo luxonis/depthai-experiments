@@ -1,9 +1,8 @@
 from pathlib import Path
 import depthai as dai
-from pathlib import Path
 import numpy as np
 
-from depthai_nodes.node import ParsingNeuralNetwork 
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.host_pointcloud_display import PointcloudDisplay
 from utils.arguments import initialize_argparser
 
@@ -48,7 +47,9 @@ with dai.Pipeline(device) as pipeline:
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     cam_out = cam.requestOutput(
         DEPTH_SHAPE,
-        type=dai.ImgFrame.Type.BGR888i if platform == dai.Platform.RVC4 else dai.ImgFrame.Type.BGR888p,
+        type=dai.ImgFrame.Type.BGR888i
+        if platform == dai.Platform.RVC4
+        else dai.ImgFrame.Type.BGR888p,
     )
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
@@ -91,10 +92,9 @@ with dai.Pipeline(device) as pipeline:
 
     try:
         nn_archive = dai.NNArchive(str(nn_blob_path))
-        
+
         parser = pipeline.create(ParsingNeuralNetwork).build(
-            input=stereo.depth,
-            nn_source=nn_archive
+            input=stereo.depth, nn_source=nn_archive
         )
     except Exception as e:
         print(f"Failed to load blob file: {e}")
@@ -103,7 +103,7 @@ with dai.Pipeline(device) as pipeline:
         print("2. Recompile the model with the latest depthai version")
         print("3. Check the blob was compiled for the correct MyriadX version")
         raise
-    
+
     # Only send xyz data once, and always reuse the message
     parser.inputs["xyz"].setReusePreviousMessage(True)
     # Get xyz data and send it to the device - to the pointcloud neural network

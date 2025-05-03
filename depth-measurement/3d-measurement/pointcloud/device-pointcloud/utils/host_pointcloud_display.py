@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 import depthai as dai
 from typing import Tuple
@@ -39,4 +38,4 @@ class PointcloudDisplay(dai.node.HostNode):
         pcl_data = pcl_data.reshape(3, -1).T.astype(np.float64) / 1000.0
         self.pcl_converter.visualize_pcl(pcl_data, downsample=DOWNSAMPLE_PCL)
 
-        self.passthrough.send(preview) 
+        self.passthrough.send(preview)

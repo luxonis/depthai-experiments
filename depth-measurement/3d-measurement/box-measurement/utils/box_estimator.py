@@ -4,7 +4,6 @@ import cv2
 import random
 import depthai as dai
 from .img_annotation_helper import AnnotationHelper
-from .img_annotation_helper import Point
 
 DISTANCE_THRESHOLD_PLANE = 0.02  # Defines the maximum distance a point can have
 # to an estimated plane to be considered an inlier
@@ -37,9 +36,9 @@ class BoxEstimator:
         self.max_distance = max_distance
 
         self.isstarted = False
-        self._pcd        = o3d.geometry.PointCloud()
-        self._box_pcd    = o3d.geometry.PointCloud()
-    
+        self._pcd = o3d.geometry.PointCloud()
+        self._box_pcd = o3d.geometry.PointCloud()
+
     def init_visualization(self):
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window()
@@ -90,7 +89,14 @@ class BoxEstimator:
             self.vis.update_renderer()
             self.vis.remove_geometry(line_set, reset_bounding_box=False)
 
-    def add_visualization_2d(self, intrinsic_mat, dist_coeffs, annotation_helper: AnnotationHelper, width, height):
+    def add_visualization_2d(
+        self,
+        intrinsic_mat,
+        dist_coeffs,
+        annotation_helper: AnnotationHelper,
+        width,
+        height,
+    ):
         bounding_box = self.bounding_box
         points_floor = np.c_[bounding_box, np.zeros(4)]
         points_top = np.c_[bounding_box, self.height * np.ones(4)]
@@ -127,16 +133,18 @@ class BoxEstimator:
         )
         box_points = np.array(self._box_pcd.points).dot(cord_change_mat.T)
         img_points, _ = cv2.projectPoints(
-            box_points,
-            (0, 0, 0),
-            (0, 0, 0),
-            intrinsic_mat,
-            dist_coeffs
+            box_points, (0, 0, 0), (0, 0, 0), intrinsic_mat, dist_coeffs
         )
 
         for line in lines:
-            p1 = (float(img_points[line[0]][0][0]) / width, float(img_points[line[0]][0][1]) / height)
-            p2 = (float(img_points[line[1]][0][0]) / width, float(img_points[line[1]][0][1]) / height)
+            p1 = (
+                float(img_points[line[0]][0][0]) / width,
+                float(img_points[line[0]][0][1]) / height,
+            )
+            p2 = (
+                float(img_points[line[1]][0][0]) / width,
+                float(img_points[line[1]][0][1]) / height,
+            )
             annotation_helper.draw_line(p1, p2, (255, 0, 0, 255), 2)
 
     def process_pcl(self, raw_pcl: dai.PointCloudData):
@@ -145,11 +153,13 @@ class BoxEstimator:
         self._pcd.points = o3d.utility.Vector3dVector(pts.astype(np.float64))
         rgb = (cols[:, :3] / 255.0).astype(np.float64)
         self._pcd.colors = o3d.utility.Vector3dVector(rgb)
-        Rcw = np.array([[1,0,0],[0,-1,0],[0,0,-1]], dtype=np.float64)
-        self._pcd.rotate(Rcw, center=(0,0,0))
+        Rcw = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=np.float64)
+        self._pcd.rotate(Rcw, center=(0, 0, 0))
 
         self._pcd = self._pcd.voxel_down_sample(voxel_size=0.005)
-        self._pcd, _ = self._pcd.remove_statistical_outlier(nb_neighbors=30, std_ratio=0.1)
+        self._pcd, _ = self._pcd.remove_statistical_outlier(
+            nb_neighbors=30, std_ratio=0.1
+        )
 
         self.raw_pcl = self._pcd
 
@@ -241,7 +251,7 @@ class BoxEstimator:
         return self.box_pcl
 
     def get_box_top(self, plane_eq):
-        rot_matrix = self.create_rotation_matrix(plane_eq[0:3], [0, 0, 1])  #
+        rot_matrix = self.create_rotation_matrix(plane_eq[0:3], [0, 0, 1])
         self.plane_pcl = self.plane_pcl.rotate(rot_matrix, center=(0, 0, 0))
         avg_z = np.average(np.asarray(self.plane_pcl.points)[:, 2])
 
