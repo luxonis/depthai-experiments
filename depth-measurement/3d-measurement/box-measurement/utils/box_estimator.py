@@ -90,7 +90,7 @@ class BoxEstimator:
             self.vis.update_renderer()
             self.vis.remove_geometry(line_set, reset_bounding_box=False)
 
-    def add_visualization_2d(self, intrinsic_mat, annotation_helper: AnnotationHelper, width, height):
+    def add_visualization_2d(self, intrinsic_mat, dist_coeffs, annotation_helper: AnnotationHelper, width, height):
         bounding_box = self.bounding_box
         points_floor = np.c_[bounding_box, np.zeros(4)]
         points_top = np.c_[bounding_box, self.height * np.ones(4)]
@@ -131,7 +131,7 @@ class BoxEstimator:
             (0, 0, 0),
             (0, 0, 0),
             intrinsic_mat,
-            np.zeros(4, dtype="float32"),
+            dist_coeffs
         )
 
         for line in lines:
@@ -141,6 +141,7 @@ class BoxEstimator:
 
     def process_pcl(self, raw_pcl: dai.PointCloudData):
         pts, cols = raw_pcl.getPointsRGB()
+        pts = pts * 0.001
         self._pcd.points = o3d.utility.Vector3dVector(pts.astype(np.float64))
         rgb = (cols[:, :3] / 255.0).astype(np.float64)
         self._pcd.colors = o3d.utility.Vector3dVector(rgb)

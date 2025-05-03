@@ -1,6 +1,6 @@
+import numpy as np
 import depthai as dai
 from .box_estimator import BoxEstimator
-from .projector_3d import PointCloudFromRGBD
 from .img_annotation_helper import AnnotationHelper
 
 
@@ -28,6 +28,7 @@ class BoxMeasurement(dai.node.ThreadedHostNode):
         )
         self.box_estimator = None
         self.intrinsics = None
+        self.dist_coeffs = None
         self.min_box_size = None
 
     def build(
@@ -35,11 +36,12 @@ class BoxMeasurement(dai.node.ThreadedHostNode):
         color: dai.Node.Output,
         pcl: dai.Node.Output,
         cam_intrinsics: list,
-        shape: tuple[int, int],
+        dist_coeffs: np.ndarray,
         max_dist: float,
         min_box_size: float,
     ) -> "BoxMeasurement":
         self.intrinsics = cam_intrinsics
+        self.dist_coeffs = dist_coeffs
         self.min_box_size = min_box_size
 
         self.box_estimator = BoxEstimator(max_dist)
@@ -70,7 +72,7 @@ class BoxMeasurement(dai.node.ThreadedHostNode):
             if l * w * h > self.min_box_size:
                 # Create ImgAnnotations and draw lines
                 height, width, _ = color_frame.shape
-                self.box_estimator.add_visualization_2d(self.intrinsics, bbox_annot_builder, width, height)
+                self.box_estimator.add_visualization_2d(self.intrinsics, self.dist_coeffs, bbox_annot_builder, width, height)
                 bbox_annot = bbox_annot_builder.build(
                     color_msg.getTimestamp(), color_msg.getSequenceNum()
                 )
