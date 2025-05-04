@@ -1,13 +1,26 @@
 identifier = "com.luxonis.pose-estimation.human-pose"
 app_version = "1.0.0"
-
-prepare_container = [
-    { type = "RUN", command = "apt-get update" },
-    { type = "RUN", command = "apt-get install -y python3 python3-pip libglib2.0-0 libgl1-mesa-glx wget git" },
-]
+entrypoint = ["bash", "-c", "/usr/bin/runsvdir -P /etc/service"]
 
 prepare_build_container = []
 
-build_steps = ["pip3 install -r /app/requirements.txt --break-system-packages"]
+prepare_container = [
+    { type = "RUN", command = "apt-get update" },
+    { type = "RUN", command = "apt-get install -y apt-utils libgl1-mesa-glx" },
+]
 
-entrypoint = ["bash", "-c", "python3 /app/main.py"]
+build_steps = [
+    "python3.12 -m pip install -r /app/requirements.txt --break-system-packages",
+    "mkdir -p /etc/service/experiment",
+    "cp /app/experiment-run.sh /etc/service/experiment/run",
+    "chmod +x /etc/service/experiment/run"
+]
+
+[base_image]
+api_url = "https://registry-1.docker.io"
+service = "registry.docker.io"
+oauth_url = "https://auth.docker.io/token"
+auth_type = "repository"
+auth_name = "luxonis/oakapp-base"
+image_name = "luxonis/oakapp-base"
+image_tag = "latest"
