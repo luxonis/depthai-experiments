@@ -1,6 +1,6 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, GatherData
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 from utils.process import ProcessDetections
@@ -104,22 +104,17 @@ with dai.Pipeline(device) as pipeline:
         pose_manip.out, pose_nn_archive
     )
 
+    gather_data = pipeline.create(GatherData).build(camera_fps=args.fps_limit)
+    detection_nn.out.link(gather_data.input_reference)
+    pose_nn.outputs.link(gather_data.input_data)
+
     annotation_node = pipeline.create(AnnotationNode).build(
-        input_detections=detection_nn.out,
+        gathered_data=gather_data.out,
         video=video_output,
         padding_factor=PADDING,
         confidence_threshold=CONFIDENCE_THRESHOLD,
         connections_pairs=connection_pairs,
     )
-    pose_nn.getOutput(0).link(
-        annotation_node.input_keypoints
-    )  # First head is for keypoints
-    pose_nn.getOutput(1).link(
-        annotation_node.input_confidence
-    )  # Second head is for confidence score
-    pose_nn.getOutput(2).link(
-        annotation_node.input_handedness
-    )  # Third head is for handedness
 
     visualizer.addTopic("Video", video_output, "images")
     visualizer.addTopic("Detections", annotation_node.out_detections, "images")
