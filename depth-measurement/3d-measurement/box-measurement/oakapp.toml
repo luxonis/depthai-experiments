@@ -1,4 +1,4 @@
-identifier = "com.luxonis.3d-measurement"
+identifier = "com.luxonis.box-measurement"
 app_version = "1.0.0"
 
 prepare_container = [
