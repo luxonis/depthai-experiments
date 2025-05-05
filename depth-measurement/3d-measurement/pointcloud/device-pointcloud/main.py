@@ -3,7 +3,6 @@ import depthai as dai
 import numpy as np
 
 from depthai_nodes.node import ParsingNeuralNetwork
-from utils.host_pointcloud_display import PointcloudDisplay
 from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
@@ -116,17 +115,8 @@ with dai.Pipeline(device) as pipeline:
     xyz_queue = parser.inputs["xyz"].createInputQueue()
     xyz_queue.send(buffer)
 
-    display = pipeline.create(PointcloudDisplay).build(
-        preview=cam_out,
-        pointcloud=parser.out,
-        depth_shape=DEPTH_SHAPE,
-    )
-    display.inputs["preview"].setBlocking(False)
-    display.inputs["pointcloud"].setBlocking(False)
-    display.inputs["pointcloud"].setMaxSize(8)
-
-    visualizer.addTopic("Main Stream", display.passthrough, "images")
-    # visualizer.addTopic("Pointcloud", display.annotation_output, "images")
+    visualizer.addTopic("Preview", cam_out, "images")
+    visualizer.addTopic("Pointcloud", parser.out, "pcl")
 
     print("Pipeline created.")
     pipeline.start()

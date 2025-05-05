@@ -1,39 +1,37 @@
-import argparse
 import depthai as dai
+from utils.arguments import initialize_argparser
 
-from host_display_pointcloud import DisplayPointCloud
+_, args = initialize_argparser()
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-m",
-    "--mono",
-    default=False,
-    action="store_true",
-    help="use mono frame for pointcloud coloring instead of color frame",
-)
-args = parser.parse_args()
+IMG_SHAPE = (640, 400)
 
-device = dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+if not device.setIrLaserDotProjectorIntensity(1):
+    print(
+        "Failed to set IR laser projector intensity. Maybe your device does not support this feature."
+    )
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
     calib_data = device.readCalibration()
-    device.setIrLaserDotProjectorIntensity(1)
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    left_out = left.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.NV12)
+    right_out = right.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.NV12)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    stereo = pipeline.create(dai.node.StereoDepth).build(
+        left=left_out,
+        right=right_out,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
+    )
     stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
     stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(True)
     stereo.setSubpixelFractionalBits(3)
+    stereo.setOutputSize(IMG_SHAPE[0], IMG_SHAPE[1])
 
     """ In-place post-processing configuration for a stereo depth node
     The best combo of filters is application specific. Hard to say there is a one size fits all.
@@ -48,31 +46,41 @@ with dai.Pipeline(device) as pipeline:
     stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 200000
     stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
 
+    
+    rgbd = pipeline.create(dai.node.RGBD).build()
+    stereo.depth.link(rgbd.inDepth)
+
+    width, height = IMG_SHAPE
     if args.mono:
-        width, height = right.getResolutionSize()
+        mono_out_from_right = right.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i)
+        mono_out_from_right.link(rgbd.inColor)
+        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_C)
+
         intrinsics = calib_data.getCameraIntrinsics(
             dai.CameraBoardSocket.CAM_C, dai.Size2f(width, height)
         )
     else:
-        cam = pipeline.create(dai.node.ColorCamera)
-        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        cam.setIspScale(1, 3)
-        cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-        cam.initialControl.setManualFocus(130)
+        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        cam_out = cam.requestOutput(
+            IMG_SHAPE,
+            dai.ImgFrame.Type.RGB888i,
+        )
+        cam_out.link(rgbd.inColor)
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-        width, height = cam.getIspSize()
         intrinsics = calib_data.getCameraIntrinsics(
             dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
         )
 
-    pointcloud = pipeline.create(dai.node.PointCloud)
-    stereo.depth.link(pointcloud.inputDepth)
-
-    display_pointcloud = pipeline.create(DisplayPointCloud).build(
-        preview=stereo.rectifiedRight if args.mono else cam.isp,
-        pointcloud=pointcloud.outputPointCloud,
-    )
+    visualizer.addTopic("preview", stereo.rectifiedRight if args.mono else cam_out)
+    visualizer.addTopic("pointcloud", rgbd.pcl)
 
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
