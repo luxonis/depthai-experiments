@@ -1,0 +1,13 @@
+identifier = "com.luxonis.custom-frontend.raw-stream"
+app_version = "0.1.0"
+
+prepare_container = [
+    { type = "RUN", command = "apt-get update" },
+    { type = "RUN", command = "apt-get install -y python3-pip net-tools" },
+]
+
+build_steps = ["pip3 install -r /app/requirements.txt --break-system-packages"]
+
+prepare_build_container = []
+
+entrypoint = ["bash", "-c", "python3 -u /app/main.py --ip $(hostname -I | awk '{print $1}')"]
