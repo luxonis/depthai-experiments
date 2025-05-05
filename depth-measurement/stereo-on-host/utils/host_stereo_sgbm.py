@@ -92,13 +92,9 @@ class StereoSGBM(dai.node.HostNode):
         left_cam = device.getStereoPairs()[0].left
         right_cam = device.getStereoPairs()[0].right
 
-        M_left = np.array(
-            calibObj.getCameraIntrinsics(left_cam, width, height)
-        )
-        M_right = np.array(
-            calibObj.getCameraIntrinsics(right_cam, width, height)
-        )
-        
+        M_left = np.array(calibObj.getCameraIntrinsics(left_cam, width, height))
+        M_right = np.array(calibObj.getCameraIntrinsics(right_cam, width, height))
+
         D_left = np.array(calibObj.getDistortionCoefficients(left_cam))
         D_right = np.array(calibObj.getDistortionCoefficients(right_cam))
 
