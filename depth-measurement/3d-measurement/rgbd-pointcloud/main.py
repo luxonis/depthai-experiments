@@ -46,13 +46,14 @@ with dai.Pipeline(device) as pipeline:
     stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 200000
     stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
 
-    
     rgbd = pipeline.create(dai.node.RGBD).build()
     stereo.depth.link(rgbd.inDepth)
 
     width, height = IMG_SHAPE
     if args.mono:
-        mono_out_from_right = right.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i)
+        mono_out_from_right = right.requestOutput(
+            IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i
+        )
         mono_out_from_right.link(rgbd.inColor)
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_C)
 
