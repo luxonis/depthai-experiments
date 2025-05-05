@@ -3,6 +3,7 @@
 This example shows how to align depth to rgb camera frame and project depth map into 3D pointcloud. You can also choose to skip rgb-depth alignment and colorize the pointcloud with right mono frame.
 
 ## Demo
+
 ![ezgif-72a39b6d489bd8](https://github.com/user-attachments/assets/2a742929-f080-4a1f-8db5-da356b695876)
 ![ezgif-7736189d82e875](https://github.com/user-attachments/assets/2cb05ac6-1dca-421b-88a9-d86c05c6e4e1)
 
