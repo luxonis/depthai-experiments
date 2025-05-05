@@ -14,10 +14,6 @@ class VisualizedTracklets(dai.Tracklets):
 
     def getVisualizationMessage(self):
         annotation_helper = AnnotationHelper()
-        # img_annotations = dai.ImgAnnotations()
-        # img_annotations.setTimestamp(self.getTimestamp())
-        # img_annotations.setSequenceNum(self.getSequenceNum())
-        # img_annotation = dai.ImgAnnotation()
         for tracklet in self.tracklets:
             if tracklet.status == dai.Tracklet.TrackingStatus.TRACKED:
                 annotation_helper.draw_rectangle(
@@ -26,28 +22,8 @@ class VisualizedTracklets(dai.Tracklets):
                         tracklet.roi.x + tracklet.roi.width,
                         tracklet.roi.y + tracklet.roi.height,
                     ),
+                    thickness=3,
                 )
-                # pts_annot = dai.PointsAnnotation()
-                # pts_annot.outlineColor = dai.Color(0.0, 1.0, 0.0)
-                # pts_annot.points.append(dai.Point2f(tracklet.roi.x, tracklet.roi.y))
-                # pts_annot.points.append(
-                #     dai.Point2f(tracklet.roi.x + tracklet.roi.width, tracklet.roi.y)
-                # )
-                # pts_annot.points.append(
-                #     dai.Point2f(
-                #         tracklet.roi.x + tracklet.roi.width,
-                #         tracklet.roi.y + tracklet.roi.height,
-                #     )
-                # )
-                # pts_annot.points.append(
-                #     dai.Point2f(tracklet.roi.x, tracklet.roi.y + tracklet.roi.height)
-                # )
-                # pts_annot.type = dai.PointsAnnotationType.LINE_LOOP
-                # pts_annot.thickness = 2
-                # img_annotation.points.append(pts_annot)
-
-                # txt_annot = dai.TextAnnotation()
-                # txt_annot.fontSize = 25
                 if self._labels:
                     label_txt = self._labels[tracklet.srcImgDetection.label]
                 else:
