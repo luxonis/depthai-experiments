@@ -1,17 +1,22 @@
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, GatherData
+from depthai_nodes.node.utils import generate_script_content
 from utils.arguments import initialize_argparser
 from utils.deepsort_tracking import DeepsortTracking
-from utils.detection_config_generator import generate_script_content
-from utils.detections_recognitions_sync import DetectionsRecognitionsSync
 
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+
+if args.fps_limit is None:
+    args.fps_limit = 4 if platform == "RVC2" else 30
+    print(
+        f"FPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag."
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -23,11 +28,11 @@ with dai.Pipeline(device) as pipeline:
         dai.getModelFromZoo(detection_model_description)
     )
 
-    recognition_model_description = dai.NNModelDescription(
+    embeddings_model_description = dai.NNModelDescription(
         "luxonis/osnet:imagenet-128x256", platform=platform
     )
-    recognition_model_archive = dai.NNArchive(
-        dai.getModelFromZoo(recognition_model_description)
+    embeddings_model_archive = dai.NNArchive(
+        dai.getModelFromZoo(embeddings_model_description)
     )
 
     if args.media_path:
@@ -70,38 +75,32 @@ with dai.Pipeline(device) as pipeline:
     detection_nn.out.link(script.inputs["det_in"])
     detection_nn.passthrough.link(script.inputs["preview"])
     script_content = generate_script_content(
-        platform=platform.lower(),
-        resize_width=recognition_model_archive.getInputWidth(),
-        resize_height=recognition_model_archive.getInputHeight(),
+        resize_width=embeddings_model_archive.getInputWidth(),
+        resize_height=embeddings_model_archive.getInputHeight(),
         padding=0,
     )
     script.setScript(script_content)
 
-    if platform == "RVC2":
-        pose_manip = pipeline.create(dai.node.ImageManip)
-        pose_manip.initialConfig.setResize(*recognition_model_archive.getInputSize())
-        pose_manip.inputConfig.setWaitForMessage(True)
-    elif platform == "RVC4":
-        pose_manip = pipeline.create(dai.node.ImageManipV2)
-        pose_manip.initialConfig.setOutputSize(
-            *recognition_model_archive.getInputSize()
-        )
-        pose_manip.inputConfig.setWaitForMessage(True)
-
-    script.outputs["manip_cfg"].link(pose_manip.inputConfig)
-    script.outputs["manip_img"].link(pose_manip.inputImage)
-
-    recognition_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        pose_manip.out, recognition_model_archive
+    embeddings_manip = pipeline.create(dai.node.ImageManipV2)
+    embeddings_manip.initialConfig.setOutputSize(
+        embeddings_model_archive.getInputWidth(),
+        embeddings_model_archive.getInputHeight(),
     )
 
-    detection_recognitions_sync = pipeline.create(DetectionsRecognitionsSync).build()
-    detection_nn.out.link(detection_recognitions_sync.input_detections)
-    recognition_nn.out.link(detection_recognitions_sync.input_recognitions)
+    script.outputs["manip_cfg"].link(embeddings_manip.inputConfig)
+    script.outputs["manip_img"].link(embeddings_manip.inputImage)
+
+    embeddings_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        embeddings_manip.out, embeddings_model_archive
+    )
+
+    gather_data = pipeline.create(GatherData).build(camera_fps=args.fps_limit)
+    detection_nn.out.link(gather_data.input_reference)
+    embeddings_nn.out.link(gather_data.input_data)
 
     deepsort_tracking = pipeline.create(DeepsortTracking).build(
-        img_frames=detection_resize.out,
-        detected_recognitions=detection_recognitions_sync.out,
+        img_frame=detection_resize.out,
+        gathered_data=gather_data.out,
         labels=detection_model_archive.getConfigV1().model.heads[0].metadata.classes,
     )
 
