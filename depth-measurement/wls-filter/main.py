@@ -1,10 +1,16 @@
+import cv2
 import depthai as dai
-from host_wls_filter import WLSFilter
-from host_display import Display
+from utils.host_wls_filter import WLSFilter
+from depthai_nodes.node import ApplyColormap
+from utils.arguments import initialize_argparser
+
+_, args = initialize_argparser()
 
 LR_CHECK = False  # Better handling for occlusions
 
-with dai.Pipeline() as pipeline:
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
@@ -21,29 +27,44 @@ with dai.Pipeline() as pipeline:
     )  # Black, to better see the cutout from rectification (black stripe on the edges)
     stereo.setLeftRightCheck(LR_CHECK)
     stereo.setSubpixel(False)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_C)
 
+    calib = device.readCalibration()
+    baseline = calib.getBaselineDistance()
     wls_filter = pipeline.create(WLSFilter).build(
         disparity=stereo.disparity,
         rectified_right=stereo.rectifiedRight,
         max_disparity=stereo.initialConfig.getMaxDisparity(),
+        baseline=baseline,
     )
 
-    right_frame = pipeline.create(Display).build(frames=wls_filter.right_frame)
-    right_frame.setName("rectified right")
+    disp_colored = pipeline.create(ApplyColormap).build(stereo.disparity)
+    disp_colored.setMaxValue(int(stereo.initialConfig.getMaxDisparity()))
+    disp_colored.setColormap(cv2.COLORMAP_JET)
 
-    disparity_frame = pipeline.create(Display).build(frames=wls_filter.disparity_frame)
-    disparity_frame.setName("disparity")
+    filtered_disp_colored = pipeline.create(ApplyColormap).build(
+        wls_filter.filtered_disp
+    )
+    filtered_disp_colored.setMaxValue(255)
+    filtered_disp_colored.setColormap(cv2.COLORMAP_JET)
 
-    depth_frame = pipeline.create(Display).build(frames=wls_filter.depth_frame)
-    depth_frame.setName("wls raw depth")
-
-    filtered_disp = pipeline.create(Display).build(frames=wls_filter.filtered_disp)
-    filtered_disp.setName("wlsFilter")
-
-    colored_disp = pipeline.create(Display).build(frames=wls_filter.colored_disp)
-    colored_disp.setName("wls colored disp")
+    visualizer.addTopic("Rectified Right", stereo.rectifiedRight)
+    visualizer.addTopic("Disparity", disp_colored.out)
+    visualizer.addTopic("WLS Raw Depth", wls_filter.depth_frame)
+    visualizer.addTopic("WLS Filtered Disparity", wls_filter.filtered_disp)
+    visualizer.addTopic("WLS Colored Disparity", filtered_disp_colored.out)
+    visualizer.addTopic("WLS Annotations", wls_filter.annotations)
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
+        else:
+            wls_filter.handle_key(key)
