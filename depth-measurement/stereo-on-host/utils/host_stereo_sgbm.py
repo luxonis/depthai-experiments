@@ -88,18 +88,22 @@ class StereoSGBM(dai.node.HostNode):
         resolution: Tuple[int, int],
     ):
         width, height = resolution
+        image_size = (width, height)
+        left_cam = device.getStereoPairs()[0].left
+        right_cam = device.getStereoPairs()[0].right
 
-        M_left = np.array(
-            calibObj.getCameraIntrinsics(device.getStereoPairs()[0].left, width, height)
-        )
-        M_right = np.array(
-            calibObj.getCameraIntrinsics(
-                device.getStereoPairs()[0].right, width, height
-            )
-        )
+        M_left = np.array(calibObj.getCameraIntrinsics(left_cam, width, height))
+        M_right = np.array(calibObj.getCameraIntrinsics(right_cam, width, height))
 
-        R1 = np.array(calibObj.getStereoLeftRectificationRotation())
-        R2 = np.array(calibObj.getStereoRightRectificationRotation())
+        D_left = np.array(calibObj.getDistortionCoefficients(left_cam))
+        D_right = np.array(calibObj.getDistortionCoefficients(right_cam))
+
+        R_stereo = np.array(calibObj.getCameraRotationMatrix(left_cam, right_cam))
+        T_stereo = np.array(calibObj.getCameraTranslationVector(left_cam, right_cam))
+
+        R1, R2, _, _, _, _, _ = cv2.stereoRectify(
+            M_left, D_left, M_right, D_right, image_size, R_stereo, T_stereo
+        )
 
         H_left = np.matmul(np.matmul(M_right, R1), np.linalg.inv(M_left))
         H_right = np.matmul(np.matmul(M_right, R2), np.linalg.inv(M_right))
