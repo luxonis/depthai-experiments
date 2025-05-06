@@ -1,46 +1,68 @@
+from typing import List
 import depthai as dai
-from depthai_nodes import TEXT_COLOR, OUTLINE_COLOR
+
+from depthai_nodes import (
+    ImgDetectionsExtended,
+    Predictions,
+    Classifications,
+)
+from depthai_nodes.utils import AnnotationHelper
 
 
-class AnnotationNode(dai.node.ThreadedHostNode):
-    def __init__(self):
+class AnnotationNode(dai.node.HostNode):
+    def __init__(self) -> None:
         super().__init__()
-        self.input = self.createInput()
-        self.output = self.createOutput()
 
-    def run(self):
-        while self.isRunning():
-            descriptions = self.input.get()
+    def build(
+        self,
+        gather_data_msg: dai.Node.Output,
+    ) -> "AnnotationNode":
+        self.link_args(gather_data_msg)
+        return self
 
-            detections_msg = descriptions["detections"]
-            genders_msg = descriptions["genders"]
-            ages_msg = descriptions["ages"]
+    def process(self, gather_data_msg: dai.Buffer) -> None:
+        img_detections_extended_msg: ImgDetectionsExtended = (
+            gather_data_msg.reference_data
+        )
+        assert isinstance(img_detections_extended_msg, ImgDetectionsExtended)
 
-            annotation = dai.ImgAnnotation()
-            img_annotations = dai.ImgAnnotations()
-            for detection, gender, age in zip(
-                detections_msg.detections, genders_msg.genders, ages_msg.ages
-            ):
-                points = detection.rotated_rect.getPoints()
+        age_gender_msg_group_list: List[dai.MessageGroup] = gather_data_msg.gathered
+        assert isinstance(age_gender_msg_group_list, list)
+        assert all(
+            isinstance(msg, dai.MessageGroup) for msg in age_gender_msg_group_list
+        )
 
-                points_annotation = dai.PointsAnnotation()
-                points_annotation.type = dai.PointsAnnotationType.LINE_LOOP
-                points_annotation.points = dai.VectorPoint2f(points)
-                points_annotation.outlineColor = OUTLINE_COLOR
-                points_annotation.thickness = 2
-                annotation.points.append(points_annotation)
+        assert len(img_detections_extended_msg.detections) == len(
+            age_gender_msg_group_list
+        )
 
-                text_annotation = dai.TextAnnotation()
-                text_annotation.position = points[0]
-                text_annotation.text = (
-                    f"{gender.classes[0]} {int(age.prediction * 100)}"
-                )
-                text_annotation.fontSize = 50
-                text_annotation.textColor = TEXT_COLOR
-                annotation.texts.append(text_annotation)
+        annotations = AnnotationHelper()
 
-            img_annotations.annotations.append(annotation)
-            img_annotations.setTimestamp(descriptions.getTimestamp())
-            img_annotations.setSequenceNum(descriptions.getSequenceNum())
+        for img_detection_extended_msg, age_gender_msg_group in zip(
+            img_detections_extended_msg.detections, age_gender_msg_group_list
+        ):
+            age_msg: Predictions = age_gender_msg_group["0"]
+            assert isinstance(age_msg, Predictions)
+            gender_msg: Classifications = age_gender_msg_group["1"]
+            assert isinstance(gender_msg, Classifications)
 
-            self.output.send(img_annotations)
+            xmin, ymin, xmax, ymax = (
+                img_detection_extended_msg.rotated_rect.getOuterRect()
+            )
+
+            annotations.draw_rectangle(
+                (xmin, ymin),
+                (xmax, ymax),
+            )
+
+            annotations.draw_text(
+                text=f"{gender_msg.classes[0][0]}; {int(age_msg.prediction * 100)}",
+                position=(xmin, ymin),
+            )
+
+        annotations_msg = annotations.build(
+            timestamp=img_detections_extended_msg.getTimestamp(),
+            sequence_num=img_detections_extended_msg.getSequenceNum(),
+        )
+
+        self.out.send(annotations_msg)
