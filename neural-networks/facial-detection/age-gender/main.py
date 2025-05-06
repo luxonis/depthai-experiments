@@ -86,14 +86,9 @@ with dai.Pipeline(device) as pipeline:
         crop_node.out, rec_model_nn_archive
     )
 
-    # recognitions sync
-    gather_rec = pipeline.create(GatherData).build(fps, wait_count_fn=return_one)
-    rec_nn.getOutput(0).link(gather_rec.input_data)  # gender
-    rec_nn.getOutput(1).link(gather_rec.input_reference)  # age
-
     # detections and recognitions sync
     gather_data_node = pipeline.create(GatherData).build(fps)
-    gather_rec.out.link(gather_data_node.input_data)
+    rec_nn.outputs.link(gather_data_node.input_data)
     det_nn.out.link(gather_data_node.input_reference)
 
     # annotation

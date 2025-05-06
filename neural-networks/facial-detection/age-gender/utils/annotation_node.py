@@ -27,28 +27,25 @@ class AnnotationNode(dai.node.HostNode):
         )
         assert isinstance(img_detections_extended_msg, ImgDetectionsExtended)
 
-        age_gender_gather_data_msg_list: List[GatheredData] = gather_data_msg.gathered
-        assert isinstance(age_gender_gather_data_msg_list, list)
+        age_gender_msg_group_list: List[dai.MessageGroup] = gather_data_msg.gathered
+        assert isinstance(age_gender_msg_group_list, list)
         assert all(
-            isinstance(msg, GatheredData) for msg in age_gender_gather_data_msg_list
+            isinstance(msg, dai.MessageGroup) for msg in age_gender_msg_group_list
         )
 
         assert len(img_detections_extended_msg.detections) == len(
-            age_gender_gather_data_msg_list
+            age_gender_msg_group_list
         )
 
         annotations = AnnotationHelper()
 
-        for img_detection_extended_msg, age_gender_gather_data_msg in zip(
-            img_detections_extended_msg.detections, age_gender_gather_data_msg_list
+        for img_detection_extended_msg, age_gender_msg_group in zip(
+            img_detections_extended_msg.detections, age_gender_msg_group_list
         ):
-            gender_msg: Classifications = age_gender_gather_data_msg.reference_data
-            assert isinstance(gender_msg, Classifications)
-            age_msg_list = age_gender_gather_data_msg.gathered
-            assert isinstance(age_msg_list, list)
-            assert len(age_msg_list) == 1
-            age_msg: Predictions = age_msg_list[0]
+            age_msg: Predictions = age_gender_msg_group["0"]
             assert isinstance(age_msg, Predictions)
+            gender_msg: Classifications = age_gender_msg_group["1"]
+            assert isinstance(gender_msg, Classifications)
 
             xmin, ymin, xmax, ymax = (
                 img_detection_extended_msg.rotated_rect.getOuterRect()
