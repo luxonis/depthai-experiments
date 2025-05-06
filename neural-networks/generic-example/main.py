@@ -1,8 +1,8 @@
-from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, ImgFrameOverlay, ApplyColormap
 
 from utils.arguments import initialize_argparser
+from utils.input import create_input_node
 
 _, args = initialize_argparser()
 
@@ -21,22 +21,10 @@ with dai.Pipeline(device) as pipeline:
         )
     )
 
-    if args.media_path:
-        replay = pipeline.create(dai.node.ReplayVideo)
-        replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(
-            dai.ImgFrame.Type.BGR888i
-            if platform == "RVC4"
-            else dai.ImgFrame.Type.BGR888p
-        )
-        replay.setLoop(True)
-        if args.fps_limit:
-            replay.setFps(args.fps_limit)
-            args.fps_limit = None  # only want to set it once
-        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
-
-    input_node = (
-        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
+    input_node = create_input_node(
+        pipeline,
+        platform,
+        args.media_path,
     )
 
     nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
