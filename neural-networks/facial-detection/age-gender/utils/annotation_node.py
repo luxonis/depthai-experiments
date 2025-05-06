@@ -4,7 +4,6 @@ import depthai as dai
 from depthai_nodes import (
     ImgDetectionsExtended,
     Predictions,
-    GatheredData,
     Classifications,
 )
 from depthai_nodes.utils import AnnotationHelper
