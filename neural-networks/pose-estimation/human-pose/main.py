@@ -21,8 +21,6 @@ DET_MODEL: str = "luxonis/yolov6-nano:r2-coco-512x288"
 REC_MODEL: str = args.model
 
 padding = 0.1
-fps = args.fps_limit
-
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -47,15 +45,10 @@ with dai.Pipeline(device) as pipeline:
             else dai.ImgFrame.Type.BGR888p
         )
         replay.setLoop(True)
-        if args.fps_limit:
-            replay.setFps(args.fps_limit)
-            args.fps_limit = None  # only want to set it once
         replay.setSize(
             det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
         )
-    input_node = (
-        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
-    )
+    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
 
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, det_model_nn_archive, fps=args.fps_limit
@@ -98,7 +91,7 @@ with dai.Pipeline(device) as pipeline:
     )  # to get all keypoints so we can draw skeleton. We will filter them later.
 
     # detections and recognitions sync
-    gather_data_node = pipeline.create(GatherData).build(fps)
+    gather_data_node = pipeline.create(GatherData).build(args.fps_limit)
     rec_nn.out.link(gather_data_node.input_data)
     detections_filter.out.link(gather_data_node.input_reference)
 
