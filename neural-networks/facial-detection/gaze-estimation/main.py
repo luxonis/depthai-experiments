@@ -12,12 +12,15 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
 
-FPS = 30
-frame_type = dai.ImgFrame.Type.BGR888i
-if "RVC2" in str(platform):
+if platform == "RVC2":
     raise RuntimeError(
         f"This demo is currently only supported on RVC4, got `{platform}`"
     )
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
+
 
 REQ_WIDTH, REQ_HEIGHT = (
     1280,
@@ -54,12 +57,13 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        if FPS:
-            replay.setFps(FPS)
+        replay.setFps(args.fps_limit)
         replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
         cam = pipeline.create(dai.node.Camera).build()
-        cam = cam.requestOutput(size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=FPS)
+        cam = cam.requestOutput(
+            size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=args.fps_limit
+        )
     input_node = replay.out if args.media_path else cam
 
     # resize to det model input size
