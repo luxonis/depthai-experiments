@@ -30,7 +30,7 @@ class FatigueDetection(dai.node.ThreadedHostNode):
             annotations = AnnotationHelper()
 
             if n_detections >= 1:
-                crop_face = self.crop_face.get().getCvFrame()
+                # crop_face = self.crop_face.get().getCvFrame()
                 landmarks = self.landmarks_nn.get()
                 pitch, eyes_closed = determine_fatigue(frame, landmarks)
 
@@ -48,7 +48,6 @@ class FatigueDetection(dai.node.ThreadedHostNode):
                     self.head_tilted_duration
                 )
 
-                print(percent_tilted, percent_closed_eyes)
                 if percent_tilted >= 0.75:
                     annotations.draw_text(
                         text="Head Tilted!",
