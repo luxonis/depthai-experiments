@@ -1,27 +1,26 @@
 from pathlib import Path
 import depthai as dai
-
 from depthai_nodes.node import ParsingNeuralNetwork, GatherData, ImgDetectionsBridge
 from depthai_nodes.node.utils import generate_script_content
-
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
-
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatformAsString()
 
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
+
 DET_MODEL = "luxonis/yunet:640x480"
 REC_MODEL = "luxonis/age-gender-recognition:62x62"
 
-fps = args.fps_limit
-
-
-def return_one(reference):
-    return 1
-
+REQ_WIDTH, REQ_HEIGHT = (
+    1024,
+    768,
+)  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -36,28 +35,33 @@ with dai.Pipeline(device) as pipeline:
     rec_model_description.platform = platform
     rec_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
 
-    # media/camera source
+    # media/camera input
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(
-            dai.ImgFrame.Type.BGR888i
-            if platform == "RVC4"
-            else dai.ImgFrame.Type.BGR888p
-        )
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
-            args.fps_limit = None  # only want to set it once
-        replay.setSize(
-            det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+        replay.setSize(REQ_WIDTH, REQ_HEIGHT)
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+        cam = cam.requestOutput(
+            size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=args.fps_limit
         )
-    input_node = (
-        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
+    input_node = replay.out if args.media_path else cam
+
+    # resize to det model input size
+    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node.initialConfig.setOutputSize(
+        det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
     )
+    resize_node.initialConfig.setReusePreviousImage(False)
+    resize_node.inputImage.setBlocking(True)
+    input_node.link(resize_node.inputImage)
 
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        input_node, det_model_nn_archive, fps=args.fps_limit
+        resize_node.out, det_model_nn_archive
     )
 
     # detection processing
@@ -87,7 +91,7 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # detections and recognitions sync
-    gather_data_node = pipeline.create(GatherData).build(fps)
+    gather_data_node = pipeline.create(GatherData).build(args.fps_limit)
     rec_nn.outputs.link(gather_data_node.input_data)
     det_nn.out.link(gather_data_node.input_reference)
 
