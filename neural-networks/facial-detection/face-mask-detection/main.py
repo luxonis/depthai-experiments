@@ -7,6 +7,7 @@ _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
 
 # define relevant labels
 LABEL_ENCODING = {
@@ -14,15 +15,15 @@ LABEL_ENCODING = {
     3: "no_mask",
 }
 
-
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    model_description = dai.NNModelDescription(args.model)
-    platform = device.getPlatformAsString()
-    model_description.platform = platform
-    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    # mask detection model
+    det_model_description = dai.NNModelDescription(args.model)
+    det_model_description.platform = platform
+    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
 
+    # media/camera input
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
@@ -32,18 +33,21 @@ with dai.Pipeline(device) as pipeline:
             else dai.ImgFrame.Type.BGR888p
         )
         replay.setLoop(True)
-        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
-
+        replay.setSize(
+            det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+        )
     input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
 
-    nn_with_parser = pipeline.create(ParsingNeuralNetwork).build(
-        input_node, nn_archive, fps=args.fps_limit
+    det_nn = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, det_model_nn_archive, fps=args.fps_limit
     )
 
-    det_process_node = pipeline.create(ImgDetectionsFilter).build(nn_with_parser.out)
+    # filter detections
+    det_process_node = pipeline.create(ImgDetectionsFilter).build(det_nn.out)
     det_process_node.setLabels(list(LABEL_ENCODING.keys()), keep=True)
 
-    visualizer.addTopic("Video", nn_with_parser.passthrough, "images")
+    # visualization
+    visualizer.addTopic("Video", det_nn.passthrough, "images")
     visualizer.addTopic("Detections", det_process_node.out, "detections")
 
     print("Pipeline created.")
