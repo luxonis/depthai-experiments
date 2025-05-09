@@ -186,7 +186,7 @@ def run_experiment(env_exe, experiment_dir, args, max_retries=3):
     """Runs the main.py script for the given timeout duration."""
     timeout = args["timeout"]
     env_vars = args["environment_variables"]
-    time.sleep(10)
+    time.sleep(20)
     virtual_env = args["virtual_display"]
     logger.debug(f"Running {experiment_dir} with timeout {timeout}s...")
 
