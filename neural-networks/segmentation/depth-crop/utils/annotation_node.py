@@ -1,7 +1,7 @@
 import cv2
 import depthai as dai
 import numpy as np
-from depthai_nodes import SegmentationMask
+from depthai_nodes import SegmentationMask, PRIMARY_COLOR
 
 # Custom colormap with 0 mapped to black - better disparity visualization
 JET_CUSTOM = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
@@ -52,7 +52,12 @@ class AnnotationNode(dai.node.HostNode):
         mask_data = cv2.resize(mask_data, (frame.shape[1], frame.shape[0]))
 
         mask = np.zeros_like(frame)
-        mask[mask_data == self.person_class] = [0, 255, 0]
+        color = [
+            int(PRIMARY_COLOR.b * 255),
+            int(PRIMARY_COLOR.g * 255),
+            int(PRIMARY_COLOR.r * 255),
+        ]
+        mask[mask_data == self.person_class] = color
 
         mask_overlay = cv2.addWeighted(frame, 1, mask, 0.5, 0)
 

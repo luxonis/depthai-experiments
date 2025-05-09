@@ -48,7 +48,7 @@ with dai.Pipeline(device) as pipeline:
         left=left.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
         right=right.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
     )
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     if platform == "RVC2":
         stereo.setOutputSize(*CAMERA_RESOLUTION)
