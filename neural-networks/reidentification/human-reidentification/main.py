@@ -12,29 +12,20 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
 
-if "RVC2" in str(platform):
-    raise RuntimeError(
-        f"This demo is currently only supported on RVC4, got `{platform}`"
-    )
-
-frame_type = (
-    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
-)
-
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    # Detection Model NN Archive
+    # detection model
     det_model_description = dai.NNModelDescription(args.det_model)
     det_model_description.platform = platform
     det_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
 
-    # Recognition Model NN Archive
+    # recognition model
     rec_model_description = dai.NNModelDescription(args.rec_model)
     rec_model_description.platform = platform
     rec_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
 
-    # Video/Camera Input Node
+    # media/camera source
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
@@ -44,54 +35,37 @@ with dai.Pipeline(device) as pipeline:
             else dai.ImgFrame.Type.BGR888p
         )
         replay.setLoop(True)
-        if args.fps_limit:
-            replay.setFps(args.fps_limit)
-            args.fps_limit = None  # only want to set it once
         replay.setSize(det_nn_archive.getInputWidth(), det_nn_archive.getInputHeight())
     else:
         cam = pipeline.create(dai.node.Camera).build()
-    input_node = replay.out if args.media_path else cam
+    input_node = replay if args.media_path else cam
 
-    # Detection Model Node
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, det_nn_archive, fps=args.fps_limit
     )
 
-    # Detections Processing Node
-    det_process_node = pipeline.create(ProcessDetections).build(det_nn.out)
-    det_process_node.set_target_size(
+    # detection processing
+    det_bridge = pipeline.create(ImgDetectionsBridge).build(
+        det_nn.out
+    )  # TODO: remove once we have it working with ImgDetectionsExtended
+    script_node = pipeline.create(dai.node.Script)
+    det_bridge.out.link(script_node.inputs["det_in"])
+    det_nn.passthrough.link(script_node.inputs["preview"])
+    script_content = generate_script_content(
+        resize_width=rec_nn_archive.getInputWidth(),
+        resize_height=rec_nn_archive.getInputHeight(),
+    )
+    script_node.setScript(script_content)
+
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setOutputSize(
         rec_nn_archive.getInputWidth(), rec_nn_archive.getInputHeight()
     )
-
-    # Crop Configuration Sender Node
-    config_sender_node = pipeline.create(dai.node.Script)
-    config_sender_node.setScriptPath(
-        str(Path(__file__).parent / "utils/config_sender_script.py")
-    )
-    config_sender_node.inputs["frame_input"].setMaxSize(30)
-    config_sender_node.inputs["config_input"].setMaxSize(30)
-    config_sender_node.inputs["num_configs_input"].setMaxSize(30)
-
-    det_nn.passthrough.link(config_sender_node.inputs["frame_input"])
-    det_process_node.config_output.link(config_sender_node.inputs["config_input"])
-    det_process_node.num_configs_output.link(
-        config_sender_node.inputs["num_configs_input"]
-    )
-
-    # Crop Node
-    crop_node = pipeline.create(dai.node.ImageManipV2)
-    crop_node.initialConfig.setReusePreviousImage(False)
-    crop_node.inputConfig.setReusePreviousMessage(False)
-    crop_node.inputImage.setReusePreviousMessage(False)
-    crop_node.inputConfig.setMaxSize(30)
-    crop_node.inputImage.setMaxSize(30)
-    crop_node.setNumFramesPool(30)
     crop_node.inputConfig.setWaitForMessage(True)
 
-    config_sender_node.outputs["output_config"].link(crop_node.inputConfig)
-    config_sender_node.outputs["output_frame"].link(crop_node.inputImage)
+    script_node.outputs["manip_cfg"].link(crop_node.inputConfig)
+    script_node.outputs["manip_img"].link(crop_node.inputImage)
 
-    # Recognition Model Node
     rec_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, rec_nn_archive
     )
