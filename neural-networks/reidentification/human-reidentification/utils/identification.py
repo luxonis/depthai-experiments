@@ -46,7 +46,6 @@ class IdentificationNode(dai.node.HostNode):
     def build(
         self, gather_data_msg, csim: float = 0.5, label_basename: str = "person"
     ) -> "IdentificationNode":
-
         self.link_args(gather_data_msg)
         self.setCosSimThreshold(csim)
         self.setLabelBasename(label_basename)
