@@ -53,6 +53,8 @@ with dai.Pipeline(device) as pipeline:
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, det_model_nn_archive, fps=args.fps_limit
     )
+    det_nn.input.setBlocking(False)
+    det_nn.input.setMaxSize(1)
 
     # detection processing
     valid_labels = [
@@ -85,6 +87,8 @@ with dai.Pipeline(device) as pipeline:
     rec_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, rec_model_nn_archive
     )
+    rec_nn.input.setBlocking(False)
+    rec_nn.input.setMaxSize(1)
     parser: HRNetParser = rec_nn.getParser(0)
     parser.setScoreThreshold(
         0.0
