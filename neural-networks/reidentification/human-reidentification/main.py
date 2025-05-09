@@ -1,10 +1,10 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, GatherData, ImgDetectionsBridge
+from depthai_nodes.node.utils import generate_script_content
 
 from utils.arguments import initialize_argparser
-from utils.process import ProcessDetections
-from utils.sync import AnnotationSyncNode
+from utils.identification import IdentificationNode
 
 _, args = initialize_argparser()
 
@@ -70,16 +70,19 @@ with dai.Pipeline(device) as pipeline:
         crop_node.out, rec_nn_archive
     )
 
-    # Annotation Sync Node
-    annotation_sync_node = pipeline.create(
-        AnnotationSyncNode, csim=args.cos_similarity_threshold
+    # detections and recognitions sync
+    gather_data_node = pipeline.create(GatherData).build(args.fps_limit)
+    rec_nn.out.link(gather_data_node.input_data)
+    det_nn.out.link(gather_data_node.input_reference)
+
+    # idenfication
+    id_node = pipeline.create(IdentificationNode).build(
+        gather_data_node.out, csim=args.cos_similarity_threshold
     )
-    det_nn.out.link(annotation_sync_node.input_detections)
-    rec_nn.out.link(annotation_sync_node.input_recognitions)
 
     # Visualizer
     visualizer.addTopic("Video", det_nn.passthrough, "images")
-    visualizer.addTopic("Objects", annotation_sync_node.output_detections, "images")
+    visualizer.addTopic("Objects", id_node.out, "images")
 
     print("Pipeline created.")
 
