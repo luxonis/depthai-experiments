@@ -1,56 +1,49 @@
 import depthai as dai
-import argparse
+import numpy as np
 
-from host_box_measurement import BoxMeasurement
+from utils.host_box_measurement import BoxMeasurement
+from utils.arguments import initialize_argparser
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-maxd",
-    "--max-dist",
-    type=float,
-    default=2,
-    help="maximum distance between camera and object in space in meters",
-)
-parser.add_argument(
-    "-mins",
-    "--min-box-size",
-    type=float,
-    default=0.003,
-    help="minimum box size in cubic meters",
-)
-args = parser.parse_args()
+_, args = initialize_argparser()
 
-# Higher resolution for example THE_720_P makes better results but drastically lowers FPS
-RESOLUTION = dai.MonoCameraProperties.SensorResolution.THE_400_P
+IMG_SHAPE = (
+    640,
+    400,
+)  # higher resolution is possible, but it will slow down fps drastically
 
-device = dai.Device()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
+    platform = device.getPlatform()
     calib_data = device.readCalibration()
     device.setIrLaserDotProjectorIntensity(1)
 
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setIspScale(1, 3)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-    cam.initialControl.setManualFocus(130)
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cam_out = cam.requestOutput(
+        IMG_SHAPE,
+        dai.ImgFrame.Type.RGB888i,
+    )
 
-    left = pipeline.create(dai.node.MonoCamera)
-    left.setResolution(RESOLUTION)
-    left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+    left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
+    right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-    right = pipeline.create(dai.node.MonoCamera)
-    right.setResolution(RESOLUTION)
-    right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+    left_output = left.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.NV12)
+    right_output = right.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.NV12)
 
-    stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
+    stereo = pipeline.create(dai.node.StereoDepth).build(
+        left=left_output,
+        right=right_output,
+        presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
+    )
     stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
     stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(False)
     stereo.setSubpixel(True)
     stereo.setSubpixelFractionalBits(3)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+    stereo.setOutputSize(IMG_SHAPE[0], IMG_SHAPE[1])
 
     """ In-place post-processing configuration for a stereo depth node
     The best combo of filters is application specific. Hard to say there is a one size fits all.
@@ -65,23 +58,43 @@ with dai.Pipeline(device) as pipeline:
     stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 15000
     stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
 
-    width, height = cam.getIspSize()
+    width, height = IMG_SHAPE
     intrinsics = calib_data.getCameraIntrinsics(
         dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
     )
+    dist_coeffs = np.array(
+        calib_data.getDistortionCoefficients(dai.CameraBoardSocket.CAM_A)
+    )
+
+    cam_out.link(stereo.inputAlignTo)
+    rgbd = pipeline.create(dai.node.RGBD).build()
+    stereo.depth.link(rgbd.inDepth)
+    cam_out.link(rgbd.inColor)
 
     box_measurement = pipeline.create(BoxMeasurement).build(
-        color=cam.isp,
-        depth=stereo.depth,
+        color=cam_out,
+        pcl=rgbd.pcl,
         cam_intrinsics=intrinsics,
-        shape=(width, height),
+        dist_coeffs=dist_coeffs,
         max_dist=args.max_dist,
         min_box_size=args.min_box_size,
     )
-    box_measurement.inputs["color"].setBlocking(False)
-    box_measurement.inputs["color"].setMaxSize(4)
-    box_measurement.inputs["depth"].setBlocking(False)
-    box_measurement.inputs["depth"].setMaxSize(4)
+    box_measurement.color_input.setBlocking(False)
+    box_measurement.color_input.setMaxSize(4)
+    box_measurement.pcl_input.setBlocking(False)
+    box_measurement.pcl_input.setMaxSize(4)
+
+    visualizer.addTopic("Main Stream", box_measurement.passthrough, "images")
+    visualizer.addTopic("Box Detection", box_measurement.annotation_output, "images")
+    visualizer.addTopic("Dimensions", box_measurement.measurements_output, "images")
+    visualizer.addTopic("Point Cloud", rgbd.pcl, "pcl")
 
     print("Pipeline created.")
-    pipeline.run()
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break
