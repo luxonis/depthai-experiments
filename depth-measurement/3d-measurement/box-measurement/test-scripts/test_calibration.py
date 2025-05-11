@@ -6,7 +6,7 @@ import sys
 root_dir = os.path.dirname(os.path.abspath(os.path.join(__file__, "..")))
 sys.path.append(root_dir)
 
-from utils.box_estimator import BoxEstimator  # noqa: E402
+from utils.box_estimator_o3d import BoxEstimatorO3d  # noqa: E402
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,7 +26,7 @@ if not os.path.exists(PATH_BOX):
 calib_pcl = o3d.io.read_point_cloud(PATH_CALIB)
 box_pcl = o3d.io.read_point_cloud(PATH_BOX)
 
-test_box_estimator = BoxEstimator(1.5)
+test_box_estimator = BoxEstimatorO3d(1.5)
 
 test_box_estimator.calibrate(calib_pcl)
 dimensions = test_box_estimator.process_pcl(box_pcl)
