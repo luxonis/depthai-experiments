@@ -13,7 +13,7 @@ if not device.setIrLaserDotProjectorIntensity(1):
     )
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    calib_data = device.readCalibration()
+    platform = pipeline.getDefaultDevice().getPlatform()
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
@@ -26,25 +26,11 @@ with dai.Pipeline(device) as pipeline:
         right=right_out,
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
-    stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
-    stereo.setLeftRightCheck(True)
-    stereo.setExtendedDisparity(False)
-    stereo.setSubpixel(True)
-    stereo.setSubpixelFractionalBits(3)
+
     stereo.setOutputSize(IMG_SHAPE[0], IMG_SHAPE[1])
 
-    """ In-place post-processing configuration for a stereo depth node
-    The best combo of filters is application specific. Hard to say there is a one size fits all.
-    They also are not free. Even though they happen on device, you pay a penalty in fps. """
-    stereo.initialConfig.postProcessing.speckleFilter.enable = False
-    stereo.initialConfig.postProcessing.speckleFilter.speckleRange = 50
-    stereo.initialConfig.postProcessing.temporalFilter.enable = True
-    stereo.initialConfig.postProcessing.spatialFilter.enable = True
-    stereo.initialConfig.postProcessing.spatialFilter.holeFillingRadius = 2
-    stereo.initialConfig.postProcessing.spatialFilter.numIterations = 1
-    stereo.initialConfig.postProcessing.thresholdFilter.minRange = 400
-    stereo.initialConfig.postProcessing.thresholdFilter.maxRange = 200000
-    stereo.initialConfig.postProcessing.decimationFilter.decimationFactor = 1
+    if platform == dai.Platform.RVC4:
+        align = pipeline.create(dai.node.ImageAlign)
 
     rgbd = pipeline.create(dai.node.RGBD).build()
     stereo.depth.link(rgbd.inDepth)
@@ -55,11 +41,12 @@ with dai.Pipeline(device) as pipeline:
             IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i
         )
         mono_out_from_right.link(rgbd.inColor)
-        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_C)
+        if platform == dai.Platform.RVC4:
+            stereo.depth.link(align.input)
+            stereo.rectifiedRight.link(align.inputAlignTo)
+        else:
+            stereo.setDepthAlign(dai.CameraBoardSocket.CAM_C)
 
-        intrinsics = calib_data.getCameraIntrinsics(
-            dai.CameraBoardSocket.CAM_C, dai.Size2f(width, height)
-        )
     else:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
         cam_out = cam.requestOutput(
@@ -67,13 +54,15 @@ with dai.Pipeline(device) as pipeline:
             dai.ImgFrame.Type.RGB888i,
         )
         cam_out.link(rgbd.inColor)
-        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+        if platform == dai.Platform.RVC4:
+            stereo.depth.link(align.input)
+            cam_out.link(align.inputAlignTo)
+        else:
+            stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-        intrinsics = calib_data.getCameraIntrinsics(
-            dai.CameraBoardSocket.CAM_A, dai.Size2f(width, height)
-        )
-
-    visualizer.addTopic("preview", stereo.rectifiedRight if args.mono else cam_out)
+    visualizer.addTopic(
+        "preview", align.outputAligned if platform == dai.Platform.RVC4 else cam_out
+    )
     visualizer.addTopic("pointcloud", rgbd.pcl)
 
     print("Pipeline created.")
