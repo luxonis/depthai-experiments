@@ -8,21 +8,21 @@ _, args = initialize_argparser()
 
 model_reference = "luxonis/yolo-p:bdd100k-320x320"
 
-if args.fps_limit and args.media_path:
-    args.fps_limit = None
-    print(
-        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
-    )
-
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+
+if args.fps_limit is None:
+    args.fps_limit = 10 if platform == "RVC2" else 20
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     model_description = dai.NNModelDescription(model_reference)
 
-    platform = device.getPlatform().name
     print(f"Platform: {platform}")
 
     model_description.platform = platform
@@ -37,7 +37,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        replay.setFps(10 if platform == "RVC2" else 20)
+        replay.setFps(args.fps_limit)
 
     else:
         cam = pipeline.create(dai.node.Camera).build()

@@ -15,12 +15,18 @@ valid_labels = [56]  # chair
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+
+if args.fps_limit is None:
+    args.fps_limit = 12 if platform == "RVC2" else 30
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     detection_model_description = dai.NNModelDescription(detection_model_slug)
-    platform = device.getPlatform().name
     print(f"Platform: {platform}")
     detection_model_description.platform = platform
     detection_nn_archive = dai.NNArchive(
@@ -44,7 +50,6 @@ with dai.Pipeline(device) as pipeline:
     )
 
     if args.media_path:
-        args.fps_limit = 12 if platform == "RVC2" else 20
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
