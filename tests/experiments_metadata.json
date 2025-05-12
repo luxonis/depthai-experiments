@@ -149,6 +149,10 @@
             "platform": [
                 "rvc4"
             ]
+        },
+        "custom-frontend/raw-stream": {
+            "reason": "FileNoFoundError: Failed to start the HTTP server. File index.html not found in the /tmp/depthai-experiments/custom-frontend/raw-stream/frontend/dist folder",
+            "platform": "all"
         }
     },
     "known_warnings": [
