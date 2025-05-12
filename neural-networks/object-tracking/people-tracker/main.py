@@ -16,6 +16,12 @@ with dai.Pipeline(device) as pipeline:
 
     platform = device.getPlatformAsString()
 
+    if args.fps_limit is None:
+        args.fps_limit = 12 if platform == "RVC2" else 30
+        print(
+            f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+        )
+
     model_description = dai.NNModelDescription(
         "luxonis/scrfd-person-detection:25g-640x640", platform=platform
     )
@@ -32,7 +38,6 @@ with dai.Pipeline(device) as pipeline:
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
-            args.fps_limit = None  # only want to set it once
 
     input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
 
