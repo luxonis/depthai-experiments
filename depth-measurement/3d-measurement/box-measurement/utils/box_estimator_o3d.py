@@ -3,7 +3,6 @@ import open3d as o3d
 import cv2
 import random
 import depthai as dai
-from .img_annotation_helper import AnnotationHelper
 
 DISTANCE_THRESHOLD_PLANE = 0.02  # Defines the maximum distance a point can have
 # to an estimated plane to be considered an inlier
