@@ -1,9 +1,11 @@
 import numpy as np
-import cv2
 import depthai as dai
 from typing import List
 
-from kalman_filter import KalmanFilter
+from .kalman_filter import KalmanFilter
+
+from depthai_nodes.utils import AnnotationHelper
+from depthai_nodes import PRIMARY_COLOR, SECONDARY_COLOR
 
 
 class KalmanFilterNode(dai.node.HostNode):
@@ -20,15 +22,18 @@ class KalmanFilterNode(dai.node.HostNode):
         label_map: List[str],
     ) -> "KalmanFilterNode":
         self.link_args(rgb, tracker_out)
-        self.sendProcessingToPipeline(True)
         self._baseline = baseline
         self._focal_length = focal_length
         self._label_map = label_map
         return self
 
-    def process(self, img_frame: dai.ImgFrame, tracklets: dai.Tracklets) -> None:
+    def process(self, img_frame: dai.Buffer, tracklets: dai.Buffer) -> None:
+        assert isinstance(img_frame, dai.ImgFrame)
+        assert isinstance(tracklets, dai.Tracklets)
         frame: np.ndarray = img_frame.getCvFrame()
         current_time = tracklets.getTimestamp()
+
+        annotation_helper = AnnotationHelper()
 
         for t in tracklets.tracklets:
             roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
@@ -86,100 +91,58 @@ class KalmanFilterNode(dai.node.HostNode):
                 vec_bbox = self._kalman_filters[t.id]["bbox"].x
                 vec_space = self._kalman_filters[t.id]["space"].x
 
-                x1_filter = int(vec_bbox[0] - vec_bbox[2] / 2)
-                x2_filter = int(vec_bbox[0] + vec_bbox[2] / 2)
-                y1_filter = int(vec_bbox[1] - vec_bbox[3] / 2)
-                y2_filter = int(vec_bbox[1] + vec_bbox[3] / 2)
+                x1_filter = (vec_bbox[0] - vec_bbox[2] / 2) / img_frame.getWidth()
+                x2_filter = (vec_bbox[0] + vec_bbox[2] / 2) / img_frame.getWidth()
+                y1_filter = (vec_bbox[1] - vec_bbox[3] / 2) / img_frame.getHeight()
+                y2_filter = (vec_bbox[1] + vec_bbox[3] / 2) / img_frame.getHeight()
 
-                cv2.rectangle(
-                    frame,
-                    (x1_filter, y1_filter),
-                    (x2_filter, y2_filter),
-                    (0, 0, 255),
-                    2,
+                annotation_helper.draw_rectangle(
+                    top_left=(x1_filter, y1_filter),
+                    bottom_right=(x2_filter, y2_filter),
+                    thickness=2,
+                    outline_color=PRIMARY_COLOR,
                 )
-                cv2.putText(
-                    frame,
-                    f"X: {int(vec_space[0])} mm",
-                    (x1 + 10, y1 + 110),
-                    cv2.FONT_HERSHEY_TRIPLEX,
-                    0.5,
-                    (0, 0, 255),
+                annotation_helper.draw_text(
+                    text=f"X: {int(vec_space[0])} mm, Y: {int(vec_space[1])} mm, Z: {int(vec_space[2])} mm",
+                    position=(
+                        x1 / img_frame.getWidth() + 0.02,
+                        y1 / img_frame.getHeight() + 0.05,
+                    ),
+                    size=10,
                 )
-                cv2.putText(
-                    frame,
-                    f"Y: {int(vec_space[1])} mm",
-                    (x1 + 10, y1 + 125),
-                    cv2.FONT_HERSHEY_TRIPLEX,
-                    0.5,
-                    (0, 0, 255),
-                )
-                cv2.putText(
-                    frame,
-                    f"Z: {int(vec_space[2])} mm",
-                    (x1 + 10, y1 + 140),
-                    cv2.FONT_HERSHEY_TRIPLEX,
-                    0.5,
-                    (0, 0, 255),
-                )
-
             try:
                 label = self._label_map[t.label]
             except Exception:
                 label = t.label
 
-            cv2.putText(
-                frame,
-                str(label),
-                (x1 + 10, y1 + 20),
-                cv2.FONT_HERSHEY_TRIPLEX,
-                0.5,
-                255,
-            )
-            cv2.putText(
-                frame,
-                f"ID: {[t.id]}",
-                (x1 + 10, y1 + 35),
-                cv2.FONT_HERSHEY_TRIPLEX,
-                0.5,
-                255,
-            )
-            cv2.putText(
-                frame,
-                t.status.name,
-                (x1 + 10, y1 + 50),
-                cv2.FONT_HERSHEY_TRIPLEX,
-                0.5,
-                255,
-            )
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0))
-
-            cv2.putText(
-                frame,
-                f"X: {int(x_space)} mm",
-                (x1 + 10, y1 + 65),
-                cv2.FONT_HERSHEY_TRIPLEX,
-                0.5,
-                255,
-            )
-            cv2.putText(
-                frame,
-                f"Y: {int(y_space)} mm",
-                (x1 + 10, y1 + 80),
-                cv2.FONT_HERSHEY_TRIPLEX,
-                0.5,
-                255,
-            )
-            cv2.putText(
-                frame,
-                f"Z: {int(z_space)} mm",
-                (x1 + 10, y1 + 95),
-                cv2.FONT_HERSHEY_TRIPLEX,
-                0.5,
-                255,
+            annotation_helper.draw_text(
+                text=f"ID: {t.id}, {label}, {t.status.name}",
+                position=(
+                    x1 / img_frame.getWidth() + 0.02,
+                    y1 / img_frame.getHeight() + 0.15,
+                ),
+                size=10,
+                color=SECONDARY_COLOR,
             )
 
-        cv2.imshow("tracker", frame)
+            annotation_helper.draw_rectangle(
+                top_left=(x1 / img_frame.getWidth(), y1 / img_frame.getHeight()),
+                bottom_right=(x2 / img_frame.getWidth(), y2 / img_frame.getHeight()),
+                thickness=2,
+                outline_color=SECONDARY_COLOR,
+            )
 
-        if cv2.waitKey(1) == ord("q"):
-            self.stopPipeline()
+            annotation_helper.draw_text(
+                text=f"X: {int(x_space)} mm, Y: {int(y_space)} mm, Z: {int(z_space)} mm",
+                position=(
+                    x1 / img_frame.getWidth() + 0.02,
+                    y1 / img_frame.getHeight() + 0.1,
+                ),
+                size=10,
+                color=SECONDARY_COLOR,
+            )
+
+        annotations = annotation_helper.build(
+            timestamp=tracklets.getTimestamp(), sequence_num=tracklets.getSequenceNum()
+        )
+        self.out.send(annotations)
