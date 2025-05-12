@@ -27,8 +27,6 @@ with dai.Pipeline(device) as pipeline:
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
 
-    stereo.setOutputSize(IMG_SHAPE[0], IMG_SHAPE[1])
-
     if platform == dai.Platform.RVC4:
         align = pipeline.create(dai.node.ImageAlign)
 
@@ -36,6 +34,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.depth.link(rgbd.inDepth)
 
     width, height = IMG_SHAPE
+    main_out = None
     if args.mono:
         mono_out_from_right = right.requestOutput(
             IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i
@@ -45,7 +44,8 @@ with dai.Pipeline(device) as pipeline:
             stereo.depth.link(align.input)
             stereo.rectifiedRight.link(align.inputAlignTo)
         else:
-            stereo.setDepthAlign(dai.CameraBoardSocket.CAM_C)
+            right_out.link(stereo.inputAlignTo)
+        main_out = mono_out_from_right
 
     else:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -57,12 +57,12 @@ with dai.Pipeline(device) as pipeline:
         if platform == dai.Platform.RVC4:
             stereo.depth.link(align.input)
             cam_out.link(align.inputAlignTo)
+            main_out = align.outputAligned
         else:
-            stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+            cam_out.link(stereo.inputAlignTo)
+            main_out = cam_out
 
-    visualizer.addTopic(
-        "preview", align.outputAligned if platform == dai.Platform.RVC4 else cam_out
-    )
+    visualizer.addTopic("preview", main_out)
     visualizer.addTopic("pointcloud", rgbd.pcl)
 
     print("Pipeline created.")
