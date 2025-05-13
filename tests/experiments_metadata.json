@@ -134,7 +134,7 @@
                 "rvc4"
             ]
         },
-        "stream-manipulation/rtsp-streaming": {
+        "streaming/rtsp-streaming": {
             "reason": "PyCairo installation issues",
             "platform": "all"
         },
@@ -185,10 +185,10 @@
         "neural-networks/pose-estimation/animal-pose",
         "neural-networks/reidentification/human-reidentification",
         "neural-networks/segmentation/yolov8-instance-segmentation",
-        "stream-manipulation/mjpeg-streaming",
-        "stream-manipulation/on-device-encoding",
-        "stream-manipulation/rtsp-streaming",
-        "stream-manipulation/webrtc-streaming",
+        "streaming/mjpeg-streaming",
+        "streaming/on-device-encoding",
+        "streaming/rtsp-streaming",
+        "streaming/webrtc-streaming",
         "tutorials/camera-demo",
         "tutorials/custom-models",
         "tutorials/display-detections",
