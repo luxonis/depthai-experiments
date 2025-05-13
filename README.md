@@ -49,7 +49,7 @@ Comprehensive collection of AI model usage, including object detection, classifi
 
 ![Stream Manipulation Demo](stream-manipulation/poe-mqtt/media/mqtt_client.gif)
 
-Examples showing different ways to stream data from DepthAI devices, including MQTT, TCP, RTSP, and WebRTC implementations.
+Examples showing different ways to stream data from DepthAI devices. This includes MJPEG, H.264, H.265, MQTT, TCP, RTSP, and WebRTC implementations.
 
 ### [📚 Tutorials](tutorials/)
 
