@@ -1,10 +1,9 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork, GatherData
 from utils.arguments import initialize_argparser
 from utils.process_keypoints import LandmarksProcessing
 from utils.node_creators import create_crop_node
-from utils.host_sync import ImageLandmarkSync
 from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
@@ -128,25 +127,17 @@ with dai.Pipeline(device) as pipeline:
     gaze_estimation_node.inputs["right_eye_image"].setMaxSize(5)
     gaze_estimation_node.inputs["head_pose_angles_yaw_pitch_roll"].setMaxSize(5)
 
-    # sync
-    host_sync_node = pipeline.create(ImageLandmarkSync)
-    gaze_estimation_node.out.link(host_sync_node.gaze_input)
-    det_nn.out.link(host_sync_node.detections_input)
-    det_nn.passthrough.link(host_sync_node.frame_input)
-    host_sync_node.frame_input.setBlocking(True)
-    host_sync_node.gaze_input.setBlocking(True)
-    host_sync_node.detections_input.setBlocking(True)
-    host_sync_node.frame_input.setMaxSize(5)
-    host_sync_node.gaze_input.setMaxSize(5)
-    host_sync_node.detections_input.setMaxSize(5)
+    # detections and gaze estimations sync
+    gather_data_node = pipeline.create(GatherData).build(args.fps_limit)
+    gaze_estimation_node.out.link(gather_data_node.input_data)
+    det_nn.out.link(gather_data_node.input_reference)
 
     # annotation
-    annotation_node = pipeline.create(AnnotationNode)
-    host_sync_node.out.link(annotation_node.input)
+    annotation_node = pipeline.create(AnnotationNode).build(gather_data_node.out)
 
     # visualization
-    visualizer.addTopic("annotation", annotation_node.output)
-    visualizer.addTopic("frame", host_sync_node.frame_out)
+    visualizer.addTopic("Video", det_nn.passthrough, "images")
+    visualizer.addTopic("Gaze", annotation_node.out, "images")
 
     print("Pipeline created.")
     pipeline.start()
