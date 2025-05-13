@@ -45,9 +45,9 @@ Demonstrations of depth perception capabilities, including spatial calculations,
 
 Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
 
-### [🔄 Stream Manipulation](stream-manipulation/)
+### [🔄 Stream Manipulation](streaming/)
 
-![Stream Manipulation Demo](stream-manipulation/poe-mqtt/media/mqtt_client.gif)
+![Stream Manipulation Demo](streaming/poe-mqtt/media/mqtt_client.gif)
 
 Examples showing different ways to stream data from DepthAI devices. This includes MJPEG, H.264, H.265, MQTT, TCP, RTSP, and WebRTC.
 
