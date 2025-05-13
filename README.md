@@ -25,7 +25,7 @@ Examples demonstrating various camera control features like focus, exposure, whi
 
 ![Connectivity Demo](connectivity/hub-snaps-events/media/snap.png)
 
-Shows how to integrate DepthAI with different frameworks and tools like [Hub](https://hub.luxonis.com/), [Foxglove](https://docs.foxglove.dev/docs/introduction/) or [Rerun](https://rerun.io/docs/getting-started/what-is-rerun).
+Shows how to integrate DepthAI with [Luxonis Hub](https://hub.luxonis.com/), [Foxglove](https://docs.foxglove.dev/docs/introduction/), [Rerun](https://rerun.io/docs/getting-started/what-is-rerun) and [Roboflow](https://roboflow.com).
 
 ### [🖥️ Custom Frontend](custom-frontend/)
 
