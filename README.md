@@ -21,9 +21,9 @@ Ready-to-use applications built with DepthAI, demonstrating real-world use cases
 
 Examples demonstrating various camera control features like focus, exposure, white balance, and other camera parameters.
 
-### [🔌 Connectivity](connectivity/)
+### [🔌 Integrations](integrations/)
 
-![Connectivity Demo](connectivity/hub-snaps-events/media/snap.png)
+![Integrations Demo](integrations/hub-snaps-events/media/snap.png)
 
 Shows how to integrate DepthAI with [Luxonis Hub](https://hub.luxonis.com/), [Foxglove](https://docs.foxglove.dev/docs/introduction/), [Rerun](https://rerun.io/docs/getting-started/what-is-rerun) and [Roboflow](https://roboflow.com).
 
