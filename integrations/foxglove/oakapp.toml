@@ -1,4 +1,4 @@
-identifier = "com.luxonis.connectivity.foxglove"
+identifier = "com.luxonis.integrations.foxglove"
 app_version = "1.0.0"
 
 prepare_container = [
