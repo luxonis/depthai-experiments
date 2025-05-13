@@ -1,11 +1,11 @@
 from pathlib import Path
 import depthai as dai
 
-from depthai_nodes.node import ParsingNeuralNetwork, ImgDetectionsBridge
+from depthai_nodes.node import ParsingNeuralNetwork, ImgDetectionsBridge, GatherData
 from depthai_nodes.node.utils import generate_script_content
 
 from utils.arguments import initialize_argparser
-from utils.host_fatigue_detection import FatigueDetection
+from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
@@ -89,16 +89,18 @@ with dai.Pipeline(device) as pipeline:
         crop_node.out, REC_MODEL
     )
 
+    # detections and gaze estimations sync
+    gather_data_node = pipeline.create(GatherData).build(args.fps_limit)
+    landmark_nn.out.link(gather_data_node.input_data)
+    det_nn.out.link(gather_data_node.input_reference)
+
     # annotation
-    fatigue_detection = pipeline.create(FatigueDetection)
-    det_nn.out.link(fatigue_detection.face_nn)
-    det_nn.passthrough.link(fatigue_detection.preview)
-    landmark_nn.out.link(fatigue_detection.landmarks_nn)
-    landmark_nn.passthrough.link(fatigue_detection.crop_face)
+    annotation_node = pipeline.create(AnnotationNode).build(gather_data_node.out)
 
     # visualization
     visualizer.addTopic("Video", det_nn.passthrough, "images")
-    visualizer.addTopic("Fatigue", fatigue_detection.out, "images")
+    visualizer.addTopic("Detections", det_nn.out, "images")
+    visualizer.addTopic("Fatique", annotation_node.out, "images")
 
     print("Pipeline created.")
     pipeline.start()
