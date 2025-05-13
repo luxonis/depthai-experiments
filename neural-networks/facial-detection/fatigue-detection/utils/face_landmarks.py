@@ -1,3 +1,4 @@
+from typing import Tuple
 import cv2
 import math
 import numpy as np
@@ -5,9 +6,9 @@ from depthai_nodes import Keypoints
 
 
 def determine_fatigue(
-    frame: np.ndarray, face_keypoints: Keypoints, pitch_angle: int = 20
+    shape: Tuple[int, int], face_keypoints: Keypoints, pitch_angle: int = 20
 ):
-    h, w = frame.shape[:2]
+    h, w = shape  # frame.shape[:2]
     face_points_2d = np.array(
         [[int(kp.x * w), int(kp.y * h)] for kp in face_keypoints.keypoints]
     )
@@ -22,7 +23,7 @@ def determine_fatigue(
     image_points = face_points_2d[pose_indices].astype("double")
 
     success, rotation_vector, translation_vector, camera_matrix, dist_coeffs = (
-        get_pose_estimation(frame.shape, image_points)
+        get_pose_estimation(shape, image_points)
     )
 
     head_tilted = False
@@ -46,7 +47,7 @@ def calc_eye_aspect_ratio(eye_points):
     return (A + B) / (2.0 * C)
 
 
-def get_pose_estimation(img_shape, image_points):
+def get_pose_estimation(shape, image_points):
     # 3D model points corresponding to the landmarks above.
     model_points = np.array(
         [
@@ -60,8 +61,8 @@ def get_pose_estimation(img_shape, image_points):
         dtype="double",
     )
 
-    focal_length = img_shape[1]
-    center = (img_shape[1] / 2, img_shape[0] / 2)
+    focal_length = shape[1]
+    center = (shape[1] / 2, shape[0] / 2)
     camera_matrix = np.array(
         [[focal_length, 0, center[0]], [0, focal_length, center[1]], [0, 0, 1]],
         dtype="double",
