@@ -8,7 +8,6 @@ from utils.face_landmarks import determine_fatigue
 
 
 class AnnotationNode(dai.node.HostNode):
-
     def __init__(self) -> None:
         super().__init__()
         self._closed_eye_duration = deque(maxlen=30)

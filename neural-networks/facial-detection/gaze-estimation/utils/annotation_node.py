@@ -6,7 +6,6 @@ from depthai_nodes.utils import AnnotationHelper
 
 
 class AnnotationNode(dai.node.HostNode):
-
     def __init__(self) -> None:
         super().__init__()
 
