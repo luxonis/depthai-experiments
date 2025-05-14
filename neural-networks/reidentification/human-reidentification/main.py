@@ -28,6 +28,11 @@ else:
 if args.cos_similarity_threshold:
     CSIM = args.cos_similarity_threshold  # override default
 
+REQ_WIDTH, REQ_HEIGHT = (
+    960,
+    960,
+)  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
+
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -48,13 +53,28 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay.setSize(det_nn_archive.getInputWidth(), det_nn_archive.getInputHeight())
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+        replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
         cam = pipeline.create(dai.node.Camera).build()
-    input_node = replay if args.media_path else cam
+        cam = cam.requestOutput(
+            size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=args.fps_limit
+        )
+    input_node = replay.out if args.media_path else cam
+
+    # resize to det model input size
+    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node.setMaxOutputFrameSize(REQ_WIDTH * REQ_HEIGHT * 3)
+    resize_node.initialConfig.setOutputSize(
+        det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+    )
+    resize_node.initialConfig.setReusePreviousImage(False)
+    resize_node.inputImage.setBlocking(True)
+    input_node.link(resize_node.inputImage)
 
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        input_node, det_nn_archive, fps=args.fps_limit
+        resize_node.out, det_model_nn_archive
     )
 
     # detection processing
@@ -63,7 +83,7 @@ with dai.Pipeline(device) as pipeline:
     )  # TODO: remove once we have it working with ImgDetectionsExtended
     script_node = pipeline.create(dai.node.Script)
     det_bridge.out.link(script_node.inputs["det_in"])
-    det_nn.passthrough.link(script_node.inputs["preview"])
+    input_node.link(script_node.inputs["preview"])
     script_content = generate_script_content(
         resize_width=rec_nn_archive.getInputWidth(),
         resize_height=rec_nn_archive.getInputHeight(),
