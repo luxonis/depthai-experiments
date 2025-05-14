@@ -34,10 +34,8 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
 Here is a list of all available parameters:
 
 ```
--det DET_MODEL, --det_model DET_MODEL
-                    Detection model HubAI reference. (default: luxonis/scrfd-person-detection:25g-640x640)
--rec REC_MODEL, --rec_model REC_MODEL
-                    Recognition model HubAI reference. (default: luxonis/osnet:imagenet-128x256)
+-id IDENTIFY, --identify IDENTIFY
+                    Determines what object to use for identification ('pose' or 'face'). (default: 'pose')
 -cos COS_SIMILARITY_THRESHOLD, --cos_similarity_threshold COS_SIMILARITY_THRESHOLD
                     Cosine similarity between object embeddings above which detections are considered as belonging to the same object. (default: 0.5)
 -media MEDIA_PATH, --media_path MEDIA_PATH
@@ -55,23 +53,18 @@ Running in peripheral mode requires a host computer and there will be communicat
 #### Examples
 
 ```bash
-python3 main.py \
-    -det luxonis/scrfd-person-detection:25g-640x640 \
-    -rec luxonis/osnet:imagenet-128x256 \
-    -cos 0.8 \
-    -fps 5
+python3 main.py
 ```
 
-This will run the human pose reidentification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
+This will run the human pose reidentification with the default device and camera input and a cosine similarity threshold of 0.8 (default for the 'pose' option).
 
 ```bash
 python3 main.py \
-    -det luxonis/scrfd-face-detection:10g-640x640 \
-    -rec luxonis/arcface:lfw-112x112 \
+    -id face \
     -fps 5
 ```
 
-This will run the human face reidentification with the default device and video input at 5 FPS.
+This will run the human face reidentification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.1 (default for the 'face' option).
 
 ### Standalone Mode
 

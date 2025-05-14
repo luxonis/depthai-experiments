@@ -8,20 +8,12 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-        "-det",
-        "--det_model",
-        help="Detection model HubAI reference.",
-        default="luxonis/scrfd-person-detection:25g-640x640",
+        "-id",
+        "--identify",
+        help="Whether to run pose or face reidentification.",
         required=False,
-        type=str,
-    )
-
-    parser.add_argument(
-        "-rec",
-        "--rec_model",
-        help="Recognition model HubAI reference.",
-        default="luxonis/osnet:imagenet-128x256",
-        required=False,
+        default="pose",
+        choices=["pose", "face"],
         type=str,
     )
 
@@ -30,7 +22,7 @@ def initialize_argparser():
         "--cos_similarity_threshold",
         help="Cosine similarity between object embeddings above which detections are considered as belonging to the same object.",
         required=False,
-        default=0.5,
+        default=None,
         type=float,
     )
 
