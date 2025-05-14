@@ -31,7 +31,7 @@ class OCRAnnotationNode(dai.node.ThreadedHostNode):
 
                     text_line = ""
                     for text, score in zip(recognition.classes, recognition.scores):
-                        if len(text) <= 3 or score < 0.25:
+                        if len(text) <= 2 or score < 0.25:
                             continue
 
                         text_line += text + " "
