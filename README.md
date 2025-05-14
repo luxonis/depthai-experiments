@@ -43,7 +43,7 @@ Click on any category below to explore detailed examples for that specific domai
       <img src="integrations/hub-snaps-events/media/snap.png" alt="Integrations Demo" width="600">
     </td>
     <td valign="top" style="padding-left: 20px;">
-      Shows how to integrate DepthAI with [Luxonis Hub](https://hub.luxonis.com/), [Foxglove](https://docs.foxglove.dev/docs/introduction/), [Rerun](https://rerun.io/docs/getting-started/what-is-rerun) and [Roboflow](https://roboflow.com).
+      Shows how to integrate DepthAI with <a href="https://hub.luxonis.com/">Luxonis Hub</a>, <a href="https://docs.foxglove.dev/docs/introduction/">Foxglove</a>, <a href="https://rerun.io/docs/getting-started/what-is-rerun">Rerun</a> and <a href="https://roboflow.com">Roboflow</a>.
     </td>
   </tr>
 </table>
@@ -56,7 +56,7 @@ Click on any category below to explore detailed examples for that specific domai
       <img src="custom-frontend/raw-stream/media/message_sending.gif" alt="Custom Frontend Demo" width="600">
     </td>
     <td valign="top" style="padding-left: 20px;">
-      Examples showing how to implement a custom Front-End application using React and [@luxonis/depthai-viewer-common](https://www.npmjs.com/package/@luxonis/depthai-viewer-common?activeTab=readme) package to connect to DepthAI application.
+      Examples showing how to implement a custom Front-End application using React and <a href="https://www.npmjs.com/package/@luxonis/depthai-viewer-common?activeTab=readme">@luxonis/depthai-viewer-common</a> package to connect to DepthAI application.
     </td>
   </tr>
 </table>
