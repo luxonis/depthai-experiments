@@ -1,6 +1,7 @@
 identifier = "com.luxonis.pose-estimation.human-pose"
 app_version = "1.0.0"
 entrypoint = ["bash", "-c", "/usr/bin/runsvdir -P /etc/service"]
+assign_frontend_port = true
 
 prepare_build_container = []
 
