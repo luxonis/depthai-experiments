@@ -19,7 +19,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Ready-to-use applications built with DepthAI, demonstrating real-world use cases and implementations. Here are also demos that we present at different conferences showing advanced use cases.
       <br><br>
-      <a href="apps/"><button>📱 Explore Apps</button></a>
+      <a href="apps/">📱 Explore Apps</a>
     </td>
   </tr>
 </table>
@@ -34,7 +34,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Examples demonstrating various camera control features like focus, exposure, white balance, and other camera parameters.
       <br><br>
-      <a href="camera-controls/"><button>🎥 Explore Camera Controls</button></a>
+      <a href="camera-controls/">🎥 Explore Camera Controls</a>
     </td>
   </tr>
 </table>
@@ -49,7 +49,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Shows how to integrate DepthAI with <a href="https://hub.luxonis.com/">Luxonis Hub</a>, <a href="https://docs.foxglove.dev/docs/introduction/">Foxglove</a>, <a href="https://rerun.io/docs/getting-started/what-is-rerun">Rerun</a> and <a href="https://roboflow.com">Roboflow</a>.
       <br><br>
-      <a href="integrations/"><button>🔌 Explore Integrations</button></a>
+      <a href="integrations/">🔌 Explore Integrations</a>
     </td>
   </tr>
 </table>
@@ -64,7 +64,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Examples showing how to implement a custom Front-End application using React and <a href="https://www.npmjs.com/package/@luxonis/depthai-viewer-common?activeTab=readme">@luxonis/depthai-viewer-common</a> package to connect to DepthAI application.
       <br><br>
-      <a href="custom-frontend/"><button>🖥️ Explore Custom Frontend</button></a>
+      <a href="custom-frontend/">🖥️ Explore Custom Frontend</a>
     </td>
   </tr>
 </table>
@@ -79,7 +79,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Demonstrations of depth perception capabilities, including spatial calculations, depth visualization, and 3D measurements including pointcloud.
       <br><br>
-      <a href="depth-measurement/"><button>📏 Explore Depth Measurement</button></a>
+      <a href="depth-measurement/">📏 Explore Depth Measurement</a>
     </td>
   </tr>
 </table>
@@ -94,7 +94,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Comprehensive collection of AI model usage, including object detection, classification, segmentation, and many more.
       <br><br>
-      <a href="neural-networks/"><button>🧠 Explore Neural Networks</button></a>
+      <a href="neural-networks/">🧠 Explore Neural Networks</a>
     </td>
   </tr>
 </table>
@@ -109,7 +109,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Examples showing different ways to stream data from DepthAI devices. This includes MJPEG, H.264, H.265, MQTT, TCP, RTSP, and WebRTC.
       <br><br>
-      <a href="streaming/"><button>🔄 Explore Stream Manipulation</button></a>
+      <a href="streaming/">🔄 Explore Stream Manipulation</a>
     </td>
   </tr>
 </table>
@@ -124,7 +124,7 @@ Click on any category below to explore detailed examples for that specific domai
     <td width="50%" style="padding-left: 20px;" valign="middle" align="center">
       Explore a variety of step-by-step guides and educational content designed to help you master DepthAI. Whether you're a beginner looking to get started or an experienced user aiming to explore advanced topics, these tutorials cover a range of concepts, from basic camera usage and displaying detections to working with custom models and multiple devices.
       <br><br>
-      <a href="tutorials/"><button>📚 Explore Tutorials</button></a>
+      <a href="tutorials/">📚 Explore Tutorials</a>
     </td>
   </tr>
 </table>
