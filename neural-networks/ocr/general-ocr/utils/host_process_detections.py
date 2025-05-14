@@ -151,13 +151,23 @@ class CropConfigsCreator(dai.node.HostNode):
         valid_detections = []
         for detection in detections:
             if detection.confidence > 0.8:
-                valid_detections.append(detection)
-                cfg = dai.ImageManipConfigV2()
                 rect = detection.rotated_rect
                 rect = self._expand_rect(rect)
                 rect = rect.denormalize(self.w, self.h)
 
-                cfg.addCropRotatedRect(rect, normalizedCoords=False)
+                xmin, ymin, xmax, ymax = rect.getOuterRect()
+                xmin = int(max(0, xmin))
+                ymin = int(max(0, ymin))
+                xmax = int(min(self.w, xmax))
+                ymax = int(min(self.h, ymax))
+
+                if xmax - xmin < 50 or ymax - ymin < 12:
+                    continue
+
+                valid_detections.append(detection)
+
+                cfg = dai.ImageManipConfigV2()
+                cfg.addCrop(xmin, ymin, xmax - xmin, ymax - ymin)
 
                 if self.target_w is not None and self.target_h is not None:
                     cfg.setOutputSize(self.target_w, self.target_h, self.resize_mode)
@@ -181,7 +191,7 @@ class CropConfigsCreator(dai.node.HostNode):
     def _expand_rect(self, rect: dai.RotatedRect) -> dai.RotatedRect:
         s = rect.size
 
-        rect.size = dai.Size2f(s.width * 1.03, s.height * 1.03)
+        rect.size = dai.Size2f(s.width * 1.03, s.height * 1.10)
 
         return rect
 

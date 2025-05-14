@@ -9,12 +9,11 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
 platform = device.getPlatform()
 
-FPS = 10
+FPS = 5
 frame_type = dai.ImgFrame.Type.BGR888p
 
 if "RVC4" in str(platform):
     frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 25
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -26,6 +25,7 @@ with dai.Pipeline(device) as pipeline:
         replay_node.setLoop(True)
 
         video_resize_node = pipeline.create(dai.node.ImageManipV2)
+        video_resize_node.setMaxOutputFrameSize(1728 * 960 * 3)
         video_resize_node.initialConfig.setOutputSize(1728, 960)
         video_resize_node.initialConfig.setFrameType(frame_type)
         replay_node.out.link(video_resize_node.inputImage)
