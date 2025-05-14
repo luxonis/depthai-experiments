@@ -1,4 +1,4 @@
-# Connectivity Overview
+# Integrations Overview
 
 This section contains examples showing different ways to connect DepthAI devices with various frameworks and tools.
 

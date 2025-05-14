@@ -1,4 +1,4 @@
-# Stream Manipulation Overview
+# Streaming Overview
 
 This section contains examples showing different ways to manipulate and stream data from DepthAI devices using various protocols and encoding methods.
 
