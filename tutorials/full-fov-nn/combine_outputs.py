@@ -1,8 +1,9 @@
 from enum import Enum
-from host_node.keyboard_reader import KeyboardPress
+from utils.keyboard_reader import KeyboardPress
 import cv2
 import numpy as np
 import depthai as dai
+from typing import Optional, List
 
 
 class MANIP_MODE(Enum):
@@ -26,7 +27,7 @@ class CombineOutputs(dai.node.HostNode):
         crop_manip: dai.Node.Output,
         letterbox_manip: dai.Node.Output,
         stretch_manip: dai.Node.Output,
-        keyboard_input: dai.Node.Output | None = None,
+        keyboard_input: Optional[dai.Node.Output] = None,
     ) -> "CombineOutputs":
         self.link_args(nn_manip, crop_manip, letterbox_manip, stretch_manip)
         self.sendProcessingToPipeline(True)
@@ -101,7 +102,7 @@ class CombineOutputs(dai.node.HostNode):
         # config = dai.ImageManipConfig()
 
         try:
-            key_presses: list[KeyboardPress] = self.keyboard_input_q.tryGetAll()
+            key_presses: List[KeyboardPress] = self.keyboard_input_q.tryGetAll()
         except dai.MessageQueue.QueueException:
             return
 

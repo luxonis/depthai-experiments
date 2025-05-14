@@ -18,18 +18,20 @@ python3 -m pip install -r requirements.txt
 
 ## Usage
 
-You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE> --fps_limit <FPS_LIMIT> --codec <CODEC> --output <OUTPUT_PATH>
 ```
-
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
-- `<CODEC>`: Video encoding - `h264`, `h265` or `mjpeg`. Default: `h264`.
-- `<OUTPUT_PATH>`: Path to the output file. Default: `video.mp4`.
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30)
+-c {h264,h265,mjpeg}, --codec {h264,h265,mjpeg}
+                    Video encoding (h264 is default) (default: h264)
+-o OUTPUT, --output OUTPUT
+                    Path to the output file. (default: video.mp4)
+```
 
 #### Examples
 
@@ -39,7 +41,7 @@ python3 main.py
 
 This will run the On Device Encoding experiment with the default device, camera input and H264 codec.
 
-```
+```bash
 python3 main.py --codec h265 --output video_h265.mp4
 ```
 
@@ -47,11 +49,18 @@ This will run the On Device Encoding experiment with the default device, H265 co
 
 ### Standalone Mode
 
-Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
 
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-# TODO: add instructions for standalone mode once oakctl supports CLI arguments
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

@@ -1,5 +1,5 @@
 import depthai as dai
-from depthai_nodes.ml.helpers.constants import (
+from depthai_nodes import (
     OUTLINE_COLOR,
     TEXT_COLOR,
     BACKGROUND_COLOR,

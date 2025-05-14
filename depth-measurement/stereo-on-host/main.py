@@ -1,10 +1,16 @@
 import depthai as dai
 
-from host_node.host_display import Display
-from host_stereo_sgbm import StereoSGBM
+from utils.arguments import initialize_argparser
+from utils.host_stereo_sgbm import StereoSGBM
+from utils.host_ssim import SSIM
+from depthai_nodes.node import ApplyColormap
+import cv2
 
-RESOLUTION_SIZE = (640, 480)
+RESOLUTION_SIZE = (640, 400)
 
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device()
 with dai.Pipeline(device) as pipeline:
     mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
@@ -26,32 +32,49 @@ with dai.Pipeline(device) as pipeline:
 
     calibObj = device.readCalibration()
 
-    host = pipeline.create(StereoSGBM).build(
+    stereoSGBM = pipeline.create(StereoSGBM).build(
         monoLeftOut=left,
         monoRightOut=right,
         calibObj=calibObj,
+        device=device,
         resolution=RESOLUTION_SIZE,
     )
-    host.inputs["monoLeft"].setBlocking(False)
-    host.inputs["monoLeft"].setMaxSize(2)
-    host.inputs["monoRight"].setBlocking(False)
-    host.inputs["monoRight"].setMaxSize(2)
+    stereoSGBM.inputs["monoLeft"].setBlocking(False)
+    stereoSGBM.inputs["monoLeft"].setMaxSize(2)
+    stereoSGBM.inputs["monoRight"].setBlocking(False)
+    stereoSGBM.inputs["monoRight"].setMaxSize(2)
 
-    mono_left = pipeline.create(Display).build(frames=host.mono_left)
-    mono_left.setName("left")
+    stereo = pipeline.create(dai.node.StereoDepth).build(left=left, right=right)
+    stereo.setLeftRightCheck(True)
+    stereo.setExtendedDisparity(False)
+    stereo.setSubpixel(True)
 
-    mono_right = pipeline.create(Display).build(frames=host.mono_right)
-    mono_right.setName("right")
+    depth_parser = pipeline.create(ApplyColormap).build(stereo.disparity)
+    depth_parser.setMaxValue(int(stereo.initialConfig.getMaxDisparity()))
+    depth_parser.setColormap(cv2.COLORMAP_JET)
 
-    disparity = pipeline.create(Display).build(frames=host.disparity_out)
-    disparity.setName("disparity")
+    ssim = pipeline.create(SSIM).build(
+        disp_generated=stereo.disparity, disp_calculated=stereoSGBM.raw_disparity_out
+    )
+    ssim.setMaxGenDisparity(int(stereo.initialConfig.getMaxDisparity()))
+    ssim.setMaxCalDisparity(int(stereoSGBM.max_disparity))
 
-    rectified_left = pipeline.create(Display).build(frames=host.rectified_left)
-    rectified_left.setName("rectified left")
+    visualizer.addTopic("Left Cam", stereoSGBM.mono_left)
+    visualizer.addTopic("Right Cam", stereoSGBM.mono_right)
+    visualizer.addTopic("Rectified Left", stereoSGBM.rectified_left)
+    visualizer.addTopic("Rectified Right", stereoSGBM.rectified_right)
 
-    rectified_right = pipeline.create(Display).build(frames=host.rectified_right)
-    rectified_right.setName("rectified right")
+    visualizer.addTopic("Depth generated", depth_parser.out, "depth")
+    visualizer.addTopic("Depth SGBM", stereoSGBM.disparity_out, "depth")
+    visualizer.addTopic("SSIM score", ssim.output, "depth")
 
-    print("pipeline created")
-    pipeline.run()
-    print("pipeline finished")
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

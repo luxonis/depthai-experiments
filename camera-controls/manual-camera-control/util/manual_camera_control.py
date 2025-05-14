@@ -1,6 +1,6 @@
 from datetime import timedelta
 from enum import Enum
-
+from typing import Tuple
 import cv2
 import depthai as dai
 
@@ -99,137 +99,130 @@ class ManualCameraControl(dai.node.HostNode):
         key_str = chr(key)
 
         ctrl = dai.CameraControl()
-        match key_str:
-            case "c":
-                self._capture = True
-            case "t":
-                ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
-                self._af_mode = dai.CameraControl.AutoFocusMode.AUTO
-                ctrl.setAutoFocusTrigger()
-                print("Autofocus trigger (and disable continuous)")
-            case "f":
-                ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO)
-                self._af_mode = dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO
-                print("Autofocus enable, continuous")
-            case "e":
-                ctrl.setAutoExposureEnable()
-                print("Autoexposure enable")
-                self._ae_enabled = True
-            case "w":
-                self._awb_lock = not self._awb_lock
-                ctrl.setAutoWhiteBalanceLock(self._awb_lock)
-                print("Auto white balance lock:", self._awb_lock)
-            case "r":
-                self._ae_lock = not self._ae_lock
-                ctrl.setAutoExposureLock(self._ae_lock)
-                print("Auto exposure lock:", self._ae_lock)
-            case key_str if key_str in [i.value for i in OtherControls]:
-                self._selected_control = OtherControls(key_str)
-                print("Selected control:", self._selected_control.name)
-            case "-" | "_":
-                ctrl = self._change_selected_control(ctrl, -1)
-            case "+" | "=":
-                ctrl = self._change_selected_control(ctrl, 1)
+        if key_str == "c":
+            self._capture = True
+        elif key_str == "t":
+            ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+            self._af_mode = dai.CameraControl.AutoFocusMode.AUTO
+            ctrl.setAutoFocusTrigger()
+            print("Autofocus trigger (and disable continuous)")
+        elif key_str == "f":
+            ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO)
+            self._af_mode = dai.CameraControl.AutoFocusMode.CONTINUOUS_VIDEO
+            print("Autofocus enable, continuous")
+        elif key_str == "e":
+            ctrl.setAutoExposureEnable()
+            print("Autoexposure enable")
+            self._ae_enabled = True
+        elif key_str == "w":
+            self._awb_lock = not self._awb_lock
+            ctrl.setAutoWhiteBalanceLock(self._awb_lock)
+            print("Auto white balance lock:", self._awb_lock)
+        elif key_str == "r":
+            self._ae_lock = not self._ae_lock
+            ctrl.setAutoExposureLock(self._ae_lock)
+            print("Auto exposure lock:", self._ae_lock)
+        elif key_str in [i.value for i in OtherControls]:
+            self._selected_control = OtherControls(key_str)
+            print("Selected control:", self._selected_control.name)
+        elif key_str in ["-", "_"]:
+            ctrl = self._change_selected_control(ctrl, -1)
+        elif key_str in ["+", "="]:
+            ctrl = self._change_selected_control(ctrl, 1)
 
         self.control_queue.send(ctrl)
 
     def _change_selected_control(self, ctrl: dai.CameraControl, change: int) -> None:
-        match self._selected_control:
-            case None:
-                print("Please select a control first using keys 3..9, 0, [ ]")
-                return ctrl
-            case OtherControls.EXPOSURE_TIME:
-                self._ae_enabled = False
-                self._exp_time = clamp(
-                    self._exp_time + change * EXP_STEP, EXP_MIN, self._exp_max
-                )
-                ctrl.setManualExposure(self._exp_time, self._sens_iso)
-                print(
-                    "Setting manual exposure, time:",
-                    self._exp_time,
-                    "iso:",
-                    self._sens_iso,
-                )
-            case OtherControls.SENSITIVITY_ISO:
-                self._ae_enabled = False
-                self._sens_iso = clamp(
-                    self._sens_iso + change * ISO_STEP, SENS_MIN, SENS_MAX
-                )
-                ctrl.setManualExposure(self._exp_time, self._sens_iso)
-                print(
-                    "Setting manual exposure, time:",
-                    self._exp_time,
-                    "iso:",
-                    self._sens_iso,
-                )
-            case OtherControls.AWB_MODE:
-                count = len(list(dai.CameraControl.AutoWhiteBalanceMode.__members__))
-                self._awb_mode_idx = (self._awb_mode_idx + change) % count
-                awb_mode = dai.CameraControl.AutoWhiteBalanceMode(self._awb_mode_idx)
-                ctrl.setAutoWhiteBalanceMode(awb_mode)
-                print("Auto white balance mode:", awb_mode)
-            case OtherControls.AE_COMPENSATION:
-                self._ae_comp = clamp(self._ae_comp + change, -9, 9)
-                ctrl.setAutoExposureCompensation(self._ae_comp)
-                print("Auto exposure compensation:", self._ae_comp)
-            case OtherControls.ANTI_BANDING_MODE:
-                count = len(list(dai.CameraControl.AntiBandingMode.__members__))
-                self._anti_banding_mode_idx = (
-                    self._anti_banding_mode_idx + change
-                ) % count
-                anti_banding_mode = dai.CameraControl.AntiBandingMode(
-                    self._anti_banding_mode_idx
-                )
-                ctrl.setAntiBandingMode(anti_banding_mode)
-                print("Anti-banding mode:", anti_banding_mode)
-            case OtherControls.EFFECT_MODE:
-                count = len(list(dai.CameraControl.EffectMode.__members__))
-                self._effect_mode_idx = (self._effect_mode_idx + change) % count
-                effect_mode = dai.CameraControl.EffectMode(self._effect_mode_idx)
-                ctrl.setEffectMode(effect_mode)
-                print("Effect mode:", effect_mode)
-            case OtherControls.BRIGHTNESS:
-                self._brightness = clamp(self._brightness + change, -10, 10)
-                ctrl.setBrightness(self._brightness)
-                print("Brightness:", self._brightness)
-            case OtherControls.CONTRAST:
-                self._contrast = clamp(self._contrast + change, -10, 10)
-                ctrl.setContrast(self._contrast)
-                print("Contrast:", self._contrast)
-            case OtherControls.SATURATION:
-                self._saturation = clamp(self._saturation + change, -10, 10)
-                ctrl.setSaturation(self._saturation)
-                print("Saturation:", self._saturation)
-            case OtherControls.SHARPNESS:
-                self._sharpness = clamp(self._sharpness + change, 0, 4)
-                ctrl.setSharpness(self._sharpness)
-                print("Sharpness:", self._sharpness)
-            case OtherControls.WHITE_BALANCE:
-                self._wb_manual = clamp(
-                    self._wb_manual + change * WB_STEP, WB_MIN, WB_MAX
-                )
-                ctrl.setManualWhiteBalance(self._wb_manual)
+        if self._selected_control is None:
+            print("Please select a control first using keys 3..9, 0, [ ]")
+            return ctrl
+        elif self._selected_control == OtherControls.EXPOSURE_TIME:
+            self._ae_enabled = False
+            self._exp_time = clamp(
+                self._exp_time + change * EXP_STEP, EXP_MIN, self._exp_max
+            )
+            ctrl.setManualExposure(self._exp_time, self._sens_iso)
+            print(
+                "Setting manual exposure, time:",
+                self._exp_time,
+                "iso:",
+                self._sens_iso,
+            )
+        elif self._selected_control == OtherControls.SENSITIVITY_ISO:
+            self._ae_enabled = False
+            self._sens_iso = clamp(
+                self._sens_iso + change * ISO_STEP, SENS_MIN, SENS_MAX
+            )
+            ctrl.setManualExposure(self._exp_time, self._sens_iso)
+            print(
+                "Setting manual exposure, time:",
+                self._exp_time,
+                "iso:",
+                self._sens_iso,
+            )
+        elif self._selected_control == OtherControls.AWB_MODE:
+            count = len(list(dai.CameraControl.AutoWhiteBalanceMode.__members__))
+            self._awb_mode_idx = (self._awb_mode_idx + change) % count
+            awb_mode = dai.CameraControl.AutoWhiteBalanceMode(self._awb_mode_idx)
+            ctrl.setAutoWhiteBalanceMode(awb_mode)
+            print("Auto white balance mode:", awb_mode)
+        elif self._selected_control == OtherControls.AE_COMPENSATION:
+            self._ae_comp = clamp(self._ae_comp + change, -9, 9)
+            ctrl.setAutoExposureCompensation(self._ae_comp)
+            print("Auto exposure compensation:", self._ae_comp)
+        elif self._selected_control == OtherControls.ANTI_BANDING_MODE:
+            count = len(list(dai.CameraControl.AntiBandingMode.__members__))
+            self._anti_banding_mode_idx = (self._anti_banding_mode_idx + change) % count
+            anti_banding_mode = dai.CameraControl.AntiBandingMode(
+                self._anti_banding_mode_idx
+            )
+            ctrl.setAntiBandingMode(anti_banding_mode)
+            print("Anti-banding mode:", anti_banding_mode)
+        elif self._selected_control == OtherControls.EFFECT_MODE:
+            count = len(list(dai.CameraControl.EffectMode.__members__))
+            self._effect_mode_idx = (self._effect_mode_idx + change) % count
+            effect_mode = dai.CameraControl.EffectMode(self._effect_mode_idx)
+            ctrl.setEffectMode(effect_mode)
+            print("Effect mode:", effect_mode)
+        elif self._selected_control == OtherControls.BRIGHTNESS:
+            self._brightness = clamp(self._brightness + change, -10, 10)
+            ctrl.setBrightness(self._brightness)
+            print("Brightness:", self._brightness)
+        elif self._selected_control == OtherControls.CONTRAST:
+            self._contrast = clamp(self._contrast + change, -10, 10)
+            ctrl.setContrast(self._contrast)
+            print("Contrast:", self._contrast)
+        elif self._selected_control == OtherControls.SATURATION:
+            self._saturation = clamp(self._saturation + change, -10, 10)
+            ctrl.setSaturation(self._saturation)
+            print("Saturation:", self._saturation)
+        elif self._selected_control == OtherControls.SHARPNESS:
+            self._sharpness = clamp(self._sharpness + change, 0, 4)
+            ctrl.setSharpness(self._sharpness)
+            print("Sharpness:", self._sharpness)
+        elif self._selected_control == OtherControls.WHITE_BALANCE:
+            self._wb_manual = clamp(self._wb_manual + change * WB_STEP, WB_MIN, WB_MAX)
+            ctrl.setManualWhiteBalance(self._wb_manual)
 
-                if self._awb_lock:
-                    self._awb_lock = False
-                    ctrl.setAutoWhiteBalanceLock(False)
-                print(
-                    "Setting manual white balance, temperature: ", self._wb_manual, "K"
-                )
-            case OtherControls.LENS_POSITION:
-                self._lens_pos = clamp(
-                    self._lens_pos + change * LENS_STEP, LENS_MIN, LENS_MAX
-                )
-                ctrl.setManualFocus(self._lens_pos)
-                print("Setting manual focus, lens position:", self._lens_pos)
-            case OtherControls.LUMA_DENOISE:
-                self._luma_denoise = clamp(self._luma_denoise + change, 0, 4)
-                ctrl.setLumaDenoise(self._luma_denoise)
-                print("Luma denoise:", self._luma_denoise)
-            case OtherControls.CHROMA_DENOISE:
-                self._chroma_denoise = clamp(self._chroma_denoise + change, 0, 4)
-                ctrl.setChromaDenoise(self._chroma_denoise)
-                print("Chroma denoise:", self._chroma_denoise)
+            if self._awb_lock:
+                self._awb_lock = False
+                ctrl.setAutoWhiteBalanceLock(False)
+            print("Setting manual white balance, temperature: ", self._wb_manual, "K")
+        elif self._selected_control == OtherControls.LENS_POSITION:
+            self._lens_pos = clamp(
+                self._lens_pos + change * LENS_STEP, LENS_MIN, LENS_MAX
+            )
+            ctrl.setManualFocus(self._lens_pos)
+            print("Setting manual focus, lens position:", self._lens_pos)
+        elif self._selected_control == OtherControls.LUMA_DENOISE:
+            self._luma_denoise = clamp(self._luma_denoise + change, 0, 4)
+            ctrl.setLumaDenoise(self._luma_denoise)
+            print("Luma denoise:", self._luma_denoise)
+        elif self._selected_control == OtherControls.CHROMA_DENOISE:
+            self._chroma_denoise = clamp(self._chroma_denoise + change, 0, 4)
+            ctrl.setChromaDenoise(self._chroma_denoise)
+            print("Chroma denoise:", self._chroma_denoise)
+
         return ctrl
 
     def _get_annotations(self, timestamp: timedelta) -> dai.ImgAnnotations:
@@ -316,7 +309,7 @@ class ManualCameraControl(dai.node.HostNode):
         return img_annotations
 
     def _get_text_annotation(
-        self, txt: str, pos: tuple[float, float], highlight: bool = False
+        self, txt: str, pos: Tuple[float, float], highlight: bool = False
     ) -> dai.TextAnnotation:
         txt_annot = dai.TextAnnotation()
         txt_annot.fontSize = 25

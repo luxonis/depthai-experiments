@@ -2,6 +2,10 @@
 
 This experiment demonstrates how to stream frames via RTSP server using H265 stream.
 
+## Demo
+
+![rtsp_stream](media/rtsp_stream.gif)
+
 ## Installation
 
 ### Ubuntu 20.04
@@ -26,16 +30,16 @@ We'd suggest using WSL2 and installing Ubuntu on there. You can use the command 
 
 ## Usage
 
-You can run the experiment in fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-### Peripheral Mode
+Here is a list of all available parameters:
 
-```bash
-python3 main.py --device <DEVICE> --fps_limit <FPS_LIMIT>
 ```
-
-- `<DEVICE>`: Device IP or ID. Default: \`\`.
-- `<FPS_LIMIT>`: Limit of the camera FPS. Default: `30`.
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 30)
+```
 
 #### Examples
 
@@ -58,11 +62,18 @@ ffplay -fflags nobuffer -fflags discardcorrupt -flags low_delay -framedrop rtsp:
 
 ### Standalone Mode
 
-Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
 To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
 
 ```bash
 bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
 ```
 
-# TODO: add instructions for standalone mode once oakctl supports CLI arguments
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.

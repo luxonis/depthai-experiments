@@ -1,6 +1,6 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.host_process_detections import ProcessDetections
 from utils.host_sync import DetectionSyncNode
@@ -8,7 +8,7 @@ from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device) if args.device else dai.DeviceInfo())
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform()
 
 FPS = 20

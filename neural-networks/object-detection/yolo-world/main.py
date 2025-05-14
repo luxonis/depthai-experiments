@@ -1,19 +1,58 @@
 import numpy as np
 import onnxruntime
 from transformers import AutoTokenizer
-import cv2
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.message import ImgDetectionsExtended
 import argparse
 import os
 
 
-from utils import draw_detections, download_model
+from utils import download_model
 
 MAX_NUM_CLASSES = 80
-QUANT_ZERO_POINT = 89.0
-QUANT_SCALE = 0.003838143777
+QUANT_ZERO_POINT = 90.0
+QUANT_SCALE = 0.003925696481
 IMAGE_SIZE = (640, 640)
+
+
+class DetectionLabelCustomizer(dai.node.HostNode):
+    def __init__(self):
+        super().__init__()
+        self._accepted_labels = []
+        self.output = self.createOutput(
+            possibleDatatypes=[
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.Buffer, True)
+            ]
+        )
+
+    def build(
+        self, nn: dai.Node.Output, accepted_labels: list, class_names: list
+    ) -> "DetectionLabelCustomizer":
+        self._accepted_labels = accepted_labels
+        self._class_names = class_names
+        self.link_args(nn)
+        return self
+
+    def process(self, detections: dai.Buffer) -> None:
+        assert isinstance(
+            detections,
+            (dai.ImgDetections, dai.SpatialImgDetections, ImgDetectionsExtended),
+        )
+
+        filtered_detections = [
+            i for i in detections.detections if i.label in self._accepted_labels
+        ]
+
+        for det in filtered_detections:
+            det.label_name = self._class_names[det.label]
+
+        img_detections = type(detections)()
+        img_detections.detections = filtered_detections
+        img_detections.setTimestamp(detections.getTimestamp())
+        img_detections.setSequenceNum(detections.getSequenceNum())
+        img_detections.transformation = detections.transformation
+        self.output.send(img_detections)
 
 
 def extract_text_embeddings(class_names):
@@ -61,6 +100,7 @@ def main(args):
         dai.Device(dai.DeviceInfo(args.device)) if args.device != "" else dai.Device()
     )
 
+    visualizer = dai.RemoteConnection()
     with dai.Pipeline(device) as pipeline:
         manip = pipeline.create(dai.node.ImageManipV2)
         manip.setMaxOutputFrameSize(IMAGE_SIZE[0] * IMAGE_SIZE[1] * 3)
@@ -68,10 +108,10 @@ def main(args):
             IMAGE_SIZE[0], IMAGE_SIZE[1], dai.ImageManipConfigV2.ResizeMode.LETTERBOX
         )
 
-        if args.video_path is not None:
+        if args.media_path is not None:
             replayNode = pipeline.create(dai.node.ReplayVideo)
             replayNode.setOutFrameType(dai.ImgFrame.Type.BGR888i)
-            replayNode.setReplayVideoFile(args.video_path)
+            replayNode.setReplayVideoFile(args.media_path)
 
             replayNode.out.link(manip.inputImage)
         else:
@@ -83,7 +123,8 @@ def main(args):
             camOut.link(manip.inputImage)
 
         model_description = dai.NNModelDescription(
-            model="yolo-world-l", platform="RVC4"
+            model="yolo-world-l:640x640-host-decoding",
+            platform="RVC4",
         )
         archive_path = dai.getModelFromZoo(model_description, useCached=True)
         nn_archive = dai.NNArchive(archive_path)
@@ -95,16 +136,20 @@ def main(args):
             {"runtime": "dsp", "performance_profile": "default"}
         )
         nn_with_parser.setNumInferenceThreads(1)
-
-        nn_with_parser.getParser(0).setConfidenceThreshold(args.confidence_threshold)
-        nn_with_parser.getParser(0).setInputImageSize(IMAGE_SIZE[0], IMAGE_SIZE[1])
+        nn_with_parser.getParser(0).setConfidenceThreshold(args.confidence_thresh)
 
         manip.out.link(nn_with_parser.inputs["images"])
-        qDet = nn_with_parser.out.createOutputQueue()
-        qImg = nn_with_parser.passthroughs["images"].createOutputQueue()
 
         textInputQueue = nn_with_parser.inputs["texts"].createInputQueue()
         nn_with_parser.inputs["texts"].setReusePreviousMessage(True)
+
+        detection_label_filter = pipeline.create(DetectionLabelCustomizer)
+        detection_label_filter.build(
+            nn_with_parser.out, list(range(len(args.class_names))), args.class_names
+        )
+
+        visualizer.addTopic("Detections", detection_label_filter.output)
+        visualizer.addTopic("Color", nn_with_parser.passthroughs["images"])
 
         pipeline.start()
 
@@ -116,12 +161,8 @@ def main(args):
 
         print("Press 'q' to stop")
         while pipeline.isRunning():
-            inDet: dai.ImgDetections = qDet.get()
-            inImage: dai.ImgFrame = qImg.get()
-            cvFrame = inImage.getCvFrame()
-            visFrame = draw_detections(cvFrame, inDet.detections, args.class_names)
-            cv2.imshow("Inference result", visFrame)
-            key = cv2.waitKey(1)
+            pipeline.processTasks()
+            key = visualizer.waitKey(1)
             if key == ord("q"):
                 break
 
@@ -133,30 +174,31 @@ def parse_args():
         "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
         required=False,
-        default="",
+        default=None,
         type=str,
     )
     parser.add_argument(
-        "-v",
-        "--video_path",
-        type=str,
+        "-media",
+        "--media_path",
+        help="Path to the media file you aim to run the model on. If not set, the model will run on the camera input.",
+        required=False,
         default=None,
-        help="The path to the video file",
+        type=str,
     )
     parser.add_argument(
         "-c",
         "--class_names",
         type=str,
         nargs="+",
-        required=True,
+        default=["person", "chair", "TV"],
         help="Class names to be detected",
     )
     parser.add_argument(
-        "-t",
-        "--confidence_threshold",
-        type=float,
+        "-conf",
+        "--confidence_thresh",
+        help="Sets the confidence threshold",
         default=0.1,
-        help="Confidence threshold for detections",
+        type=float,
     )
     return parser.parse_args()
 
@@ -166,10 +208,10 @@ def check_args(args):
         raise ValueError(
             f"Number of classes exceeds the maximum number of classes: {MAX_NUM_CLASSES}"
         )
-    if args.video_path is not None and not os.path.exists(args.video_path):
-        raise FileNotFoundError(f"Video file not found at {args.video_path}")
+    if args.media_path is not None and not os.path.exists(args.media_path):
+        raise FileNotFoundError(f"Video file not found at {args.media_path}")
 
-    if args.video_path is None:
+    if args.media_path is None:
         print("No video file provided. Using camera input.")
 
 

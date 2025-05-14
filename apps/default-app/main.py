@@ -1,38 +1,48 @@
 #!/usr/bin/env python3
 import cv2
 import depthai as dai
-from host_node.host_depth_color_transform import DepthColorTransform
+from depthai_nodes.node import ApplyColormap
+from typing import Optional
+from utils.arguments import initialize_argparser
 
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
 STEREO_RESOLUTION = (800, 600)
 NN_DIMENSIONS = (512, 288)
 
-remoteConnector = dai.RemoteConnection()
-
-device = dai.Device()
-platform = device.getPlatform()
-device.setIrLaserDotProjectorIntensity(1)
+if not device.setIrLaserDotProjectorIntensity(1):
+    print(
+        "Failed to set IR laser projector intensity. Maybe your device does not support this feature."
+    )
 with dai.Pipeline(device) as pipeline:
-    cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-
-    nnArchive = dai.NNArchive(
+    print("Creating pipeline...")
+    model_description = dai.NNModelDescription(
+        f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}"
+    )
+    platform = device.getPlatform()
+    platform_str = device.getPlatformAsString()
+    model_description.platform = platform_str
+    nn_archive = dai.NNArchive(
         dai.getModelFromZoo(
-            dai.NNModelDescription(
-                model=f"yolov6-nano:r2-coco-{NN_DIMENSIONS[0]}x{NN_DIMENSIONS[1]}",
-                platform=platform.name,
-            )
+            model_description,
+            apiKey=args.api_key,
         )
     )
+    cameraNode = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+
     if platform == dai.Platform.RVC2:
         detectionNetwork = pipeline.create(dai.node.DetectionNetwork)
         cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888p).link(
             detectionNetwork.input
         )
-        detectionNetwork.setNNArchive(nnArchive, numShaves=6)
+        detectionNetwork.setNNArchive(nn_archive, numShaves=4)
     else:
         detectionNetwork = pipeline.create(dai.node.DetectionNetwork).build(
             cameraNode.requestOutput(NN_DIMENSIONS, dai.ImgFrame.Type.BGR888i),
-            nnArchive,
+            nn_archive,
         )
 
     outputToEncode = cameraNode.requestOutput((1440, 1080), type=dai.ImgFrame.Type.NV12)
@@ -46,15 +56,15 @@ with dai.Pipeline(device) as pipeline:
     outputToEncode.link(h264Encoder.input)
 
     # Add the remote connector topics
-    remoteConnector.addTopic("Raw video", outputToEncode)
-    remoteConnector.addTopic("Video H264", h264Encoder.out)
-    remoteConnector.addTopic("Detections", detectionNetwork.out)
+    visualizer.addTopic("Raw video", outputToEncode)
+    visualizer.addTopic("Video H264", h264Encoder.out)
+    visualizer.addTopic("Detections", detectionNetwork.out)
 
     # Stereo depth - only for stereo devices
     cameraFeatures = device.getConnectedCameraFeatures()
 
-    cam_mono_1: dai.CameraBoardSocket | None = None
-    cam_mono_2: dai.CameraBoardSocket | None = None
+    cam_mono_1: Optional[dai.CameraBoardSocket] = None
+    cam_mono_2: Optional[dai.CameraBoardSocket] = None
     for feature in cameraFeatures:
         if dai.CameraSensorType.MONO in feature.supportedTypes:
             if cam_mono_1 is None:
@@ -63,20 +73,29 @@ with dai.Pipeline(device) as pipeline:
                 cam_mono_2 = feature.socket
                 break
     if cam_mono_1 and cam_mono_2:
+        device.setIrLaserDotProjectorIntensity(1)
         left_cam = pipeline.create(dai.node.Camera).build(cam_mono_1)
         right_cam = pipeline.create(dai.node.Camera).build(cam_mono_2)
         stereo = pipeline.create(dai.node.StereoDepth).build(
             left=left_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
             right=right_cam.requestFullResolutionOutput(dai.ImgFrame.Type.NV12),
-            presetMode=dai.node.StereoDepth.PresetMode.HIGH_DENSITY,
+            presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
         )
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
         if platform == dai.Platform.RVC2:
             stereo.setOutputSize(*STEREO_RESOLUTION)
 
-        coloredDepth = pipeline.create(DepthColorTransform).build(stereo.disparity)
+        coloredDepth = pipeline.create(ApplyColormap).build(stereo.disparity)
         coloredDepth.setColormap(cv2.COLORMAP_JET)
-        remoteConnector.addTopic("Depth", coloredDepth.output)
+        visualizer.addTopic("Depth", coloredDepth.out)
 
-    remoteConnector.registerPipeline(pipeline)
-    pipeline.run()
+    print("Pipeline created.")
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

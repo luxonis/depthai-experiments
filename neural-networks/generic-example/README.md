@@ -25,17 +25,17 @@ Here is a list of all available parameters:
 
 ```
 -m MODEL, --model MODEL
-                      HubAI model reference. (default: None)
+                      HubAI model reference. (default: luxonis/yolov6-nano:r2-coco-512x288)
 -d DEVICE, --device DEVICE
                       Optional name, DeviceID or IP of the camera to connect to. (default: None)
--ann ANNOTATION_MODE, --annotation_mode ANNOTATION_MODE
-                      Annotation mode. Can be either 'segmentation', 'segmentation_with_annotation', or None (default). (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
                       FPS limit for the model runtime. (default: None)
 -media MEDIA_PATH, --media_path MEDIA_PATH
                       Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 -api API_KEY, --api_key API_KEY
                       HubAI API key to access private model. (default: )
+-overlay OVERLAY_MODE, --overlay_mode
+                      If passed, overlays model output on the input image when the output is an array (e.g., depth maps, segmentation maps). Otherwise, displays outputs separately.
 ```
 
 **Note:**
@@ -49,11 +49,10 @@ Running in peripheral mode requires a host computer and there will be communicat
 #### Examples
 
 ```bash
-python3 main.py \
-    --model luxonis/yolov6-nano:r2-coco-512x288
+python3 main.py
 ```
 
-This will run a simple YOLOv6 object detection model on your camera input.
+This will run a simple YOLOv6 object detection model (`luxonis/yolov6-nano:r2-coco-512x288`) on your camera input.
 
 ```bash
 python3 main.py \

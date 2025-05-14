@@ -4,6 +4,7 @@ import depthai as dai
 import threading
 import cv2
 from utility import filter_internal_cameras, run_pipeline
+from typing import List, Callable
 
 model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
 archive_path = dai.getModelFromZoo(model_description)
@@ -35,7 +36,7 @@ labelMap = [
 
 
 class OpencvManager:
-    def __init__(self, keys: list[int]):
+    def __init__(self, keys: List[int]):
         self.newFrameEvent = threading.Event()
         self.lock = threading.Lock()
         self.frames: dict[int, dai.ImgFrame] = self._init_dictionary(keys)
@@ -87,7 +88,7 @@ class OpencvManager:
             self.detections[dx_id] = detections
             self.newFrameEvent.set()
 
-    def _init_dictionary(self, keys: list[int]) -> dict:
+    def _init_dictionary(self, keys: List[int]) -> dict:
         dic = dict()
         for key in keys:
             dic[key] = None
@@ -95,7 +96,7 @@ class OpencvManager:
 
 
 class Display(dai.node.HostNode):
-    def __init__(self, callback: callable, dx_id: int) -> None:
+    def __init__(self, callback: Callable, dx_id: int) -> None:
         super().__init__()
         self.callback = callback
         self.dx_id = dx_id
@@ -109,7 +110,7 @@ class Display(dai.node.HostNode):
         self.callback(in_frame, in_det, self.dx_id)
 
 
-def getPipeline(dev: dai.Device, callback: callable) -> dai.Pipeline:
+def getPipeline(dev: dai.Device, callback: Callable) -> dai.Pipeline:
     pipeline = dai.Pipeline(dev)
 
     cam_rgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -128,7 +129,7 @@ def getPipeline(dev: dai.Device, callback: callable) -> dai.Pipeline:
 
 
 def pair_device_with_pipeline(
-    device_info: dai.DeviceInfo, pipelines: list[dai.Pipeline], callback: callable
+    device_info: dai.DeviceInfo, pipelines: List[dai.Pipeline], callback: Callable
 ) -> None:
     device = dai.Device(device_info)
 
@@ -145,8 +146,8 @@ if len(devices) == 0:
 else:
     print("Found", len(devices), "devices")
 
-pipelines: list[dai.Pipeline] = []
-threads: list[threading.Thread] = []
+pipelines: List[dai.Pipeline] = []
+threads: List[threading.Thread] = []
 manager = OpencvManager([device.getMxId() for device in devices])
 
 for dev in devices:

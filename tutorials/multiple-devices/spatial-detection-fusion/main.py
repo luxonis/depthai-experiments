@@ -6,6 +6,7 @@ from detection import Detection
 import os
 import config
 from birdseyeview import BirdsEyeView
+from typing import List, Dict, Callable
 
 model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
 archive_path = dai.getModelFromZoo(model_description)
@@ -41,16 +42,16 @@ class OpencvManager:
         self.newFrameEvent = threading.Event()
         self.lock = threading.Lock()
         self.keys = []
-        self.frames: dict[str, dai.ImgFrame] = {}  # window_name -> frame
-        self.detections: dict[
+        self.frames: Dict[str, dai.ImgFrame] = {}  # window_name -> frame
+        self.detections: Dict[
             str, dai.SpatialImgDetections
         ] = {}  # window_name -> detections
-        self.depth_frames: dict[str, np.ndarray] = {}  # window_name -> depth_frame
-        self.dx_ids: dict[str, str] = {}  # window_name -> device_id
+        self.depth_frames: Dict[str, np.ndarray] = {}  # window_name -> depth_frame
+        self.dx_ids: Dict[str, str] = {}  # window_name -> device_id
         self.show_detph = False
-        self.detected_objects: list[Detection] = []
-        self.cam_to_world: dict[str, any] = {}  # device_id -> cam_to_world
-        self.friendly_id: dict[str, int] = {}  # device_id -> friendly_id
+        self.detected_objects: List[Detection] = []
+        self.cam_to_world: Dict[str, any] = {}  # device_id -> cam_to_world
+        self.friendly_id: Dict[str, int] = {}  # device_id -> friendly_id
 
     def run(self) -> None:
         for window_name in self.frames.keys():
@@ -256,7 +257,7 @@ class OpencvManager:
 
 
 class Display(dai.node.HostNode):
-    def __init__(self, callback_frame: callable, window_name: str) -> None:
+    def __init__(self, callback_frame: Callable, window_name: str) -> None:
         super().__init__()
         self.callback_frame = callback_frame
         self.widnow_name = window_name
@@ -287,7 +288,7 @@ class Display(dai.node.HostNode):
         self.callback_frame(rgb_frame, nn_out, depth_frame, self.widnow_name)
 
 
-def filter_internal_cameras(devices: list[dai.DeviceInfo]) -> list[dai.DeviceInfo]:
+def filter_internal_cameras(devices: List[dai.DeviceInfo]) -> List[dai.DeviceInfo]:
     filtered_devices = []
     for d in devices:
         if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
@@ -301,7 +302,7 @@ def run_pipeline(pipeline: dai.Pipeline) -> None:
 
 
 def get_pipelines(
-    device: dai.Device, callback_frame: callable, friendly_id: int
+    device: dai.Device, callback_frame: Callable, friendly_id: int
 ) -> dai.Pipeline:
     pipeline = dai.Pipeline(device)
 
@@ -348,8 +349,8 @@ def get_pipelines(
 
 def pair_device_with_pipeline(
     dev_info: dai.DeviceInfo,
-    pipelines: list,
-    callback_frame: callable,
+    pipelines: List,
+    callback_frame: Callable,
     friendly_id: int,
 ) -> None:
     device: dai.Device = dai.Device(dev_info)
@@ -364,8 +365,8 @@ else:
     print("Found", len(devices), "devices")
 
 
-pipelines: list[dai.Pipeline] = []
-threads: list[threading.Thread] = []
+pipelines: List[dai.Pipeline] = []
+threads: List[threading.Thread] = []
 manager = OpencvManager()
 
 for friendly_id, dev in enumerate(devices):

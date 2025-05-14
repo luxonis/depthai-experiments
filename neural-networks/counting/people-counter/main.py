@@ -1,78 +1,66 @@
-import argparse
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes.ml.parsers import SCRFDParser
-from host_node.counter_text_serializer import CounterTextSerializer
-from host_node.draw_detections import DrawDetections
-from host_node.draw_text import DrawText
-from host_node.host_display import Display
-from host_node.normalize_bbox import NormalizeBbox
-from host_node.object_counter import ObjectCounter
-from host_node.parser_bridge import ParserBridge
+from depthai_nodes.node import ParsingNeuralNetwork
+from utils.arguments import initialize_argparser
+from utils.object_counter import ObjectCounter
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-vid",
-    "--video",
-    type=str,
-    help="Path to video to use for inference. Otherwise uses the DepthAI color camera",
-)
-args = parser.parse_args()
+_, args = initialize_argparser()
 
-device = dai.Device()
-model_description = dai.NNModelDescription(
-    modelSlug="scrfd-person-detection",
-    platform=device.getPlatform().name,
-    modelVersionSlug="2-5g-640x640",
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
+if args.fps_limit and args.media_path:
+    args.fps_limit = None
+    print(
+        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
+    )
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    if args.video:
+
+    platform = device.getPlatformAsString()
+    model_description = dai.NNModelDescription(
+        "luxonis/scrfd-person-detection:25g-640x640", platform=platform
+    )
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+
+    if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
-        replay.setReplayVideoFile(Path(args.video).resolve().absolute())
-        replay.setSize(640, 640)
-        replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-        frame_type = pipeline.create(dai.node.ImageManip)
-        frame_type.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-        frame_type.setMaxOutputFrameSize(640 * 640 * 3)
-        replay.out.link(frame_type.inputImage)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(
+            dai.ImgFrame.Type.BGR888i
+            if platform == "RVC4"
+            else dai.ImgFrame.Type.BGR888p
+        )
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+            args.fps_limit = None  # only want to set it once
+        replay.setSize(nn_archive.getInputWidth(), nn_archive.getInputHeight())
 
-        preview = frame_type.out
-    else:
-        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        preview = cam.requestOutput(size=(640, 640), type=dai.ImgFrame.Type.BGR888p)
+    input_node = (
+        replay.out if args.media_path else pipeline.create(dai.node.Camera).build()
+    )
 
-    nn = pipeline.create(dai.node.NeuralNetwork)
-    nn.setNNArchive(nn_archive)
-    nn.input.setBlocking(False)
-    preview.link(nn.input)
-    nn_parser = pipeline.create(SCRFDParser)
-    nn_parser.setFeatStrideFPN((8, 16, 32, 64, 128))
-    nn_parser.setNumAnchors(1)
-    nn.out.link(nn_parser.input)
-    bridge = pipeline.create(ParserBridge).build(nn=nn_parser.out)
+    nn_with_parser: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, nn_archive, fps=args.fps_limit
+    )
+    object_counter = pipeline.create(ObjectCounter).build(
+        nn=nn_with_parser.out, label_map=["People"]
+    )
 
-    object_counter = pipeline.create(ObjectCounter).build(nn=bridge.output)
-    counter_serializer = pipeline.create(CounterTextSerializer).build(
-        counter=object_counter.output, label_map=["People count"]
-    )
-    draw_count = pipeline.create(DrawText).build(
-        frame=preview, text=counter_serializer.output
-    )
-    draw_count.config.position = (15, 30)
-    draw_count.config.size = 1
-
-    normalize_bbox = pipeline.create(NormalizeBbox).build(
-        frame=draw_count.output, nn=bridge.output
-    )
-    draw_detections = pipeline.create(DrawDetections).build(
-        frame=draw_count.output, nn=normalize_bbox.output, label_map=["Person"]
-    )
-    display = pipeline.create(Display).build(frames=draw_detections.output)
+    visualizer.addTopic("Video", nn_with_parser.passthrough)
+    visualizer.addTopic("Visualizations", nn_with_parser.out)
+    visualizer.addTopic("Object count", object_counter.out)
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

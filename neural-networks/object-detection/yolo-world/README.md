@@ -1,8 +1,10 @@
 # Multi-Input YOLO World Demo README
 
-## Overview
+This example demonstrates the implementation of multi-input [YOLO-World](https://github.com/AILab-CVC/YOLO-World) object detection pipeline on DepthAI. The experiment works only on RVC4.
 
-This example demonstrates the implementation of multi-input YOLO-WORLD object detection pipeline on DepthAI.
+## Demo
+
+![Barrel detection](media/barrel-detection.gif)
 
 ## Features
 
@@ -10,7 +12,7 @@ This example demonstrates the implementation of multi-input YOLO-WORLD object de
 - Support for video files and live camera input.
 - Customizable class names and confidence threshold.
 
-## Setup
+## Installation
 
 1. Install the required Python libraries:
    ```bash
@@ -33,17 +35,13 @@ python main.py --device <DEVICE> --class_names <CLASS_NAMES> [OPTIONS]
 
 ### Optional Arguments
 
-- `--video_path`: Path to the video file for processing. If omitted, live camera input is used.
-- `--confidence_threshold`: Confidence threshold for detections (default: 0.1).
+- `--media_path`: Path to the video file for processing. If omitted, live camera input is used.
+- `--confidence_thresh`: Confidence threshold for detections (default: 0.1).
 
 ### Example
 
-```bash
-python main.py --device 192.168.1.100 --class_names person car dog --video_path input.mp4 --confidence_threshold 0.2
-```
-
-For running with a depthai visualizer:
+Running with a depthai visualizer:
 
 ```bash
-python main_dai_visualizer.py --device 192.168.1.100 --class_names person car dog --video_path input.mp4 --confidence_threshold 0.2
+python main.py --class_names person car dog --confidence_thresh 0.2
 ```

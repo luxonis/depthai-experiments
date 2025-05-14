@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import depthai as dai
-from depthai_nodes import ParsingNeuralNetwork
+from depthai_nodes.node import ParsingNeuralNetwork
 from utils.arguments import initialize_argparser
 from utils.mjpeg_streamer import MJPEGStreamer
 
@@ -15,7 +15,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     model_description = dai.NNModelDescription("luxonis/yolov6-nano:r2-coco-512x288")
-    platform = pipeline.getDefaultDevice().getPlatformAsString()
+    platform = device.getPlatformAsString()
     model_description.platform = platform
     nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 

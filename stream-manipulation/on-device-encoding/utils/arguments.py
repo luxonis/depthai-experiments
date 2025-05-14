@@ -3,7 +3,9 @@ import argparse
 
 def initialize_argparser():
     """Initialize the argument parser for the script."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     parser.add_argument(
         "-d",
@@ -29,7 +31,7 @@ def initialize_argparser():
         choices=["h264", "h265", "mjpeg"],
         default="h264",
         type=str,
-        help="Video encoding (h264 is default)",
+        help="Video encoding",
     )
 
     parser.add_argument(

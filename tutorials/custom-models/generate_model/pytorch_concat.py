@@ -1,9 +1,14 @@
-#! /usr/bin/env python3
+import os
 
-from pathlib import Path
+import depthai as dai
 import torch
+from generate_utils import generate_model, parse_arguments
+from luxonis_ml.nn_archive.config import CONFIG_VERSION
 from torch import nn
-import blobconverter
+
+args = parse_arguments()
+
+platform = dai.Platform.__members__[args.platform.upper()]
 
 
 class CatImgs(nn.Module):
@@ -11,33 +16,75 @@ class CatImgs(nn.Module):
         return torch.cat((img1, img2, img3), 3)
 
 
-# Define the expected input shape (dummy input)
-shape = (1, 3, 300, 300)
-X = torch.ones(shape, dtype=torch.float32)
+model = CatImgs()
 
-path = Path("out/")
-path.mkdir(parents=True, exist_ok=True)
-onnx_file = "out/concat.onnx"
+input_shape = (1, 3, 300, 300)
 
-print(f"Writing to {onnx_file}")
-torch.onnx.export(
-    CatImgs(),
-    (X, X, X),
-    onnx_file,
-    opset_version=12,
-    do_constant_folding=True,
-    input_names=["img1", "img2", "img3"],  # Optional
-    output_names=["output"],  # Optional
-)
+cfg_dict = {
+    "config_version": CONFIG_VERSION,
+    "model": {
+        "metadata": {
+            "name": "concat",
+            "path": "concat.onnx",
+            "precision": "float32",
+        },
+        "inputs": [
+            {
+                "name": "img1",
+                "dtype": "float32",
+                "input_type": "image",
+                "shape": input_shape,
+                "layout": "NCHW",
+                "preprocessing": {
+                    "mean": [0.0, 0.0, 0.0],
+                    "scale": [1.0, 1.0, 1.0],
+                    "reverse_channels": False,
+                    "interleaved_to_planar": None,
+                },
+            },
+            {
+                "name": "img2",
+                "dtype": "float32",
+                "input_type": "image",
+                "shape": input_shape,
+                "layout": "NCHW",
+                "preprocessing": {
+                    "mean": [0.0, 0.0, 0.0],
+                    "scale": [1.0, 1.0, 1.0],
+                    "reverse_channels": False,
+                    "interleaved_to_planar": None,
+                },
+            },
+            {
+                "name": "img3",
+                "dtype": "float32",
+                "input_type": "image",
+                "shape": input_shape,
+                "layout": "NCHW",
+                "preprocessing": {
+                    "mean": [0.0, 0.0, 0.0],
+                    "scale": [1.0, 1.0, 1.0],
+                    "reverse_channels": False,
+                    "interleaved_to_planar": None,
+                },
+            },
+        ],
+        "outputs": [{"name": "output", "dtype": "float32"}],
+        "heads": [
+            {
+                "parser": "ImageOutputParser",
+                "outputs": ["output"],
+                "metadata": {"output_is_bgr": True},
+            }
+        ],
+    },
+}
 
-# No need for onnx-simplifier here
-
-# Use blobconverter to convert onnx->IR->blob
-blobconverter.from_onnx(
-    model=onnx_file,
-    data_type="FP16",
-    shaves=6,
-    use_cache=False,
-    output_dir="../models",
-    optimizer_params=[],
+os.makedirs(str("out/models"), exist_ok=True)
+generate_model(
+    model=model,
+    cfg_dict=cfg_dict,
+    output_path=f"out/models/concat.{args.platform.lower()}.tar.xz",
+    simplify_model=False,
+    platform=platform,
 )

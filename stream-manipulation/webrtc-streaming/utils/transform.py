@@ -3,8 +3,8 @@ import depthai as dai
 import numpy as np
 from aiortc import VideoStreamTrack
 from av import VideoFrame
-from depthai_nodes import ParsingNeuralNetwork
-from depthai_nodes.ml.messages import ImgDetectionExtended
+from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes import ImgDetectionExtended
 
 
 class VideoTransform(VideoStreamTrack):

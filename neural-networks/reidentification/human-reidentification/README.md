@@ -37,9 +37,9 @@ Here is a list of all available parameters:
 
 ```
 -det DET_MODEL, --det_model DET_MODEL
-                    Detection model HubAI reference. (default: None)
+                    Detection model HubAI reference. (default: luxonis/scrfd-person-detection:25g-640x640)
 -rec REC_MODEL, --rec_model REC_MODEL
-                    Recognition model HubAI reference. (default: None)
+                    Recognition model HubAI reference. (default: luxonis/osnet:imagenet-128x256)
 -cos COS_SIMILARITY_THRESHOLD, --cos_similarity_threshold COS_SIMILARITY_THRESHOLD
                     Cosine similarity between object embeddings above which detections are considered as belonging to the same object. (default: 0.5)
 -media MEDIA_PATH, --media_path MEDIA_PATH

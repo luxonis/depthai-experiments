@@ -1,95 +1,50 @@
-#!/usr/bin/env python3
+from pathlib import Path
 
 import depthai as dai
-import argparse
-from os import name as osName
-import subprocess as sp
+from utils.arguments import initialize_argparser
+from utils.encoder_profiles import ENCODER_PROFILES
 
-from hostnodes.host_play_encoded_video import PlayEncodedVideo, WIDTH, HEIGHT
-from hostnodes.host_display import Display
+_, args = initialize_argparser()
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-enc",
-    "--encode",
-    default="jpeg",
-    choices={"h264", "h265", "jpeg"},
-    help="Select encoding format. Default: %(default)s",
-)
-parser.add_argument(
-    "-fps",
-    "--fps",
-    type=float,
-    default=30.0,
-    help="Camera FPS to configure. Default: %(default)s",
-)
-parser.add_argument(
-    "-v",
-    "--verbose",
-    default=False,
-    action="store_true",
-    help="Prints latency for the encoded frame data to reach the app",
-)
-args = parser.parse_args()
+if args.encode == "h265":
+    print(
+        "Playing H265 encoded stream using Visualizer is currently not supported. Using H264 encoding."
+    )
+    args.encode = "h264"
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
 
-enc_opts = {
-    "h264": dai.VideoEncoderProperties.Profile.H264_MAIN,
-    "h265": dai.VideoEncoderProperties.Profile.H265_MAIN,
-    "jpeg": dai.VideoEncoderProperties.Profile.MJPEG,
-}
+with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
 
-command = [
-    "ffplay",
-    "-i",
-    "-",
-    "-x",
-    str(WIDTH),
-    "-y",
-    str(HEIGHT),
-    "-framerate",
-    "60",
-    "-fflags",
-    "nobuffer",
-    "-flags",
-    "low_delay",
-    "-framedrop",
-    "-strict",
-    "experimental",
-]
+    platform = device.getPlatformAsString()
 
-if osName == "nt":  # Running on Windows
-    command = ["cmd", "/c"] + command
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setLoop(True)
+        cam_out = replay.out
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+        cam_out = cam.requestOutput((1920, 1440), type=dai.ImgFrame.Type.NV12)
 
-try:
-    proc = sp.Popen(command, stdin=sp.PIPE)  # Start the ffplay process
-except Exception as e:
-    exit("Error: cannot run ffplay!\nTry running: sudo apt install ffmpeg")
-
-
-with dai.Pipeline() as pipeline:
-    # Define sources and output
-    camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    video = camRgb.requestOutput(
-        size=(WIDTH, HEIGHT), type=dai.ImgFrame.Type.NV12, fps=args.fps
+    encoder = pipeline.create(dai.node.VideoEncoder).build(
+        input=cam_out,
+        frameRate=args.fps_limit,
+        profile=ENCODER_PROFILES[args.encode],
     )
 
-    videoEnc = pipeline.create(dai.node.VideoEncoder)
-    videoEnc.setDefaultProfilePreset(args.fps, enc_opts[args.encode])
+    visualizer.addTopic("Video", encoder.out)
+    print("Pipeline created.")
 
-    # Linking
-    video.link(videoEnc.input)
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
 
-    decoded = pipeline.create(PlayEncodedVideo).build(
-        enc_out=videoEnc.bitstream, proc=proc
-    )
-
-    color = pipeline.create(Display).build(frame=decoded.output)
-    color.setName("Color")
-
-    print("pipeline created")
-    pipeline.run()
-    print("pipeline finished")
-
-    proc.stdin.close()
-    print("process closed")
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key from the remote connection!")
+            break

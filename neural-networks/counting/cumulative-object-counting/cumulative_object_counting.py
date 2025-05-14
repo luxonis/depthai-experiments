@@ -4,6 +4,7 @@ import cv2
 import depthai as dai
 
 from trackable_object import TrackableObject
+from typing import Dict, Tuple
 
 
 class CumulativeObjectCounting(dai.node.HostNode):
@@ -13,7 +14,7 @@ class CumulativeObjectCounting(dai.node.HostNode):
         self._frame_count = 0
         self._axis = True
         self._roi_position = 0.5
-        self._trackable_objects: dict[int, TrackableObject] = {}
+        self._trackable_objects: Dict[int, TrackableObject] = {}
         self._counter = [0, 0, 0, 0]
         self.output = self.createOutput(
             possibleDatatypes=[
@@ -67,7 +68,7 @@ class CumulativeObjectCounting(dai.node.HostNode):
 
     def _calculate_centroid(
         self, height: int, width: int, t: dai.Tracklet
-    ) -> tuple[int, int]:
+    ) -> Tuple[int, int]:
         roi = t.roi.denormalize(width, height)
         x1 = int(roi.topLeft().x)
         y1 = int(roi.topLeft().y)
@@ -77,7 +78,7 @@ class CumulativeObjectCounting(dai.node.HostNode):
         return centroid
 
     def _update_counter(
-        self, height: int, width: int, to: TrackableObject, centroid: tuple[int, int]
+        self, height: int, width: int, to: TrackableObject, centroid: Tuple[int, int]
     ) -> None:
         if self._axis and not to.counted:
             x = [c[0] for c in to.centroids]
@@ -118,7 +119,7 @@ class CumulativeObjectCounting(dai.node.HostNode):
                 to.counted = True
 
     def _draw_tracklet(
-        self, frame: np.ndarray, t: dai.Tracklet, centroid: tuple[int, int]
+        self, frame: np.ndarray, t: dai.Tracklet, centroid: Tuple[int, int]
     ) -> None:
         text = "ID {}".format(t.id)
         cv2.putText(
