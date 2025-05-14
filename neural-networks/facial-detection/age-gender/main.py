@@ -70,7 +70,7 @@ with dai.Pipeline(device) as pipeline:
     )  # TODO: remove once we have it working with ImgDetectionsExtended
     script_node = pipeline.create(dai.node.Script)
     det_bridge.out.link(script_node.inputs["det_in"])
-    det_nn.passthrough.link(script_node.inputs["preview"])
+    input_node.link(script_node.inputs["preview"])
     script_content = generate_script_content(
         resize_width=rec_model_nn_archive.getInputWidth(),
         resize_height=rec_model_nn_archive.getInputHeight(),
