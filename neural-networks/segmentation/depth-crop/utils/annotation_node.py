@@ -63,6 +63,7 @@ class AnnotationNode(dai.node.HostNode):
 
         disp_frame = (disparity.getFrame() * self.disp_multiplier).astype(np.uint8)
         depth_frame = cv2.applyColorMap(disp_frame, JET_CUSTOM)
+        depth_frame = cv2.resize(depth_frame, (frame.shape[1], frame.shape[0]))
 
         # cut out the mask from the depth frame
         mask_data = np.where(mask_data == self.person_class, 1, 0).astype(np.uint8)
