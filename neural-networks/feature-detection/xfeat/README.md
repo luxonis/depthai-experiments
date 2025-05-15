@@ -9,6 +9,8 @@ In `mono` mode we visualize the matches between the frames and the reference fra
 
 > **Note:** If you want to run the example in `stereo` mode, you need a device with at least 2 cameras (left and right).
 
+> **Note:** Some model operations are not supported on-device and will be run on the host computer. This means that the speed of the app will be affected by the host computer's power. We have set some default FPS limits and `maxNumKeypoints` to ensure that the app runs smoothly on most machines. Feel free to increase the FPS limit if you have a powerful enough machine. To increase the maximum matched keypoints change the `setMaxKeypoints` function in the `mono.py` or `stereo.py` file.
+
 ## Demo
 
 ![XFeat Mono Demo on OAK](media/xfeat_demo.gif)
