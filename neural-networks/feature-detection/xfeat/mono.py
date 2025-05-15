@@ -30,6 +30,7 @@ def mono_mode(
         )
 
         parser: XFeatMonoParser = pipeline.create(ParserGenerator).build(nn_archive)[0]
+        parser.setMaxKeypoints(1024)
         network.out.link(parser.input)
 
         custom_visualizer: MonoVersionVisualizer = pipeline.create(
