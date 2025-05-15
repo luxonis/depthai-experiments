@@ -19,7 +19,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     platform = device.getPlatform().name
-    FPS_LIMIT = 10 if platform == "RVC2" else 20
+    FPS_LIMIT = 10 if platform == "RVC2" else 25
     print(f"Platform: {platform}")
 
     # Check if the device has color, left and right cameras
