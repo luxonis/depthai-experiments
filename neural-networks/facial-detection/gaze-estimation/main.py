@@ -18,8 +18,8 @@ frame_type = (
 
 
 REQ_WIDTH, REQ_HEIGHT = (
-    1280,
-    1280,
+    768,
+    768,
 )  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
 
 DET_MODEL = "luxonis/scrfd-face-detection:10g-640x640"
