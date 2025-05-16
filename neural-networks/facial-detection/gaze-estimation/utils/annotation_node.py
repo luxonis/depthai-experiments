@@ -35,7 +35,7 @@ class AnnotationNode(dai.node.HostNode):
             )
 
             # Draw gaze
-            gaze_tensor = gaze.getTensor("Identity", dequantize=True)
+            gaze_tensor = gaze.getFirstTensor(dequantize=True)
             gaze_tensor = gaze_tensor.flatten()
 
             left_eye = keypoints[0]
