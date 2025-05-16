@@ -1,57 +1,54 @@
-import argparse
-import depthai as dai
-
 from pathlib import Path
-from cumulative_object_counting import CumulativeObjectCounting
-from host_fps_drawer import FPSDrawer
-from host_display import Display
+import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-v",
-    "--video_path",
-    type=str,
-    default="",
-    help="Path to video. If empty OAK-RGB camera is used.",
-)
-parser.add_argument(
-    "-roi", "--roi_position", type=float, default=0.5, help="ROI Position (0-1)"
-)
-parser.add_argument(
-    "-a",
-    "--axis",
-    default=True,
-    action="store_false",
-    help="Axis for cumulative counting (default=x axis)",
-)
-parser.add_argument(
-    "-sp",
-    "--save_path",
-    type=str,
-    default="",
-    help="Path to save the output. If None output won't be saved",
-)
-args = parser.parse_args()
+from utils.arguments import initialize_argparser
+from utils.annotation_node import AnnotationNode
 
-model_description = dai.NNModelDescription(modelSlug="mobilenet-ssd", platform="RVC2")
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
+_, args = initialize_argparser()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
 
-with dai.Pipeline() as pipeline:
-    if args.video_path:
+frame_type = (
+    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+)
+
+if platform != "RVC2":
+    raise ValueError(f"This experiment is only supported for RVC2 platform.")
+
+
+with dai.Pipeline(device) as pipeline:
+
+    # model
+    model_description = dai.NNModelDescription(args.model)
+    model_description.platform = platform
+    model_nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    model_input_width, model_input_height = (
+        model_nn_archive.getInputWidth(),
+        model_nn_archive.getInputHeight(),
+    )
+
+    # media/camera input
+    if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
-        replay.setLoop(False)
-        replay.setOutFrameType(dai.ImgFrame.Type.BGR888p)
-        replay.setReplayVideoFile(args.video_path)
-        replay.setSize((300, 300))
-        video_out = replay.out
-
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(frame_type)
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+        replay.setSize(model_input_width, model_input_height)
+        input_node = replay.out
     else:
-        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        video_out = cam.requestOutput((300, 300), dai.ImgFrame.Type.BGR888p)
+        cam = pipeline.create(dai.node.Camera).build()
+        input_node = cam.requestOutput(
+            size=(model_input_width, model_input_height),
+            type=frame_type,
+            fps=args.fps_limit,
+        )
 
-    nn = pipeline.create(dai.node.DetectionNetwork).build(
-        input=video_out, nnArchive=dai.NNArchive(archive_path)
+    nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, model_nn_archive
     )
     nn.setConfidenceThreshold(0.5)
     nn.setNumInferenceThreads(2)
