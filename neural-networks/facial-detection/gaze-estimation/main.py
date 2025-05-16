@@ -5,6 +5,8 @@ from utils.arguments import initialize_argparser
 from utils.process_keypoints import LandmarksProcessing
 from utils.node_creators import create_crop_node
 from utils.annotation_node import AnnotationNode
+from utils.host_concatenate_head_pose import ConcatenateHeadPose
+
 
 _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
@@ -102,20 +104,20 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # head pose estimation
-    head_pose_nn = pipeline.create(dai.node.NeuralNetwork)
-    head_pose_nn.setNNArchive(head_pose_model_nn_archive)
+    head_pose_nn = pipeline.create(ParsingNeuralNetwork).build(
+        face_crop_node.out, head_pose_model_nn_archive
+    )
     head_pose_nn.input.setBlocking(True)
-    face_crop_node.out.link(head_pose_nn.input)
+    # face_crop_node.out.link(head_pose_nn.input)
 
-    head_pose_script = pipeline.create(dai.node.Script)
-    head_pose_script.setScriptPath(Path(__file__).parent / "utils/head_pose_script.py")
-    head_pose_nn.out.link(head_pose_script.inputs["pose_input"])
-    head_pose_script.inputs["pose_input"].setBlocking(True)
+    head_pose_concatenate_node = pipeline.create(ConcatenateHeadPose).build(
+        head_pose_nn.getOutput(0), head_pose_nn.getOutput(1), head_pose_nn.getOutput(2)
+    )
 
     # gaze estimation
     gaze_estimation_node = pipeline.create(dai.node.NeuralNetwork)
     gaze_estimation_node.setNNArchive(gaze_model_nn_archive)
-    head_pose_script.outputs["head_pose_output"].link(
+    head_pose_concatenate_node.output.link(
         gaze_estimation_node.inputs["head_pose_angles_yaw_pitch_roll"]
     )
     left_eye_crop_node.out.link(gaze_estimation_node.inputs["left_eye_image"])
