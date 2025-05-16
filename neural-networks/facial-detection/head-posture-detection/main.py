@@ -1,93 +1,88 @@
 from pathlib import Path
 import depthai as dai
+from depthai_nodes.node import ParsingNeuralNetwork, GatherData
+from utils.annotation_node import AnnotationNode
+from utils.arguments import initialize_argparser
+from utils.host_process_detections import CropConfigsCreator
 
-from head_posture_detection import HeadPostureDetection
-from detections_recognitions_sync import DetectionsRecognitionsSync
+_, args = initialize_argparser()
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform()
 
-face_det_model_description = dai.NNModelDescription(
-    model="luxonis/yunet:640x640", platform="RVC2"
-)
-face_det_archive_path = dai.getModelFromZoo(face_det_model_description)
-face_det_nn_archive = dai.NNArchive(face_det_archive_path)
+FPS = 30
+frame_type = dai.ImgFrame.Type.BGR888i
+if "RVC2" in str(platform):
+    frame_type = dai.ImgFrame.Type.RGB888p
 
-recognition_model_description = dai.NNModelDescription(
-    model="luxonis/head-pose-estimation:60x60", platform="RVC2"
-)
-recognition_archive_path = dai.getModelFromZoo(recognition_model_description)
-recognition_nn_archive = dai.NNArchive(recognition_archive_path)
-
-device = dai.Device()
-stereo = 1 < len(device.getConnectedCameras())
 with dai.Pipeline(device) as pipeline:
-    print("Creating Color Camera...")
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(1080, 1080)
-    cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam.setInterleaved(False)
-    cam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam.setPreviewNumFramesPool(10)
+    print("Creating pipeline...")
 
-    face_det_manip = pipeline.create(dai.node.ImageManip)
-    face_det_manip.initialConfig.setResize(300, 300)
-    face_det_manip.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
-    cam.preview.link(face_det_manip.inputImage)
+    if args.media_path:
+        replay_node = pipeline.create(dai.node.ReplayVideo)
+        replay_node.setReplayVideoFile(Path(args.media_path))
+        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay_node.setLoop(True)
 
-    if stereo:
-        monoLeft = pipeline.create(dai.node.MonoCamera)
-        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        monoLeft.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+        video_resize_node = pipeline.create(dai.node.ImageManipV2)
+        video_resize_node.initialConfig.setOutputSize(640, 480)
+        video_resize_node.initialConfig.setFrameType(frame_type)
 
-        monoRight = pipeline.create(dai.node.MonoCamera)
-        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        monoRight.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+        replay_node.out.link(video_resize_node.inputImage)
 
-        stereo = pipeline.create(dai.node.StereoDepth)
-        stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-        monoLeft.out.link(stereo.left)
-        monoRight.out.link(stereo.right)
-
-        print("OAK-D detected, app will display spatial coordiantes")
-        face_det_nn = pipeline.create(dai.node.MobileNetSpatialDetectionNetwork)
-        face_det_nn.setBoundingBoxScaleFactor(0.8)
-        face_det_nn.setDepthLowerThreshold(100)
-        face_det_nn.setDepthUpperThreshold(5000)
-        stereo.depth.link(face_det_nn.inputDepth)
+        input_node = video_resize_node.out
     else:
-        print("OAK-1 detected, app won't display spatial coordiantes")
-        face_det_nn = pipeline.create(dai.node.MobileNetDetectionNetwork)
+        camera_node = pipeline.create(dai.node.Camera).build()
+        input_node = camera_node.requestOutput((640, 480), frame_type, fps=FPS)
 
-    face_det_nn.setConfidenceThreshold(0.5)
-    face_det_nn.setNNArchive(face_det_nn_archive)
-    face_det_nn.input.setBlocking(False)
-    face_det_nn.input.setMaxSize(1)
-    face_det_manip.out.link(face_det_nn.input)
+    face_detection_node: ParsingNeuralNetwork = pipeline.create(
+        ParsingNeuralNetwork
+    ).build(input_node, "luxonis/yunet:640x480")
+    face_detection_node.input.setBlocking(True)
 
-    image_manip_script = pipeline.create(dai.node.Script)
-    image_manip_script.setScriptPath(Path(__file__).parent / "script.py")
-    face_det_nn.out.link(image_manip_script.inputs["face_det_in"])
-    cam.preview.link(image_manip_script.inputs["preview"])
-
-    recognition_manip = pipeline.create(dai.node.ImageManip)
-    recognition_manip.initialConfig.setResize(60, 60)
-    recognition_manip.inputConfig.setWaitForMessage(True)
-    image_manip_script.outputs["manip_cfg"].link(recognition_manip.inputConfig)
-    image_manip_script.outputs["manip_img"].link(recognition_manip.inputImage)
-
-    print("Creating recognition Neural Network...")
-    recognition_nn = pipeline.create(dai.node.NeuralNetwork)
-    recognition_nn.setNNArchive(recognition_nn_archive)
-    recognition_manip.out.link(recognition_nn.input)
-
-    recognition_sync = pipeline.create(DetectionsRecognitionsSync).build()
-    face_det_nn.out.link(recognition_sync.input_detections)
-    recognition_nn.out.link(recognition_sync.input_recognitions)
-    recognition_sync.set_camera_fps(cam.getFps())
-
-    head_pose_detection = pipeline.create(HeadPostureDetection).build(
-        cam.preview, recognition_sync.output
+    detection_process_node = pipeline.create(CropConfigsCreator).build(
+        face_detection_node.out, (640, 480), (60, 60)
     )
-    head_pose_detection.inputs["detected_recognitions"].setBlocking(False)
-    head_pose_detection.inputs["detected_recognitions"].setMaxSize(1)
 
-    pipeline.run()
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setReusePreviousImage(False)
+    crop_node.inputConfig.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(True)
+    crop_node.inputConfig.setMaxSize(30)
+    crop_node.inputImage.setMaxSize(30)
+    crop_node.setNumFramesPool(30)
+
+    detection_process_node.config_output.link(crop_node.inputConfig)
+    input_node.link(crop_node.inputImage)
+
+    head_pose_node = pipeline.create(dai.node.NeuralNetwork)
+    head_pose_node.setFromModelZoo(
+        dai.NNModelDescription("luxonis/head-pose-estimation:60x60"), useCached=True
+    )
+    crop_node.out.link(head_pose_node.input)
+
+    head_pose_node.input.setBlocking(True)
+
+    sync_detection_node = pipeline.create(GatherData).build(FPS)
+    detection_process_node.detections_output.link(sync_detection_node.input_reference)
+    head_pose_node.out.link(sync_detection_node.input_data)
+
+    frame_sync_node = pipeline.create(GatherData).build(FPS, lambda x: 1)
+    input_node.link(frame_sync_node.input_reference)
+    sync_detection_node.out.link(frame_sync_node.input_data)
+
+    annotation_node = pipeline.create(AnnotationNode)
+    frame_sync_node.out.link(annotation_node.input)
+
+    visualizer.addTopic("annotation", annotation_node.output_annotation)
+    visualizer.addTopic("frame", annotation_node.output_frame)
+
+    print("Pipeline created.")
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
+            break
