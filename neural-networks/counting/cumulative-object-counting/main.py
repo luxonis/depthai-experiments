@@ -50,7 +50,6 @@ with dai.Pipeline(device) as pipeline:
     nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, model_nn_archive
     )
-    nn.setConfidenceThreshold(0.5)
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
 
