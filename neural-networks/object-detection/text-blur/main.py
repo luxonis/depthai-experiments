@@ -9,14 +9,17 @@ _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatform()
+platform = device.getPlatform().name
 
-FPS = 28
-if "RVC4" in str(platform):
-    frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 28
-else:
-    frame_type = dai.ImgFrame.Type.BGR888p
+frame_type = (
+    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+)
+
+if args.fps_limit is None:
+    args.fps_limit = 10 if platform == "RVC2" else 30
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -26,6 +29,7 @@ with dai.Pipeline(device) as pipeline:
         replay_node.setReplayVideoFile(Path(args.media_path))
         replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay_node.setLoop(True)
+        replay_node.setFps(args.fps_limit)
 
         video_resize_node = pipeline.create(dai.node.ImageManipV2)
         video_resize_node.initialConfig.setOutputSize(576, 320)
@@ -36,7 +40,9 @@ with dai.Pipeline(device) as pipeline:
         input_node = video_resize_node.out
     else:
         camera_node = pipeline.create(dai.node.Camera).build()
-        input_node = camera_node.requestOutput((576, 320), frame_type, fps=FPS)
+        input_node = camera_node.requestOutput(
+            (576, 320), frame_type, fps=args.fps_limit
+        )
 
     detection_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, "luxonis/paddle-text-detection:320x576"

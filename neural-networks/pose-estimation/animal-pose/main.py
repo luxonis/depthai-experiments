@@ -1,9 +1,14 @@
 from pathlib import Path
 import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork
+from depthai_nodes.node import (
+    ParsingNeuralNetwork,
+    ImgDetectionsBridge,
+    ImgDetectionsFilter,
+    GatherData,
+)
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
-from utils.script import generate_script_content
+from depthai_nodes.node.utils import generate_script_content
 
 _, args = initialize_argparser()
 
@@ -13,20 +18,20 @@ pose_model_slug = "luxonis/superanimal-landmarker:256x256"
 padding = 0.1
 valid_labels = [0, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 
-if args.fps_limit and args.media_path:
-    args.fps_limit = None
-    print(
-        "WARNING: FPS limit is set but media path is provided. FPS limit will be ignored."
-    )
-
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+
+if args.fps_limit is None:
+    args.fps_limit = 4 if platform == "RVC2" else 20
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     detection_model_description = dai.NNModelDescription(detection_model_slug)
-    platform = device.getPlatform().name
     print(f"Platform: {platform}")
     detection_model_description.platform = platform
     detection_nn_archive = dai.NNArchive(
@@ -54,7 +59,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        replay.setFps(4 if platform == "RVC2" else 20)
+        replay.setFps(args.fps_limit)
     else:
         cam = pipeline.create(dai.node.Camera).build()
     input_node = replay if args.media_path else cam
@@ -71,6 +76,7 @@ with dai.Pipeline(device) as pipeline:
         resize_height=pose_nn_archive.getInputHeight(),
         padding=padding,
         valid_labels=valid_labels,
+        resize_mode="STRETCH",
     )
     script.setScript(script_content)
 
@@ -87,13 +93,23 @@ with dai.Pipeline(device) as pipeline:
         pose_manip.out, pose_nn_archive
     )
 
+    detections_filter = pipeline.create(ImgDetectionsFilter).build(
+        detection_nn.out, labels_to_keep=valid_labels
+    )
+
+    detections_bridge = pipeline.create(ImgDetectionsBridge).build(
+        detections_filter.out
+    )
+
+    gather_data = pipeline.create(GatherData).build(camera_fps=args.fps_limit)
+    detections_bridge.out.link(gather_data.input_reference)
+    pose_nn.out.link(gather_data.input_data)
+
     annotation_node = pipeline.create(AnnotationNode).build(
-        input_detections=detection_nn.out,
+        input_detections=gather_data.out,
         connection_pairs=connection_pairs,
         padding=padding,
-        valid_labels=valid_labels,
     )
-    pose_nn.out.link(annotation_node.input_keypoints)
 
     visualizer.addTopic("Video", detection_nn.passthrough, "images")
     visualizer.addTopic("Detections", annotation_node.out_detections, "images")

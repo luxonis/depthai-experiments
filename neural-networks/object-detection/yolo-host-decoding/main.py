@@ -19,6 +19,12 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
+if args.fps_limit is None:
+    args.fps_limit = 25 if platform == "RVC2" else 30
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
+
 model_description = dai.NNModelDescription(model_reference)
 model_description.platform = platform
 nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
@@ -33,7 +39,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        replay.setFps(30)
+        replay.setFps(args.fps_limit)
 
     else:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)

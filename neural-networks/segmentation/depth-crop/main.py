@@ -19,7 +19,7 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     platform = device.getPlatform().name
-    FPS_LIMIT = 10 if platform == "RVC2" else 20
+    FPS_LIMIT = 10 if platform == "RVC2" else 25
     print(f"Platform: {platform}")
 
     # Check if the device has color, left and right cameras
@@ -48,7 +48,7 @@ with dai.Pipeline(device) as pipeline:
         left=left.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
         right=right.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
     )
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
     if platform == "RVC2":
         stereo.setOutputSize(*CAMERA_RESOLUTION)

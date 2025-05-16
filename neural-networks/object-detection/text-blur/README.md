@@ -43,7 +43,7 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the human-machine safety experiment with the default device.
+This will run the text-blur experiment with the default device.
 
 ### Standalone Mode
 

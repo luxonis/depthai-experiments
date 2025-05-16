@@ -25,31 +25,6 @@ def initialize_argparser():
         type=float,
     )
 
-    parser.add_argument(
-        "-media",
-        "--media_path",
-        help="Path to the media file you aim to run the model on. If not set, the model will run on the camera input.",
-        required=False,
-        default=None,
-        type=str,
-    )
-
-    parser.add_argument(
-        "-conf",
-        "--confidence_thresh",
-        help="set the confidence threshold",
-        default=0.5,
-        type=float,
-    )
-
-    parser.add_argument(
-        "-iou",
-        "--iou_thresh",
-        help="set the NMS IoU threshold",
-        default=0.45,
-        type=float,
-    )
-
     args = parser.parse_args()
 
     return parser, args

@@ -2,6 +2,7 @@ import depthai as dai
 
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
+from depthai_nodes.node import ApplyColormap
 
 _, args = initialize_argparser()
 
@@ -12,6 +13,12 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
+
+if args.fps_limit is None:
+    args.fps_limit = 20 if platform == "RVC2" else 30
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 model_description = dai.NNModelDescription(model_reference)
 model_description.platform = platform
@@ -35,8 +42,8 @@ with dai.Pipeline(device) as pipeline:
     left_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right_cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left_cam.requestOutput(nn_archive.getInputSize()),
-        right=right_cam.requestOutput(nn_archive.getInputSize()),
+        left=left_cam.requestOutput(nn_archive.getInputSize(), fps=args.fps_limit),
+        right=right_cam.requestOutput(nn_archive.getInputSize(), fps=args.fps_limit),
         presetMode=dai.node.StereoDepth.PresetMode.HIGH_DETAIL,
     )
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
@@ -59,11 +66,16 @@ with dai.Pipeline(device) as pipeline:
 
     annotation_node = pipeline.create(AnnotationNode).build(
         input_detections=nn.out,
+        depth=stereo.depth,
         labels=nn_archive.getConfig().model.heads[0].metadata.classes,
     )
 
+    apply_colormap = pipeline.create(ApplyColormap).build(stereo.depth)
+
     visualizer.addTopic("Camera", nn.passthrough)
     visualizer.addTopic("Detections", annotation_node.out_annotations)
+    visualizer.addTopic("Depth", apply_colormap.out)
+
     print("Pipeline created.")
     pipeline.start()
     visualizer.registerPipeline(pipeline)
