@@ -54,6 +54,7 @@ with dai.Pipeline(device) as pipeline:
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
 
+    # object tracking
     objectTracker = pipeline.create(dai.node.ObjectTracker)
     objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
     objectTracker.setTrackerIdAssignmentPolicy(
@@ -64,28 +65,22 @@ with dai.Pipeline(device) as pipeline:
     nn.passthrough.link(objectTracker.inputDetectionFrame)
     nn.out.link(objectTracker.inputDetections)
 
-    counting = pipeline.create(CumulativeObjectCounting).build(
-        img_frames=video_out, tracklets=objectTracker.out
+    # annotation
+    annotation_node = pipeline.create(AnnotationNode).build(
+        objectTracker.out, axis=args.axis, roi_position=args.roi_position
     )
-    counting.set_axis(args.axis)
-    counting.set_roi_position(args.roi_position)
 
-    fps_drawer = pipeline.create(FPSDrawer).build(counting.output)
-
-    if args.save_path:
-        img_manip = pipeline.create(dai.node.ImageManip)
-        img_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
-        fps_drawer.output.link(img_manip.inputImage)
-
-        videoEncoder = pipeline.create(dai.node.VideoEncoder).build(img_manip.out)
-        videoEncoder.setProfile(dai.VideoEncoderProperties.Profile.H264_MAIN)
-
-        record = pipeline.create(dai.node.RecordVideo)
-        record.setRecordVideoFile(Path(args.save_path))
-        videoEncoder.out.link(record.input)
-
-    display = pipeline.create(Display).build(fps_drawer.output)
-    display.setName("Cumulative Object Counting")
+    # visualization
+    visualizer.addTopic("Video", nn.passthrough)
+    visualizer.addTopic("Count", annotation_node.out)
 
     print("Pipeline created.")
-    pipeline.run()
+
+    pipeline.start()
+    visualizer.registerPipeline(pipeline)
+
+    while pipeline.isRunning():
+        key_pressed = visualizer.waitKey(1)
+        if key_pressed == ord("q"):
+            pipeline.stop()
+            break
