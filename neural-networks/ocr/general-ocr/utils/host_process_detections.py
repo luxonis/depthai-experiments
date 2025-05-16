@@ -153,13 +153,12 @@ class CropConfigsCreator(dai.node.HostNode):
             if detection.confidence > 0.8:
                 rect = detection.rotated_rect
                 rect = self._expand_rect(rect)
-                rect = rect.denormalize(self.w, self.h)
 
                 xmin, ymin, xmax, ymax = rect.getOuterRect()
-                xmin = int(max(0, xmin))
-                ymin = int(max(0, ymin))
-                xmax = int(min(self.w, xmax))
-                ymax = int(min(self.h, ymax))
+                xmin = int(max(0, xmin * self.w))
+                ymin = int(max(0, ymin * self.h))
+                xmax = int(min(self.w, xmax * self.w))
+                ymax = int(min(self.h, ymax * self.h))
 
                 if xmax - xmin < 50 or ymax - ymin < 12:
                     continue
