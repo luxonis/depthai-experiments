@@ -1,14 +1,17 @@
 import depthai as dai
 from typing import List, Tuple, Optional
 
-DEFAULT_OUTLINE_COLOR_RGBA: Tuple[int, int, int, int] = (0, 255, 0, 255) # Green
+DEFAULT_OUTLINE_COLOR_RGBA: Tuple[int, int, int, int] = (0, 255, 0, 255)  # Green
+
 
 class AnnotationNode(dai.node.HostNode):
     def __init__(self):
         super().__init__()
-        
+
         self.labels: List[str] = []
-        self.outline_color: dai.Color = self._create_dai_color(*DEFAULT_OUTLINE_COLOR_RGBA) 
+        self.outline_color: dai.Color = self._create_dai_color(
+            *DEFAULT_OUTLINE_COLOR_RGBA
+        )
 
         self.annotation_out = self.createOutput(
             possibleDatatypes=[
@@ -29,7 +32,7 @@ class AnnotationNode(dai.node.HostNode):
         input_frame_stream: dai.Node.Output,
         input_detections_stream: dai.Node.Output,
         labels: List[str],
-        outline_color_rgba: Optional[Tuple[int, int, int, int]] = None
+        outline_color_rgba: Optional[Tuple[int, int, int, int]] = None,
     ) -> "AnnotationNode":
         self.labels = labels
         if outline_color_rgba:
@@ -38,7 +41,9 @@ class AnnotationNode(dai.node.HostNode):
         self.link_args(input_frame_stream, input_detections_stream)
         return self
 
-    def process(self, frame_message: dai.ImgFrame, detections_message: dai.ImgDetections) -> None:
+    def process(
+        self, frame_message: dai.ImgFrame, detections_message: dai.ImgDetections
+    ) -> None:
         output_annotations_msg = dai.ImgAnnotations()
         output_annotations_msg.setTimestamp(frame_message.getTimestamp())
         output_annotations_msg.setSequenceNum(frame_message.getSequenceNum())
@@ -46,13 +51,20 @@ class AnnotationNode(dai.node.HostNode):
         current_img_annotation_group = dai.ImgAnnotation()
 
         for detection in detections_message.detections:
-            xmin, ymin, xmax, ymax = detection.xmin, detection.ymin, detection.xmax, detection.ymax
-            
+            xmin, ymin, xmax, ymax = (
+                detection.xmin,
+                detection.ymin,
+                detection.xmax,
+                detection.ymax,
+            )
+
             rect_points_data = [
-                dai.Point2f(xmin, ymin), dai.Point2f(xmax, ymin),
-                dai.Point2f(xmax, ymax), dai.Point2f(xmin, ymax),
+                dai.Point2f(xmin, ymin),
+                dai.Point2f(xmax, ymin),
+                dai.Point2f(xmax, ymax),
+                dai.Point2f(xmin, ymax),
             ]
-            
+
             points_annotation = dai.PointsAnnotation()
             points_annotation.type = dai.PointsAnnotationType.LINE_LOOP
             points_annotation.points = dai.VectorPoint2f(rect_points_data)
@@ -61,7 +73,11 @@ class AnnotationNode(dai.node.HostNode):
             current_img_annotation_group.points.append(points_annotation)
 
             label_idx = detection.label
-            label_text = self.labels[label_idx] if 0 <= label_idx < len(self.labels) else "Unknown"
+            label_text = (
+                self.labels[label_idx]
+                if 0 <= label_idx < len(self.labels)
+                else "Unknown"
+            )
             confidence_text = f"{int(detection.confidence * 100)}%"
             full_text = f"{label_text}: {confidence_text}"
 
@@ -72,5 +88,7 @@ class AnnotationNode(dai.node.HostNode):
             text_annotation.textColor = self._create_dai_color(255, 255, 255)
             current_img_annotation_group.texts.append(text_annotation)
 
-        output_annotations_msg.annotations = dai.VectorImgAnnotation([current_img_annotation_group])
+        output_annotations_msg.annotations = dai.VectorImgAnnotation(
+            [current_img_annotation_group]
+        )
         self.annotation_out.send(output_annotations_msg)
