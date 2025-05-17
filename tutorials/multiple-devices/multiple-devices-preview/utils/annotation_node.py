@@ -1,7 +1,7 @@
 import depthai as dai
 from typing import List, Tuple, Optional
 
-DEFAULT_OUTLINE_COLOR_RGBA: Tuple[int, int, int, int] = (0, 255, 0, 255)  # Green
+DEFAULT_OUTLINE_COLOR_RGBA: Tuple[int, int, int, int] = (0, 1, 0, 1)  # Green
 
 
 class AnnotationNode(dai.node.HostNode):
@@ -19,7 +19,9 @@ class AnnotationNode(dai.node.HostNode):
             ]
         )
 
-    def _create_dai_color(self, r: int, g: int, b: int, a: int = 255) -> dai.Color:
+    def _create_dai_color(
+        self, r: float, g: float, b: float, a: float = 1.0
+    ) -> dai.Color:
         color = dai.Color()
         color.r = r
         color.g = g
@@ -32,7 +34,7 @@ class AnnotationNode(dai.node.HostNode):
         input_frame_stream: dai.Node.Output,
         input_detections_stream: dai.Node.Output,
         labels: List[str],
-        outline_color_rgba: Optional[Tuple[int, int, int, int]] = None,
+        outline_color_rgba: Optional[Tuple[float, float, float, float]] = None,
     ) -> "AnnotationNode":
         self.labels = labels
         if outline_color_rgba:

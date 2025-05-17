@@ -1,3 +1,4 @@
+import os
 import depthai as dai
 from typing import List, Optional, Dict, Any
 from utils.utility import filter_internal_cameras
@@ -93,9 +94,7 @@ def main():
         key = visualizer.waitKey(1)
         if key == ord("q"):
             print("Got 'q' key from the remote connection! Shutting down.")
-            break
-        if not active_pipelines_info:
-            break
+            os._exit(0)
 
 
 if __name__ == "__main__":

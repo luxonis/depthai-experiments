@@ -1,8 +1,9 @@
+import os
 import depthai as dai
 from typing import List, Optional, Dict, Any
 
 from utils.annotation_node import AnnotationNode
-from utils.utility import filter_internal_cameras
+from utils.utility import filter_internal_cameras, generate_vibrant_random_color
 from depthai_nodes.node import ParsingNeuralNetwork
 
 HTTP_PORT = 8082
@@ -44,6 +45,7 @@ def setup_detection_pipeline(
     print(f"=== Successfully connected to device: {mxid}")
 
     cameras_features = device_instance.getConnectedCameraFeatures()
+
     print(f"    >>> Cameras: {[c.socket.name for c in cameras_features]}")
     print(f"    >>> USB speed: {device_instance.getUsbSpeed().name}")
 
@@ -67,7 +69,7 @@ def setup_detection_pipeline(
         input_frame_stream=cam_out,
         input_detections_stream=detector_host_node.out,
         labels=LABEL_MAP,
-        outline_color_rgba=(0, 255, 0, 255),
+        outline_color_rgba=generate_vibrant_random_color(),
     )
 
     visualizer.addTopic(
@@ -148,9 +150,7 @@ def main():
         key = visualizer.waitKey(1)
         if key == ord("q"):
             print("Got 'q' key from the remote connection! Shutting down.")
-            break
-        if not active_pipelines_info:
-            break
+            os._exit(0)
 
 
 if __name__ == "__main__":
