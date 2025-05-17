@@ -1,13 +1,28 @@
-identifier = "com.luxonis.box-measurement"
-app_version = "1.0.0"
+identifier   = "com.luxonis.box-measurement"
+app_version  = "0.1.0"
 
 prepare_container = [
-    { type = "RUN", command = "apt-get update" },
-    { type = "RUN", command = "apt-get install -y python3 python3-pip libglib2.0-0 libgl1-mesa-glx wget" },
+  { type = "RUN", command = "apt-get update" },
+  { type = "RUN", command = "apt-get install -y --no-install-recommends python3-pip libegl1-mesa libgomp1 libgl1-mesa-glx libglib2.0-0 libusb-1.0-0 usbutils"}
 ]
 
 prepare_build_container = []
 
-build_steps = ["pip3 install -r /app/requirements.txt --break-system-packages"]
 
-entrypoint = ["bash", "-c", "python3 /app/main.py"]
+build_steps = [
+"pip3 install --no-cache-dir -r /app/requirements.txt --break-system-packages",
+"""
+bash -c '
+DIR=$(python3 -c "import open3d, pathlib, depthai; print(pathlib.Path(open3d.__file__).parent)") &&
+echo ">> linking into $DIR" &&
+for lib in libEGL.so.1 libGL.so.1 libGLESv2.so.2; do
+  ln -sf /usr/lib/aarch64-linux-gnu/$lib $DIR/$lib &&
+  echo "Linked $lib"
+done
+'
+"""
+]
+
+entrypoint = ["bash", "-c", "python3 -u /app/main.py"]
+
+environment = {PYTHONUNBUFFERED="1", OPEN3D_CPU_RENDERING = "true", PIP_BREAK_SYSTEM_PACKAGES = "1"}
