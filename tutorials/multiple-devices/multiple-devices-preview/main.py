@@ -1,6 +1,5 @@
 import depthai as dai
 from typing import List, Optional, Dict, Any
-import time
 from utils.utility import filter_internal_cameras
 
 HTTP_PORT = 8082
@@ -44,9 +43,6 @@ def main():
     initialized_setups: List[Dict[str, Any]] = []
 
     for dev_info in available_devices_info:
-        # Add a small delay if rapidly initializing devices causes issues
-        time.sleep(0.5) 
-        
         setup_info = setup_device_pipeline(dev_info, visualizer)
         if setup_info:
             initialized_setups.append(setup_info)

@@ -1,7 +1,7 @@
 import depthai as dai
 import threading
 import cv2
-from utility import filter_internal_cameras, run_pipeline
+from utils.utility import filter_internal_cameras, run_pipeline
 from typing import List, Dict, Callable
 
 
