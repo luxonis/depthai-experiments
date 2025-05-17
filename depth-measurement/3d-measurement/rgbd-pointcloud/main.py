@@ -13,7 +13,7 @@ if not device.setIrLaserDotProjectorIntensity(1):
     )
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-    platform = pipeline.getDefaultDevice().getPlatform()
+    platform = device.getPlatform()
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
@@ -31,7 +31,6 @@ with dai.Pipeline(device) as pipeline:
         align = pipeline.create(dai.node.ImageAlign)
 
     rgbd = pipeline.create(dai.node.RGBD).build()
-    stereo.depth.link(rgbd.inDepth)
 
     width, height = IMG_SHAPE
     main_out = None
@@ -43,8 +42,10 @@ with dai.Pipeline(device) as pipeline:
         if platform == dai.Platform.RVC4:
             stereo.depth.link(align.input)
             stereo.rectifiedRight.link(align.inputAlignTo)
+            align.outputAligned.link(rgbd.inDepth)
         else:
             right_out.link(stereo.inputAlignTo)
+            stereo.depth.link(rgbd.inDepth)
         main_out = mono_out_from_right
 
     else:
@@ -57,10 +58,11 @@ with dai.Pipeline(device) as pipeline:
         if platform == dai.Platform.RVC4:
             stereo.depth.link(align.input)
             cam_out.link(align.inputAlignTo)
-            main_out = align.outputAligned
+            align.outputAligned.link(rgbd.inDepth)
         else:
             cam_out.link(stereo.inputAlignTo)
-            main_out = cam_out
+            stereo.depth.link(rgbd.inDepth)
+        main_out = cam_out
 
     visualizer.addTopic("preview", main_out)
     visualizer.addTopic("pointcloud", rgbd.pcl)
