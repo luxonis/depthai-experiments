@@ -1,5 +1,5 @@
 import depthai as dai
-from typing import List
+from typing import List, Callable
 
 
 def filter_internal_cameras(devices: List[dai.DeviceInfo]) -> List[dai.DeviceInfo]:
@@ -13,3 +13,4 @@ def filter_internal_cameras(devices: List[dai.DeviceInfo]) -> List[dai.DeviceInf
 
 def run_pipeline(pipeline: dai.Pipeline) -> None:
     pipeline.run()
+

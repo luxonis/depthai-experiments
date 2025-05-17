@@ -1,25 +1,27 @@
 import depthai as dai
 import threading
-import cv2
-from utility import filter_internal_cameras, run_pipeline
+from util.utility import filter_internal_cameras, run_pipeline
 from typing import Callable, List
 
 
-class OpencvManager:
+class Manager:
     def __init__(self, keys: List[int]):
         self.newFrameEvent = threading.Event()
         self.lock = threading.Lock()
         self.frames = self._init_frames(keys)
+        self.visualizer = dai.RemoteConnection(httpPort=8082)
 
     def run(self) -> None:
         while True:
             self.newFrameEvent.wait()
             for dx_id in self.frames.keys():
                 if self.frames[dx_id] is not None:
-                    cv2.imshow(f"rgb - {dx_id}", self.frames[dx_id])
+                    self.visualizer.addTopic(f"RGB - {dx_id}",self.frames[dx_id])
 
-                    if cv2.waitKey(1) == ord("q"):
-                        return
+            key = self.visualizer.waitKey(1)
+            if key == ord("q"):
+                print("Got q key from the remote connection!")
+                break
 
     def setFrame(self, frame: dai.ImgFrame, dx_id: int) -> None:
         with self.lock:
@@ -31,21 +33,6 @@ class OpencvManager:
         for key in keys:
             dic[key] = None
         return dic
-
-
-class Display(dai.node.HostNode):
-    def __init__(self, frameCallback: Callable, dx_id: int) -> None:
-        super().__init__()
-        self.callback = frameCallback
-        self.dx_id = dx_id
-
-    def build(self, cam_out: dai.Node.Output) -> "Display":
-        self.link_args(cam_out)
-        self.sendProcessingToPipeline(True)
-        return self
-
-    def process(self, in_frame: dai.ImgFrame) -> None:
-        self.callback(in_frame.getCvFrame(), self.dx_id)
 
 
 def getPipeline(dev: dai.Device, callback: Callable) -> dai.Pipeline:
@@ -81,7 +68,7 @@ print(f"Found {len(devices)} internal devices")
 
 pipelines: List[dai.Pipeline] = []
 threads: List[threading.Thread] = []
-manager = OpencvManager([device.getMxId() for device in devices])
+manager = Manager([device.getMxId() for device in devices])
 
 for dev in devices:
     pair_device_with_pipeline(dev, pipelines, manager.setFrame)
