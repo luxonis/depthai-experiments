@@ -33,7 +33,7 @@ with dai.Pipeline(device) as pipeline:
     rgbd = pipeline.create(dai.node.RGBD).build()
 
     width, height = IMG_SHAPE
-    main_out = None
+    cam_out = None
     if args.mono:
         mono_out_from_right = right.requestOutput(
             IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i
@@ -46,25 +46,25 @@ with dai.Pipeline(device) as pipeline:
         else:
             right_out.link(stereo.inputAlignTo)
             stereo.depth.link(rgbd.inDepth)
-        main_out = mono_out_from_right
+        cam_out = mono_out_from_right
 
     else:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        cam_out = cam.requestOutput(
+        color_out = cam.requestOutput(
             IMG_SHAPE,
             dai.ImgFrame.Type.RGB888i,
         )
-        cam_out.link(rgbd.inColor)
+        color_out.link(rgbd.inColor)
         if platform == dai.Platform.RVC4:
             stereo.depth.link(align.input)
-            cam_out.link(align.inputAlignTo)
+            color_out.link(align.inputAlignTo)
             align.outputAligned.link(rgbd.inDepth)
         else:
-            cam_out.link(stereo.inputAlignTo)
+            color_out.link(stereo.inputAlignTo)
             stereo.depth.link(rgbd.inDepth)
-        main_out = cam_out
+        cam_out = color_out
 
-    visualizer.addTopic("preview", main_out)
+    visualizer.addTopic("preview", cam_out)
     visualizer.addTopic("pointcloud", rgbd.pcl)
 
     print("Pipeline created.")
