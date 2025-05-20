@@ -23,10 +23,12 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
 Here is a list of all available parameters:
 
 ```
--m {luxonis/crestereo:iter2-160x120,luxonis/crestereo:iter2-320x240}, --model {luxonis/crestereo:iter2-160x120,luxonis/crestereo:iter2-320x240}
-                    Crestereo model to be used for inference. By default the bigger model is chosen. (default: luxonis/crestereo:iter2-320x240)
+-m MODEL, --model MODEL
+                      HubAI model reference of the crestereo model to be used for inference. (default: luxonis/crestereo:iter2-320x240 for RVC2 and luxonis/crestereo:iter4-640x360 for RVC4)
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect to. (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
-                    FPS limit of the video. Default for the device is 2 (default: 2)
+                      FPS limit for the model runtime. (default: 2 for RVC2 and 5 for RVC4)
 ```
 
 - `<DEVICE_FILTER_ENV>`: DepthAI environment variable used for filtering the devices. Usable variables are `DEPTHAI_DEVICE_NAME_LIST` and `DEPTHAI_PLATFORM`. For usage examples see the [subsection below](#examples).

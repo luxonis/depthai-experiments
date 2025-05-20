@@ -34,12 +34,12 @@ Here is a list of all available parameters:
 ```
 -m MODEL, --model MODEL
                       HubAI model reference. (default: luxonis/thermal-person-detection:256x192)
--api API_KEY, --api_key API_KEY
-                      HubAI API key to access private model. (default: )
 -d DEVICE, --device DEVICE
                       Optional name, DeviceID or IP of the camera to connect to. (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
-                      FPS limit for the model runtime. (default: None)
+                      FPS limit for the model runtime. (default: 20)
 -media MEDIA_PATH, --media_path MEDIA_PATH
                       Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-api API_KEY, --api_key API_KEY
+                      HubAI API key to access private model. (default: "")
 ```

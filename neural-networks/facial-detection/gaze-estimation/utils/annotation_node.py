@@ -1,69 +1,70 @@
+from typing import List
 import depthai as dai
-from depthai_nodes import OUTLINE_COLOR
+
+from depthai_nodes import ImgDetectionsExtended
+from depthai_nodes.utils import AnnotationHelper
 
 
-class AnnotationNode(dai.node.ThreadedHostNode):
-    def __init__(self):
+class AnnotationNode(dai.node.HostNode):
+    def __init__(self) -> None:
         super().__init__()
-        self.input = self.createInput()
-        self.output = self.createOutput()
 
-    def run(self):
-        while self.isRunning():
-            landmarks = self.input.get()
-            detections_msg = landmarks["detections"]
-            gazes_msg = landmarks["gazes"]
+    def build(self, gather_data_msg) -> "AnnotationNode":
+        self.link_args(gather_data_msg)
+        return self
 
-            annotation = dai.ImgAnnotation()
-            img_annotations = dai.ImgAnnotations()
-            src_w, src_h = detections_msg.transformation.getSourceSize()
+    def process(self, gather_data_msg) -> None:
+        detections_msg: ImgDetectionsExtended = gather_data_msg.reference_data
+        assert isinstance(detections_msg, ImgDetectionsExtended)
+        src_w, src_h = detections_msg.transformation.getSize()
 
-            for detection, gaze in zip(detections_msg.detections, gazes_msg.landmarks):
-                face_bbox = detection.rotated_rect.getPoints()
-                keypoints = detection.keypoints
+        gaze_msg_list: List[dai.NNData] = gather_data_msg.gathered
+        assert isinstance(gaze_msg_list, list)
+        assert all(isinstance(rec_msg, dai.NNData) for rec_msg in gaze_msg_list)
+        assert len(gaze_msg_list) == len(detections_msg.detections)
 
-                points_annotation = dai.PointsAnnotation()
-                points_annotation.type = dai.PointsAnnotationType.LINE_LOOP
-                points_annotation.points = dai.VectorPoint2f(face_bbox)
-                points_annotation.outlineColor = OUTLINE_COLOR
-                points_annotation.thickness = 2
-                annotation.points.append(points_annotation)
+        annotations = AnnotationHelper()
 
-                # Draw gaze
-                gaze_tensor = gaze.getTensor("Identity", dequantize=True)
-                gaze_tensor = gaze_tensor.flatten()
+        for detection, gaze in zip(detections_msg.detections, gaze_msg_list):
+            face_bbox = detection.rotated_rect.getPoints()
+            keypoints = detection.keypoints
 
-                left_eye = keypoints[0]
-                le_line_ann = self._draw_line(
-                    dai.Point2f(left_eye.x, left_eye.y), gaze_tensor, src_w, src_h
-                )
-                annotation.points.append(le_line_ann)
+            # Draw bbox
+            annotations.draw_rectangle(
+                [face_bbox[0].x, face_bbox[0].y], [face_bbox[2].x, face_bbox[2].y]
+            )
 
-                right_eye = keypoints[1]
-                re_line_ann = self._draw_line(
-                    dai.Point2f(right_eye.x, right_eye.y), gaze_tensor, src_w, src_h
-                )
-                annotation.points.append(re_line_ann)
+            # Draw gaze
+            gaze_tensor = gaze.getFirstTensor(dequantize=True)
+            gaze_tensor = gaze_tensor.flatten()
 
-            img_annotations.annotations.append(annotation)
-            img_annotations.setTimestamp(landmarks.getTimestamp())
-            img_annotations.setSequenceNum(landmarks.getSequenceNum())
+            left_eye = keypoints[0]
+            annotations.draw_line(
+                [left_eye.x, left_eye.y],
+                self._get_end_point(left_eye, gaze_tensor, src_w, src_h),
+            )
 
-            self.output.send(img_annotations)
+            right_eye = keypoints[1]
+            annotations.draw_line(
+                [right_eye.x, right_eye.y],
+                self._get_end_point(right_eye, gaze_tensor, src_w, src_h),
+            )
 
-    def _draw_line(
+        annotations_msg = annotations.build(
+            timestamp=detections_msg.getTimestamp(),
+            sequence_num=detections_msg.getSequenceNum(),
+        )
+
+        self.out.send(annotations_msg)
+
+    def _get_end_point(
         self, start_point: dai.Point2f, vector: list, src_w: int, src_h: int
     ) -> dai.PointsAnnotation:
         gaze_vector = (vector * 640)[:2]
         gaze_vector_x = gaze_vector[0] / src_w
         gaze_vector_y = gaze_vector[1] / src_h
-        end_point = dai.Point2f(
-            start_point.x + gaze_vector_x, start_point.y - gaze_vector_y
-        )
-
-        line_ann = dai.PointsAnnotation()
-        line_ann.type = dai.PointsAnnotationType.LINE_STRIP
-        line_ann.points = dai.VectorPoint2f([start_point, end_point])
-        line_ann.outlineColor = dai.Color(0.0, 0.0, 1.0, 1.0)
-        line_ann.thickness = 2
-        return line_ann
+        end_point = [
+            start_point.x + gaze_vector_x.item(),
+            start_point.y - gaze_vector_y.item(),
+        ]
+        return end_point

@@ -1,54 +1,64 @@
+from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
+
 from utils.arguments import initialize_argparser
-from pathlib import Path
 from utils.blur_detections import BlurBboxes
+
+DET_MODEL = "luxonis/yunet:640x480"
 
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatform()
+platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
-FPS = 28
-if "RVC4" in str(platform):
-    frame_type = dai.ImgFrame.Type.BGR888i
-    FPS = 28
-else:
-    frame_type = dai.ImgFrame.Type.BGR888p
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
+
+if args.fps_limit is None:
+    args.fps_limit = 20 if platform == "RVC2" else 30
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
+    # face detection model
+    det_model_description = dai.NNModelDescription(DET_MODEL)
+    det_model_description.platform = platform
+    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+
+    # media/camera input
     if args.media_path:
-        replay_node = pipeline.create(dai.node.ReplayVideo)
-        replay_node.setReplayVideoFile(Path(args.media_path))
-        replay_node.setOutFrameType(dai.ImgFrame.Type.NV12)
-        replay_node.setLoop(True)
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(frame_type)
+        replay.setLoop(True)
+        replay.setSize(
+            det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
+        )
+    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
 
-        video_resize_node = pipeline.create(dai.node.ImageManipV2)
-        video_resize_node.initialConfig.setOutputSize(640, 480)
-        video_resize_node.initialConfig.setFrameType(frame_type)
-
-        replay_node.out.link(video_resize_node.inputImage)
-
-        input_node = video_resize_node.out
-    else:
-        camera_node = pipeline.create(dai.node.Camera).build()
-        input_node = camera_node.requestOutput((640, 480), frame_type, fps=FPS)
-
-    detection_node: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        input_node, "luxonis/yunet:640x480"
+    det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        input_node, det_model_nn_archive, fps=args.fps_limit
     )
 
+    # blurring
     blur_node = pipeline.create(BlurBboxes)
-    detection_node.out.link(blur_node.input_detections)
-    detection_node.passthrough.link(blur_node.input_frame)
+    det_nn.out.link(blur_node.input_detections)
+    det_nn.passthrough.link(blur_node.input_frame)
 
-    visualizer.addTopic("Video", detection_node.passthrough)
-    visualizer.addTopic("Blurred faces", blur_node.out)
+    # visualization
+    visualizer.addTopic("Video", det_nn.passthrough)
+    visualizer.addTopic("FaceBlur", blur_node.out)
 
     print("Pipeline created.")
+
     pipeline.start()
     visualizer.registerPipeline(pipeline)
 

@@ -1,41 +1,53 @@
+from typing import List
+
 import depthai as dai
-from depthai_nodes import TEXT_COLOR, OUTLINE_COLOR
+
+from depthai_nodes import (
+    ImgDetectionsExtended,
+    Classifications,
+)
+from depthai_nodes.utils import AnnotationHelper
 
 
-class AnnotationNode(dai.node.ThreadedHostNode):
-    def __init__(self):
+class AnnotationNode(dai.node.HostNode):
+    def __init__(self) -> None:
         super().__init__()
-        self.input = self.createInput()
-        self.output = self.createOutput()
 
-    def run(self):
-        while self.isRunning():
-            descriptions = self.input.get()
+    def build(
+        self,
+        gather_data_msg: dai.Node.Output,
+    ) -> "AnnotationNode":
+        self.link_args(gather_data_msg)
+        return self
 
-            detections_msg = descriptions["detections"]
-            emotions_message = descriptions["emotions"]
+    def process(self, gather_data_msg: dai.Buffer) -> None:
+        dets_msg: ImgDetectionsExtended = gather_data_msg.reference_data
+        assert isinstance(dets_msg, ImgDetectionsExtended)
 
-            annotation = dai.ImgAnnotation()
-            img_annotations = dai.ImgAnnotations()
-            for i, detection in enumerate(detections_msg.detections):
-                points = detection.rotated_rect.getPoints()
+        rec_msg_list: List[Classifications] = gather_data_msg.gathered
+        assert isinstance(rec_msg_list, list)
+        assert all(isinstance(rec_msg, Classifications) for rec_msg in rec_msg_list)
+        assert len(dets_msg.detections) == len(rec_msg_list)
 
-                points_annotation = dai.PointsAnnotation()
-                points_annotation.type = dai.PointsAnnotationType.LINE_LOOP
-                points_annotation.points = dai.VectorPoint2f(points)
-                points_annotation.outlineColor = OUTLINE_COLOR
-                points_annotation.thickness = 3
-                annotation.points.append(points_annotation)
+        annotations = AnnotationHelper()
 
-                text_annotation = dai.TextAnnotation()
-                text_annotation.position = points[0]
-                text_annotation.text = f"{emotions_message.classes[i]} {int(emotions_message.scores[i] * 100)}%"
-                text_annotation.fontSize = 50
-                text_annotation.textColor = TEXT_COLOR
-                annotation.texts.append(text_annotation)
+        for det_msg, rec_msg in zip(dets_msg.detections, rec_msg_list):
+            xmin, ymin, xmax, ymax = det_msg.rotated_rect.getOuterRect()
 
-            img_annotations.annotations.append(annotation)
-            img_annotations.setTimestamp(descriptions.getTimestamp())
-            img_annotations.setSequenceNum(descriptions.getSequenceNum())
+            annotations.draw_rectangle(
+                (xmin, ymin),
+                (xmax, ymax),
+            )
 
-            self.output.send(img_annotations)
+            annotations.draw_text(
+                text=f"{rec_msg.top_class} ({rec_msg.top_score.item():.2f})",
+                position=(xmin, ymin),
+                size=20,
+            )
+
+        annotations_msg = annotations.build(
+            timestamp=dets_msg.getTimestamp(),
+            sequence_num=dets_msg.getSequenceNum(),
+        )
+
+        self.out.send(annotations_msg)

@@ -9,6 +9,8 @@ In `mono` mode we visualize the matches between the frames and the reference fra
 
 > **Note:** If you want to run the example in `stereo` mode, you need a device with at least 2 cameras (left and right).
 
+> **Note:** Some model operations are not supported on-device and will be run on the host computer. This means that the speed of the app will be affected by the host computer's power. We have set some default FPS limits and `maxNumKeypoints` to ensure that the app runs smoothly on most machines. Feel free to increase the FPS limit if you have a powerful enough machine. To increase the maximum matched keypoints change the `setMaxKeypoints` function in the `mono.py` or `stereo.py` file.
+
 ## Demo
 
 ![XFeat Mono Demo on OAK](media/xfeat_demo.gif)
@@ -28,12 +30,12 @@ You can run the experiment in fully on device (`STANDALONE` mode) or using your 
 Here is a list of all available parameters:
 
 ```
+-m MODEL, --model MODEL
+                    The HubAI model reference for XFeat model. Get it from the Luxonis HubAI. (default: luxonis/xfeat:mono-320x240)
 -d DEVICE, --device DEVICE
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
-                    FPS limit for the model runtime. (default: 30)
--m MODEL, --model MODEL
-                    The HubAI model reference for XFeat model. Get it from the Luxonis HubAI. (default: luxonis/xfeat:mono-320x240)
+                    FPS limit for the model runtime. (default: 5 for stereo mode and 10 for mono mode)
 ```
 
 **NOTE**:

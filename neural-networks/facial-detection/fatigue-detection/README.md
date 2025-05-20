@@ -4,11 +4,9 @@ This example demonstrates how to detect if a person is fatigued and tired. First
 
 ![example](media/output.gif)
 
-:exclamation: **This demo currently only works on RVC4 devices** :exclamation:
-
 ## Instalation
 
-Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Running this example requires a **Luxonis OAK device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
 ```bash
@@ -24,6 +22,8 @@ Here is a list of all available parameters:
 ```
 -d DEVICE, --device DEVICE
                       Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                      FPS limit for the model runtime. (default: 5 for RVC2 and 7 for RVC4)
 -media MEDIA_PATH, --media_path MEDIA_PATH
                       Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```

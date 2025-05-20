@@ -11,8 +11,6 @@ The pipeline consists of a detection model (
 ) providing embeddings for each of the detected objects.
 Object reidentification is achieved by calculating cosine similarity between the embeddings.
 
-**WARNING:** The experiment currently works only on RVC4 devices.
-
 ## Demo
 
 [![human pose reidentification](media/human_pose_reidentification.gif)](media/human_pose_reidentification.gif)
@@ -22,7 +20,7 @@ Object reidentification is achieved by calculating cosine similarity between the
 
 ## Installation
 
-Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Running this example requires a **Luxonis OAK device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
 ```bash
@@ -36,18 +34,16 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
 Here is a list of all available parameters:
 
 ```
--det DET_MODEL, --det_model DET_MODEL
-                    Detection model HubAI reference. (default: luxonis/scrfd-person-detection:25g-640x640)
--rec REC_MODEL, --rec_model REC_MODEL
-                    Recognition model HubAI reference. (default: luxonis/osnet:imagenet-128x256)
--cos COS_SIMILARITY_THRESHOLD, --cos_similarity_threshold COS_SIMILARITY_THRESHOLD
-                    Cosine similarity between object embeddings above which detections are considered as belonging to the same object. (default: 0.5)
--media MEDIA_PATH, --media_path MEDIA_PATH
-                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
--fps FPS_LIMIT, --fps_limit FPS_LIMIT
-                    FPS limit for the model runtime. (default: 30.0)
 -d DEVICE, --device DEVICE
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 2 for RVC2 and 10 for RVC4)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-id IDENTIFY, --identify IDENTIFY
+                    Determines what object to use for identification ('pose' or 'face'). (default: 'pose')
+-cos COS_SIMILARITY_THRESHOLD, --cos_similarity_threshold COS_SIMILARITY_THRESHOLD
+                    Cosine similarity between object embeddings above which detections are considered as belonging to the same object. (default: 0.5)
 ```
 
 ### Peripheral Mode
@@ -57,23 +53,18 @@ Running in peripheral mode requires a host computer and there will be communicat
 #### Examples
 
 ```bash
-python3 main.py \
-    -det luxonis/scrfd-person-detection:25g-640x640 \
-    -rec luxonis/osnet:imagenet-128x256 \
-    -cos 0.8 \
-    -fps 5
+python3 main.py
 ```
 
-This will run the human pose reidentification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.8.
+This will run the human pose reidentification with the default device and camera input and a cosine similarity threshold of 0.8 (default for the 'pose' option).
 
 ```bash
 python3 main.py \
-    -det luxonis/scrfd-face-detection:10g-640x640 \
-    -rec luxonis/arcface:lfw-112x112 \
+    -id face \
     -fps 5
 ```
 
-This will run the human face reidentification with the default device and video input at 5 FPS.
+This will run the human face reidentification with the default device and camera input at 5 FPS and a cosine similarity threshold of 0.1 (default for the 'face' option).
 
 ### Standalone Mode
 
