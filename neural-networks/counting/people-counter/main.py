@@ -12,6 +12,10 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
 
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
@@ -24,11 +28,7 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(
-            dai.ImgFrame.Type.BGR888i
-            if platform == "RVC4"
-            else dai.ImgFrame.Type.BGR888p
-        )
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
         replay.setSize(
             det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
@@ -62,5 +62,5 @@ with dai.Pipeline(device) as pipeline:
     while pipeline.isRunning():
         key = visualizer.waitKey(1)
         if key == ord("q"):
-            print("Got q key from the remote connection!")
+            print("Got q key. Exiting...")
             break

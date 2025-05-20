@@ -1,30 +1,32 @@
 from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, GatherData
+
 from utils.arguments import initialize_argparser
 from utils.process_keypoints import LandmarksProcessing
 from utils.node_creators import create_crop_node
 from utils.annotation_node import AnnotationNode
 from utils.host_concatenate_head_pose import ConcatenateHeadPose
 
-_, args = initialize_argparser()
-visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatform().name
-
-frame_type = (
-    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
-)
-
-
+DET_MODEL = "luxonis/scrfd-face-detection:10g-640x640"
+HEAD_POSE_MODEL = "luxonis/head-pose-estimation:60x60"
+GAZE_MODEL = "luxonis/gaze-estimation-adas:60x60"
 REQ_WIDTH, REQ_HEIGHT = (
     768,
     768,
 )  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
 
-DET_MODEL = "luxonis/scrfd-face-detection:10g-640x640"
-HEAD_POSE_MODEL = "luxonis/head-pose-estimation:60x60"
-GAZE_MODEL = "luxonis/gaze-estimation-adas:60x60"
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+print(f"Platform: {platform}")
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -102,7 +104,6 @@ with dai.Pipeline(device) as pipeline:
         face_crop_node.out, head_pose_model_nn_archive
     )
     head_pose_nn.input.setBlocking(True)
-    # face_crop_node.out.link(head_pose_nn.input)
 
     head_pose_concatenate_node = pipeline.create(ConcatenateHeadPose).build(
         head_pose_nn.getOutput(0), head_pose_nn.getOutput(1), head_pose_nn.getOutput(2)
@@ -136,6 +137,7 @@ with dai.Pipeline(device) as pipeline:
     visualizer.addTopic("Gaze", annotation_node.out, "images")
 
     print("Pipeline created.")
+
     pipeline.start()
     visualizer.registerPipeline(pipeline)
 

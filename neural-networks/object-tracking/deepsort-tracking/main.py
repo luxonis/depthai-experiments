@@ -3,14 +3,23 @@ from pathlib import Path
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, GatherData
 from depthai_nodes.node.utils import generate_script_content
+
 from utils.arguments import initialize_argparser
 from utils.deepsort_tracking import DeepsortTracking
+
+DET_MODEL = "luxonis/yolov6-nano:r2-coco-512x288"
+EMB_MODEL = "luxonis/osnet:imagenet-128x256"
 
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
 
 if args.fps_limit is None:
     args.fps_limit = 4 if platform == "RVC2" else 30
@@ -21,16 +30,16 @@ if args.fps_limit is None:
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    detection_model_description = dai.NNModelDescription(
-        "luxonis/yolov6-nano:r2-coco-512x288", platform=platform
-    )
-    detection_model_archive = dai.NNArchive(
-        dai.getModelFromZoo(detection_model_description)
+    # detection model
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_model_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_w, det_model_h = (
+        det_model_archive.getInputWidth(),
+        det_model_archive.getInputHeight(),
     )
 
-    embeddings_model_description = dai.NNModelDescription(
-        "luxonis/osnet:imagenet-128x256", platform=platform
-    )
+    # embeddings model
+    embeddings_model_description = dai.NNModelDescription(EMB_MODEL, platform=platform)
     embeddings_model_archive = dai.NNArchive(
         dai.getModelFromZoo(embeddings_model_description)
     )
@@ -38,40 +47,38 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay.setFps(args.fps_limit)
-        cam_out = replay.out
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
     else:
         cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
         cam_out = cam.requestOutput(
             size=(1920, 1080),
-            type=dai.ImgFrame.Type.NV12,
+            type=frame_type,
             fps=args.fps_limit,
         )
-    detection_resize = pipeline.create(dai.node.ImageManipV2)
-    detection_resize.setMaxOutputFrameSize(
-        detection_model_archive.getInputWidth()
-        * detection_model_archive.getInputHeight()
-        * 3
-    )
-    detection_resize.initialConfig.setOutputSize(
-        detection_model_archive.getInputWidth(),
-        detection_model_archive.getInputHeight(),
+    input_node = replay.out if args.media_path else cam_out
+
+    # resize to det model input size
+    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node.setMaxOutputFrameSize(det_model_w * det_model_h * 3)
+    resize_node.initialConfig.setOutputSize(
+        det_model_w,
+        det_model_h,
         dai.ImageManipConfigV2.ResizeMode.STRETCH,
     )
-    detection_resize.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    if platform == "RVC4":
-        detection_resize.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888i)
-    cam_out.link(detection_resize.inputImage)
+    resize_node.initialConfig.setFrameType(frame_type)
+    input_node.link(resize_node.inputImage)
 
-    detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        detection_resize.out, detection_model_archive
+    det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        resize_node.out, det_model_archive
     )
 
+    # detection processing
     script = pipeline.create(dai.node.Script)
-    detection_nn.out.link(script.inputs["det_in"])
-    detection_nn.passthrough.link(script.inputs["preview"])
+    det_nn.out.link(script.inputs["det_in"])
+    det_nn.passthrough.link(script.inputs["preview"])
     script_content = generate_script_content(
         resize_width=embeddings_model_archive.getInputWidth(),
         resize_height=embeddings_model_archive.getInputHeight(),
@@ -79,29 +86,31 @@ with dai.Pipeline(device) as pipeline:
     )
     script.setScript(script_content)
 
-    embeddings_manip = pipeline.create(dai.node.ImageManipV2)
-    embeddings_manip.initialConfig.setOutputSize(
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.initialConfig.setOutputSize(
         embeddings_model_archive.getInputWidth(),
         embeddings_model_archive.getInputHeight(),
     )
 
-    script.outputs["manip_cfg"].link(embeddings_manip.inputConfig)
-    script.outputs["manip_img"].link(embeddings_manip.inputImage)
+    script.outputs["manip_cfg"].link(crop_node.inputConfig)
+    script.outputs["manip_img"].link(crop_node.inputImage)
 
     embeddings_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        embeddings_manip.out, embeddings_model_archive
+        crop_node.out, embeddings_model_archive
     )
 
     gather_data = pipeline.create(GatherData).build(camera_fps=args.fps_limit)
-    detection_nn.out.link(gather_data.input_reference)
+    det_nn.out.link(gather_data.input_reference)
     embeddings_nn.out.link(gather_data.input_data)
 
+    # tracking
     deepsort_tracking = pipeline.create(DeepsortTracking).build(
-        img_frame=detection_resize.out,
+        img_frame=resize_node.out,
         gathered_data=gather_data.out,
-        labels=detection_model_archive.getConfigV1().model.heads[0].metadata.classes,
+        labels=det_model_archive.getConfigV1().model.heads[0].metadata.classes,
     )
 
+    # visualization
     visualizer.addTopic("Video", cam_out, "images")
     visualizer.addTopic("Detections", deepsort_tracking.out, "images")
 
@@ -111,7 +120,7 @@ with dai.Pipeline(device) as pipeline:
     visualizer.registerPipeline(pipeline)
 
     while pipeline.isRunning():
-        key_pressed = visualizer.waitKey(1)
-        if key_pressed == ord("q"):
-            pipeline.stop()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
             break

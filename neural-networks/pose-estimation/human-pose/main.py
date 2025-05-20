@@ -1,6 +1,6 @@
 from pathlib import Path
-import depthai as dai
 
+import depthai as dai
 from depthai_nodes.node import (
     ParsingNeuralNetwork,
     HRNetParser,
@@ -12,15 +12,20 @@ from depthai_nodes.node.utils import generate_script_content
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 
-_, args = initialize_argparser()
-visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatformAsString()
-
 DET_MODEL: str = "luxonis/yolov6-nano:r2-coco-512x288"
 REC_MODEL: str = args.model
+PADDING = 0.1
 
-padding = 0.1
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+print(f"Platform: {platform}")
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -39,11 +44,7 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(
-            dai.ImgFrame.Type.BGR888i
-            if platform == "RVC4"
-            else dai.ImgFrame.Type.BGR888p
-        )
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
         replay.setSize(
             det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
@@ -70,7 +71,7 @@ with dai.Pipeline(device) as pipeline:
     script_content = generate_script_content(
         resize_width=rec_model_nn_archive.getInputWidth(),
         resize_height=rec_model_nn_archive.getInputHeight(),
-        padding=padding,
+        padding=PADDING,
         valid_labels=valid_labels,
     )
     script_node.setScript(script_content)
@@ -122,7 +123,7 @@ with dai.Pipeline(device) as pipeline:
     visualizer.registerPipeline(pipeline)
 
     while pipeline.isRunning():
-        key_pressed = visualizer.waitKey(1)
-        if key_pressed == ord("q"):
-            pipeline.stop()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
             break

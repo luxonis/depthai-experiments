@@ -1,14 +1,23 @@
 from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, GatherData, ImgDetectionsBridge
 from depthai_nodes.node.utils import generate_script_content
+
 from utils.arguments import initialize_argparser
 from utils.identification import IdentificationNode
 
+REQ_WIDTH, REQ_HEIGHT = (
+    960,
+    960,
+)  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
+
 _, args = initialize_argparser()
+
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
 frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
@@ -27,12 +36,6 @@ else:
 
 if args.cos_similarity_threshold:
     CSIM = args.cos_similarity_threshold  # override default
-
-REQ_WIDTH, REQ_HEIGHT = (
-    960,
-    960,
-)  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
-
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -121,7 +124,7 @@ with dai.Pipeline(device) as pipeline:
     pipeline.start()
 
     while pipeline.isRunning():
-        key_pressed = visualizer.waitKey(1)
-        if key_pressed == ord("q"):
-            pipeline.stop()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
             break

@@ -1,16 +1,23 @@
 from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
+
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 
-_, args = initialize_argparser()
+MODEL = "luxonis/yolo-p:bdd100k-320x320"
 
-model_reference = "luxonis/yolo-p:bdd100k-320x320"
+_, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+)
 
 if args.fps_limit is None:
     args.fps_limit = 10 if platform == "RVC2" else 20
@@ -21,52 +28,48 @@ if args.fps_limit is None:
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    model_description = dai.NNModelDescription(model_reference)
-
-    print(f"Platform: {platform}")
-
+    # yolo-p model
+    model_description = dai.NNModelDescription(MODEL)
     model_description.platform = platform
     nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
-
-    frame_type = (
-        dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
-    )
 
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay.setFps(args.fps_limit)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
 
     else:
         cam = pipeline.create(dai.node.Camera).build()
-        cam_out = cam.requestOutput(
-            (1280, 720), dai.ImgFrame.Type.NV12, fps=args.fps_limit
-        )
+        cam_out = cam.requestOutput((1280, 720), frame_type, fps=args.fps_limit)
     input_node = replay.out if args.media_path else cam_out
 
-    imageManip = pipeline.create(dai.node.ImageManipV2)
-    imageManip.setMaxOutputFrameSize(
+    # resize to model input size
+    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node.setMaxOutputFrameSize(
         nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
     )
-    imageManip.initialConfig.setOutputSize(
+    crop_node.initialConfig.setOutputSize(
         nn_archive.getInputWidth(), nn_archive.getInputHeight()
     )
-    imageManip.initialConfig.setFrameType(frame_type)
-    input_node.link(imageManip.inputImage)
+    crop_node.initialConfig.setFrameType(frame_type)
+    input_node.link(crop_node.inputImage)
 
-    detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        imageManip.out, nn_archive
+    nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        crop_node.out, nn_archive
     )
 
+    # annotation
     annotation_node = pipeline.create(AnnotationNode).build(
         frame=input_node,
-        detections=detection_nn.getOutput(0),
-        road_segmentations=detection_nn.getOutput(1),
-        lane_segmentations=detection_nn.getOutput(2),
+        detections=nn.getOutput(0),
+        road_segmentations=nn.getOutput(1),
+        lane_segmentations=nn.getOutput(2),
     )
 
+    # visualization
     visualizer.addTopic(
         "Road Segmentation", annotation_node.out_segmentations, "images"
     )
@@ -78,7 +81,7 @@ with dai.Pipeline(device) as pipeline:
     visualizer.registerPipeline(pipeline)
 
     while pipeline.isRunning():
-        key_pressed = visualizer.waitKey(1)
-        if key_pressed == ord("q"):
-            pipeline.stop()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
             break

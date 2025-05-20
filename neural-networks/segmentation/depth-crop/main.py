@@ -4,38 +4,39 @@ from utils.annotation_node import AnnotationNode
 
 from utils.arguments import initialize_argparser
 
+CAMERA_RESOLUTION = (640, 400)
+
 _, args = initialize_argparser()
-
-model_reference_rvc2 = "luxonis/deeplab-v3-plus:256x256"
-model_reference_rvc4 = "luxonis/deeplab-v3-plus:512x288"
-
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
-CAMERA_RESOLUTION = (640, 400)
+MODEL = (
+    "luxonis/deeplab-v3-plus:512x288"
+    if platform == "RVC4"
+    else "luxonis/deeplab-v3-plus:256x256"
+)
+
+FPS_LIMIT = 10 if platform == "RVC2" else 25
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    platform = device.getPlatform().name
-    FPS_LIMIT = 10 if platform == "RVC2" else 25
-    print(f"Platform: {platform}")
-
     # Check if the device has color, left and right cameras
     available_cameras = device.getConnectedCameras()
-
     if len(available_cameras) < 3:
         raise ValueError(
             "Device must have 3 cameras (color, left and right) in order to run this experiment."
         )
 
-    model_description = dai.NNModelDescription(
-        model=model_reference_rvc2 if platform == "RVC2" else model_reference_rvc4,
-    )
+    # depth estimation model
+    model_description = dai.NNModelDescription(MODEL)
     model_description.platform = platform
     nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
+    # camera input
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_output = color.requestOutput(
         CAMERA_RESOLUTION, dai.ImgFrame.Type.NV12, fps=FPS_LIMIT
@@ -67,6 +68,7 @@ with dai.Pipeline(device) as pipeline:
         nn_source=nn_archive, input=manip.out
     )
 
+    # annotation
     annotation_node = pipeline.create(AnnotationNode).build(
         preview=color_output,
         disparity=stereo.disparity,
@@ -74,6 +76,7 @@ with dai.Pipeline(device) as pipeline:
         max_disparity=stereo.initialConfig.getMaxDisparity(),
     )
 
+    # visualization
     visualizer.addTopic("Segmentation", annotation_node.output_segmentation)
     visualizer.addTopic("Cutout", annotation_node.output_cutout)
     visualizer.addTopic("Depth", annotation_node.output_depth)
@@ -84,7 +87,7 @@ with dai.Pipeline(device) as pipeline:
     visualizer.registerPipeline(pipeline)
 
     while pipeline.isRunning():
-        key_pressed = visualizer.waitKey(1)
-        if key_pressed == ord("q"):
-            pipeline.stop()
+        key = visualizer.waitKey(1)
+        if key == ord("q"):
+            print("Got q key. Exiting...")
             break

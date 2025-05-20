@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
 
@@ -6,9 +7,11 @@ from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 
 _, args = initialize_argparser()
+
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
 frame_type = (
     dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
@@ -19,13 +22,15 @@ if platform != "RVC2":
 
 
 with dai.Pipeline(device) as pipeline:
-    # model
-    model_description = dai.NNModelDescription(args.model)
-    model_description.platform = platform
-    model_nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
-    model_input_width, model_input_height = (
-        model_nn_archive.getInputWidth(),
-        model_nn_archive.getInputHeight(),
+    print("Creating pipeline...")
+
+    # detection model
+    det_model_description = dai.NNModelDescription(args.model)
+    det_model_description.platform = platform
+    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_w, det_model_h = (
+        det_model_nn_archive.getInputWidth(),
+        det_model_nn_archive.getInputHeight(),
     )
 
     # media/camera input
@@ -36,18 +41,18 @@ with dai.Pipeline(device) as pipeline:
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
-        replay.setSize(model_input_width, model_input_height)
-        input_node = replay.out
+        replay.setSize(det_model_w, det_model_h)
     else:
         cam = pipeline.create(dai.node.Camera).build()
-        input_node = cam.requestOutput(
-            size=(model_input_width, model_input_height),
+        cam = cam.requestOutput(
+            size=(det_model_w, det_model_h),
             type=frame_type,
             fps=args.fps_limit,
         )
+    input_node = replay.out if args.media_path else cam
 
     nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        input_node, model_nn_archive
+        input_node, det_model_nn_archive
     )
     nn.setNumInferenceThreads(2)
     nn.input.setBlocking(False)
@@ -58,7 +63,6 @@ with dai.Pipeline(device) as pipeline:
     objectTracker.setTrackerIdAssignmentPolicy(
         dai.TrackerIdAssignmentPolicy.SMALLEST_ID
     )
-
     nn.passthrough.link(objectTracker.inputTrackerFrame)
     nn.passthrough.link(objectTracker.inputDetectionFrame)
     nn.out.link(objectTracker.inputDetections)

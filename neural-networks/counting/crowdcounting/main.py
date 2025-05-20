@@ -11,6 +11,7 @@ _, args = initialize_argparser()
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")

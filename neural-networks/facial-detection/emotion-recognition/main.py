@@ -1,26 +1,30 @@
 from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork, GatherData, ImgDetectionsBridge
 from depthai_nodes.node.utils import generate_script_content
+
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 
-_, args = initialize_argparser()
-visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
-platform = device.getPlatform().name
-
-frame_type = (
-    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
-)
-
 DET_MODEL = "luxonis/yunet:640x480"
 REC_MODEL = "luxonis/emotion-recognition:260x260"
-
 REQ_WIDTH, REQ_HEIGHT = (
     1024,
     768,
 )  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
+
+
+_, args = initialize_argparser()
+
+visualizer = dai.RemoteConnection(httpPort=8082)
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
+platform = device.getPlatform().name
+print(f"Platform: {platform}")
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -100,6 +104,7 @@ with dai.Pipeline(device) as pipeline:
     visualizer.addTopic("Emotions", annotation_node.out, "images")
 
     print("Pipeline created.")
+
     pipeline.start()
     visualizer.registerPipeline(pipeline)
 

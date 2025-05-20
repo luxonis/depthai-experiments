@@ -1,23 +1,29 @@
 from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import (
     ParsingNeuralNetwork,
     ImgDetectionsFilter,
     ImgDetectionsBridge,
 )
+
 from utils.arguments import initialize_argparser
+
+LABEL_ENCODING = {
+    1: "mask",
+    3: "no_mask",
+}  # relevant labels
 
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
-# define relevant labels
-LABEL_ENCODING = {
-    1: "mask",
-    3: "no_mask",
-}
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -31,11 +37,7 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(
-            dai.ImgFrame.Type.BGR888i
-            if platform == "RVC4"
-            else dai.ImgFrame.Type.BGR888p
-        )
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
         replay.setSize(
             det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()

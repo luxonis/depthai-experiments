@@ -3,10 +3,14 @@ import depthai as dai
 from utils.kalman_filter_node import KalmanFilterNode
 from utils.arguments import initialize_argparser
 
+DET_MODEL = "luxonis/yolov6-nano:r2-coco-512x288"
+
 _, args = initialize_argparser()
 
+visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
 if args.fps_limit is None:
     args.fps_limit = 20
@@ -16,28 +20,22 @@ if args.fps_limit is None:
 
 # Check if the device has color, left and right cameras
 available_cameras = device.getConnectedCameras()
-
 if len(available_cameras) < 3:
     raise ValueError(
         "Device must have 3 cameras (color, left and right) in order to run this experiment."
     )
 
-visualizer = dai.RemoteConnection(httpPort=8082)
-
-model_description = dai.NNModelDescription(
-    "luxonis/yolov6-nano:r2-coco-512x288", platform
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
-
-labels = nn_archive.getConfig().model.heads[0].metadata.classes
-person_label = labels.index("person")
-
-print("Creating pipeline...")
-
 with dai.Pipeline(device) as pipeline:
-    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    print("Creating pipeline...")
 
+    # detection model
+    model_description = dai.NNModelDescription(DET_MODEL, platform)
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    labels = nn_archive.getConfig().model.heads[0].metadata.classes
+    person_label = labels.index("person")
+
+    # camera input
+    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     left_cam = pipeline.create(dai.node.Camera).build(
         dai.CameraBoardSocket.CAM_B, sensorFps=args.fps_limit
     )
@@ -61,12 +59,12 @@ with dai.Pipeline(device) as pipeline:
     nn.setBoundingBoxScaleFactor(0.7)
     nn.setDepthLowerThreshold(100)
     nn.setDepthUpperThreshold(5000)
-
     if platform == "RVC2":
         nn.setNNArchive(
             nn_archive, numShaves=6
         )  # TODO: change to numShaves=4 if running on OAK-D Lite
 
+    # tracking
     object_tracker = pipeline.create(dai.node.ObjectTracker)
     object_tracker.setDetectionLabelsToTrack([person_label])  # track only person
     object_tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
@@ -82,6 +80,7 @@ with dai.Pipeline(device) as pipeline:
         dai.CameraBoardSocket.CAM_C, 640, 400
     )[0][0]
 
+    # kalman filter
     kalman_filter_node = pipeline.create(KalmanFilterNode).build(
         rgb=nn.passthrough,
         tracker_out=object_tracker.out,
@@ -90,6 +89,7 @@ with dai.Pipeline(device) as pipeline:
         label_map=labels,
     )
 
+    # visualization
     visualizer.addTopic("Video", nn.passthrough, "images")
     visualizer.addTopic("Tracklets", kalman_filter_node.out, "images")
 
@@ -101,5 +101,5 @@ with dai.Pipeline(device) as pipeline:
     while pipeline.isRunning():
         key = visualizer.waitKey(1)
         if key == ord("q"):
-            print("Got q key from the remote connection!")
+            print("Got q key. Exiting...")
             break

@@ -1,22 +1,29 @@
+from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import ParsingNeuralNetwork
+
 from utils.arguments import initialize_argparser
-from pathlib import Path
 from utils.blur_detections import BlurBboxes
+
+DET_MODEL = "luxonis/yunet:640x480"
 
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
-MODEL = "luxonis/yunet:640x480"
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # face detection model
-    det_model_description = dai.NNModelDescription(MODEL)
+    det_model_description = dai.NNModelDescription(DET_MODEL)
     det_model_description.platform = platform
     det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
 
@@ -24,11 +31,7 @@ with dai.Pipeline(device) as pipeline:
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(
-            dai.ImgFrame.Type.BGR888i
-            if platform == "RVC4"
-            else dai.ImgFrame.Type.BGR888p
-        )
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
         replay.setSize(
             det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
@@ -49,6 +52,7 @@ with dai.Pipeline(device) as pipeline:
     visualizer.addTopic("FaceBlur", blur_node.out)
 
     print("Pipeline created.")
+
     pipeline.start()
     visualizer.registerPipeline(pipeline)
 
