@@ -1,0 +1,7 @@
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
+depthai==3.0.0a15
+onnxruntime==1.22.0
+onnxruntime-gpu==1.22.0
+numpy==2.2.6
+opencv-python==4.11.0.86
+opencv-python-headless==4.10.0.84
