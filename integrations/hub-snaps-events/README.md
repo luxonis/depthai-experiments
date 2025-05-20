@@ -27,12 +27,18 @@ Here is a list of all available parameters:
 ```
 -d DEVICE, --device DEVICE
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
--key API_KEY, --api-key API_KEY
+-key API_KEY, --api_key API_KEY
                     HubAI API key of your team. Not required if 'DEPTHAI_HUB_API_KEY' environment variable is set. (default: )
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
                     FPS limit for the model runtime. (default: None)
 -media MEDIA_PATH, --media_path MEDIA_PATH
                     Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-thr CONFIDENCE_THRESHOLD, --confidence_threshold CONFIDENCE_THRESHOLD
+                    If detection is higher then set confidence then we send the snap. (default: 0.7)
+-c CLASS_NAMES [CLASS_NAMES ...], --class_names CLASS_NAMES [CLASS_NAMES ...]
+                    Class names to consider. (default: ['person'])
+-ti TIME_INTERVAL, --time_interval TIME_INTERVAL
+                    Minimum time between snaps. (default: 60.0)
 ```
 
 Here is a list of all available parameters:
@@ -42,7 +48,7 @@ Running in peripheral mode requires a host computer and there will be communicat
 #### Examples
 
 ```bash
-python3 main.py --api-key <API_KEY>
+python3 main.py --api_key <API_KEY>
 ```
 
 This will run the Hub Snaps & Events experiment with the default device and camera input.
