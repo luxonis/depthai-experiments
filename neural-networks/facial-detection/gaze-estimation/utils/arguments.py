@@ -8,9 +8,9 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-        "-media",
-        "--media_path",
-        help="Path to the media file you aim to run the model on. If not set, the model will run on the camera input.",
+        "-d",
+        "--device",
+        help="Optional name, DeviceID or IP of the camera to connect to.",
         required=False,
         default=None,
         type=str,
@@ -26,13 +26,14 @@ def initialize_argparser():
     )
 
     parser.add_argument(
-        "-d",
-        "--device",
-        help="Optional name, DeviceID or IP of the camera to connect to.",
+        "-media",
+        "--media_path",
+        help="Path to the media file you aim to run the model on. If not set, the model will run on the camera input.",
         required=False,
         default=None,
         type=str,
     )
+
     args = parser.parse_args()
 
     return parser, args

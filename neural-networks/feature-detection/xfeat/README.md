@@ -30,12 +30,12 @@ You can run the experiment in fully on device (`STANDALONE` mode) or using your 
 Here is a list of all available parameters:
 
 ```
+-m MODEL, --model MODEL
+                    The HubAI model reference for XFeat model. Get it from the Luxonis HubAI. (default: luxonis/xfeat:mono-320x240)
 -d DEVICE, --device DEVICE
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
                     FPS limit for the model runtime. (default: 5 for stereo mode and 10 for mono mode)
--m MODEL, --model MODEL
-                    The HubAI model reference for XFeat model. Get it from the Luxonis HubAI. (default: luxonis/xfeat:mono-320x240)
 ```
 
 **NOTE**:

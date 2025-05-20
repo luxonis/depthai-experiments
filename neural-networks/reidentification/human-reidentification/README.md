@@ -34,16 +34,16 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
 Here is a list of all available parameters:
 
 ```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 2 for RVC2 and 10 for RVC4)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 -id IDENTIFY, --identify IDENTIFY
                     Determines what object to use for identification ('pose' or 'face'). (default: 'pose')
 -cos COS_SIMILARITY_THRESHOLD, --cos_similarity_threshold COS_SIMILARITY_THRESHOLD
                     Cosine similarity between object embeddings above which detections are considered as belonging to the same object. (default: 0.5)
--media MEDIA_PATH, --media_path MEDIA_PATH
-                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
--fps FPS_LIMIT, --fps_limit FPS_LIMIT
-                    FPS limit for the model runtime. (default: 2 for RVC2 and 10 for RVC4)
--d DEVICE, --device DEVICE
-                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
 ```
 
 ### Peripheral Mode

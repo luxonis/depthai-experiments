@@ -8,6 +8,15 @@ def initialize_argparser():
     )
 
     parser.add_argument(
+        "-m",
+        "--model",
+        help="The HubAI model reference for XFeat model. Get it from the Luxonis HubAI.",
+        required=False,
+        default="luxonis/xfeat:mono-320x240",
+        type=str,
+    )
+
+    parser.add_argument(
         "-d",
         "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
@@ -23,15 +32,6 @@ def initialize_argparser():
         required=False,
         default=None,
         type=int,
-    )
-
-    parser.add_argument(
-        "-m",
-        "--model",
-        help="The HubAI model reference for XFeat model. Get it from the Luxonis HubAI.",
-        required=False,
-        default="luxonis/xfeat:mono-320x240",
-        type=str,
     )
 
     args = parser.parse_args()

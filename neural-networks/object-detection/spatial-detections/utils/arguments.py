@@ -8,6 +8,15 @@ def initialize_argparser():
     )
 
     parser.add_argument(
+        "-m",
+        "--model",
+        help="Model reference to use for object detection.",
+        required=False,
+        default="luxonis/yolov6-nano:r2-coco-512x288",
+        type=str,
+    )
+
+    parser.add_argument(
         "-d",
         "--device",
         help="Optional name, DeviceID or IP of the camera to connect to.",
@@ -22,16 +31,7 @@ def initialize_argparser():
         help="FPS limit for the model runtime.",
         required=False,
         default=None,
-        type=float,
-    )
-
-    parser.add_argument(
-        "-m",
-        "--model",
-        help="Model reference to use for object detection.",
-        required=False,
-        default="luxonis/yolov6-nano:r2-coco-512x288",
-        type=str,
+        type=int,
     )
 
     args = parser.parse_args()
