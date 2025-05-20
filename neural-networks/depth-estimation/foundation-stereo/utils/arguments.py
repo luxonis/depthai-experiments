@@ -43,7 +43,7 @@ def initialize_argparser():
         help="Resolution of the streams, select 400 (for 640x400) or 800 (for 1280x800).",
         required=False,
         default=400,
-        type=str,
+        type=int,
     )
 
     args = parser.parse_args()
