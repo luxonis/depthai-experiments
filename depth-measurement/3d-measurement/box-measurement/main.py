@@ -22,7 +22,6 @@ device.setIrFloodLightIntensity(1)
 
 platform = device.getPlatform()
 
-# NN model init 
 model_version_slug = "512x320"
 
 model_description = dai.NNModelDescription(
@@ -283,8 +282,8 @@ with dai.Pipeline(device) as p:
 
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.enableDistortionCorrection(True)
-    stereo.setExtendedDisparity(True)
-    stereo.setLeftRightCheck(True)
+    # stereo.setExtendedDisparity(True)
+    # stereo.setLeftRightCheck(True)
 
     align = p.create(dai.node.ImageAlign)
     stereo.depth.link(align.input)
@@ -299,7 +298,7 @@ with dai.Pipeline(device) as p:
     manip = p.create(dai.node.ImageManipV2)
     manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
     manip.initialConfig.setFrameType(
-        dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+        dai.ImgFrame.Type.BGR888p if platform == dai.Platform.RVC2 else dai.ImgFrame.Type.BGR888i
     )
     manip.setMaxOutputFrameSize(
         nn_archive.getInputSize()[0] * nn_archive.getInputSize()[1] * 3
@@ -310,6 +309,11 @@ with dai.Pipeline(device) as p:
     nn = p.create(ParsingNeuralNetwork).build(
         nn_source=nn_archive, input=manip.out
     )
+
+    if platform == dai.Platform.RVC2:
+        nn.setNNArchive(
+            nn_archive, numShaves=7
+        )
 
     nn._parsers[0].setConfidenceThreshold(0.7)
     nn._parsers[0].setIouThreshold(0.5)
@@ -322,8 +326,9 @@ with dai.Pipeline(device) as p:
     nn.out.link(Annotations.inputDet)
 
     outputToVisualize = color.requestOutput(
-        (1280, 800),                                       # Needs to have same aspect ratio as NN input (1.6) for it to work
-        type=dai.ImgFrame.Type.NV12
+        (640, 400),
+        type=dai.ImgFrame.Type.RGB888p,
+        fps=fps,
     )
 
     vis = dai.RemoteConnection(httpPort=8082)

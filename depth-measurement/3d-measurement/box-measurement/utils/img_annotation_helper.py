@@ -4,6 +4,13 @@ from typing import List, Optional, Tuple
 import depthai as dai
 import numpy as np
 
+from depthai_nodes.constants import (
+    KEYPOINT_COLOR,
+    BACKGROUND_COLOR,
+    OUTLINE_COLOR, 
+    TEXT_COLOR
+)
+
 Point = Tuple[float, float]
 ColorRGBA = Tuple[float, float, float, float]
 
@@ -18,7 +25,11 @@ class AnnotationHelper:
         self.annotation: dai.ImgAnnotation = dai.ImgAnnotation()
 
     def draw_line(
-        self, pt1: Point, pt2: Point, color: ColorRGBA, thickness: float
+        self,
+        pt1: Point,
+        pt2: Point,
+        color: ColorRGBA = KEYPOINT_COLOR,
+        thickness: float = 2,
     ) -> "AnnotationHelper":
         """Draws a line between two points.
 
@@ -46,8 +57,8 @@ class AnnotationHelper:
     def draw_polyline(
         self,
         points: List[Point],
-        outline_color: ColorRGBA,
-        fill_color: Optional[ColorRGBA] = None,
+        outline_color: ColorRGBA = OUTLINE_COLOR,
+        fill_color: Optional[ColorRGBA] = BACKGROUND_COLOR,
         thickness: float = 1,
         closed: bool = False,
     ) -> "AnnotationHelper":
@@ -71,6 +82,8 @@ class AnnotationHelper:
             if not closed
             else dai.PointsAnnotationType.LINE_LOOP
         )
+        if not closed:
+            fill_color = None
         points_annot = self._create_points_annotation(
             points, outline_color, fill_color, points_type
         )
@@ -79,7 +92,10 @@ class AnnotationHelper:
         return self
 
     def draw_points(
-        self, points: List[Point], color: ColorRGBA, thickness: float = 2
+        self,
+        points: List[Point],
+        color: ColorRGBA = KEYPOINT_COLOR,
+        thickness: float = 2,
     ) -> "AnnotationHelper":
         """Draws points.
 
@@ -104,7 +120,7 @@ class AnnotationHelper:
         self,
         center: Point,
         radius: float,
-        outline_color: ColorRGBA,
+        outline_color: ColorRGBA = OUTLINE_COLOR,
         fill_color: Optional[ColorRGBA] = None,
         thickness: float = 1,
     ) -> "AnnotationHelper":
@@ -137,8 +153,8 @@ class AnnotationHelper:
         self,
         top_left: Point,
         bottom_right: Point,
-        outline_color: ColorRGBA,
-        fill_color: Optional[ColorRGBA] = None,
+        outline_color: ColorRGBA = OUTLINE_COLOR,
+        fill_color: Optional[ColorRGBA] = BACKGROUND_COLOR,
         thickness: float = 1,
     ) -> "AnnotationHelper":
         """Draws a rectangle.
@@ -169,8 +185,8 @@ class AnnotationHelper:
         self,
         text: str,
         position: Point,
-        color: ColorRGBA,
-        background_color: Optional[ColorRGBA] = None,
+        color: ColorRGBA = TEXT_COLOR,
+        background_color: Optional[ColorRGBA] = BACKGROUND_COLOR,
         size: float = 32,
     ) -> "AnnotationHelper":
         """Draws text.
@@ -204,8 +220,8 @@ class AnnotationHelper:
         center: Point,
         size: Tuple[float, float],
         angle: float,
-        outline_color: ColorRGBA,
-        fill_color: Optional[ColorRGBA] = None,
+        outline_color: ColorRGBA = OUTLINE_COLOR,
+        fill_color: Optional[ColorRGBA] = BACKGROUND_COLOR,
         thickness: float = 1,
     ) -> "AnnotationHelper":
         """Draws a rotated rectangle.
@@ -253,7 +269,8 @@ class AnnotationHelper:
         type: dai.PointsAnnotationType,
     ) -> dai.PointsAnnotation:
         points_annot = dai.PointsAnnotation()
-        points_annot.outlineColor = self._create_color(color)
+        if color is not None:
+            points_annot.outlineColor = self._create_color(color)
         if fill_color is not None:
             points_annot.fillColor = self._create_color(fill_color)
         points_annot.type = type
@@ -261,6 +278,8 @@ class AnnotationHelper:
         return points_annot
 
     def _create_color(self, color: ColorRGBA) -> dai.Color:
+        if isinstance(color, dai.Color):
+            return color
         c = dai.Color()
         c.a = color[3]
         c.r = color[0]
