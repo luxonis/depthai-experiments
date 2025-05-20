@@ -17,6 +17,12 @@ frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
 )
 
+if args.fps_limit is None:
+    args.fps_limit = 20
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 

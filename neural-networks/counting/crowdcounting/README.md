@@ -30,7 +30,7 @@ Here is a list of all available parameters:
 -media MEDIA_PATH, --media_path MEDIA_PATH
                     Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
-                    FPS limit for the model runtime. (default: 5)
+                    FPS limit for the model runtime. (default: 1 for RVC2 and 5 for RVC4)
 -d DEVICE, --device DEVICE
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
 ```

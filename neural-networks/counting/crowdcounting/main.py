@@ -13,6 +13,12 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
+if args.fps_limit is None:
+    args.fps_limit = 1 if platform == "RVC2" else 5
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 

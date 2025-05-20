@@ -29,7 +29,7 @@ def initialize_argparser():
         "--fps_limit",
         help="FPS limit for the model runtime.",
         required=False,
-        default=5,
+        default=None,
         type=int,
     )
 

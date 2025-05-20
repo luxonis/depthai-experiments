@@ -23,6 +23,12 @@ frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
 )
 
+if not args.fps_limit:
+    args.fps_limit = 2 if platform == "RVC2" else 10
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
+
 if args.identify == "pose":
     DET_MODEL = "luxonis/scrfd-person-detection:25g-640x640"
     REC_MODEL = "luxonis/osnet:imagenet-128x256"

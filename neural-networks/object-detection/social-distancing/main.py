@@ -15,11 +15,15 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
-FPS = 10 if platform == "RVC2" else 20
-
 frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
 )
+
+if args.fps_limit is None:
+    args.fps_limit = 10 if platform == "RVC2" else 10
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -43,7 +47,7 @@ with dai.Pipeline(device) as pipeline:
     rgb = cam.requestOutput(
         size=det_model_nn_archive.getInputSize(),
         type=frame_type,
-        fps=FPS,
+        fps=args.fps_limit,
     )
 
     left = pipeline.create(dai.node.Camera).build(
@@ -54,8 +58,12 @@ with dai.Pipeline(device) as pipeline:
     )
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left.requestOutput(det_model_nn_archive.getInputSize(), fps=FPS),
-        right=right.requestOutput(det_model_nn_archive.getInputSize(), fps=FPS),
+        left=left.requestOutput(
+            det_model_nn_archive.getInputSize(), fps=args.fps_limit
+        ),
+        right=right.requestOutput(
+            det_model_nn_archive.getInputSize(), fps=args.fps_limit
+        ),
     )
     stereo.initialConfig.setConfidenceThreshold(255)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)

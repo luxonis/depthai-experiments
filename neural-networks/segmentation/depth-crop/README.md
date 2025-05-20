@@ -25,6 +25,8 @@ Here is a list of all available parameters:
 ```
 -d DEVICE, --device DEVICE
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 10 for RVC2 and 25 for RVC4)
 ```
 
 ### Peripheral Mode

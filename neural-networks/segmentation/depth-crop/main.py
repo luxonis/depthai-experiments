@@ -19,7 +19,11 @@ MODEL = (
     else "luxonis/deeplab-v3-plus:256x256"
 )
 
-FPS_LIMIT = 10 if platform == "RVC2" else 25
+if not args.fps_limit:
+    args.fps_limit = 10 if platform == "RVC2" else 25
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
@@ -39,15 +43,15 @@ with dai.Pipeline(device) as pipeline:
     # camera input
     color = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_output = color.requestOutput(
-        CAMERA_RESOLUTION, dai.ImgFrame.Type.NV12, fps=FPS_LIMIT
+        CAMERA_RESOLUTION, dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
 
     left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(
-        left=left.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
-        right=right.requestOutput(CAMERA_RESOLUTION, fps=FPS_LIMIT),
+        left=left.requestOutput(CAMERA_RESOLUTION, fps=args.fps_limit),
+        right=right.requestOutput(CAMERA_RESOLUTION, fps=args.fps_limit),
     )
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)

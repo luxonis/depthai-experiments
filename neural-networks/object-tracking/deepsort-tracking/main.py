@@ -22,7 +22,7 @@ frame_type = (
 )
 
 if args.fps_limit is None:
-    args.fps_limit = 4 if platform == "RVC2" else 30
+    args.fps_limit = 5 if platform == "RVC2" else 30
     print(
         f"FPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag."
     )
