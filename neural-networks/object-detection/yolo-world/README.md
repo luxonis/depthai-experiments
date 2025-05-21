@@ -1,6 +1,8 @@
 # Multi-Input YOLO World Demo README
 
-This example demonstrates the implementation of multi-input [YOLO-World](https://github.com/AILab-CVC/YOLO-World) object detection pipeline on DepthAI. The experiment works only on RVC4.
+This example demonstrates the implementation of multi-input [YOLO-World](https://github.com/AILab-CVC/YOLO-World) object detection pipeline on DepthAI.
+
+**NOTE:** This experiment works only on `RVC4` devices and currently only in `PERIPHERAL` mode.
 
 ## Demo
 
@@ -14,34 +16,34 @@ This example demonstrates the implementation of multi-input [YOLO-World](https:/
 
 ## Installation
 
-1. Install the required Python libraries:
-   ```bash
-   pip install -r requirements.txt
-   ```
-1. Ensure a DepthAI-compatible device is available and configured.
+Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment by running:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-Run the script with the required arguments:
+Here is a list of all available parameters:
 
-```bash
-python main.py --device <DEVICE> --class_names <CLASS_NAMES> [OPTIONS]
+```
+-d DEVICE, --device DEVICE
+                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                      FPS limit for the model runtime. (default: 5)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                     Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-c CLASS_NAMES [CLASS_NAMES ...], --class_names CLASS_NAMES [CLASS_NAMES ...]
+                     Class names to be detected (default: ['person', 'chair', 'TV'])
+-conf CONFIDENCE_THRESH, --confidence_thresh CONFIDENCE_THRESH
+                     Sets the confidence threshold (default: 0.1)
 ```
 
-### Required Arguments
-
-- `--device`: Optional name, DeviceID or IP of the camera to connect to.
-- `--class_names`: Space-separated list of class names to detect (up to 80 classes).
-
-### Optional Arguments
-
-- `--media_path`: Path to the video file for processing. If omitted, live camera input is used.
-- `--confidence_thresh`: Confidence threshold for detections (default: 0.1).
-
 ### Example
-
-Running with a depthai visualizer:
 
 ```bash
 python main.py --class_names person car dog --confidence_thresh 0.2
 ```
+
+This will run the example by detecting `person`, `car` and `dog` classes using 0.2 as confidence threshold.
