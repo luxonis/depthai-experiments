@@ -26,10 +26,6 @@ Here is a list of all available parameters:
                       If passed, overlays model output on the input image when the output is an array (e.g., depth maps, segmentation maps). Otherwise, displays outputs separately.
 ```
 
-**Note:**
-
-If you want to visualize segmentation model output as an overlay you should use `-ann segmentation`. Similarly, if you are using an instance segmentation model and want to visualize its output as overlay you should use `-ann segmentation_with_annotation`.
-
 ## Peripheral Mode
 
 ### Installation
