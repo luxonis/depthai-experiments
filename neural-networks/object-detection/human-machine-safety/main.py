@@ -35,26 +35,29 @@ if args.fps_limit is None:
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
 
+available_cameras = device.getConnectedCameras()
+if len(available_cameras) < 3:
+    raise ValueError(
+        "Device must have 3 cameras (color, left and right) in order to run this experiment."
+    )
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    # Check if the device has color, left and right cameras
-    available_cameras = device.getConnectedCameras()
-    if len(available_cameras) < 3:
-        raise ValueError(
-            "Device must have 3 cameras (color, left and right) in order to run this experiment."
-        )
-
     # object detection model
-    obj_det_model_description = dai.NNModelDescription(OBJ_DET_MODEL)
-    obj_det_model_description.platform = platform
-    obj_det_nn_archive = dai.NNArchive(dai.getModelFromZoo(obj_det_model_description))
+    obj_det_model_description = dai.NNModelDescription(OBJ_DET_MODEL, platform=platform)
+    obj_det_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(obj_det_model_description, useCached=False)
+    )
     classes = obj_det_nn_archive.getConfig().model.heads[0].metadata.classes
 
     # palm detection model
-    palm_det_model_description = dai.NNModelDescription(PALM_DET_MODEL)
-    palm_det_model_description.platform = platform
-    palm_det_nn_archive = dai.NNArchive(dai.getModelFromZoo(palm_det_model_description))
+    palm_det_model_description = dai.NNModelDescription(
+        PALM_DET_MODEL, platform=platform
+    )
+    palm_det_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(palm_det_model_description, useCached=False)
+    )
 
     # camera input
     color_camera = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)

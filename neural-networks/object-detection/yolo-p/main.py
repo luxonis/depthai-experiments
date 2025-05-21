@@ -29,10 +29,11 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # yolo-p model
-    model_description = dai.NNModelDescription(MODEL)
-    model_description.platform = platform
-    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    model_description = dai.NNModelDescription(MODEL, platform=platform)
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description, useCached=False))
+    model_w, model_h = nn_archive.getInputSize()
 
+    # media/camera input
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
@@ -40,30 +41,22 @@ with dai.Pipeline(device) as pipeline:
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
-
+        replay.setSize(model_w, model_h)
     else:
         cam = pipeline.create(dai.node.Camera).build()
-        cam_out = cam.requestOutput((1280, 720), frame_type, fps=args.fps_limit)
-    input_node = replay.out if args.media_path else cam_out
+        cam_out = cam.requestOutput(
+            size=(model_w, model_h), type=frame_type, fps=args.fps_limit
+        )
 
-    # resize to model input size
-    crop_node = pipeline.create(dai.node.ImageManipV2)
-    crop_node.setMaxOutputFrameSize(
-        nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
-    )
-    crop_node.initialConfig.setOutputSize(
-        nn_archive.getInputWidth(), nn_archive.getInputHeight()
-    )
-    crop_node.initialConfig.setFrameType(frame_type)
-    input_node.link(crop_node.inputImage)
+    input_node_out = replay.out if args.media_path else cam_out
 
     nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        crop_node.out, nn_archive
+        input_node_out, nn_archive
     )
 
     # annotation
     annotation_node = pipeline.create(AnnotationNode).build(
-        frame=input_node,
+        frame=input_node_out,
         detections=nn.getOutput(0),
         road_segmentations=nn.getOutput(1),
         lane_segmentations=nn.getOutput(2),

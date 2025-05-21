@@ -3,7 +3,7 @@ from depthai_nodes.node import ParsingNeuralNetwork, DepthMerger
 
 from utils.host_bird_eye_view import BirdsEyeView
 from utils.measure_object_distance import MeasureObjectDistance
-from host_social_distancing import SocialDistancing
+from utils.host_social_distancing import SocialDistancing
 from utils.arguments import initialize_argparser
 
 DET_MODEL = "luxonis/scrfd-person-detection:25g-640x640"
@@ -25,20 +25,20 @@ if args.fps_limit is None:
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
 
+available_cameras = device.getConnectedCameras()
+if len(available_cameras) < 3:
+    raise ValueError(
+        "Device must have 3 cameras (color, left and right) in order to run this experiment."
+    )
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    # Check if the device has color, left and right cameras
-    available_cameras = device.getConnectedCameras()
-    if len(available_cameras) < 3:
-        raise ValueError(
-            "Device must have 3 cameras (color, left and right) in order to run this experiment."
-        )
-
     # person detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
 
     # camera input
     cam = pipeline.create(dai.node.Camera).build(

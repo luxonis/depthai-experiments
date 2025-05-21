@@ -1,6 +1,6 @@
 import depthai as dai
 from typing import List, Tuple
-from utils.measure_object_distance import ObjectDistances, DetectionDistance
+from .measure_object_distance import ObjectDistances, DetectionDistance
 from depthai_nodes.utils import AnnotationHelper
 from depthai_nodes import PRIMARY_COLOR, SECONDARY_COLOR
 

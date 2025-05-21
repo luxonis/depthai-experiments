@@ -27,15 +27,11 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # detection model
-    det_model_description = dai.NNModelDescription(args.model)
-    det_model_description.platform = platform
+    det_model_description = dai.NNModelDescription(args.model, platform=platform)
     det_model_nn_archive = dai.NNArchive(
-        dai.getModelFromZoo(det_model_description, apiKey=args.api_key)
+        dai.getModelFromZoo(det_model_description, useCached=False, apiKey=args.api_key)
     )
-    det_model_w, det_model_h = (
-        det_model_nn_archive.getInputWidth(),
-        det_model_nn_archive.getInputHeight(),
-    )
+    det_model_w, det_model_h = det_model_nn_archive.getInputSize()
 
     # media/camera input
     if args.media_path:
