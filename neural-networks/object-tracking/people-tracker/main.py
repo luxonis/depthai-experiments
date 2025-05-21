@@ -31,7 +31,7 @@ with dai.Pipeline(device) as pipeline:
 
     # detection model
     model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
-    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description, useCached=False))
 
     # media/camera input
     if args.media_path:
@@ -39,8 +39,6 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        if args.fps_limit:
-            replay.setFps(args.fps_limit)
     else:
         cam = pipeline.create(dai.node.Camera).build()
     input_node = replay if args.media_path else cam

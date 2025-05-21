@@ -9,6 +9,10 @@ from utils.deepsort_tracking import DeepsortTracking
 
 DET_MODEL = "luxonis/yolov6-nano:r2-coco-512x288"
 EMB_MODEL = "luxonis/osnet:imagenet-128x256"
+REQ_WIDTH, REQ_HEIGHT = (
+    1024,
+    768,
+)  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
 
 _, args = initialize_argparser()
 
@@ -32,17 +36,17 @@ with dai.Pipeline(device) as pipeline:
 
     # detection model
     det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
-    det_model_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
-    det_model_w, det_model_h = (
-        det_model_archive.getInputWidth(),
-        det_model_archive.getInputHeight(),
+    det_model_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
     )
+    det_model_w, det_model_h = det_model_archive.getInputSize()
 
     # embeddings model
     embeddings_model_description = dai.NNModelDescription(EMB_MODEL, platform=platform)
-    embeddings_model_archive = dai.NNArchive(
-        dai.getModelFromZoo(embeddings_model_description)
+    embeddings_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(embeddings_model_description, useCached=False)
     )
+    embeddings_model_w, embeddings_model_h = embeddings_model_nn_archive.getInputSize()
 
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
@@ -51,14 +55,13 @@ with dai.Pipeline(device) as pipeline:
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
+        replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
-        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        cam = pipeline.create(dai.node.Camera).build()
         cam_out = cam.requestOutput(
-            size=(1920, 1080),
-            type=frame_type,
-            fps=args.fps_limit,
+            size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=args.fps_limit
         )
-    input_node = replay.out if args.media_path else cam_out
+    input_node_out = replay.out if args.media_path else cam_out
 
     # resize to det model input size
     resize_node = pipeline.create(dai.node.ImageManipV2)
@@ -69,7 +72,7 @@ with dai.Pipeline(device) as pipeline:
         dai.ImageManipConfigV2.ResizeMode.STRETCH,
     )
     resize_node.initialConfig.setFrameType(frame_type)
-    input_node.link(resize_node.inputImage)
+    input_node_out.link(resize_node.inputImage)
 
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         resize_node.out, det_model_archive
@@ -80,25 +83,23 @@ with dai.Pipeline(device) as pipeline:
     det_nn.out.link(script.inputs["det_in"])
     det_nn.passthrough.link(script.inputs["preview"])
     script_content = generate_script_content(
-        resize_width=embeddings_model_archive.getInputWidth(),
-        resize_height=embeddings_model_archive.getInputHeight(),
+        resize_width=embeddings_model_w,
+        resize_height=embeddings_model_h,
         padding=0,
     )
     script.setScript(script_content)
 
     crop_node = pipeline.create(dai.node.ImageManipV2)
-    crop_node.initialConfig.setOutputSize(
-        embeddings_model_archive.getInputWidth(),
-        embeddings_model_archive.getInputHeight(),
-    )
+    crop_node.initialConfig.setOutputSize(embeddings_model_w, embeddings_model_h)
 
     script.outputs["manip_cfg"].link(crop_node.inputConfig)
     script.outputs["manip_img"].link(crop_node.inputImage)
 
     embeddings_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        crop_node.out, embeddings_model_archive
+        crop_node.out, embeddings_model_nn_archive
     )
 
+    # detections and embeddings sync
     gather_data = pipeline.create(GatherData).build(camera_fps=args.fps_limit)
     det_nn.out.link(gather_data.input_reference)
     embeddings_nn.out.link(gather_data.input_data)
@@ -111,7 +112,7 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # visualization
-    visualizer.addTopic("Video", cam_out, "images")
+    visualizer.addTopic("Video", input_node_out, "images")
     visualizer.addTopic("Detections", deepsort_tracking.out, "images")
 
     print("Pipeline created.")

@@ -1,14 +1,19 @@
 import depthai as dai
 
 from depthai_nodes.node import ImgDetectionsFilter
+
 from utils.collision_avoidance_node import CollisionAvoidanceNode
 from utils.host_bird_eye_view import BirdsEyeView
 from utils.arguments import initialize_argparser
 
+DET_MODEL = "luxonis/yolov6-nano:r2-coco-512x288"
+
 _, args = initialize_argparser()
 
+visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
+print(f"Platform: {platform}")
 
 if args.fps_limit is None:
     args.fps_limit = 20
@@ -16,28 +21,22 @@ if args.fps_limit is None:
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
 
-# Check if the device has color, left and right cameras
-available_cameras = device.getConnectedCameras()
-
-if len(available_cameras) < 3:
+if len(device.getConnectedCameras()) < 3:
     raise ValueError(
         "Device must have 3 cameras (color, left and right) in order to run this experiment."
     )
 
-visualizer = dai.RemoteConnection(httpPort=8082)
-
-model_description = dai.NNModelDescription(
-    "luxonis/yolov6-nano:r2-coco-512x288", platform
-)
-archive_path = dai.getModelFromZoo(model_description)
-nn_archive = dai.NNArchive(archive_path)
-
-labels = nn_archive.getConfig().model.heads[0].metadata.classes
-person_label = labels.index("person")
-
-print("Creating pipeline...")
 
 with dai.Pipeline(device) as pipeline:
+    print("Creating pipeline...")
+
+    # detection model
+    model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description, useCached=False))
+    labels = nn_archive.getConfig().model.heads[0].metadata.classes
+    person_label = labels.index("person")
+
+    # camera input
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
 
     left_cam = pipeline.create(dai.node.Camera).build(
@@ -71,6 +70,7 @@ with dai.Pipeline(device) as pipeline:
         nn.out, labels_to_keep=[person_label]
     )
 
+    # tracking
     tracker = pipeline.create(dai.node.ObjectTracker)
     tracker.setDetectionLabelsToTrack([person_label])  # track only person
     tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
@@ -86,6 +86,7 @@ with dai.Pipeline(device) as pipeline:
         nn.passthrough, tracker.out
     )
 
+    # visualization
     visualizer.addTopic("Video", nn.passthrough, "images")
     visualizer.addTopic("Tracklets", collision_avoidance.out, "images")
     visualizer.addTopic("Direction", collision_avoidance.out_direction, "images")
@@ -98,5 +99,5 @@ with dai.Pipeline(device) as pipeline:
     while pipeline.isRunning():
         key = visualizer.waitKey(1)
         if key == ord("q"):
-            print("Got q key from the remote connection!")
+            print("Got q key. Exiting...")
             break

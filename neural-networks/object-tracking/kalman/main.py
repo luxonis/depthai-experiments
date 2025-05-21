@@ -18,9 +18,7 @@ if args.fps_limit is None:
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
 
-# Check if the device has color, left and right cameras
-available_cameras = device.getConnectedCameras()
-if len(available_cameras) < 3:
+if len(device.getConnectedCameras()) < 3:
     raise ValueError(
         "Device must have 3 cameras (color, left and right) in order to run this experiment."
     )
@@ -29,8 +27,8 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # detection model
-    model_description = dai.NNModelDescription(DET_MODEL, platform)
-    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description, useCached=False))
     labels = nn_archive.getConfig().model.heads[0].metadata.classes
     person_label = labels.index("person")
 
