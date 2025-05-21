@@ -6,7 +6,7 @@
         },
         "neural-networks/object-detection/yolo-world": {
             "reason": "Complex example, works only on RVC4",
-            "platform": "rvc4"
+            "platform": "rvc2"
         },
         "neural-networks/object-detection/thermal-detection": {
             "reason": "Needs thermal camera",
