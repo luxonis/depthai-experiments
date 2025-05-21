@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import depthai as dai
 from depthai_nodes.node import (
     ParsingNeuralNetwork,
@@ -8,56 +10,64 @@ from depthai_nodes.node import (
 from utils.helper_functions import extract_text_embeddings
 from utils.arguments import initialize_argparser
 
+MODEL = "yolo-world-l:640x640-host-decoding"
 MAX_NUM_CLASSES = 80
-IMAGE_SIZE = (640, 640)
-
 
 _, args = initialize_argparser()
-if len(args.class_names) > MAX_NUM_CLASSES:
-    raise ValueError(
-        f"Number of classes exceeds the maximum number of classes: {MAX_NUM_CLASSES}"
-    )
 
 visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatformAsString()
+print(f"Platform: {platform}")
+
+frame_type = (
+    dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
+)
 
 text_features = extract_text_embeddings(
     class_names=args.class_names, max_num_classes=MAX_NUM_CLASSES
 )
 
+if len(args.class_names) > MAX_NUM_CLASSES:
+    raise ValueError(
+        f"Number of classes exceeds the maximum number of classes: {MAX_NUM_CLASSES}"
+    )
+
+if args.fps_limit is None:
+    args.fps_limit = 5
+    print(
+        f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
+    )
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    manip = pipeline.create(dai.node.ImageManipV2)
-    manip.setMaxOutputFrameSize(IMAGE_SIZE[0] * IMAGE_SIZE[1] * 3)
-    manip.initialConfig.setOutputSize(
-        IMAGE_SIZE[0], IMAGE_SIZE[1], dai.ImageManipConfigV2.ResizeMode.LETTERBOX
-    )
+    # yolo world model
+    model_description = dai.NNModelDescription(MODEL)
+    model_description.platform = platform
+    model_nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
+    model_w, model_h = model_nn_archive.getInputSize()
 
-    if args.media_path is not None:
-        replayNode = pipeline.create(dai.node.ReplayVideo)
-        replayNode.setOutFrameType(dai.ImgFrame.Type.BGR888i)
-        replayNode.setReplayVideoFile(args.media_path)
-
-        replayNode.out.link(manip.inputImage)
+    # media/camera input
+    if args.media_path:
+        replay = pipeline.create(dai.node.ReplayVideo)
+        replay.setReplayVideoFile(Path(args.media_path))
+        replay.setOutFrameType(frame_type)
+        replay.setLoop(True)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
+        replay.setSize(model_w, model_h)
     else:
         cam = pipeline.create(dai.node.Camera).build(
             boardSocket=dai.CameraBoardSocket.CAM_A
         )
-        camOut = cam.requestOutput(IMAGE_SIZE, dai.ImgFrame.Type.RGB888i)
-
-        camOut.link(manip.inputImage)
-
-    model_description = dai.NNModelDescription(
-        model="yolo-world-l:640x640-host-decoding",
-        platform="RVC4",
-    )
-
-    nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description, useCached=True))
+        cam_out = cam.requestOutput(
+            size=(model_w, model_h), type=frame_type, fps=args.fps_limit
+        )
+    input_node = replay.out if args.media_path else cam_out
 
     nn_with_parser = pipeline.create(ParsingNeuralNetwork)
-    nn_with_parser.setNNArchive(nn_archive)
+    nn_with_parser.setNNArchive(model_nn_archive)
     nn_with_parser.setBackend("snpe")
     nn_with_parser.setBackendProperties(
         {"runtime": "dsp", "performance_profile": "default"}
@@ -65,7 +75,7 @@ with dai.Pipeline(device) as pipeline:
     nn_with_parser.setNumInferenceThreads(1)
     nn_with_parser.getParser(0).setConfidenceThreshold(args.confidence_thresh)
 
-    manip.out.link(nn_with_parser.inputs["images"])
+    input_node.link(nn_with_parser.inputs["images"])
 
     textInputQueue = nn_with_parser.inputs["texts"].createInputQueue()
     nn_with_parser.inputs["texts"].setReusePreviousMessage(True)
@@ -80,6 +90,7 @@ with dai.Pipeline(device) as pipeline:
         label_encoding={k: v for k, v in enumerate(args.class_names)},
     )
 
+    # visualization
     visualizer.addTopic("Detections", det_process_bridge.out)
     visualizer.addTopic("Video", nn_with_parser.passthroughs["images"])
 
@@ -98,5 +109,5 @@ with dai.Pipeline(device) as pipeline:
         pipeline.processTasks()
         key = visualizer.waitKey(1)
         if key == ord("q"):
-            print("Got q key from the remote connection!")
+            print("Got q key. Exiting...")
             break
