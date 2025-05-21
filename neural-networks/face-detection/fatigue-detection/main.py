@@ -35,14 +35,18 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # face detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
+    det_model_w, det_model_h = det_model_nn_archive.getInputSize()
 
     # face landmark model
-    rec_model_description = dai.NNModelDescription(REC_MODEL)
-    rec_model_description.platform = platform
-    rec_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
+    rec_model_description = dai.NNModelDescription(REC_MODEL, platform=platform)
+    rec_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(rec_model_description, useCached=False)
+    )
+    rec_model_w, rec_model_h = rec_model_nn_archive.getInputSize()
 
     # media/camera input
     if args.media_path:
@@ -55,19 +59,17 @@ with dai.Pipeline(device) as pipeline:
         replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
         cam = pipeline.create(dai.node.Camera).build()
-        cam = cam.requestOutput(
+        cam_out = cam.requestOutput(
             size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=args.fps_limit
         )
-    input_node = replay.out if args.media_path else cam
+    input_node_out = replay.out if args.media_path else cam_out
 
     # resize to det model input size
     resize_node = pipeline.create(dai.node.ImageManipV2)
-    resize_node.initialConfig.setOutputSize(
-        det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
-    )
+    resize_node.initialConfig.setOutputSize(det_model_w, det_model_h)
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
-    input_node.link(resize_node.inputImage)
+    input_node_out.link(resize_node.inputImage)
 
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         resize_node.out, det_model_nn_archive
@@ -79,10 +81,10 @@ with dai.Pipeline(device) as pipeline:
     )  # TODO: remove once we have it working with ImgDetectionsExtended
     script_node = pipeline.create(dai.node.Script)
     det_bridge.out.link(script_node.inputs["det_in"])
-    input_node.link(script_node.inputs["preview"])
+    input_node_out.link(script_node.inputs["preview"])
     script_content = generate_script_content(
-        resize_width=rec_model_nn_archive.getInputWidth(),
-        resize_height=rec_model_nn_archive.getInputHeight(),
+        resize_width=rec_model_w,
+        resize_height=rec_model_h,
     )
     script_node.setScript(script_content)
 

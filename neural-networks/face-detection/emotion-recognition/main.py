@@ -14,7 +14,6 @@ REQ_WIDTH, REQ_HEIGHT = (
     768,
 )  # we are requesting larger input size than required because we want to keep some resolution for the second stage model
 
-
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
@@ -36,14 +35,17 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # face detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
+    det_model_w, det_model_h = det_model_nn_archive.getInputSize()
 
     # emotion recognition model
-    rec_model_description = dai.NNModelDescription(REC_MODEL)
-    rec_model_description.platform = platform
-    rec_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
+    rec_model_description = dai.NNModelDescription(REC_MODEL, platform=platform)
+    rec_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(rec_model_description, useCached=False)
+    )
 
     # media/camera input
     if args.media_path:
@@ -63,9 +65,7 @@ with dai.Pipeline(device) as pipeline:
 
     # resize to det model input size
     resize_node = pipeline.create(dai.node.ImageManipV2)
-    resize_node.initialConfig.setOutputSize(
-        det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
-    )
+    resize_node.initialConfig.setOutputSize(det_model_w, det_model_h)
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
     input_node.link(resize_node.inputImage)
