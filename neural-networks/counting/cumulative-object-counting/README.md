@@ -1,6 +1,11 @@
 # Cumulative Object Counting
 
-![cumulative object counting](https://raw.githubusercontent.com/TannerGilbert/Tensorflow-2-Object-Counting/master/doc/cumulative_object_counting.PNG)
+This experiments demonstrates cummulative object counting.
+It utilizes an object detection model to detect objects (e.g. `people`) and counts how many pass in the upward and downward direction.
+
+## Demo
+
+![cumulative object counting](media/cumulative-object-counting.gif)
 
 ## Installation
 
