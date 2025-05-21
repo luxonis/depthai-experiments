@@ -33,14 +33,14 @@ if args.fps_limit is None:
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
 
-
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # crestereo model
-    cre_model_description = dai.NNModelDescription(args.model)
-    cre_model_description.platform = platform
-    cre_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(cre_model_description))
+    cre_model_description = dai.NNModelDescription(args.model, platform=platform)
+    cre_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(cre_model_description, useCached=False)
+    )
     model_input_shape = cre_model_nn_archive.getInputSize()
 
     # stereo camera input
