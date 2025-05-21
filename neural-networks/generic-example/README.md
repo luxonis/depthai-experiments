@@ -28,7 +28,7 @@ Here is a list of all available parameters:
 
 **Note:**
 
-If you want to vis  ualize segmentation model output as an overlay you should use `-ann segmentation`. Similarly, if you are using an instance segmentation model and want to visualize its output as overlay you should use `-ann segmentation_with_annotation`.
+If you want to visualize segmentation model output as an overlay you should use `-ann segmentation`. Similarly, if you are using an instance segmentation model and want to visualize its output as overlay you should use `-ann segmentation_with_annotation`.
 
 ## Peripheral Mode
 
