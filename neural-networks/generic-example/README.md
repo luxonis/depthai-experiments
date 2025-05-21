@@ -71,14 +71,10 @@ python3 main.py \
 
 And this will run an instance segmentation model.
 
-## Standalone Mode
+## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the [oakctl](https://stg.docs.luxonis.com/software/oak-apps/oakctl/) command-line tool (enables host-device interaction) as:
-
-```bash
-bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
-```
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software/oak-apps/oakctl/#undefined).
 
 The app can then be run with:
 
