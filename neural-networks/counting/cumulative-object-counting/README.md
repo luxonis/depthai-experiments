@@ -1,8 +1,10 @@
 # Cumulative Object Counting
 
-This example demonstrates how to run an inference pipeline for cummulative object counting using the DepthAI library.
-It utilizes an object detection model to detect objects (e.g. `people`) and counts how many pass in an upward and downward direction.
+This example demonstrates how to run an inference pipeline for cummulative object counting using the DepthAI and OAK cameras.
+It utilizes an object detection model to detect objects (e.g. `people`) and counts how many pass in an upward and downward direction. By default it uses [Mobilenet-SSD](https://zoo-rvc4.luxonis.com/luxonis/mobilenet-ssd/2da6e0a5-4785-488d-8cf5-c35f7ec1a1ed) model.
+
 The example is inspired by / based on:
+
 - [Tensorflow 2 Object Counting](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
 - [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/)
 - [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)
@@ -11,18 +13,11 @@ The example is inspired by / based on:
 
 ![cumulative object counting](media/cumulative-object-counting.gif)
 
-## Installation
-
-Running this example requires a **Luxonis OAK2 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
-Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Usage
 
-You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
+
+You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -32,7 +27,7 @@ Here is a list of all available parameters:
 -d DEVICE, --device DEVICE
                       Optional name, DeviceID or IP of the camera to connect to. (default: None)
 -fps FPS_LIMIT, --fps_limit FPS_LIMIT
-                      FPS limit for the model runtime. (default: None)
+                      FPS limit for the model runtime. (default: 25)
 -media MEDIA_PATH, --media_path MEDIA_PATH
                       Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 -a AXIS, --axis AXIS
@@ -41,36 +36,43 @@ Here is a list of all available parameters:
                       osition of the axis (if 0.5, axis is placed in the middle of the frame). (default: 0.5)
 ```
 
-### Peripheral Mode
+> **Note:** This example currently only works on RVC2 devices becuase dai.ObjectTracker node is not supported on RVC4.
+
+## Peripheral Mode
+
+### Installation
+
+You need to first prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
+
+```bash
+pip install -r requirements.txt
+```
 
 Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
-#### Examples
+### Examples
 
 ```bash
 python3 main.py
 ```
 
-This will run the experiment using `mobilenet-ssd` model counting for people on your camera input.
+This will run the experiment with default arguments.
 
 ```bash
-python3 main.py \
-    --model <HubAI model reference> \
-    --media_path <path to media file> \
-    --axis y
+python3 main.py -d <DEVICE_IP>
 ```
 
-This will run the experiment using a custom model counting for a custom object class (the experiment is hardcoded to use the model class with the smallest ID) on a media file input.
-The objects are counted when crossing the y-axis positioned in the middle of the frame (default position).
+This will run the cumulative object counting experiment with the provided device ip, camera input and default fps limit based on the device.
 
-### Standalone Mode
+## Standalone Mode (RVC4 only)
 
-Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
-To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
-
-```bash
-bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
-```
+Running the example in the standalone mode, app runs entirely on the device.
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -79,4 +81,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software/oak-apps/configuration/) for more information about this configuration file).

@@ -1,6 +1,6 @@
 # Multi-Input YOLO World Demo README
 
-This example demonstrates the implementation of multi-input [YOLO-World](https://github.com/AILab-CVC/YOLO-World) object detection pipeline on DepthAI.
+This example demonstrates the implementation of multi-input [YOLO-World](https://zoo-rvc4.luxonis.com/luxonis/yolo-world-l/6684e96f-11fc-4d92-8657-12a5fd8e532a) object detection pipeline on DepthAI. It can detect objects in real-time using YOLO, has support for video files and live camera input, and is customizable with class names and confidence threshold.
 
 **NOTE:** This experiment works only on `RVC4` devices and currently only in `PERIPHERAL` mode.
 
@@ -8,22 +8,11 @@ This example demonstrates the implementation of multi-input [YOLO-World](https:/
 
 ![Barrel detection](media/barrel-detection.gif)
 
-## Features
-
-- Detect objects in real-time using YOLO.
-- Support for video files and live camera input.
-- Customizable class names and confidence threshold.
-
-## Installation
-
-Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
-Moreover, you need to prepare a **Python 3.10** environment by running:
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Usage
+
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
+
+You can run the experiment only by using your your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -40,7 +29,24 @@ Here is a list of all available parameters:
                      Sets the confidence threshold (default: 0.1)
 ```
 
-### Example
+## Peripheral Mode
+
+### Installation
+
+You need to first prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
+
+```bash
+pip install -r requirements.txt
+```
+
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
+
+### Examples
 
 ```bash
 python main.py --class_names person car dog --confidence_thresh 0.2

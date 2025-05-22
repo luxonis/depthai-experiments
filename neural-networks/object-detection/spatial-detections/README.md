@@ -1,6 +1,6 @@
 # Spatial Detections
 
-This experiment shows how to use DepthAI and OAK camera to detect object with their spatial coordinates in real-time! The experiment by default uses [YOLOv6 Nano](https://hub.luxonis.com/ai/models/face58c4-45ab-42a0-bafc-19f9fee8a034?view=page) object detection model but you can use other models as well by using `-m` or `--model` argument. It should work with any YOLO detection model.
+This experiment shows how to use DepthAI and OAK camera to detect object with their spatial coordinates in real-time! The experiment by default uses [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detection model but you can use other models as well by using `-m` or `--model` argument. It should work with any YOLO detection model.
 
 You can read more about spatial detection network in our [documentation](https://docs.luxonis.com/software/depthai-components/nodes/yolo_spatial_detection_network/). It combines the bounding boxes with the depth information into spatial image detections.
 
@@ -10,17 +10,11 @@ You can read more about spatial detection network in our [documentation](https:/
 
 ![Exampe](media/spatial-detections.gif)
 
-## Installation
-
-You need to prepare a Python environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Usage
 
-You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
+
+You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -33,11 +27,24 @@ Here is a list of all available parameters:
                     FPS limit for the model runtime. (default: 20 for RVC2 and 30 for RVC4)
 ```
 
-### Peripheral Mode
+## Peripheral Mode
+
+### Installation
+
+You need to first prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
+
+```bash
+pip install -r requirements.txt
+```
 
 Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
-#### Examples
+### Examples
 
 ```bash
 python3 main.py
@@ -51,13 +58,10 @@ python3 main.py --model luxonis/yolov6-large:r2-coco-640x352
 
 This will run the experiment with the specified YOLOv6-Large model.
 
-### Standalone Mode
+## Standalone Mode (RVC4 only)
 
-Running the experiment in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/) runs the app entirely on the device.To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
-
-```bash
-bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
-```
+Running the example in the standalone mode, app runs entirely on the device.
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -66,8 +70,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
-
-### Notes
-
-If running on **OAK-D Lite**, make sure to set the `numShaves=4` when calling the `.setNNArchive()` method on the spatial detection node.
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software/oak-apps/configuration/) for more information about this configuration file).
