@@ -12,7 +12,7 @@ A gaze estimation example is built to showcase the 3 stage pipeline. The pipelin
 1. The cropped face is used as input to the [Head pose model](https://hub.luxonis.com/ai/models/068ac18a-de71-4a6e-9f0f-42776c0ef980?view=page) which returns the 3D vector the heads position.
 1. The cropped eyes and the 3D pose vector are fed into [ADAS gaze estimation model](https://hub.luxonis.com/ai/models/b174ff1b-740b-4016-b8d5-b9488dbdd657?view=page) to compute the final gaze of the person.
 
-**:exclamation: ON RVC2 you can run the experiment with camera input only (`--media` flag doesnt work due to a problem with the replay node).:exclamation:**
+**:exclamation: ON RVC2 you can run the experiment with camera input only (`--media` flag doesnt work due to a problem with the replay node). :exclamation:**
 
 ## Installation
 
