@@ -21,20 +21,21 @@ if args.fps_limit is None:
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
 
+available_cameras = device.getConnectedCameras()
+if len(available_cameras) < 3:
+    raise ValueError(
+        "Device must have 3 cameras (color, left and right) in order to run this experiment."
+    )
+
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
-    # Check if the device has color, left and right cameras
-    available_cameras = device.getConnectedCameras()
-    if len(available_cameras) < 3:
-        raise ValueError(
-            "Device must have 3 cameras (color, left and right) in order to run this experiment."
-        )
-
     # detection model
-    det_model_description = dai.NNModelDescription(args.model)
-    det_model_description.platform = platform
-    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(args.model, platform=platform)
+    det_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
+    classes = det_model_nn_archive.getConfig().model.heads[0].metadata.classes
 
     # camera input
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
@@ -70,9 +71,7 @@ with dai.Pipeline(device) as pipeline:
 
     # annotation
     annotation_node = pipeline.create(AnnotationNode).build(
-        input_detections=nn.out,
-        depth=stereo.depth,
-        labels=det_model_nn_archive.getConfig().model.heads[0].metadata.classes,
+        input_detections=nn.out, depth=stereo.depth, labels=classes
     )
 
     apply_colormap = pipeline.create(ApplyColormap).build(stereo.depth)

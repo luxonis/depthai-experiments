@@ -13,8 +13,12 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
+frame_type = (
+    dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i
+)
+
 if args.fps_limit is None:
-    args.fps_limit = 1 if platform == "RVC2" else 5
+    args.fps_limit = 2 if platform == "RVC2" else 5
     print(
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
@@ -23,24 +27,20 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # crowd counting model
-    cc_model_description = dai.NNModelDescription(args.model)
-    cc_model_description.platform = platform
-    cc_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(cc_model_description))
+    cc_model_description = dai.NNModelDescription(args.model, platform=platform)
+    cc_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(cc_model_description, useCached=False)
+    )
 
     # media/camera input
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(
-            dai.ImgFrame.Type.BGR888i
-            if platform == "RVC4"
-            else dai.ImgFrame.Type.BGR888p
-        )
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay.setSize(
-            cc_model_nn_archive.getInputWidth(), cc_model_nn_archive.getInputHeight()
-        )
-    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+    input_node = replay if args.media_path else cam
 
     cc_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, cc_model_nn_archive, fps=args.fps_limit
@@ -68,5 +68,5 @@ with dai.Pipeline(device) as pipeline:
     while pipeline.isRunning():
         key_pressed = visualizer.waitKey(1)
         if key_pressed == ord("q"):
-            pipeline.stop()
+            print("Got q key. Exiting...")
             break

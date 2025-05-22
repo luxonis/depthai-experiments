@@ -29,9 +29,10 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # text detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
 
     # media/camera input
     if args.media_path:

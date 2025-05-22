@@ -16,9 +16,9 @@ pip install -r requirements.txt
 
 ## Usage
 
-The provided experiment detects chairs, but you can change the object class by changing the valid labels in `script_*.py` file and in constructing the `AnnotationNode` in `main.py`: `annotation_node = pipeline.create(AnnotationNode, connection_pairs=connection_pairs, valid_labels=[41])` where `41` is the label for cups.
-
 You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
+
+Here is a list of all available parameters:
 
 ```
 -d DEVICE, --device DEVICE
@@ -29,7 +29,8 @@ You can run the experiment fully on device (`STANDALONE` mode) or using your you
                     Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```
 
-**NOTE**: Camera and shoes can not be detected with general YOLOv6 detector. So, you need to provide your own detector for these objects.
+**NOTE**: The provided experiment detects chairs, but you can change the object class by changing the `VALID_LABELS` constant in `main.py` (e.g. `VALID_LABELS=[41])` where `41` is the label for cups).
+Camera and shoes can not be detected with general YOLOv6 detector. So, you need to provide your own detector for these objects.
 
 ### Peripheral Mode
 

@@ -9,7 +9,6 @@ from utils.node_creators import create_crop_node
 from utils.annotation_node import AnnotationNode
 from utils.host_concatenate_head_pose import ConcatenateHeadPose
 
-DET_MODEL = "luxonis/scrfd-face-detection:10g-640x640"
 HEAD_POSE_MODEL = "luxonis/head-pose-estimation:60x60"
 GAZE_MODEL = "luxonis/gaze-estimation-adas:60x60"
 REQ_WIDTH, REQ_HEIGHT = (
@@ -24,12 +23,18 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
+DET_MODEL = (
+    "luxonis/yunet:320x240"
+    if platform == "RVC2"
+    else "luxonis/scrfd-face-detection:10g-640x640"
+)
+
 frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
 )
 
 if args.fps_limit is None:
-    args.fps_limit = 3 if platform == "RVC2" else 30
+    args.fps_limit = 8 if platform == "RVC2" else 30
     print(
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
@@ -60,14 +65,15 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay.setFps(args.fps_limit)
+        if args.fps_limit:
+            replay.setFps(args.fps_limit)
         replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
         cam = pipeline.create(dai.node.Camera).build()
-        cam = cam.requestOutput(
+        cam_out = cam.requestOutput(
             size=(REQ_WIDTH, REQ_HEIGHT), type=frame_type, fps=args.fps_limit
         )
-    input_node = replay.out if args.media_path else cam
+    input_node_out = replay.out if args.media_path else cam_out
 
     # resize to det model input size
     resize_node = pipeline.create(dai.node.ImageManipV2)
@@ -79,7 +85,7 @@ with dai.Pipeline(device) as pipeline:
     )
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
-    input_node.link(resize_node.inputImage)
+    input_node_out.link(resize_node.inputImage)
 
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         resize_node.out, det_model_nn_archive
@@ -96,13 +102,13 @@ with dai.Pipeline(device) as pipeline:
     det_nn.out.link(detection_process_node.detections_input)
 
     left_eye_crop_node = create_crop_node(
-        pipeline, input_node, detection_process_node.left_config_output
+        pipeline, input_node_out, detection_process_node.left_config_output
     )
     right_eye_crop_node = create_crop_node(
-        pipeline, input_node, detection_process_node.right_config_output
+        pipeline, input_node_out, detection_process_node.right_config_output
     )
     face_crop_node = create_crop_node(
-        pipeline, input_node, detection_process_node.face_config_output
+        pipeline, input_node_out, detection_process_node.face_config_output
     )
 
     # head pose estimation

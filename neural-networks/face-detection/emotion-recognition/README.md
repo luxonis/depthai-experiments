@@ -3,15 +3,14 @@
 This example demonstrates how to run 2 stage inference with the DepthAI v3 library.
 It recognizes all people in the frame and determines their emotions. There are 8 possible emotions: anger, contempt, disgust, fear, happiness, neutral, sadness, and surprise. The demo uses [YuNet](https://hub.luxonis.com/ai/models/5d635f3c-45c0-41d2-8800-7ca3681b1915?view=page) face detection model, crops the faces and then recognizes the emotions of the person using [Emotions recognition model](https://hub.luxonis.com/ai/models/3cac7277-2474-4b36-a68e-89ac977366c3?view=page).
 
-**:exclamation: This experiment works only on RVC4 devices:exclamation:**
-
 ## Demo
 
 ![Demo](media/emotion-recognition.gif)
 
 ## Instalation
 
-Running this example requires a **Luxonis OAK4 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).You need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
+Running this example requires a **Luxonis OAK device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
 
 ```bash
 pip install -r requirements.txt

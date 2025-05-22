@@ -23,13 +23,16 @@ python3 main.py \
     --media ...
 ```
 
-The relevant arguments:
+Here is a list of all available parameters:
 
-- **--device** \[OPTIONAL\]: DeviceID or IP of the camera to connect to.
-  By default, the first locally available device is used;
-- **--media** \[OPTIONAL\]: Path to the media file to be used as input.
-  Currently, only video files are supported but we plan to add support for more formats (e.g. images) in the future.
-  By default, camera input is used;
+```
+-d DEVICE, --device DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: the first locally available device is used)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                    FPS limit for the model runtime. (default: 5 for both RVC2 and RVC4)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                    Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+```
 
 Running the script downloads the model, creates a DepthAI pipeline, infers on camera input or the provided media, and display the results by **DepthAI visualizer**
 The latter runs in the browser at `http://localhost:8082`.

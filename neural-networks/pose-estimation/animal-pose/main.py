@@ -38,18 +38,17 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
 
     # pose estimation model
-    pose_model_description = dai.NNModelDescription(POSE_MODEL)
-    pose_model_description.platform = platform
-    pose_nn_archive = dai.NNArchive(dai.getModelFromZoo(pose_model_description))
-    pose_model_w, pose_model_h = (
-        pose_nn_archive.getInputWidth(),
-        pose_nn_archive.getInputHeight(),
+    pose_model_description = dai.NNModelDescription(POSE_MODEL, platform=platform)
+    pose_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(pose_model_description, useCached=False)
     )
+    pose_model_w, pose_model_h = pose_nn_archive.getInputSize()
 
     # media/camera input
     if args.media_path:
@@ -57,8 +56,6 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        if args.fps_limit:
-            replay.setFps(args.fps_limit)
     else:
         cam = pipeline.create(dai.node.Camera).build()
     input_node = replay if args.media_path else cam
@@ -100,7 +97,7 @@ with dai.Pipeline(device) as pipeline:
     )
 
     # detections and pose estimations sync
-    gather_data = pipeline.create(GatherData).build(camera_fps=args.fps_limit)
+    gather_data = pipeline.create(GatherData).build(args.fps_limit)
     detections_bridge.out.link(gather_data.input_reference)
     pose_nn.out.link(gather_data.input_data)
 

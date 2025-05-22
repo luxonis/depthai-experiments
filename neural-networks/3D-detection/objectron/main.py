@@ -33,21 +33,17 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
-    classes = det_nn_archive.getConfig().model.heads[0].metadata.classes
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
 
     # position estimation model
-    pos_model_description = dai.NNModelDescription(POS_MODEL)
-    pos_model_description.platform = platform
+    pos_model_description = dai.NNModelDescription(POS_MODEL, platform=platform)
     pos_nn_archive = dai.NNArchive(
         dai.getModelFromZoo(pos_model_description, useCached=False)
     )
-    pos_model_w, pos_model_h = (
-        pos_nn_archive.getInputWidth(),
-        pos_nn_archive.getInputHeight(),
-    )
+    pos_model_w, pos_model_h = pos_nn_archive.getInputSize()
 
     # media/camera input
     if args.media_path:
@@ -55,7 +51,6 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay.setFps(args.fps_limit)
     else:
         cam = pipeline.create(dai.node.Camera).build()
     input_node = replay if args.media_path else cam
@@ -102,9 +97,7 @@ with dai.Pipeline(device) as pipeline:
     connection_pairs = (
         pos_nn_archive.getConfig().model.heads[0].metadata.extraParams["skeleton_edges"]
     )
-    annotation_node = pipeline.create(
-        AnnotationNode,
-    ).build(
+    annotation_node = pipeline.create(AnnotationNode).build(
         gathered_data=gather_data.out,
         connection_pairs=connection_pairs,
         padding=PADDING,
@@ -122,5 +115,5 @@ with dai.Pipeline(device) as pipeline:
     while pipeline.isRunning():
         key_pressed = visualizer.waitKey(1)
         if key_pressed == ord("q"):
-            pipeline.stop()
+            print("Got q key. Exiting...")
             break

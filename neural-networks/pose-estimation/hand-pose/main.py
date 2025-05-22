@@ -57,19 +57,19 @@ with dai.Pipeline(device) as pipeline:
 
     # resize to det model input size
     resize_node = pipeline.create(dai.node.ImageManipV2)
-    input_node.setMaxOutputFrameSize(
+    resize_node.setMaxOutputFrameSize(
         det_nn_archive.getInputWidth() * det_nn_archive.getInputHeight() * 3
     )
-    input_node.initialConfig.setOutputSize(
+    resize_node.initialConfig.setOutputSize(
         det_nn_archive.getInputWidth(),
         det_nn_archive.getInputHeight(),
         mode=dai.ImageManipConfigV2.ResizeMode.STRETCH,
     )
-    input_node.initialConfig.setFrameType(frame_type)
-    input_node.link(input_node.inputImage)
+    resize_node.initialConfig.setFrameType(frame_type)
+    input_node.link(resize_node.inputImage)
 
     detection_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        input_node.out, det_nn_archive
+        resize_node.out, det_nn_archive
     )
 
     # detection processing

@@ -1,70 +1,67 @@
-import depthai as dai
+from typing import List
 import numpy as np
+import depthai as dai
+
+from depthai_nodes import ImgDetectionsExtended, Predictions
 from depthai_nodes.utils import AnnotationHelper
 
-SECONDARY_COLOR = dai.Color(
-    float(240 / 255), float(240 / 255), float(240 / 255), float(1.0)
-)
 
-
-class AnnotationNode(dai.node.ThreadedHostNode):
-    def __init__(self):
+class AnnotationNode(dai.node.HostNode):
+    def __init__(self) -> None:
         super().__init__()
-        self.input = self.createInput()
-
-        self.output_annotation = self.createOutput()
-        self.output_frame = self.createOutput()
-
         self._min_threshold = 15
 
-    def run(self):
-        while self.isRunning():
-            synced_data = self.input.get()
-            annotation_helper = AnnotationHelper()
+    def build(
+        self,
+        gather_data_msg: dai.Node.Output,
+    ) -> "AnnotationNode":
+        self.link_args(gather_data_msg)
+        return self
 
-            frame = synced_data.reference_data  # dai.ImgFrame
+    def process(self, gather_data_msg: dai.Buffer) -> None:
+        img_detections_extended_msg: ImgDetectionsExtended = (
+            gather_data_msg.reference_data
+        )
+        assert isinstance(img_detections_extended_msg, ImgDetectionsExtended)
 
-            detections_pose = synced_data.gathered
+        pose_msg_group_list: List[dai.MessageGroup] = gather_data_msg.gathered
+        assert isinstance(pose_msg_group_list, list)
+        assert all(isinstance(msg, dai.MessageGroup) for msg in pose_msg_group_list)
 
-            detections = detections_pose[0].reference_data.detections
-            poses = detections_pose[0].gathered
+        assert len(img_detections_extended_msg.detections) == len(pose_msg_group_list)
 
-            for det, pose in zip(detections, poses):
-                yaw = pose.getTensor("tf.identity").ravel()[0]
-                roll = pose.getTensor("tf.identity_1").ravel()[0]
-                pitch = pose.getTensor("tf.identity_2").ravel()[0]
+        annotations = AnnotationHelper()
 
-                pose_text = self._decode_pose(yaw, pitch, roll)
+        for img_detection_extended_msg, pose_msg_group in zip(
+            img_detections_extended_msg.detections, pose_msg_group_list
+        ):
 
-                pose_information = (
-                    f"Pitch: {pitch:.0f} \nYaw: {yaw:.0f} \nRoll: {roll:.0f}"
-                )
+            yaw_msg: Predictions = pose_msg_group["0"]
+            assert isinstance(yaw_msg, Predictions)
+            yaw = yaw_msg.prediction
+            roll_msg: Predictions = pose_msg_group["1"]
+            assert isinstance(roll_msg, Predictions)
+            roll = roll_msg.prediction
+            pitch_msg: Predictions = pose_msg_group["2"]
+            assert isinstance(pitch_msg, Predictions)
+            pitch = pitch_msg.prediction
 
-                outer_points = det.rotated_rect.getOuterRect()
+            pose_text = self._decode_pose(yaw, pitch, roll)
 
-                x_min, y_min, x_max, y_max = [np.round(x, 2) for x in outer_points]
+            pose_information = f"Pitch: {pitch:.0f} \nYaw: {yaw:.0f} \nRoll: {roll:.0f}"
 
-                annotation_helper.draw_rectangle(
-                    (x_min, y_min),
-                    (x_max, y_max),
-                    fill_color=dai.Color(0.0, 0.0, 0.0, 0.0),
-                )
+            outer_points = img_detection_extended_msg.rotated_rect.getOuterRect()
+            x_min, y_min, x_max, _ = [np.round(x, 2) for x in outer_points]
 
-                annotation_helper.draw_text(
-                    pose_information,
-                    (x_max, y_min + 0.1),
-                    size=16,
-                    color=SECONDARY_COLOR,
-                )
-                annotation_helper.draw_text(pose_text, (x_min, y_min), size=28)
+            annotations.draw_text(pose_information, (x_max, y_min + 0.1), size=16)
+            annotations.draw_text(pose_text, (x_min, y_min), size=28)
 
-            annotations = annotation_helper.build(
-                timestamp=frame.getTimestamp(),
-                sequence_num=frame.getSequenceNum(),
-            )
+        annotations_msg = annotations.build(
+            timestamp=img_detections_extended_msg.getTimestamp(),
+            sequence_num=img_detections_extended_msg.getSequenceNum(),
+        )
 
-            self.output_frame.send(frame)
-            self.output_annotation.send(annotations)
+        self.out.send(annotations_msg)
 
     def _decode_pose(self, yaw: float, pitch: float, roll: float) -> str:
         vals = np.array([abs(pitch), abs(yaw), abs(roll)])

@@ -32,9 +32,10 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
 
     # media/camera input
     if args.media_path:
@@ -44,12 +45,13 @@ with dai.Pipeline(device) as pipeline:
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
+        replay.setSize(REQ_WIDTH, REQ_HEIGHT)
     else:
-        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+        cam = pipeline.create(dai.node.Camera).build()
         cam_out = cam.requestOutput(
             (REQ_WIDTH, REQ_HEIGHT), frame_type, fps=args.fps_limit
         )
-    input_node = replay.out if args.media_path else cam_out
+    input_node_out = replay.out if args.media_path else cam_out
 
     # resize to det model input size
     crop_node = pipeline.create(dai.node.ImageManipV2)
@@ -58,7 +60,7 @@ with dai.Pipeline(device) as pipeline:
     crop_node.setMaxOutputFrameSize(
         det_model_nn_archive.getInputWidth() * det_model_nn_archive.getInputHeight() * 3
     )
-    input_node.link(crop_node.inputImage)
+    input_node_out.link(crop_node.inputImage)
 
     nn = pipeline.create(dai.node.NeuralNetwork).build(
         crop_node.out, det_model_nn_archive
@@ -71,7 +73,7 @@ with dai.Pipeline(device) as pipeline:
     host_decoding_node.set_iou_thresh(args.iou_thresh)
 
     # visualization
-    visualizer.addTopic("Camera", input_node)
+    visualizer.addTopic("Camera", input_node_out)
     visualizer.addTopic("Detections", host_decoding_node.output)
 
     print("Pipeline created.")

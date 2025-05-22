@@ -13,7 +13,6 @@ from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 
 DET_MODEL: str = "luxonis/yolov6-nano:r2-coco-512x288"
-REC_MODEL: str = args.model
 PADDING = 0.1
 
 _, args = initialize_argparser()
@@ -37,14 +36,16 @@ with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
 
     # person detection model
-    det_model_description = dai.NNModelDescription(DET_MODEL)
-    det_model_description.platform = platform
-    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+    det_model_description = dai.NNModelDescription(DET_MODEL, platform=platform)
+    det_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(det_model_description, useCached=False)
+    )
 
     # pose estimation model
-    rec_model_description = dai.NNModelDescription(REC_MODEL)
-    rec_model_description.platform = platform
-    rec_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(rec_model_description))
+    rec_model_description = dai.NNModelDescription(args.model, platform=platform)
+    rec_model_nn_archive = dai.NNArchive(
+        dai.getModelFromZoo(rec_model_description, useCached=False)
+    )
 
     # media/camera source
     if args.media_path:
@@ -52,10 +53,9 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay.setSize(
-            det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
-        )
-    input_node = replay if args.media_path else pipeline.create(dai.node.Camera).build()
+    else:
+        cam = pipeline.create(dai.node.Camera).build()
+    input_node = replay if args.media_path else cam
 
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         input_node, det_model_nn_archive, fps=args.fps_limit

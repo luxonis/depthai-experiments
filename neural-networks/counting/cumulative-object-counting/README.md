@@ -1,43 +1,82 @@
 # Cumulative Object Counting
 
-![cumulative object counting](https://raw.githubusercontent.com/TannerGilbert/Tensorflow-2-Object-Counting/master/doc/cumulative_object_counting.PNG)
+This example demonstrates how to run an inference pipeline for cummulative object counting using the DepthAI library.
+It utilizes an object detection model to detect objects (e.g. `people`) and counts how many pass in an upward and downward direction.
+The example is inspired by / based on:
+- [Tensorflow 2 Object Counting](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
+- [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/)
+- [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)
+
+## Demo
+
+![cumulative object counting](media/cumulative-object-counting.gif)
 
 ## Installation
 
-```
-python3 -m pip install -r requirements.txt
+Running this example requires a **Luxonis OAK2 device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Moreover, you need to prepare a **Python 3.10** environment with [DepthAI](https://pypi.org/project/depthai/) and [DepthAI Nodes](https://pypi.org/project/depthai-nodes/) packages installed. You can do this by running:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-```
-usage: main.py [-h] [-m MODEL] [-v VIDEO_PATH] [-roi ROI_POSITION] [-a] [-sp SAVE_PATH]
+You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode).
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -v VIDEO_PATH, --video_path VIDEO_PATH
-                        Path to video. If empty OAK-RGB camera is used. (default='') (default: )
-  -roi ROI_POSITION, --roi_position ROI_POSITION
-                        ROI Position (0-1) (default: 0.5)
-  -a, --axis            Axis for cumulative counting (default=x axis) (default: True)
-  -sp SAVE_PATH, --save_path SAVE_PATH
-                        Path to save the output. If None output won't be saved (default: )
-```
-
-Camera example:
+Here is a list of all available parameters:
 
 ```
-python main.py
+-m MODEL, --model MODEL
+                      HubAI reference of the object detection model. (default: luxonis/mobilenet-ssd:300x300)
+-d DEVICE, --device DEVICE
+                      Optional name, DeviceID or IP of the camera to connect to. (default: None)
+-fps FPS_LIMIT, --fps_limit FPS_LIMIT
+                      FPS limit for the model runtime. (default: None)
+-media MEDIA_PATH, --media_path MEDIA_PATH
+                      Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
+-a AXIS, --axis AXIS
+                      Axis for cumulative counting (either x or y). (default: x)
+-roi ROI_POSITION, --roi_position ROI_POSITION
+                      osition of the axis (if 0.5, axis is placed in the middle of the frame). (default: 0.5)
 ```
 
-Video example:
+### Peripheral Mode
 
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
+
+#### Examples
+
+```bash
+python3 main.py
 ```
-python main.py -v demo/example_01.mp4 -a
+
+This will run the experiment using `mobilenet-ssd` model counting for people on your camera input.
+
+```bash
+python3 main.py \
+    --model <HubAI model reference> \
+    --media_path <path to media file> \
+    --axis y
 ```
 
-## Inspired by / Based on
+This will run the experiment using a custom model counting for a custom object class (the experiment is hardcoded to use the model class with the smallest ID) on a media file input.
+The objects are counted when crossing the y-axis positioned in the middle of the frame (default position).
 
-- [Tensorflow 2 Object Counting](https://github.com/TannerGilbert/Tensorflow-2-Object-Counting)
-- [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/)
-- [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)
+### Standalone Mode
+
+Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
+To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
+
+```bash
+bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
+```
+
+The app can then be run with:
+
+```bash
+oakctl connect <DEVICE_IP>
+oakctl app run .
+```
+
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
