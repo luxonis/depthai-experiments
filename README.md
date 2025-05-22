@@ -99,17 +99,17 @@ Click on any category below to explore detailed examples for that specific domai
   </tr>
 </table>
 
-### [🔄 Stream Manipulation](streaming/)
+### [🔄 Streaming](streaming/)
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="streaming/poe-mqtt/media/mqtt_client.gif" alt="Stream Manipulation Demo">
+      <img src="streaming/poe-mqtt/media/mqtt_client.gif" alt="Streaming Demo">
     </td>
     <td width="50%" valign="middle" align="center">
       Examples showing different ways to stream data from DepthAI devices. This includes MJPEG, H.264, H.265, MQTT, TCP, RTSP, and WebRTC.
       <br><br>
-      <a href="streaming/">🔄 Explore Stream Manipulation</a>
+      <a href="streaming/">🔄 Explore Streaming</a>
     </td>
   </tr>
 </table>
