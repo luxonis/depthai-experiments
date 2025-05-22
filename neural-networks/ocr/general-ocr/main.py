@@ -1,12 +1,11 @@
 from pathlib import Path
 
 import depthai as dai
-import depthai as dai
-from depthai_nodes.node import ParsingNeuralNetwork, GatherData, ImgDetectionsBridge
-from depthai_nodes.node.utils import generate_script_content
+from depthai_nodes.node import ParsingNeuralNetwork, GatherData
 
 from utils.annotation_node import OCRAnnotationNode
 from utils.arguments import initialize_argparser
+from utils.host_process_detections import CropConfigsCreator
 
 DET_MODEL = "luxonis/paddle-text-detection:320x576"
 REC_MODEL = "luxonis/paddle-text-recognition:320x48"
@@ -47,11 +46,12 @@ with dai.Pipeline(device) as pipeline:
     rec_model_nn_archive = dai.NNArchive(
         dai.getModelFromZoo(rec_model_description, useCached=False)
     )
+    rec_model_w, rec_model_h = rec_model_nn_archive.getInputSize()
 
     if args.media_path:
         replay = pipeline.create(dai.node.ReplayVideo)
         replay.setReplayVideoFile(Path(args.media_path))
-        replay.setOutFrameType(dai.ImgFrame.Type.NV12)
+        replay.setOutFrameType(frame_type)
         replay.setLoop(True)
         if args.fps_limit:
             replay.setFps(args.fps_limit)
@@ -75,26 +75,21 @@ with dai.Pipeline(device) as pipeline:
     det_nn.setNumPoolFrames(30)
 
     # detection processing
-    det_bridge = pipeline.create(ImgDetectionsBridge).build(
-        det_nn.out, ignore_angle=True
-    )  # TODO: remove once we have it working with ImgDetectionsExtended
-    script_node = pipeline.create(dai.node.Script)
-    det_bridge.out.link(script_node.inputs["det_in"])
-    input_node_out.link(script_node.inputs["preview"])
-    script_content = generate_script_content(
-        resize_width=rec_model_nn_archive.getInputWidth(),
-        resize_height=rec_model_nn_archive.getInputHeight(),
+    detection_process_node = pipeline.create(CropConfigsCreator)
+    detection_process_node.build(
+        det_nn.out, (REQ_WIDTH, REQ_HEIGHT), (rec_model_w, rec_model_h)
     )
-    script_node.setScript(script_content)
 
     crop_node = pipeline.create(dai.node.ImageManipV2)
-    crop_node.initialConfig.setOutputSize(
-        rec_model_nn_archive.getInputWidth(), rec_model_nn_archive.getInputHeight()
-    )
-    crop_node.inputConfig.setWaitForMessage(True)
+    crop_node.initialConfig.setReusePreviousImage(False)
+    crop_node.inputConfig.setReusePreviousMessage(False)
+    crop_node.inputImage.setReusePreviousMessage(True)
+    crop_node.inputConfig.setMaxSize(30)
+    crop_node.inputImage.setMaxSize(30)
+    crop_node.setNumFramesPool(30)
 
-    script_node.outputs["manip_cfg"].link(crop_node.inputConfig)
-    script_node.outputs["manip_img"].link(crop_node.inputImage)
+    detection_process_node.config_output.link(crop_node.inputConfig)
+    input_node_out.link(crop_node.inputImage)
 
     ocr_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         crop_node.out, rec_model_nn_archive
@@ -104,8 +99,8 @@ with dai.Pipeline(device) as pipeline:
 
     # detections and recognitions sync
     gather_data_node = pipeline.create(GatherData).build(args.fps_limit)
+    detection_process_node.detections_output.link(gather_data_node.input_reference)
     ocr_nn.out.link(gather_data_node.input_data)
-    det_nn.out.link(gather_data_node.input_reference)
 
     # annotation
     annotation_node = pipeline.create(OCRAnnotationNode)
