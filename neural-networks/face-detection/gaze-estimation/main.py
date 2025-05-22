@@ -9,7 +9,6 @@ from utils.node_creators import create_crop_node
 from utils.annotation_node import AnnotationNode
 from utils.host_concatenate_head_pose import ConcatenateHeadPose
 
-DET_MODEL = "luxonis/scrfd-face-detection:10g-640x640"
 HEAD_POSE_MODEL = "luxonis/head-pose-estimation:60x60"
 GAZE_MODEL = "luxonis/gaze-estimation-adas:60x60"
 REQ_WIDTH, REQ_HEIGHT = (
@@ -24,12 +23,18 @@ device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device(
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
+DET_MODEL = (
+    "luxonis/yunet:320x240"
+    if platform == "RVC2"
+    else "luxonis/scrfd-face-detection:10g-640x640"
+)
+
 frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
 )
 
 if args.fps_limit is None:
-    args.fps_limit = 3 if platform == "RVC2" else 30
+    args.fps_limit = 8 if platform == "RVC2" else 30
     print(
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
