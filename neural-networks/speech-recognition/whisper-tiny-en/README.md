@@ -1,95 +1,69 @@
 # Speech Recognition
 
-This example demonstrates the Gen3 Pipeline Builder running
-[Whisper Tiny EN Network](https://hub.luxonis.com/ai/models/0aaf1b77-761b-44d6-893c-c473ca463186?view=page). In this demo DepthAI visualizer is integrated.
+This example demonstrates how to run
+[Whisper Tiny EN Network](https://zoo-rvc4.luxonis.com/luxonis/whisper-tiny-en/0aaf1b77-761b-44d6-893c-c473ca463186) on DepthAI with OAK4 devices.
 
-## Setup
+> **Note:** This example only works on RVC4.
 
-The experiment can be run using peripheral or standalone mode.
+## Demo
 
-### Peripheral mode
+## Usage
 
-For peripheral mode you first need to install the required packages manually.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
 
-#### Installation
+You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
-```bash
-python3 -m pip install -r requirements.txt
+Here is a list of all available parameters:
+
+```
+--device_ip DEVICE
+                    Optional name, DeviceID or IP of the camera to connect to. (default: None)
+--audio_file
+                    The audio file that will be used in the experiment.
 ```
 
-For this mode only you will need to install the `depthai` and `openai-whisper` packages manually.
+## Peripheral Mode
+
+### Installation
+
+You need to first prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
 
 ```bash
-python3 -m pip install -U --prefer-binary --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local "depthai==3.0.0-alpha.6.dev0+4b380c003bbfe52348befdb82cf32013a7db2793"
-python3 -m pip install -U openai-whisper==20231117 --no-deps
+pip install -r requirements.txt
 ```
 
-Furthermore, you will need to install the `ffmpeg` tool that is needed for audio pre-processing.
+You will need to install the `ffmpeg` tool that is needed for audio pre-processing.
 
 ```bash
 sudo apt-get install ffmpeg
 ```
 
-#### Running
+Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
-Run the application using python
+### Examples
 
 ```bash
 python3 main.py --device_ip <device_ip> --audio_file <audio_file>
 ```
 
-or using oakctl tool
-
-```bash
-oakctl run-script python3 main.py --device_ip <device_ip> --audio_file <audio_file>
-```
-
 > \[!WARNING\]
 > The `--device_ip` and `--audio_file` arguments are mandatory. The `device_ip` is the IP address of the device you are connecting to. The `audio_file` is the path to the audio file you want to use for the inference.
 
-To see the output in visualizer open browser at http://localhost:8000.
+## Standalone Mode (RVC4 only)
 
-### Standalone mode
+Running the example in the standalone mode, app runs entirely on the device.
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software/oak-apps/oakctl).
 
-All the requirements are installed in virtual environment automatically using `oakctl` tool. Environment is setup according to the `oakapp.toml` file.
+The app can then be run with:
 
-#### Connecting to the camera
-
-Connect to the device with command
-
-```
-oakctl connect
-```
-
-If you have more cameras on your network you can list the available devices using `oakctl list` to obtain the IP adress of the desired camera.
-
-With the obtained IP you can connect to the camera. For example desired camera has IP `192.168.0.10`, connect as
-
-```
-oakctl connect 192.168.0.10
-```
-
-OR
-
-You can connect to the camera with it's index in the `oakctl list` table. For example if the camera is 3rd in the table, connect as
-
-```
-oakctl connect 3
-```
-
-#### Running
-
-Run the `oakctl` app from the `whisper-tiny-en` directory as
-
-```
+```bash
+oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-> \[!NOTE\]
-> To test the application with a different audio file, place the new file in the `whisper-tiny-en/assets/audio_files` directory. Then, update the `--audio_file` argument in the `entrypoint` field of the `oakapp.toml` file to specify the new file.
-
-To see the output in visualizer open browser at http://192.168.0.10:8000, if `192.168.0.10` is IP of your camera.
-
-## Using the Visualizer
-
-Once the Visualizer is opened, click on Decoded Audio Message tab and you will see the transcribed text from the audio file.
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software/oak-apps/configuration/) for more information about this configuration file).
