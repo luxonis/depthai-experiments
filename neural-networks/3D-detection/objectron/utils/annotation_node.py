@@ -74,7 +74,7 @@ class AnnotationNode(dai.node.HostNode):
                     )
 
             annotation_helper.draw_text(
-                text=f"{detection.confidence:.2f}%",
+                text=f"{(detection.confidence * 100):.2f}%",
                 position=(detection.xmin, detection.ymin - 0.05),
                 color=SECONDARY_COLOR,
                 size=16.0,
