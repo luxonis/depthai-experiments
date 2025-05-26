@@ -4,7 +4,6 @@ import numpy as np
 from depthai_nodes.node import ParsingNeuralNetwork
 
 from utils.annotation_node import AnnotationNode
-from utils.sync_node import SyncNode
 
 
 NN_WIDTH, NN_HEIGHT = 512, 320
@@ -53,7 +52,7 @@ def read_intrinsics():
 
 with dai.Pipeline(device) as p:
     # Profiling
-    fps = 5
+    fps = 10
 
     color = p.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_output = color.requestOutput(
@@ -108,14 +107,12 @@ with dai.Pipeline(device) as p:
     nn._parsers[0].setIouThreshold(0.5)
     nn._parsers[0].setMaskConfidence(0.5)
 
-    sync_node = p.create(SyncNode)
-    rgbd.pcl.link(sync_node.inputPCL)
-    nn.passthrough.link(sync_node.inputRGB)
-    nn.out.link(sync_node.inputDet)
-
     Annotations = AnnotationNode()
     Annotations.intrinsics = read_intrinsics()
-    sync_node.out.link(Annotations.input)
+
+    rgbd.pcl.link(Annotations.inputPCL)
+    nn.passthrough.link(Annotations.inputRGB)
+    nn.out.link(Annotations.inputDet)
 
     outputToVisualize = color.requestOutput(
         (640, 400),

@@ -3,6 +3,9 @@ import numpy as np
 import cv2
 from utils.utils_box import reverse_resize_and_pad
 import time
+import cProfile 
+import pstats
+import io
 
 from utils.img_annotation_helper import AnnotationHelper
 from utils.CuboidFitter import CuboidFitter
@@ -11,7 +14,6 @@ NN_WIDTH, NN_HEIGHT = 512, 320
 INPUT_SHAPE = (NN_WIDTH, NN_HEIGHT)
 
 IMG_WIDTH, IMG_HEIGHT = 640, 400
-CAMERA_RESOLUTION = (IMG_WIDTH, IMG_HEIGHT)
 
 class AnnotationNode(dai.node.ThreadedHostNode):
     '''
@@ -19,7 +21,9 @@ class AnnotationNode(dai.node.ThreadedHostNode):
     '''
     def __init__(self):
         dai.node.ThreadedHostNode.__init__(self)
-        self.input = self.createInput()
+        self.inputPCL = self.createInput()
+        self.inputRGB = self.createInput()
+        self.inputDet = self.createInput()
 
         self.outputPCL = self.createOutput()
         self.outputANN  = self.createOutput()
@@ -174,6 +178,8 @@ class AnnotationNode(dai.node.ThreadedHostNode):
         """Draw all annotations (mask, 3D box fit, bounding box + label) for a single detection."""
         # Draw segmentation mask 
         # print("AnnotationNode: Annotating detection with index", idx)
+        # pr = cProfile.Profile()
+        # pr.enable()
         self.draw_mask(mask, idx)
 
         # Cuboid fitting 
@@ -181,18 +187,19 @@ class AnnotationNode(dai.node.ThreadedHostNode):
 
         # Draw bbox and label 
         self.draw_box_and_label(det)
+        # pr.disable()
+        # s = io.StringIO()
+        # stats = pstats.Stats(pr, stream=s)
+        # stats.strip_dirs()             # remove system paths
+        # stats.sort_stats('cumtime')    # sort by cumulative time
+        # stats.print_stats(15)          # top 15 entries
+        # print(s.getvalue())
 
     def run(self):
         while self.isRunning():
-            pcl_msg = None
-            rgb_msg = None
-            det_msg = None
-
-            inputs = self.input.get()
-
-            pcl_msg = inputs['pcl']
-            rgb_msg = inputs['rgb']
-            det_msg = inputs['detections']
+            pcl_msg = self.inputPCL.get()
+            rgb_msg = self.inputRGB.get()
+            det_msg = self.inputDet.get()
 
             if pcl_msg is None or rgb_msg is None or det_msg is None:
                 # print(f"AnnotationNode: Missing messages - PCL: {pcl_msg is None}, RGB: {rgb_msg is None}, Det: {det_msg is None}") # For debugging
@@ -216,8 +223,8 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                 detections = parser_output.detections
                 mask_full = reverse_resize_and_pad(mask, (IMG_WIDTH, IMG_HEIGHT), INPUT_SHAPE) # This is still a heavy operation
 
-                timestamp = inputs.getTimestamp()
-                seq_num = inputs.getSequenceNum()
+                timestamp = inPointCloud.getTimestamp()
+                seq_num = inPointCloud.getSequenceNum()
 
                 self.helper_det = AnnotationHelper()
                 self.helper_cuboid = AnnotationHelper()
