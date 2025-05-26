@@ -2,7 +2,10 @@ import os
 import depthai as dai
 from typing import List, Optional, Dict, Any
 
-from utils.utility import filter_internal_cameras, setup_devices, start_pipelines, start_pipelines, any_pipeline_running
+from utils.utility import filter_devices, setup_devices, start_pipelines, start_pipelines, any_pipeline_running
+from utils.arguments import initialize_argparser 
+
+_, args = initialize_argparser()
 
 HTTP_PORT = 8082
 
@@ -47,7 +50,11 @@ def setup_mjpeg_pipeline(
 
 def main():
     all_device_infos = dai.Device.getAllAvailableDevices()
-    available_devices_info = filter_internal_cameras(all_device_infos)
+    available_devices_info = filter_devices(
+        all_device_infos,
+        include_ip=args.include_ip,
+        max_devices=args.max_devices,
+    )
 
     if not available_devices_info:
         print("No DepthAI devices found or filtered out.")

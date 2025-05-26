@@ -1,17 +1,42 @@
 import depthai as dai
-from typing import List, Callable, Dict, Any
+from typing import List, Optional, Callable, Dict, Any
 
 import random
 import colorsys
 
 
-def filter_internal_cameras(devices: List[dai.DeviceInfo]) -> List[dai.DeviceInfo]:
-    filtered_devices = []
+def filter_devices(
+    devices: List[dai.DeviceInfo],
+    include_ip: bool = False,
+    max_devices: Optional[int] = None,
+    warn_if_many_ip: Optional[int] = 5
+) -> List[dai.DeviceInfo]:
+    """
+    Args:
+        devices: list of all DeviceInfo from dai.Device.getAllAvailableDevices()
+        include_ip: if False, drop all TCP_IP attachments (e.g. OAK-4). If True, keep them.
+        max_devices: if set, only return up to this many devices (first-come).  
+        warn_if_many_ip: if include_ip and the count of IP devices >= this, emit a warning.
+    """
+    internal, ip_only = [], []
     for d in devices:
-        if d.protocol != dai.XLinkProtocol.X_LINK_TCP_IP:
-            filtered_devices.append(d)
+        if d.protocol == dai.XLinkProtocol.X_LINK_TCP_IP:
+            ip_only.append(d)
+        else:
+            internal.append(d)
 
-    return filtered_devices
+    if include_ip:
+        result = internal + ip_only
+        if warn_if_many_ip and len(ip_only) >= warn_if_many_ip:
+            print(f"⚠️  Warning: {len(ip_only)} IP-only devices detected. You may saturate your network.")
+    else:
+        result = internal
+
+    if max_devices is not None and len(result) > max_devices:
+        print(f"⚠️  Capping device list to first {max_devices} of {len(result)} total.")
+        result = result[:max_devices]
+
+    return result
 
 
 def generate_vibrant_random_color() -> tuple[float, float, float, float]:
