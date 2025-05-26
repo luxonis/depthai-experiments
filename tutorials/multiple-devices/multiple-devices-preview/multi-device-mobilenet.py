@@ -1,14 +1,20 @@
 import os
 import depthai as dai
 from typing import List, Optional, Dict, Any
+from depthai_nodes.node import ParsingNeuralNetwork
 
 from utils.annotation_node import AnnotationNode
-from utils.utility import filter_devices, setup_devices, start_pipelines, start_pipelines, any_pipeline_running, generate_vibrant_random_color
+from utils.utility import (
+    filter_devices,
+    setup_devices,
+    start_pipelines,
+    any_pipeline_running,
+    generate_vibrant_random_color,
+)
 from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
 
-from depthai_nodes.node import ParsingNeuralNetwork
 
 HTTP_PORT = 8082
 
@@ -97,7 +103,6 @@ def main():
         include_ip=args.include_ip,
         max_devices=args.max_devices,
     )
-    
 
     if not available_devices_info:
         print("No DepthAI devices found or filtered out.")
@@ -109,13 +114,17 @@ def main():
 
     visualizer = dai.RemoteConnection(httpPort=HTTP_PORT)
 
-    initialized_setups: List[Dict[str, Any]] = setup_devices(available_devices_info, visualizer, setup_detection_pipeline)
+    initialized_setups: List[Dict[str, Any]] = setup_devices(
+        available_devices_info, visualizer, setup_detection_pipeline
+    )
 
     if not initialized_setups:
         print("No devices were successfully set up. Exiting.")
         return
 
-    active_pipelines_info: List[Dict[str, Any]] = start_pipelines(initialized_setups, visualizer)
+    active_pipelines_info: List[Dict[str, Any]] = start_pipelines(
+        initialized_setups, visualizer
+    )
     print(f"\n{len(active_pipelines_info)} device(s) should be streaming.")
 
     while any_pipeline_running(active_pipelines_info):

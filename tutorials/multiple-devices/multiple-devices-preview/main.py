@@ -1,12 +1,18 @@
 import os
 import depthai as dai
 from typing import List, Optional, Dict, Any
-from utils.utility import filter_devices, setup_devices, start_pipelines, start_pipelines, any_pipeline_running
+from utils.utility import (
+    filter_devices,
+    setup_devices,
+    start_pipelines,
+    any_pipeline_running,
+)
 from utils.arguments import initialize_argparser
 
 _, args = initialize_argparser()
 
 HTTP_PORT = 8082
+
 
 def setup_device_pipeline(
     dev_info: dai.DeviceInfo, visualizer: dai.RemoteConnection
@@ -35,6 +41,7 @@ def setup_device_pipeline(
     print(f"    Pipeline for {mxid} configured. Ready to be started.")
     return {"device": device_instance, "pipeline": pipeline, "mxid": mxid}
 
+
 def main():
     all_device_infos = dai.Device.getAllAvailableDevices()
     available_devices_info = filter_devices(
@@ -51,12 +58,16 @@ def main():
 
     visualizer = dai.RemoteConnection(httpPort=HTTP_PORT)
 
-    initialized_setups: List[Dict[str, Any]] = setup_devices(available_devices_info, visualizer, setup_device_pipeline)
+    initialized_setups: List[Dict[str, Any]] = setup_devices(
+        available_devices_info, visualizer, setup_device_pipeline
+    )
     if not initialized_setups:
         print("No devices were successfully set up. Exiting.")
         return
 
-    active_pipelines_info: List[Dict[str, Any]] = start_pipelines(initialized_setups, visualizer)
+    active_pipelines_info: List[Dict[str, Any]] = start_pipelines(
+        initialized_setups, visualizer
+    )
     print(f"\n{len(active_pipelines_info)} device(s) should be streaming.")
 
     while any_pipeline_running(active_pipelines_info):

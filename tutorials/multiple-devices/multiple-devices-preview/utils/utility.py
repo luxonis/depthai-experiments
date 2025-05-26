@@ -9,13 +9,13 @@ def filter_devices(
     devices: List[dai.DeviceInfo],
     include_ip: bool = False,
     max_devices: Optional[int] = None,
-    warn_if_many_ip: Optional[int] = 5
+    warn_if_many_ip: Optional[int] = 5,
 ) -> List[dai.DeviceInfo]:
     """
     Args:
         devices: list of all DeviceInfo from dai.Device.getAllAvailableDevices()
         include_ip: if False, drop all TCP_IP attachments (e.g. OAK-4). If True, keep them.
-        max_devices: if set, only return up to this many devices (first-come).  
+        max_devices: if set, only return up to this many devices (first-come).
         warn_if_many_ip: if include_ip and the count of IP devices >= this, emit a warning.
     """
     internal, ip_only = [], []
@@ -28,7 +28,9 @@ def filter_devices(
     if include_ip:
         result = internal + ip_only
         if warn_if_many_ip and len(ip_only) >= warn_if_many_ip:
-            print(f"⚠️  Warning: {len(ip_only)} IP-only devices detected. You may saturate your network.")
+            print(
+                f"⚠️  Warning: {len(ip_only)} IP-only devices detected. You may saturate your network."
+            )
     else:
         result = internal
 
@@ -50,17 +52,27 @@ def generate_vibrant_random_color() -> tuple[float, float, float, float]:
 
     return (r, g, b, 1)
 
-def setup_devices(devices_info: List[dai.DeviceInfo], visualizer: dai.RemoteConnection, setup_device_pipeline: Callable) -> List[Dict[str, Any]]:
+
+def setup_devices(
+    devices_info: List[dai.DeviceInfo],
+    visualizer: dai.RemoteConnection,
+    setup_device_pipeline: Callable,
+) -> List[Dict[str, Any]]:
     initialized_setups: List[Dict[str, Any]] = []
     for dev_info in devices_info:
         setup_info = setup_device_pipeline(dev_info, visualizer)
         if setup_info:
             initialized_setups.append(setup_info)
         else:
-            print(f"--- Failed to set up device {dev_info.getDeviceId()}. Skipping. ---")
+            print(
+                f"--- Failed to set up device {dev_info.getDeviceId()}. Skipping. ---"
+            )
     return initialized_setups
 
-def start_pipelines(setups: List[Dict[str, Any]], visualizer: dai.RemoteConnection) -> List[Dict[str, Any]]:
+
+def start_pipelines(
+    setups: List[Dict[str, Any]], visualizer: dai.RemoteConnection
+) -> List[Dict[str, Any]]:
     active_pipelines_info: List[Dict[str, Any]] = []
     for setup in setups:
         try:
@@ -77,6 +89,7 @@ def start_pipelines(setups: List[Dict[str, Any]], visualizer: dai.RemoteConnecti
             setup["device"].close()
             continue
     return active_pipelines_info
+
 
 def any_pipeline_running(pipelines: List[Dict[str, Any]]) -> bool:
     """Return True if at least one pipeline is still running."""
