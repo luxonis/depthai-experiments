@@ -70,8 +70,8 @@ with dai.Pipeline(device) as p:
 
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.enableDistortionCorrection(True)
-    # stereo.setExtendedDisparity(True)
-    # stereo.setLeftRightCheck(True)
+    stereo.setExtendedDisparity(True)
+    stereo.setLeftRightCheck(True)
 
     align = p.create(dai.node.ImageAlign)
     stereo.depth.link(align.input)
