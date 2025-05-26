@@ -27,42 +27,25 @@ with dai.Pipeline(device) as pipeline:
         presetMode=dai.node.StereoDepth.PresetMode.DEFAULT,
     )
 
-    if platform == dai.Platform.RVC4:
-        align = pipeline.create(dai.node.ImageAlign)
-
     rgbd = pipeline.create(dai.node.RGBD).build()
 
     width, height = IMG_SHAPE
-    cam_out = None
     if args.mono:
-        mono_out_from_right = right.requestOutput(
-            IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i
-        )
-        mono_out_from_right.link(rgbd.inColor)
-        if platform == dai.Platform.RVC4:
-            stereo.depth.link(align.input)
-            stereo.rectifiedRight.link(align.inputAlignTo)
-            align.outputAligned.link(rgbd.inDepth)
-        else:
-            right_out.link(stereo.inputAlignTo)
-            stereo.depth.link(rgbd.inDepth)
-        cam_out = mono_out_from_right
-
+        cam_node = right
     else:
-        cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        color_out = cam.requestOutput(
-            IMG_SHAPE,
-            dai.ImgFrame.Type.RGB888i,
-        )
-        color_out.link(rgbd.inColor)
-        if platform == dai.Platform.RVC4:
-            stereo.depth.link(align.input)
-            color_out.link(align.inputAlignTo)
-            align.outputAligned.link(rgbd.inDepth)
-        else:
-            color_out.link(stereo.inputAlignTo)
-            stereo.depth.link(rgbd.inDepth)
-        cam_out = color_out
+        cam_node = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+
+    cam_out = cam_node.requestOutput(IMG_SHAPE, type=dai.ImgFrame.Type.RGB888i)
+    cam_out.link(rgbd.inColor)
+
+    if platform == dai.Platform.RVC4:
+        align = pipeline.create(dai.node.ImageAlign)
+        stereo.depth.link(align.input)
+        cam_out.link(align.inputAlignTo)
+        align.outputAligned.link(rgbd.inDepth)
+    else:
+        cam_out.link(stereo.inputAlignTo)
+        stereo.depth.link(rgbd.inDepth)
 
     visualizer.addTopic("preview", cam_out)
     visualizer.addTopic("pointcloud", rgbd.pcl)
