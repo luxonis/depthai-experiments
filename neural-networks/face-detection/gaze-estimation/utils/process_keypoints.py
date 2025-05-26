@@ -79,7 +79,7 @@ class LandmarksProcessing(dai.node.ThreadedHostNode):
     def create_crop_cfg(
         self, rectangle: dai.RotatedRect, img_detections: ImgDetectionsExtended
     ):
-        cfg = dai.ImageManipConfigV2()
+        cfg = dai.ImageManipConfig()
         cfg.addCropRotatedRect(rectangle, normalizedCoords=False)
         cfg.setOutputSize(self.target_w, self.target_h)
         cfg.setReusePreviousImage(False)

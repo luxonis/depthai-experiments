@@ -82,7 +82,7 @@ with dai.Pipeline(device) as pipeline:
     )
     script_node.setScript(script_content)
 
-    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node = pipeline.create(dai.node.ImageManip)
     crop_node.initialConfig.setOutputSize(
         rec_model_nn_archive.getInputWidth(), rec_model_nn_archive.getInputHeight()
     )
