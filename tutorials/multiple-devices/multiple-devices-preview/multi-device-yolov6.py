@@ -18,6 +18,7 @@ _, args = initialize_argparser()
 
 HTTP_PORT = 8082
 
+
 def setup_detection_pipeline(
     dev_info: dai.DeviceInfo,
     visualizer: dai.RemoteConnection,
@@ -41,7 +42,8 @@ def setup_detection_pipeline(
     cam_out = cam_node.requestOutput(size=(512, 288), type=dai.ImgFrame.Type.BGR888p)
 
     model_description = dai.NNModelDescription(
-        "luxonis/yolov6-nano:r2-coco-512x288", platform=device_instance.getPlatformAsString()
+        "luxonis/yolov6-nano:r2-coco-512x288",
+        platform=device_instance.getPlatformAsString(),
     )
     archive_path = dai.getModelFromZoo(model_description)
     nn_archive_obj = dai.NNArchive(archivePath=archive_path)

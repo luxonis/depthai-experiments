@@ -95,13 +95,12 @@ Run this script with
 python3 multi-device-yolov6.py [--include-ip] [--max-devices N]
 ```
 
-#### MJPEG decoding (threaded) on multiple devices
+#### H.264 encoding on multiple devices
 
-The [multi-device-mjpeg-decoding.py](multi-device-mjpeg-decoding.py) script will connect to multiple devices and stream encoded 4K JPEG frames from all devices to the host. On host computer we run a thread for each device, boot the device, get frames,
-decode them, and put them in a queue which the main thread reads and displays the frame on the main thread.
+The [multi-device-encoding.py](multi-device-encoding.py) script will connect to multiple devices and stream encoded H.264 frames from all devices to the host. On host computer we run a thread for each device, boot the device, get frames, decode them, and put them in a queue which the main thread reads and displays the frame on the main thread.
 
 Run this script with
 
 ```bash
-python3 multi-device-mjpeg-decoding.py [--include-ip] [--max-devices N]
+python3 multi-device-encoding.py [--include-ip] [--max-devices N]
 ```

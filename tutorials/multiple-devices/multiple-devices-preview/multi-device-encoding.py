@@ -40,11 +40,11 @@ def setup_mjpeg_pipeline(
     video_encoder = pipeline.create(dai.node.VideoEncoder).build(
         input=rgb_video_out,
         frameRate=30,
-        profile=dai.VideoEncoderProperties.Profile.MJPEG,
+        profile=dai.VideoEncoderProperties.Profile.H264_MAIN,
     )
 
     visualizer.addTopic(
-        topicName=f"MJPEG - {mxid}",
+        topicName=f"H264 Stream - {mxid}",
         output=video_encoder.out,
     )
     print(

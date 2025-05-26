@@ -6,7 +6,7 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = "TBU"
+    parser.description = "Example with multiple devices connected."
 
     parser.add_argument(
         "--include-ip",
