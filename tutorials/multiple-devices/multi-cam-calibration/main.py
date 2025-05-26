@@ -88,7 +88,7 @@ class OpencvManager:
         self.ctrl_queues[window_name] = ctrl_queue
         self.cam_stills[window_name] = cam_still
         self.cameras[friendly_id] = window_name
-        self.dx_ids[friendly_id] = device.getMxId()
+        self.dx_ids[friendly_id] = device.getDeviceId()
         self.intrinsic_mats[friendly_id] = np.array(
             device.readCalibration().getCameraIntrinsics(
                 dai.CameraBoardSocket.CAM_A, 3840, 2160
@@ -295,7 +295,7 @@ def get_pipelines(
     still_encoder.setDefaultProfilePreset(1, dai.VideoEncoderProperties.Profile.MJPEG)
     rgb_preview.link(still_encoder.input)
 
-    window_name = f"[{friendly_id + 1}] Camera - mxid: {device.getMxId()}"
+    window_name = f"[{friendly_id + 1}] Camera - mxid: {device.getDeviceId()}"
     manager.set_custom_key(window_name)
 
     pipeline.create(
@@ -317,7 +317,7 @@ def pair_device_with_pipeline(
     friendly_id: int,
 ) -> None:
     device: dai.Device = dai.Device(dev_info)
-    print("=== Connected to " + device.getMxId())
+    print("=== Connected to " + dev_info.getDeviceId())
     pipelines.append(
         get_pipelines(device, callback_frame, callback_params, friendly_id)
     )
