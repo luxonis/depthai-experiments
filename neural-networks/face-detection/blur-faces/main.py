@@ -54,7 +54,6 @@ with dai.Pipeline(device) as pipeline:
     det_nn.passthrough.link(blur_node.input_frame)
 
     # visualization
-    visualizer.addTopic("Video", det_nn.passthrough)
     visualizer.addTopic("FaceBlur", blur_node.out)
 
     print("Pipeline created.")
