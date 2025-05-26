@@ -1,7 +1,6 @@
 import numpy as np
 import open3d as o3d
 from itertools import combinations
-from scipy.spatial import ConvexHull
 import time
 
 class CuboidFitter:
@@ -47,7 +46,6 @@ class CuboidFitter:
         self.plane_points = []
     
     def set_point_cloud(self, pcl_points, timing_results, colors=None):
-
         if timing_results:
             #start_time2 = time.time()
             self.center = pcl_points.mean(axis=0)
@@ -143,20 +141,21 @@ class CuboidFitter:
         translated_d = planes[:, 3] - s * distances * norm  # Calculate the translated d values
         translated_planes = np.column_stack((normal, translated_d))  # Combine the normal and new d values
         return translated_planes
-    
+     
     def intersect_planes(self, plane_eq1, plane_eq2, plane_eq3, tol=1e-6):
-    
         A = np.array([plane_eq1[:3], plane_eq2[:3], plane_eq3[:3]])
         B = -np.array([plane_eq1[3], plane_eq2[3], plane_eq3[3]])
         # Calculate determinant and check if it's close to zero (nearly parallel planes)
         det_A = np.linalg.det(A)
         if np.abs(det_A) < tol:
+            print("intersect_planes: Planes are nearly parallel or coincident. Cannot find intersection.")
             return None
+
         # Solve for the intersection point
         intersection_point = np.linalg.solve(A, B)
         
         return intersection_point
-    
+
     def dist_to_plane1(self, point, plane_eq):
         return abs(np.dot(plane_eq[:3], point) + plane_eq[3]) / np.linalg.norm(plane_eq[:3])
     
@@ -276,10 +275,12 @@ class CuboidFitter:
             point = self.intersect_planes(*plane_comb)
             if point is not None:
                 self.corners.append(point)
+        print("Number of corners found: ", len(self.corners))
 
         dimensions = [
             self.distance_between_planes(self.planes[i], translated_planes[i]) / 10.0 for i in range(3)
         ]
+        print("Dimensions: ", dimensions)
 
         # Assuming length > width > height (can be cases where this is not true..) TO DO: other way of sorting
         sorted_dims = np.sort(dimensions)[::-1]
