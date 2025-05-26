@@ -52,7 +52,7 @@ def read_intrinsics():
 
 with dai.Pipeline(device) as p:
     # Profiling
-    fps = 10
+    fps = 5
 
     color = p.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
     color_output = color.requestOutput(

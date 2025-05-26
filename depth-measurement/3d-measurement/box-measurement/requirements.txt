@@ -3,6 +3,6 @@
 depthai==3.0.0a15.dev0+adc7ca692eef7dae97593176cb1f977eed6f8837
 depthai-nodes==0.2.1
 # numpy==1.26.4 
-numpy==2.2.0
+numpy>=1.22
 open3d==0.19.0
 opencv-python-headless==4.10.0.84
