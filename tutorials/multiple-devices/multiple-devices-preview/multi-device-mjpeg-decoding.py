@@ -2,7 +2,7 @@ import os
 import depthai as dai
 from typing import List, Optional, Dict, Any
 
-from utils.utility import filter_internal_cameras
+from utils.utility import filter_internal_cameras, setup_devices, start_pipelines, start_pipelines, any_pipeline_running
 
 HTTP_PORT = 8082
 
@@ -53,61 +53,19 @@ def main():
         print("No DepthAI devices found or filtered out.")
         return
 
-    print(
-        f"Found {len(available_devices_info)} DepthAI devices to configure for MJPEG streaming."
-    )
+    print(f"Found {len(available_devices_info)} DepthAI devices to configure.")
 
     visualizer = dai.RemoteConnection(httpPort=HTTP_PORT)
 
-    initialized_setups: List[Dict[str, Any]] = []
-
-    for dev_info in available_devices_info:
-        setup_info = setup_mjpeg_pipeline(dev_info, visualizer)
-        if setup_info:
-            initialized_setups.append(setup_info)
-        else:
-            mxid_for_error = (
-                dev_info.getMxId()
-                if hasattr(dev_info, "getMxId")
-                else dev_info.getDeviceId()
-            )
-            print(f"--- Failed to set up device {mxid_for_error}. Skipping. ---")
-
+    initialized_setups: List[Dict[str, Any]] = setup_devices(available_devices_info, visualizer, setup_mjpeg_pipeline)
     if not initialized_setups:
-        print("No devices were successfully set up for MJPEG streaming. Exiting.")
+        print("No devices were successfully set up. Exiting.")
         return
 
-    active_pipelines_info: List[Dict[str, Any]] = []
-    for setup in initialized_setups:
-        try:
-            print(f"\nStarting MJPEG pipeline for device {setup['mxid']}...")
-            setup["pipeline"].start()
-            visualizer.registerPipeline(setup["pipeline"])
-            print(f"Pipeline for {setup['mxid']} registered with visualizer.")
-            active_pipelines_info.append(setup)
-        except Exception as e:
-            print(
-                f"Error starting or registering pipeline for device {setup['mxid']}: {e}"
-            )
-            try:
-                setup["device"].close()
-            except Exception as close_e:
-                print(
-                    f"--- Error closing device {setup['mxid']} after start/register failure: {close_e} ---"
-                )
+    active_pipelines_info: List[Dict[str, Any]] = start_pipelines(initialized_setups, visualizer)
+    print(f"\n{len(active_pipelines_info)} device(s) should be streaming.")
 
-    print(f"\n{len(active_pipelines_info)} device(s) should be streaming MJPEG video.")
-
-    while True:
-        all_running = True
-        for item_info in active_pipelines_info:
-            if not item_info["pipeline"].isRunning():
-                print(f"Pipeline for device {item_info['mxid']} is no longer running!")
-                all_running = False
-        if not all_running and not active_pipelines_info:
-            print("All active pipelines have stopped.")
-            break
-
+    while any_pipeline_running(active_pipelines_info):
         key = visualizer.waitKey(1)
         if key == ord("q"):
             print("Got 'q' key from the remote connection! Shutting down.")

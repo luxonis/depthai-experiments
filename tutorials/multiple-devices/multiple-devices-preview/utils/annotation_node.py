@@ -1,4 +1,5 @@
 import depthai as dai
+from depthai_nodes.utils import AnnotationHelper
 from typing import List, Tuple, Optional
 
 DEFAULT_OUTLINE_COLOR_RGBA: Tuple[int, int, int, int] = (0, 1, 0, 1)  # Green
