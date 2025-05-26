@@ -1,5 +1,5 @@
 import depthai as dai
-from typing import List, Tuple, Optional
+from typing import Tuple, Optional
 
 DEFAULT_OUTLINE_COLOR_RGBA: Tuple[int, int, int, int] = (0, 1, 0, 1)  # Green
 
@@ -8,7 +8,6 @@ class AnnotationNode(dai.node.HostNode):
     def __init__(self):
         super().__init__()
 
-        self.labels: List[str] = []
         self.outline_color: dai.Color = self._create_dai_color(
             *DEFAULT_OUTLINE_COLOR_RGBA
         )
@@ -33,10 +32,8 @@ class AnnotationNode(dai.node.HostNode):
         self,
         input_frame_stream: dai.Node.Output,
         input_detections_stream: dai.Node.Output,
-        labels: List[str],
         outline_color_rgba: Optional[Tuple[float, float, float, float]] = None,
     ) -> "AnnotationNode":
-        self.labels = labels
         if outline_color_rgba:
             self.outline_color = self._create_dai_color(*outline_color_rgba)
 
@@ -74,12 +71,7 @@ class AnnotationNode(dai.node.HostNode):
             points_annotation.thickness = 1.0
             current_img_annotation_group.points.append(points_annotation)
 
-            label_idx = detection.label
-            label_text = (
-                self.labels[label_idx]
-                if 0 <= label_idx < len(self.labels)
-                else "Unknown"
-            )
+            label_text = detection.name
             confidence_text = f"{int(detection.confidence * 100)}%"
             full_text = f"{label_text}: {confidence_text}"
 

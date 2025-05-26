@@ -47,7 +47,6 @@ def setup_detection_pipeline(
     )
     archive_path = dai.getModelFromZoo(model_description)
     nn_archive_obj = dai.NNArchive(archivePath=archive_path)
-    labels = nn_archive_obj.getConfigV1().model.heads[0].metadata.classes
 
     detector_host_node = pipeline.create(ParsingNeuralNetwork).build(
         input=cam_out, nn_source=nn_archive_obj
@@ -56,7 +55,6 @@ def setup_detection_pipeline(
     annotation_host_node = pipeline.create(AnnotationNode).build(
         input_frame_stream=cam_out,
         input_detections_stream=detector_host_node.out,
-        labels=labels,
         outline_color_rgba=generate_vibrant_random_color(),
     )
 
