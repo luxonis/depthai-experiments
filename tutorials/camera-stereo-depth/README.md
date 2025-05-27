@@ -1,11 +1,12 @@
 # Camera Demo
 
-This experiment streams all camera sensors of the connected device to the visualizer. All streams are limited to (1920, 1080) resolution and are H.264 encoded.
+This experiment streams all camera sensors of the connected device.
+
+This experiment shows how to preview video and depth streams from cameras.
 
 ## Demo
 
-![single_cam](media/single_cam.png)
-![multi_cam](media/multi_cam.png)
+![example](media/example.png)
 
 ## Installation
 

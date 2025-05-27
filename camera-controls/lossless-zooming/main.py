@@ -34,7 +34,7 @@ with dai.Pipeline(device) as pipeline:
             (1920, 1080), dai.ImgFrame.Type.NV12, fps=args.fps_limit
         )
 
-    image_manip = pipeline.create(dai.node.ImageManipV2)
+    image_manip = pipeline.create(dai.node.ImageManip)
     image_manip.setMaxOutputFrameSize(
         nn_archive.getInputWidth() * nn_archive.getInputHeight() * 3
     )
@@ -51,14 +51,19 @@ with dai.Pipeline(device) as pipeline:
     )
 
     crop_face = pipeline.create(CropFace).build(nn_with_parser.out)
-    crop_manip = pipeline.create(dai.node.ImageManipV2)
+    crop_manip = pipeline.create(dai.node.ImageManip)
     crop_manip.inputConfig.setWaitForMessage(False)
     crop_manip.setMaxOutputFrameSize(1920 * 1080 * 3)
     crop_face.output.link(crop_manip.inputConfig)
     cam_out.link(crop_manip.inputImage)
 
-    visualizer.addTopic("Video", cam_out, "images")
+    encoder = pipeline.create(dai.node.VideoEncoder)  # only works on RVC4
+    encoder.setDefaultProfilePreset(30.0, dai.VideoEncoderProperties.Profile.H264_MAIN)
+    cam_out.link(encoder.input)
+
+    visualizer.addTopic("Video", encoder.out, "images")
     visualizer.addTopic("Visualizations", nn_with_parser.out, "images")
+
     visualizer.addTopic("Cropped Face", crop_manip.out, "crop")
 
     print("Pipeline created.")

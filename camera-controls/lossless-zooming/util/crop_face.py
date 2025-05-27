@@ -9,7 +9,7 @@ class CropFace(dai.node.HostNode):
         super().__init__()
         self.output = self.createOutput(
             possibleDatatypes=[
-                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfigV2, True)
+                dai.Node.DatatypeHierarchy(dai.DatatypeEnum.ImageManipConfig, True)
             ]
         )
 
@@ -40,7 +40,7 @@ class CropFace(dai.node.HostNode):
         rect.size = dai.Size2f(0.4, 0.4)
         rect.center = dai.Point2f(x_avg, y_avg)
 
-        cfg = dai.ImageManipConfigV2()
+        cfg = dai.ImageManipConfig()
         cfg.addCropRotatedRect(rect, True)
         cfg.setTimestamp(detections.getTimestamp())
         self.output.send(cfg)
