@@ -10,6 +10,8 @@ This tutorial contains three main scripts:
 
 ## Demo
 
+![demo_1](https://github.com/user-attachments/assets/6f5e913d-2b25-4f46-b77a-7c0a89821caf)
+
 Just two OAK cameras looking at each other.
 
 Program will also print USB speed, and connected cameras for each connected device before starting the pipeline. Output example for having connected OAK-D S2, OAK-D PRO
@@ -93,7 +95,7 @@ This will include IP cameras and then only use the first 3 discovered devices.
 Script [multi-device-yolov6.py](multi-device-yolov6.py) will run `YOLOv6 Nano` single shot object detector on all devices and display detections on frames.
 If you would want to display detections on high-res frames, check [tutorial here](https://docs.luxonis.com/projects/api/en/latest/tutorials/dispaying_detections/).
 
-![Demo image](https://user-images.githubusercontent.com/18037362/146223605-e4fd0fb3-7cf9-40a0-87e0-73d63a46eb2d.png)
+![demo_2](https://github.com/user-attachments/assets/a700342c-2105-40b0-a831-66efb094b19c)
 
 Run this script with
 
