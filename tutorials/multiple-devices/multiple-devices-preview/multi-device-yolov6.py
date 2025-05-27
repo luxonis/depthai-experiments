@@ -3,13 +3,11 @@ import depthai as dai
 from typing import List, Optional, Dict, Any
 from depthai_nodes.node import ParsingNeuralNetwork
 
-from utils.annotation_node import AnnotationNode
 from utils.utility import (
     filter_devices,
     setup_devices,
     start_pipelines,
     any_pipeline_running,
-    generate_vibrant_random_color,
 )
 from utils.arguments import initialize_argparser
 
@@ -39,7 +37,7 @@ def setup_detection_pipeline(
     print(f"    Pipeline created for device: {mxid}")
 
     cam_node = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    cam_out = cam_node.requestOutput(size=(512, 288), type=dai.ImgFrame.Type.BGR888p)
+    cam_out = cam_node.requestOutput(size=(512, 288), type=dai.ImgFrame.Type.RGB888i)
 
     model_description = dai.NNModelDescription(
         "luxonis/yolov6-nano:r2-coco-512x288",
@@ -49,13 +47,7 @@ def setup_detection_pipeline(
     nn_archive_obj = dai.NNArchive(archivePath=archive_path)
 
     detector_host_node = pipeline.create(ParsingNeuralNetwork).build(
-        input=cam_out, nn_source=nn_archive_obj
-    )
-
-    annotation_host_node = pipeline.create(AnnotationNode).build(
-        input_frame_stream=cam_out,
-        input_detections_stream=detector_host_node.out,
-        outline_color_rgba=generate_vibrant_random_color(),
+        input=cam_node, nn_source=nn_archive_obj
     )
 
     visualizer.addTopic(
@@ -65,7 +57,7 @@ def setup_detection_pipeline(
     )
     visualizer.addTopic(
         topicName=f"Annotations - {mxid}",
-        output=annotation_host_node.annotation_out,
+        output=detector_host_node.out,
         group=f"{mxid}",
     )
     print(f"    Pipeline for {mxid} configured. Ready to be started.")
