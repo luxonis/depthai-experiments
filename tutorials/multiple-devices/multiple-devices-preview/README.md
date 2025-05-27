@@ -1,10 +1,14 @@
-# Calculate spatial coordinates on the host
+# Multiple devices per host
 
-This example shows how you can use multiple DepthAI's on a single host. The demo will find all devices connected to the host and display an RGB preview from each of them.
+This example demonstrates how to connect and use multiple DepthAI (OAK) devices simultaneously on a single host machine. Each connected device will initialize a pipeline, and an RGB preview from each will be displayed independently.
+
+This tutorial contains three main scripts:
+
+1. [main.py](main.py) – Displays RGB previews from multiple connected devices.
+1. [multi-device-yolov6.py](multi-device-yolov6.py) – Runs YOLOv6 object detection on all devices.
+1. [multi-device-encoding.py](multi-device-encoding.py) – Streams and decodes H.264 video from all devices.
 
 ## Demo
-
-[![Multiple devices per host](https://user-images.githubusercontent.com/18037362/113307040-01d83c00-9305-11eb-9a42-c69c72a5dba5.gif)](https://www.youtube.com/watch?v=N1IY2CfhmEc "Multiple devices per host")
 
 Just two OAK cameras looking at each other.
 
@@ -31,7 +35,9 @@ Attempting to connect to device: 14442C1011D6C5D600...
 
 ## Usage
 
-You can run the experiment using your your computer as host, ie. in `PERIPHERAL` mode.
+Running this example requires at least one (or multiple) **Luxonis device(s)** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
+
+You can run the experiment using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -48,7 +54,6 @@ You can find more information about the supported devices and the set up instruc
 Moreover, you need to prepare a **Python 3.10** environment with the following packages installed:
 
 - [DepthAI](https://pypi.org/project/depthai/),
-- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
 
 You can simply install them by running:
 

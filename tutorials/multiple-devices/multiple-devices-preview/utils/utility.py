@@ -41,7 +41,9 @@ def filter_devices(
 def setup_devices(
     devices_info: List[dai.DeviceInfo],
     visualizer: dai.RemoteConnection,
-    setup_device_pipeline: Callable[[dai.DeviceInfo, dai.RemoteConnection], Optional[Dict[str, Any]]],
+    setup_device_pipeline: Callable[
+        [dai.DeviceInfo, dai.RemoteConnection], Optional[Dict[str, Any]]
+    ],
 ) -> List[Dict[str, Any]]:
     initialized_setups: List[Dict[str, Any]] = []
     for dev_info in devices_info:
