@@ -1,6 +1,6 @@
 # MJPEG Streaming
 
-This experiments demonstrate how to stream frames via HTTP server using MJPEG stream. It performs object detection using [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model.
+This experiment demonstrates how to stream frames via HTTP server using MJPEG stream. It performs object detection using [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model.
 
 ## Demo
 
