@@ -1,8 +1,6 @@
-# Camera Demo
+# Camera Stereo Depth
 
-This experiment streams all camera sensors of the connected device.
-
-This experiment shows how to preview video and depth streams from cameras.
+This experiment shows a minimal implementation of stereo detph implementation.
 
 ## Demo
 
@@ -10,7 +8,7 @@ This experiment shows how to preview video and depth streams from cameras.
 
 ## Installation
 
-Running this example requires a **Luxonis device** connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
+Running this example requires a **stereo enabled Luxonis device**  connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
 
 Install required packages by running:
 
