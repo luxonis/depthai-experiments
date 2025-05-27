@@ -37,6 +37,7 @@ def setup_detection_pipeline(
     print(f"    Pipeline created for device: {mxid}")
 
     cam_node = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    cam_out = cam_node.requestOutput(size=(1280, 720), type=dai.ImgFrame.Type.NV12)
 
     model_description = dai.NNModelDescription(
         "luxonis/yolov6-nano:r2-coco-512x288",
@@ -51,7 +52,7 @@ def setup_detection_pipeline(
 
     visualizer.addTopic(
         topicName=f"Video - {mxid}",
-        output=detector_host_node.passthrough,
+        output=cam_out,
         group=f"{mxid}",
     )
     visualizer.addTopic(
