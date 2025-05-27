@@ -25,11 +25,13 @@ class CollisionAvoidanceNode(dai.node.HostNode):
         self.link_args(rgb, tracker_out)
         return self
 
-    def moving_forward(self, tracklet_id):
+    def moving_forward(self, tracklet_id, moving_threshold=100):
         z_values = self.object_coordinates[tracklet_id]["z"]
         if len(z_values) < 2:
             return False
-        return z_values[-1] < z_values[0]
+        if z_values[-1] < z_values[0] - moving_threshold:
+            return True
+        return False
 
     def calculate_metrics(self, tracklet_id):
         x1 = self.object_coordinates[tracklet_id]["x"][0]
