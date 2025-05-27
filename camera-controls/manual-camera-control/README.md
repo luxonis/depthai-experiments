@@ -21,6 +21,37 @@ Here is a list of all available parameters:
                     FPS limit for the model runtime. (default: 30)
 ```
 
+### Keyboard Controls
+
+| Key      | Description                          |
+| -------- | ------------------------------------ |
+| `c`      | Capture an image                     |
+| `e`      | Autoexposure                         |
+| `t`      | Trigger autofocus                    |
+| `f`      | Autofocus (continuous)               |
+| `w`      | Auto white balance lock (true/false) |
+| `r`      | Auto exposure lock (true/false)      |
+| `+`, `-` | Increase/decrease selected control   |
+
+The following controls can be selected and modified with `+` and `-` keys:
+
+| Key | Description                |
+| --- | -------------------------- |
+| `1` | Manual exposure time       |
+| `2` | Manual sensitivity ISO     |
+| `3` | Auto white balance mode    |
+| `4` | Auto exposure compensation |
+| `5` | Anti-banding/flicker mode  |
+| `6` | Effect mode                |
+| `7` | Brightness                 |
+| `8` | Contrast                   |
+| `9` | Saturation                 |
+| `0` | Sharpness                  |
+| `o` | Manual white balance       |
+| `p` | Manual focus               |
+| `[` | Luma denoise               |
+| `]` | Chroma denoise             |
+
 ## Peripheral Mode
 
 ### Installation
