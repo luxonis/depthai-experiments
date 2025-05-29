@@ -2,5 +2,4 @@
 depthai==3.0.0b1
 git+https://github.com/luxonis/depthai-nodes.git@main#egg=depthai-nodes
 opencv-python==4.10.0.84
-blobconverter==1.4.3
 numpy>=1.22
