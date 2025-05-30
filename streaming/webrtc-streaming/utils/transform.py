@@ -134,11 +134,11 @@ def start_pipeline(pipeline: dai.Pipeline, options):
             model_description.platform = platform
             nn_archive = dai.NNArchive(dai.getModelFromZoo(model_description))
 
-            manip = pipeline.create(dai.node.ImageManipV2)
+            manip = pipeline.create(dai.node.ImageManip)
             manip.initialConfig.setOutputSize(
                 nn_archive.getInputWidth(),
                 nn_archive.getInputHeight(),
-                dai.ImageManipConfigV2.ResizeMode.STRETCH,
+                dai.ImageManipConfig.ResizeMode.STRETCH,
             )
             manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
             manip.setMaxOutputFrameSize(

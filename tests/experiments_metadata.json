@@ -1,5 +1,25 @@
 {
     "known_failing_experiments": {
+        "tutorials/multiple-devices/multi-cam-calibration": {
+            "reason": "Not ported to latest DAI yet",
+            "platform": "all"
+        },
+        "tutorials/multiple-devices/spatial-detection-fusion": {
+            "reason": "Not ported to latest DAI yet",
+            "platform": "all"
+        },
+        "tutorials/multiple-devices/multiple-devices-preview": {
+            "reason": "Needs multiple devices",
+            "platform": "all"
+        },
+        "custom-frontend/raw-stream": {
+            "reason": "Failed to start the HTTP server",
+            "platform": "all"
+        },
+        "integrations/roboflow-integration": {
+            "reason": "Can't run without arguments (e.g. roboflow api-key)",
+            "platform": "all"
+        },
         "neural-networks/speech-recognition/whisper-tiny-en": {
             "reason": "Complex example, needs to be updated",
             "platform": "all"
@@ -8,12 +28,12 @@
             "reason": "Complex example, works only on RVC4",
             "platform": "rvc2"
         },
+        "neural-networks/ocr/yololicense-plate-recognition": {
+            "reason": "Complex example, works only on RVC4",
+            "platform": "rvc2"
+        },
         "neural-networks/object-detection/thermal-detection": {
             "reason": "Needs thermal camera",
-            "platform": "all"
-        },
-        "neural-networks/segmentation/yolov8-instance-segmentation": {
-            "reason": "Failed to connect to Rerun server",
             "platform": "all"
         },
         "neural-networks/object-tracking/kalman": {
@@ -46,10 +66,6 @@
                 "rvc4"
             ]
         },
-        "integrations/roboflow-integration": {
-            "reason": "Can't run without arguments (e.g. roboflow api-key)",
-            "platform": "all"
-        },
         "integrations/rerun": {
             "reason": "Failed loading `libxkbcommon-x11.so.0",
             "platform": [
@@ -70,48 +86,22 @@
             "reason": "Open3D causes some memory segfault",
             "platform": "all"
         },
-        "depth-measurement/3d-measurement/pointcloud/rgbd-pointcloud": {
-            "reason": "Open3D causes some memory segfault",
-            "platform": "all"
-        },
-        "depth-measurement/3d-measurement/pointcloud/device-pointcloud": {
-            "reason": "Open3D causes some memory segfault",
-            "platform": "all"
-        },
-        "depth-measurement/qt-gui": {
-            "reason": "PyQT installation issues",
-            "platform": "all"
-        },
-        "depth-measurement/stereo-on-host": {
-            "reason": "Extrinsic connection between the requested cameraId's doesn't exist. Please recalibrate or modify your calibration data",
-            "platform": [
-                "rvc4"
-            ]
-        },
         "streaming/rtsp-streaming": {
             "reason": "PyCairo installation issues",
             "platform": "all"
         },
-        "tutorials/multiple-devices/spatial-detection-fusion": {
-            "reason": "No devices found after filtering (also has RVC2 model)",
-            "platform": [
-                "rvc4"
-            ]
-        },
-        "tutorials/multiple-devices/multi-cam-calibration": {
-            "reason": "No devices found after filtering",
-            "platform": [
-                "rvc4"
-            ]
-        },
-        "custom-frontend/raw-stream": {
-            "reason": "FileNoFoundError: Failed to start the HTTP server. File index.html not found in the /tmp/depthai-experiments/custom-frontend/raw-stream/frontend/dist folder",
+        "streaming/poe-mqtt": {
+            "reason": "Needs backend connection sometimes, flaky to test.",
             "platform": "all"
         }
     },
     "known_warnings": [
         "The issued warnings are orientative, based on optimal settings for a single network, if multiple networks are running in parallel the optimal settings may vary",
         "Did not get the input image sizes from the imageIn input. Defaulting to 416 x 416",
-        "Network compiled for 8 shaves, maximum available"
+        "Network compiled for 8 shaves, maximum available",
+        "UserWarning: Specified provider 'TensorrtExecutionProvider' is not in available",
+        "UserWarning: Specified provider 'CUDAExecutionProvider' is not in available",
+        "You are using ImgDetectionsBridge to transform from ImgDetectionsExtended to ImgDetections.",
+        "Sync node has been trying to sync for"
     ]
 }

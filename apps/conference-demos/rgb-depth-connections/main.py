@@ -7,7 +7,7 @@ from utils.arguments import initialize_argparser
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 
 OUTPUT_SHAPE = (512, 288)
 
