@@ -1,3 +1,3 @@
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
-depthai==3.0.0b1
-depthai-nodes==0.2.1
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local
+depthai==3.0.0b1.dev0+31a67eaa9e07de42b423bf9e2b427317744d2c18
+opencv-python==4.10.0.84

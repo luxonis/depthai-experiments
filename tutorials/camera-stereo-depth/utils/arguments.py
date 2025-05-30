@@ -21,17 +21,10 @@ def initialize_argparser():
         "--fps_limit",
         help="FPS limit for the model runtime.",
         required=False,
+        default=30,
         type=int,
     )
 
-    parser.add_argument(
-        "-media",
-        "--media_path",
-        help="Path to the media file you aim to run the model on. If not set, the model will run on the camera input.",
-        required=False,
-        default=None,
-        type=str,
-    )
     args = parser.parse_args()
 
     return parser, args
