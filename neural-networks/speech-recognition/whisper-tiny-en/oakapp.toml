@@ -12,4 +12,4 @@ prepare_build_container = []
 
 build_steps = ["pip3 install openai-whisper==20231117 --no-deps --break-system-packages", "pip3 install -r /app/requirements.txt --break-system-packages"]
 
-entrypoint = ["bash", "-c", "python3 /app/main.py --device_ip '' --audio_file /app/assets/audio_files/command_LED_yellow.mp3"]
+entrypoint = ["bash", "-c", "python3 -u /app/main.py --device_ip '' --audio_file /app/assets/audio_files/command_LED_yellow.mp3"]

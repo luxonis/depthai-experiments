@@ -11,7 +11,7 @@ RESOLUTION_SIZE = (640, 400)
 _, args = initialize_argparser()
 
 visualizer = dai.RemoteConnection(httpPort=8082)
-device = dai.Device()
+device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 with dai.Pipeline(device) as pipeline:
     mono_left = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
     mono_right = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
