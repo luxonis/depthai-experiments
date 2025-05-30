@@ -16,12 +16,12 @@ class CropFace(dai.node.HostNode):
     detections_input : dai.Input
         The input link for the ImageDetectionsExtended message.
     config_output : dai.Output
-        The output link for the ImageManipConfigV2 messages.
+        The output link for the ImageManipConfig messages.
     source_size : Tuple[int, int]
         The size of the source image (width, height).
     target_size : Optional[Tuple[int, int]] = (1920, 1080)
         The size of the target image (width, height).
-    resize_mode : dai.ImageManipConfigV2.ResizeMode = dai.ImageManipConfigV2.ResizeMode.STRETCH
+    resize_mode : dai.ImageManipConfig.ResizeMode = dai.ImageManipConfig.ResizeMode.STRETCH
         The resize mode to use when target size is set. Options are: CENTER_CROP, LETTERBOX, NONE, STRETCH.
     """
 
@@ -53,7 +53,7 @@ class CropFace(dai.node.HostNode):
             The size of the source image (width, height).
         target_size : Optional[Tuple[int, int]]
             The size of the target image (width, height).
-        resize_mode : dai.ImageManipConfigV2.ResizeMode = dai.ImageManipConfigV2.ResizeMode.CENTER_CROP
+        resize_mode : dai.ImageManipConfig.ResizeMode = dai.ImageManipConfig.ResizeMode.CENTER_CROP
             The resize mode to use when target size is set. Options are: CENTER_CROP, LETTERBOX, NONE, STRETCH.
         """
 

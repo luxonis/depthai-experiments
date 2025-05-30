@@ -9,6 +9,8 @@ The example is inspired by / based on:
 - [OpenCV People Counter](https://www.pyimagesearch.com/2018/08/13/opencv-people-counter/)
 - [tensorflow_object_counting_api](https://github.com/ahmetozlu/tensorflow_object_counting_api)
 
+**NOTE**: The experiment currently works only on RVC2.
+
 ## Demo
 
 ![cumulative object counting](media/cumulative-object-counting.gif)

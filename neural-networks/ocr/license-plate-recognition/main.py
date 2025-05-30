@@ -97,6 +97,7 @@ with dai.Pipeline(device) as pipeline:
     config_sender_node.setScriptPath(
         Path(__file__).parent / "utils/config_sender_script.py"
     )
+    config_sender_node.setLogLevel(dai.LogLevel.CRITICAL)
 
     input_node_out.link(config_sender_node.inputs["frame_input"])
     vehicle_det_nn.out.link(config_sender_node.inputs["detections_input"])
@@ -115,6 +116,8 @@ with dai.Pipeline(device) as pipeline:
     lp_config_sender.setScriptPath(
         Path(__file__).parent / "utils/license_plate_sender_script.py"
     )
+    lp_config_sender.setLogLevel(dai.LogLevel.CRITICAL)
+
     input_node_out.link(lp_config_sender.inputs["frame_input"])
 
     lp_det_nn = pipeline.create(ParsingNeuralNetwork).build(
