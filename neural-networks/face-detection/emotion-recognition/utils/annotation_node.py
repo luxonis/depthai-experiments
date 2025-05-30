@@ -2,10 +2,7 @@ from typing import List
 
 import depthai as dai
 
-from depthai_nodes import (
-    ImgDetectionsExtended,
-    Classifications,
-)
+from depthai_nodes import ImgDetectionsExtended, Classifications, SECONDARY_COLOR
 from depthai_nodes.utils import AnnotationHelper
 
 
@@ -41,8 +38,9 @@ class AnnotationNode(dai.node.HostNode):
 
             annotations.draw_text(
                 text=f"{rec_msg.top_class} ({rec_msg.top_score.item():.2f})",
-                position=(xmin, ymin),
+                position=(xmin + 0.005, ymin + 0.025),
                 size=20,
+                color=SECONDARY_COLOR,
             )
 
         annotations_msg = annotations.build(

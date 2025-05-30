@@ -58,7 +58,7 @@ class AnnotationNode(dai.node.HostNode):
 
             annotations.draw_text(
                 text=f"{gender_msg.classes[0][0]}; {int(age_msg.prediction * 100)}",
-                position=(xmin + 0.005, ymin + 0.05),
+                position=(xmin + 0.005, ymin + 0.025),
                 size=20,
                 color=SECONDARY_COLOR,
             )

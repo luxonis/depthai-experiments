@@ -145,7 +145,7 @@ with dai.Pipeline(device) as pipeline:
     annotation_node = pipeline.create(AnnotationNode).build(gather_data_node.out)
 
     # visualization
-    visualizer.addTopic("Video", det_nn.passthrough, "images")
+    visualizer.addTopic("Video", input_node_out, "images")
     visualizer.addTopic("Gaze", annotation_node.out, "images")
 
     print("Pipeline created.")

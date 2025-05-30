@@ -32,7 +32,7 @@ with dai.Pipeline(device) as pipeline:
     rvc2 = device_platform == dai.Platform.RVC2
     model_dimension = (320, 240) if rvc2 else (640, 480)
     faceDet_modelDescription = dai.NNModelDescription(
-        modelSlug=f"yunet:{model_dimension[0]}x{model_dimension[1]}",
+        f"yunet:{model_dimension[0]}x{model_dimension[1]}",
         platform=device.getPlatform().name,
     )
     faceDet_nnarchive = dai.NNArchive(dai.getModelFromZoo(faceDet_modelDescription))
