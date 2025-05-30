@@ -1,10 +1,13 @@
-# Default Application
+# RGB-D projection Demo
 
-This application performs real-time object detection using a [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model and stereo depth estimation (if the device has stereo cameras). It streams raw video, H.264/MJPEG encoded video, object detection results, and a colorized depth map to a remote visualizer for monitoring and analysis.
+This example shows how to align depth to rgb camera frame and project depth map into 3D pointcloud. You can also choose to skip rgb-depth alignment and colorize the pointcloud with right mono frame.
+
+**NOTE**: This example requires a device with color camera and stereo cameras.
 
 ## Demo
 
-![Demo](./media/demo.gif)
+![ezgif-72a39b6d489bd8](https://github.com/user-attachments/assets/2a742929-f080-4a1f-8db5-da356b695876)
+![ezgif-7736189d82e875](https://github.com/user-attachments/assets/2cb05ac6-1dca-421b-88a9-d86c05c6e4e1)
 
 ## Usage
 
@@ -15,10 +18,9 @@ You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode
 Here is a list of all available parameters:
 
 ```
--d DEVICE, --device DEVICE
+    -d DEVICE, --device DEVICE
                       Optional name, DeviceID or IP of the camera to connect to. (default: None)
--api API_KEY, --api_key API_KEY
-                      HubAI API key to access private model. (default: )
+    -m, --mono            use mono frame for pointcloud coloring instead of color frame
 ```
 
 ## Peripheral Mode
@@ -27,8 +29,7 @@ Here is a list of all available parameters:
 
 You need to first prepare a **Python 3.10** environment with the following packages installed:
 
-- [DepthAI](https://pypi.org/project/depthai/),
-- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+- [DepthAI](https://pypi.org/project/depthai/)
 
 You can simply install them by running:
 
