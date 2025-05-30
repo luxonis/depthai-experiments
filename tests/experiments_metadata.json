@@ -8,6 +8,10 @@
             "reason": "Not ported to latest DAI yet",
             "platform": "all"
         },
+        "tutorials/multiple-devices/multiple-devices-preview": {
+            "reason": "Needs multiple devices",
+            "platform": "all"
+        },
         "custom-frontend/raw-stream": {
             "reason": "Failed to start the HTTP server",
             "platform": "all"
@@ -84,6 +88,10 @@
         },
         "streaming/rtsp-streaming": {
             "reason": "PyCairo installation issues",
+            "platform": "all"
+        },
+        "streaming/poe-mqtt": {
+            "reason": "Needs backend connection sometimes, flaky to test.",
             "platform": "all"
         }
     },
