@@ -6,21 +6,13 @@ This experiment shows a minimal implementation of stereo detph implementation.
 
 ![example](media/example.png)
 
-## Installation
-
-Running this example requires a **stereo enabled Luxonis device**  connected to your computer. You can find more information about the supported devices and the set up instructions in our [Documentation](https://rvc4.docs.luxonis.com/hardware).
-
-Install required packages by running:
-
-```bash
-pip install -r requirements.txt
-```
-
 ## Usage
 
-You can run the experiment fully on device (`STANDALONE` mode) or using your your computer as host (`PERIPHERAL` mode). `STANDALONE` mode is only supported on RVC4.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
 
-All scripts accept the following arguments:
+You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+
+Here is a list of all available parameters:
 
 ```
 -d DEVICE, --device DEVICE
@@ -29,11 +21,24 @@ All scripts accept the following arguments:
                     FPS limit for the model runtime. (default: 30)
 ```
 
-### Peripheral Mode
+## Peripheral Mode
+
+### Installation
+
+You need to first prepare a **Python 3.10** environment with the following packages installed:
+
+- [DepthAI](https://pypi.org/project/depthai/),
+- [DepthAI Nodes](https://pypi.org/project/depthai-nodes/).
+
+You can simply install them by running:
+
+```bash
+pip install -r requirements.txt
+```
 
 Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app. Below are some examples of how to run the example.
 
-#### Examples
+### Examples
 
 ```bash
 python3 main.py
@@ -47,14 +52,10 @@ python3 main.py -fps 10
 
 This will run the Camera Demo experiment with the default device at 10 FPS.
 
-### Standalone Mode
+## Standalone Mode (RVC4 only)
 
-Running the example in the [Standalone mode](https://rvc4.docs.luxonis.com/software/depthai/standalone/), app runs entirely on the device.
-To run the example in this mode, first install the [oakctl](https://rvc4.docs.luxonis.com/software/tools/oakctl/) command-line tool (enables host-device interaction) as:
-
-```bash
-bash -c "$(curl -fsSL https://oakctl-releases.luxonis.com/oakctl-installer.sh)"
-```
+Running the example in the standalone mode, app runs entirely on the device.
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -63,4 +64,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file.
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software/oak-apps/configuration/) for more information about this configuration file).

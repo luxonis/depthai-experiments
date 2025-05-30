@@ -40,7 +40,7 @@ with dai.Pipeline(device) as pipeline:
     stereo.setLeftRightCheck(True)
 
     depth_parser = pipeline.create(ApplyColormap).build(stereo.disparity)
-    depth_parser.setMaxValue(int(stereo.initialConfig.getMaxDisparity()))
+    # depth_parser.setMaxValue(int(stereo.initialConfig.getMaxDisparity())) # NOTE: Uncomment when DAI fixes a bug
     depth_parser.setColormap(cv2.COLORMAP_JET)
 
     encoder = pipeline.create(dai.node.VideoEncoder)

@@ -34,7 +34,7 @@ with dai.Pipeline(device) as pipeline:
         )
         cam_out.link(encoder.input)
 
-        visualizer.addTopic(str(sensor.socket), encoder.out, "images")
+        visualizer.addTopic(sensor.socket.name, encoder.out, "images")
 
     print("Pipeline created.")
 
