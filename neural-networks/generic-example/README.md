@@ -1,7 +1,7 @@
 # Generic Example
 
 We provide here an example for running inference with a **single model** on a **single-image input** with a **single-head output**.
-The example is generic and can be used for various single-image input models from the [HubAI Model ZOO](https://hub.luxonis.com/ai/models).
+The example is generic and can be used for various single-image input models from the [Model ZOO](https://zoo-rvc4.luxonis.com).
 
 ## Usage
 
