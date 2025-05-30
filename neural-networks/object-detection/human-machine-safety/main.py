@@ -82,9 +82,9 @@ with dai.Pipeline(device) as pipeline:
         (800, 600), dai.ImgFrame.Type.NV12, fps=args.fps_limit
     )
 
-    obj_det_manip = pipeline.create(dai.node.ImageManipV2)
+    obj_det_manip = pipeline.create(dai.node.ImageManip)
     obj_det_manip.initialConfig.setOutputSize(
-        512, 288, mode=dai.ImageManipConfigV2.ResizeMode.STRETCH
+        512, 288, mode=dai.ImageManipConfig.ResizeMode.STRETCH
     )
     obj_det_manip.initialConfig.setFrameType(frame_type)
     camera_output.link(obj_det_manip.inputImage)
@@ -98,9 +98,9 @@ with dai.Pipeline(device) as pipeline:
             obj_det_nn_archive, numShaves=7
         )  # TODO: change to numShaves=4 if running on OAK-D Lite
 
-    palm_det_manip = pipeline.create(dai.node.ImageManipV2)
+    palm_det_manip = pipeline.create(dai.node.ImageManip)
     palm_det_manip.initialConfig.setOutputSize(
-        192, 192, mode=dai.ImageManipConfigV2.ResizeMode.STRETCH
+        192, 192, mode=dai.ImageManipConfig.ResizeMode.STRETCH
     )
     palm_det_manip.initialConfig.setFrameType(frame_type)
     camera_output.link(palm_det_manip.inputImage)

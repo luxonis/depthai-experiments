@@ -63,5 +63,6 @@ class BlurBboxes(dai.node.ThreadedHostNode):
             img = dai.ImgFrame()
             img.setCvFrame(frame_copy, frame_type)
             img.setTimestamp(ts)
+            img.setSequenceNum(frame.getSequenceNum())
 
             self.out.send(img)

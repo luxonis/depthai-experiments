@@ -5,6 +5,8 @@ It recognizes age and gender of all detected faces on the frame. The demo uses [
 
 ## Demo
 
+![Age and Gender Recognition](./media/age-gender.gif)
+
 ## Usage
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
