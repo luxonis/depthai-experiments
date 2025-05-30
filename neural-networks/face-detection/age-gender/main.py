@@ -7,7 +7,6 @@ from depthai_nodes.node.utils import generate_script_content
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 
-DET_MODEL = "luxonis/yunet:640x480"
 REC_MODEL = "luxonis/age-gender-recognition:62x62"
 REQ_WIDTH, REQ_HEIGHT = (
     1024,
@@ -20,13 +19,14 @@ visualizer = dai.RemoteConnection(httpPort=8082)
 device = dai.Device(dai.DeviceInfo(args.device)) if args.device else dai.Device()
 platform = device.getPlatform().name
 print(f"Platform: {platform}")
+DET_MODEL = "luxonis/yunet:640x480" if platform == "RVC4" else "luxonis/yunet:320x240"
 
 frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
 )
 
 if args.fps_limit is None:
-    args.fps_limit = 5 if platform == "RVC2" else 30
+    args.fps_limit = 10 if platform == "RVC2" else 30
     print(
         f"\nFPS limit set to {args.fps_limit} for {platform} platform. If you want to set a custom FPS limit, use the --fps_limit flag.\n"
     )
@@ -64,7 +64,7 @@ with dai.Pipeline(device) as pipeline:
     input_node_out = replay.out if args.media_path else cam_out
 
     # resize to det model input size
-    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node = pipeline.create(dai.node.ImageManip)
     resize_node.initialConfig.setOutputSize(det_model_w, det_model_h)
     resize_node.initialConfig.setReusePreviousImage(False)
     resize_node.inputImage.setBlocking(True)
@@ -87,7 +87,7 @@ with dai.Pipeline(device) as pipeline:
     )
     script_node.setScript(script_content)
 
-    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node = pipeline.create(dai.node.ImageManip)
     crop_node.initialConfig.setOutputSize(
         rec_model_nn_archive.getInputWidth(), rec_model_nn_archive.getInputHeight()
     )
@@ -109,7 +109,7 @@ with dai.Pipeline(device) as pipeline:
     annotation_node = pipeline.create(AnnotationNode).build(gather_data_node.out)
 
     # visualization
-    visualizer.addTopic("Video", det_nn.passthrough, "images")
+    visualizer.addTopic("Video", input_node_out, "images")
     visualizer.addTopic("AgeGender", annotation_node.out, "images")
 
     print("Pipeline created.")

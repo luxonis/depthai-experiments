@@ -68,7 +68,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(frame_type)
         replay.setLoop(True)
-        replay_resize = pipeline.create(dai.node.ImageManipV2)
+        replay_resize = pipeline.create(dai.node.ImageManip)
         replay_resize.initialConfig.setOutputSize(REQ_WIDTH, REQ_HEIGHT)
         replay_resize.initialConfig.setReusePreviousImage(False)
         replay_resize.setMaxOutputFrameSize(REQ_WIDTH * REQ_HEIGHT * 3)
@@ -81,7 +81,7 @@ with dai.Pipeline(device) as pipeline:
     input_node_out = replay_resize.out if args.media_path else cam_out
 
     # resize input to vehicle det model input size
-    vehicle_det_resize_node = pipeline.create(dai.node.ImageManipV2)
+    vehicle_det_resize_node = pipeline.create(dai.node.ImageManip)
     vehicle_det_resize_node.initialConfig.setOutputSize(
         vehicle_det_model_w, vehicle_det_model_h
     )
@@ -101,7 +101,7 @@ with dai.Pipeline(device) as pipeline:
     input_node_out.link(config_sender_node.inputs["frame_input"])
     vehicle_det_nn.out.link(config_sender_node.inputs["detections_input"])
 
-    vehicle_crop_node = pipeline.create(dai.node.ImageManipV2)
+    vehicle_crop_node = pipeline.create(dai.node.ImageManip)
     vehicle_crop_node.initialConfig.setReusePreviousImage(False)
     vehicle_crop_node.inputConfig.setReusePreviousMessage(False)
     vehicle_crop_node.inputImage.setReusePreviousMessage(False)
@@ -126,7 +126,7 @@ with dai.Pipeline(device) as pipeline:
     lp_det_nn.out.link(lp_config_sender.inputs["license_plate_detections"])
 
     # resize detected licence plates to ocr model input size
-    lp_crop_node = pipeline.create(dai.node.ImageManipV2)
+    lp_crop_node = pipeline.create(dai.node.ImageManip)
     vehicle_crop_node.initialConfig.setReusePreviousImage(False)
     lp_crop_node.inputConfig.setReusePreviousMessage(False)
     lp_crop_node.inputImage.setReusePreviousMessage(False)

@@ -77,7 +77,7 @@ with dai.Pipeline(device) as pipeline:
     )
     script.setScript(script_content)
 
-    pose_manip = pipeline.create(dai.node.ImageManipV2)
+    pose_manip = pipeline.create(dai.node.ImageManip)
     pose_manip.initialConfig.setOutputSize(pose_model_w, pose_model_h)
     pose_manip.inputConfig.setWaitForMessage(True)
 
