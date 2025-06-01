@@ -6,7 +6,9 @@ def initialize_argparser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.description = "Example with multiple devices connected."
+    parser.description = (
+        "This script sets up a calibration pipeline for DepthAI devices."
+    )
 
     parser.add_argument(
         "--include-ip",

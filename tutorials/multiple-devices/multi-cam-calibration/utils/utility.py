@@ -1,9 +1,6 @@
 import depthai as dai
 from typing import List, Optional, Callable, Dict, Any
 
-import random
-import colorsys
-
 
 def filter_devices(
     devices: List[dai.DeviceInfo],
@@ -39,18 +36,6 @@ def filter_devices(
         result = result[:max_devices]
 
     return result
-
-
-def generate_vibrant_random_color() -> tuple[float, float, float, float]:
-    hue = random.random()  # Hue (0.0 to 1.0, wraps around)
-    saturation = random.uniform(
-        0.7, 1.0
-    )  # High saturation (0.7 to 1.0 for colorfulness)
-    value = random.uniform(0.6, 1.0)  # Medium to high brightness (0.6 to 1.0)
-
-    r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
-
-    return (r, g, b, 1)
 
 
 def setup_devices(
