@@ -1,8 +1,6 @@
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==3.0.0a15.dev0+adc7ca692eef7dae97593176cb1f977eed6f8837
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
+depthai==3.0.0b1
 depthai-nodes==0.2.1
-# numpy==1.26.4 
 numpy>=1.22
 open3d==0.19.0
 opencv-python-headless==4.10.0.84

@@ -70,8 +70,8 @@ with dai.Pipeline(device) as p:
 
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     stereo.enableDistortionCorrection(True)
-    stereo.setExtendedDisparity(True)
-    stereo.setLeftRightCheck(True)
+    # stereo.setExtendedDisparity(True)
+    # stereo.setLeftRightCheck(True)
 
     align = p.create(dai.node.ImageAlign)
     stereo.depth.link(align.input)
@@ -79,11 +79,20 @@ with dai.Pipeline(device) as p:
 
     # For PCL
     rgbd = p.create(dai.node.RGBD).build()
-    align.outputAligned.link(rgbd.inDepth)
+
+    if platform == dai.Platform.RVC4:
+        align = p.create(dai.node.ImageAlign)
+        stereo.depth.link(align.input)
+        color_output.link(align.inputAlignTo)
+        align.outputAligned.link(rgbd.inDepth)
+    else:
+        stereo.depth.link(rgbd.inDepth)
+        color_output.link(stereo.inputAlignTo)
+    
     color_output.link(rgbd.inColor)
 
     # For NN 
-    manip = p.create(dai.node.ImageManipV2)
+    manip = p.create(dai.node.ImageManip)
     manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
     manip.initialConfig.setFrameType(
         dai.ImgFrame.Type.BGR888p if platform == dai.Platform.RVC2 else dai.ImgFrame.Type.BGR888i
