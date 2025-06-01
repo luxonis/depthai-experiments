@@ -318,7 +318,7 @@ def get_pipelines(
         right=mono_right.requestOutput(size=(640, 640)),
     )
 
-    cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+    cam_stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.DEFAULT)
     cam_stereo.setDepthAlign(
         dai.CameraBoardSocket.CAM_A
     )  # Align depth map to the perspective of RGB camera, on which inference is done
