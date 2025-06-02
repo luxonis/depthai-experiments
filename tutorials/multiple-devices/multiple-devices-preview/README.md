@@ -37,7 +37,7 @@ Attempting to connect to device: 14442C1011D6C5D600...
 
 ## Usage
 
-Running this example requires at least one (or multiple) **Luxonis device(s)** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
+Running this example requires at least one (or multiple) **Luxonis device(s)** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the experiment using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
