@@ -78,6 +78,10 @@ Here is a list of all available parameters:
 1. **Verify Saved Output**\
    After calibration, the extrinsic parameters are saved to a file in `[your specified directory]/extrinsics_[your device id].npz`
 
+> **Note about visualizer annotations**\
+> If you are using multiple devices, the `Selected for Calib` label might appear on both device streams due to a limitation in how topics are grouped in the visualizer.\
+> To avoid confusion, configure the visualizer to show annotations only for the currently selected device.
+
 ### Peripheral Mode
 
 Running in peripheral mode requires a host computer and there will be communication between device and host which could affect the overall speed of the app.
