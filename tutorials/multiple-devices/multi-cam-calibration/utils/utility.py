@@ -1,9 +1,6 @@
 import depthai as dai
 from typing import List, Optional, Callable, Dict, Any
 
-import random
-import colorsys
-
 
 def filter_devices(
     devices: List[dai.DeviceInfo],
@@ -41,23 +38,26 @@ def filter_devices(
     return result
 
 
-def generate_vibrant_random_color() -> tuple[float, float, float, float]:
-    hue = random.random()  # Hue (0.0 to 1.0, wraps around)
-    saturation = random.uniform(
-        0.7, 1.0
-    )  # High saturation (0.7 to 1.0 for colorfulness)
-    value = random.uniform(0.6, 1.0)  # Medium to high brightness (0.6 to 1.0)
-
-    r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
-
-    return (r, g, b, 1)
-
-
 def setup_devices(
     devices_info: List[dai.DeviceInfo],
     visualizer: dai.RemoteConnection,
     setup_device_pipeline: Callable,
 ) -> List[Dict[str, Any]]:
+    """
+    Initializes and sets up pipelines for a list of DepthAI devices.
+
+    Args:
+        devices_info: A list of `depthai.DeviceInfo` objects for the devices to set up.
+        visualizer: An instance of `depthai.RemoteConnection` for visualization.
+        setup_device_pipeline: A callback function that takes a `dai.DeviceInfo`
+            and `dai.RemoteConnection` and returns a dictionary containing the
+            setup information (e.g., device instance, pipeline object, mxid)
+            or None if setup fails.
+
+    Returns:
+        A list of dictionaries, where each dictionary represents a successfully
+        initialized device setup.
+    """
     initialized_setups: List[Dict[str, Any]] = []
     for dev_info in devices_info:
         setup_info = setup_device_pipeline(dev_info, visualizer)
@@ -73,6 +73,19 @@ def setup_devices(
 def start_pipelines(
     setups: List[Dict[str, Any]], visualizer: dai.RemoteConnection
 ) -> List[Dict[str, Any]]:
+    """
+    Starts the DepthAI pipelines for successfully initialized device setups.
+
+    Args:
+        setups: A list of dictionaries, where each dictionary represents an
+            initialized device setup (output from `setup_devices`).
+            Each dictionary must contain 'mxid', 'pipeline', and 'device' keys.
+        visualizer: An instance of `depthai.RemoteConnection` to register pipelines with.
+
+    Returns:
+        A list of dictionaries, representing setups for which pipelines were
+        successfully started and registered.
+    """
     active_pipelines_info: List[Dict[str, Any]] = []
     for setup in setups:
         try:
