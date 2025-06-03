@@ -64,11 +64,19 @@ Here is a list of all available parameters:
 | `a` | **Camera Selection**: Cycles the calibration focus to the next available camera. The selected camera will be indicated by the on-screen text "Selected for Calib: True". |
 | `c` | **Calibrate**: Captures a high-res still, uses a checkerboard to compute and save the camera's pose, then displays the world axes.                                       |
 
-**Notes:**
+#### Step-by-Step Guide for Accurate Calibration
 
-- Ensure the checkerboard is clearly visible to the camera you intend to calibrate before pressing `c`.
-- Ensure the checkerboard properties are correctly configured, currently it is configured for the checkerboard in this repo [checkerboard](pattern.pdf).
-- Calibration results for each camera are saved in a file named `extrinsics_[MXID].npz`, where `[MXID]` is the unique ID of the DepthAI device.
+1. **Position the Checkerboard**\
+   Make sure the checkerboard is clearly visible to the camera you want to calibrate. Good lighting and minimal motion help ensure accurate corner detection.
+
+1. **Configure Checkerboard Settings**\
+   Verify that the checkerboard size and square dimensions are correctly set in the [code](utils/calibration_node.py). This example uses the checkerboard provided in the repository: [pattern.pdf](pattern.pdf).
+
+1. **Start Calibration**\
+   Press the `c` key to calibrate. Progress and errors will be printed in your terminal—use this to confirm success or diagnose failures.
+
+1. **Verify Saved Output**\
+   After calibration, the extrinsic parameters are saved to a file in `[your specified directory]/extrinsics_[your device id].npz`
 
 ### Peripheral Mode
 
