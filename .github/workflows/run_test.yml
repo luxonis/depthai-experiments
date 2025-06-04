@@ -90,7 +90,7 @@ jobs:
           cd /home/$USER/hil_framework
           git pull https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.luxonis.com/luxonis/hil_lab/hil_framework.git
           git fetch
-          git checkout main
+          git checkout tags/hil_before_major_refactor
 
   test:
     needs: [setup, update-hil]
