@@ -121,4 +121,4 @@ class CropFace(dai.node.HostNode):
         x_avg = sum(self.x) / len(self.x)
         y_avg = sum(self.y) / len(self.y)
 
-        return round(x_avg, 2), round(y_avg, 2)  # Remove rounding once fixed in beta
+        return x_avg, y_avg
