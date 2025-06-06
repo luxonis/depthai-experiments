@@ -16,7 +16,7 @@ We have two different pointcloud demos which generate the pointcloud either on t
 
 ### Multi-device pointcloud
 
-See [demo here](https://github.com/luxonis/depthai-experiments/tree/master/gen2-multiple-devices/rgbd-pointcloud-fusion) for **pointcloud fusion from multiple OAKs**.
+See [demo here](https://github.com/luxonis/oak-examples/tree/master/gen2-multiple-devices/rgbd-pointcloud-fusion) for **pointcloud fusion from multiple OAKs**.
 
 ![demo](https://user-images.githubusercontent.com/18037362/198794141-be39c3c1-b6e8-4a8a-8b1b-e9c4e30e7365.gif)
 

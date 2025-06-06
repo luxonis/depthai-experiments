@@ -1,7 +1,7 @@
 ## Point cloud fusion
 This example demonstrates how point clouds from different cameras can be merged together.
 
-_For a single camera version check out [rgbd-pointcloud](https://github.com/luxonis/depthai-experiments/tree/master/gen2-pointcloud/rgbd-pointcloud)._
+_For a single camera version check out [rgbd-pointcloud](https://github.com/luxonis/oak-examples/tree/master/gen2-pointcloud/rgbd-pointcloud)._
 
 ![demo](img/demo.gif)
 ## Install project requirements

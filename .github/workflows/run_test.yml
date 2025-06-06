@@ -48,7 +48,7 @@ jobs:
           
       - name: Run Test
         run: |
-          CMD="hil --testbed oak4-pro --reservation-name 'dominik.zacek@luxonis.com' --commands 'cd ~/Documents/source/depthai-experiments' 'git pull' 'python3 ./gen3/gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./gen3/neural-networks/object-detection/mobile-object-localizer"
+          CMD="hil --testbed oak4-pro --reservation-name 'dominik.zacek@luxonis.com' --commands 'cd ~/Documents/source/oak-examples' 'git pull' 'python3 ./gen3/gen3_script_tester.py --environment-variables DEPTHAI_PLATFORM=${{ matrix.platform }} --virtual-display --path ./gen3/neural-networks/object-detection/mobile-object-localizer"
           if [ -n "${{ github.event.inputs.depthai_version }}" ]; then
             CMD="$CMD --depthai-version ${{ github.event.inputs.depthai_version }}"
           fi

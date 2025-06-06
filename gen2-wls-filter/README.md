@@ -22,7 +22,7 @@ Run
 If you see the following when running `main.py`:
 ```
 Traceback (most recent call last):
-  File "/Users/leeroy/depthai-experiments/wls-filter/./main.py", line 52, in <module>
+  File "/Users/leeroy/oak-examples/wls-filter/./main.py", line 52, in <module>
     wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(lr_check)
 AttributeError: module 'cv2.cv2' has no attribute 'ximgproc'
 ```

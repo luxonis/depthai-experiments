@@ -6,7 +6,7 @@ Model takes input image of size 192 x 192, and predicts 468 facial landmarks and
 
 ## Demo
 
-https://github.com/luxonis/depthai-experiments/assets/18037362/04d594e2-2238-49d6-a818-a9079270beff
+https://github.com/luxonis/oak-examples/assets/18037362/04d594e2-2238-49d6-a818-a9079270beff
 
 
 ## Pre-requisites

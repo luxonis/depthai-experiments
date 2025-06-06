@@ -5,7 +5,7 @@ It tracks detected objects in the frames. Demo uses [YoloV6n](https://github.com
 
 ## Demo
 
-[![Alt text for the image](https://github.com/luxonis/depthai-experiments/assets/18037362/f59a3ac2-8657-4faf-acad-c1f7a5787ac0)](https://tinyurl.com/yjy99z6v)
+[![Alt text for the image](https://github.com/luxonis/oak-examples/assets/18037362/f59a3ac2-8657-4faf-acad-c1f7a5787ac0)](https://tinyurl.com/yjy99z6v)
 
 (Click on the gif for the high-res video)
 
@@ -22,7 +22,7 @@ It tracks detected objects in the frames. Demo uses [YoloV6n](https://github.com
 
 ## 2-stage NN pipeline graph
 
-![image](https://github.com/luxonis/depthai-experiments/assets/18037362/e90008b5-0ff0-4f59-ad8a-1a65e3e17ab0)
+![image](https://github.com/luxonis/oak-examples/assets/18037362/e90008b5-0ff0-4f59-ad8a-1a65e3e17ab0)
 
 ## Pre-requisites
 
