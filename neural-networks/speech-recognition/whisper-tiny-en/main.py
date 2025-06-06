@@ -5,9 +5,8 @@ from pathlib import Path
 
 from utils.constants import Config
 from utils.arguments import initialize_argparser
-from utils.audio_encoder import AudioEncoder
-from utils.whisper_decoder import WhisperDecoder
-from utils.annotation_node import AnnotationNode
+from utils import AudioEncoder, AnnotationNode, WhisperEncoder, WhisperDecoder
+
 
 # Setup logging
 logging.basicConfig(
@@ -60,29 +59,35 @@ with dai.Pipeline(device) as pipeline:
     encoder_nn.setNNArchive(dai.NNArchive(archivePath=encoder_archive_path))
     audio_encoder.output.link(encoder_nn.input)
 
-    # Decoder setup
-    dec_host_data = pipeline.create(WhisperDecoder, Config.MEAN_DECODE_LEN)
-    encoder_nn.out.link(dec_host_data.input_enc)
+    encoder_postprocess = pipeline.create(WhisperEncoder)
 
     decoder_nn = pipeline.create(dai.node.NeuralNetwork)
     decoder_nn.setNNArchive(dai.NNArchive(archivePath=decoder_archive_path))
+    encoder_postprocess.decoder_initialization.link(decoder_nn.input)
 
-    dec_host_data.out.link(decoder_nn.input)
-    decoder_nn.out.link(dec_host_data.input_dec)
+    recursive_decoder_process = pipeline.create(WhisperDecoder, Config.MEAN_DECODE_LEN)
+    encoder_postprocess.passthrough.link(recursive_decoder_process.encoder_input)
+    decoder_nn.out.link(recursive_decoder_process.decoder_input)
+
+    # recursive link
+    recursive_decoder_process.out.link(decoder_nn.input)
+    encoder_postprocess = encoder_postprocess.build(
+        encoder_nn.out, recursive_decoder_process.token_sequence
+    )
+
+    text_process = pipeline.create(AnnotationNode)
+    camera_out.link(text_process.frame_intput)
+    recursive_decoder_process.token_sequence.link(text_process.token_input)
 
     # Script node for LED
     led_changer = pipeline.create(dai.node.Script)
-    dec_host_data.out_color.link(led_changer.inputs["color_in"])
     led_changer.setScriptPath(Path(__file__).parent / "utils/led_changer_script.py")
+    text_process.color_output.link(led_changer.inputs["color_in"])
 
-    text_annotation = pipeline.create(AnnotationNode)
-    camera_out.link(text_annotation.frame_intput)
-    dec_host_data.annotation_out.link(text_annotation.color_text_input)
-
-    visualizer.addTopic("Camera", text_annotation.frame_out)
+    visualizer.addTopic("Camera", text_process.frame_out)
 
     # Add visualizer topic
-    visualizer.addTopic("Decoded Audio Message", text_annotation.annotaion_out)
+    visualizer.addTopic("Decoded Audio Message", text_process.annotaion_out)
 
     print("Pipeline created.")
 

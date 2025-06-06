@@ -54,11 +54,15 @@ class AudioEncoder(dai.node.ThreadedHostNode):
         if key == "r":
             print("Recording audio...")
             audio = self._record_audio_array()
+            # choices = ["red", "green", "blue", "yellow"]
+            # choice = np.random.choice(choices)
+            # file_path = f"assets/audio_files/comKmand_LED_{choice}.mp3"
+            # audio = load_audio(file_path)
+
             mel_spectrogram = self._process_audio_array(audio)
 
             nn_data = dai.NNData()
             nn_data.addTensor(
                 "audio", mel_spectrogram, dataType=dai.TensorInfo.DataType.FP16
             )
-            print("sending audio data")
             self.output.send(nn_data)
