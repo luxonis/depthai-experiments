@@ -1,6 +1,6 @@
 # People Counter
 
-This experiments demonstrate how to count people in the frame. It uses [SCRFD Person detection](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c) model.
+This example demonstrate how to count people in the frame. It uses [SCRFD Person detection](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c) model.
 
 ## Demo
 

@@ -10,7 +10,7 @@ This example demonstrates how to run a 3 stage pipeline and multi input models. 
 
 ## Demo
 
-[![Gaze Example Demo](https://github.com/luxonis/depthai-experiments/assets/18037362/6c7688e5-30bc-4bed-8455-8b8e9899c5b0)](https://tinyurl.com/5h3dycc5)
+[![Gaze Example Demo](https://github.com/luxonis/oak-examples/assets/18037362/6c7688e5-30bc-4bed-8455-8b8e9899c5b0)](https://tinyurl.com/5h3dycc5)
 
 ## Usage
 
