@@ -44,7 +44,7 @@ with dai.Pipeline(device) as pipeline:
     right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
 
     stereo = pipeline.create(dai.node.StereoDepth).build(left=left.out, right=right.out)
-    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_ACCURACY)
+    stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DETAIL)
     stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
     stereo.setLeftRightCheck(True)
     stereo.setExtendedDisparity(False)

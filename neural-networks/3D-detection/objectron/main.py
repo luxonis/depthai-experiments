@@ -72,7 +72,7 @@ with dai.Pipeline(device) as pipeline:
     )
     script.setScript(script_content)
 
-    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node = pipeline.create(dai.node.ImageManip)
     crop_node.initialConfig.setOutputSize(pos_model_w, pos_model_h)
     crop_node.inputConfig.setWaitForMessage(True)
 

@@ -76,7 +76,7 @@ with dai.Pipeline(device) as pipeline:
     input_node_out = replay.out if args.media_path else cam_out
 
     # resize to det model input size
-    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node = pipeline.create(dai.node.ImageManip)
     resize_node.initialConfig.setOutputSize(
         det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
     )
@@ -145,7 +145,7 @@ with dai.Pipeline(device) as pipeline:
     annotation_node = pipeline.create(AnnotationNode).build(gather_data_node.out)
 
     # visualization
-    visualizer.addTopic("Video", det_nn.passthrough, "images")
+    visualizer.addTopic("Video", input_node_out, "images")
     visualizer.addTopic("Gaze", annotation_node.out, "images")
 
     print("Pipeline created.")

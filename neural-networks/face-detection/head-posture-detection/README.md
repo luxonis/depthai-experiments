@@ -5,9 +5,9 @@ This example demonstrates calculating head poses in a video stream. This is achi
 **How it works?**
 
 1. Color camera produces high-res frames, that are sent to Face detection NN node.
-1. The object detections (faces) are processed by CropConfigsCreator node which generates a dai.ImageManipConfigV2 for each detection.
-1. ImageManipV2 node uses the generated configs to crop all detections from the original image frame. It also resizes the cropped detections to (60, 60) which is the input size of the Head posture NN.
-1. Head posture NN node infers yaw, pitch and roll from the outputs of the ImageManipV2 node.
+1. The object detections (faces) are processed by CropConfigsCreator node which generates a dai.ImageManipConfig for each detection.
+1. ImageManip node uses the generated configs to crop all detections from the original image frame. It also resizes the cropped detections to (60, 60) which is the input size of the Head posture NN.
+1. Head posture NN node infers yaw, pitch and roll from the outputs of the ImageManip node.
 1. The original frame, detections and the head postures get synced back together with the use of two Gather nodes (first sync detections and postures, then sync all of them at once to the frame)
 1. The synced data is then sent to an AnnotationNode to generate text and bounding box.
 1. The annotations and frame are then registered to a dai.RemoteConnection() object to display them in a local browser.
@@ -20,7 +20,7 @@ This example demonstrates calculating head poses in a video stream. This is achi
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -69,7 +69,7 @@ This will run the experiment with the default device and the video file.
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -78,4 +78,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software/oak-apps/configuration/) for more information about this configuration file).
+This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

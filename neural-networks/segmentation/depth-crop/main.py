@@ -55,7 +55,7 @@ with dai.Pipeline(device) as pipeline:
     if platform == "RVC2":
         stereo.setOutputSize(*CAMERA_RESOLUTION)
 
-    manip = pipeline.create(dai.node.ImageManipV2)
+    manip = pipeline.create(dai.node.ImageManip)
     manip.initialConfig.setOutputSize(*nn_archive.getInputSize())
     manip.initialConfig.setFrameType(
         dai.ImgFrame.Type.BGR888p if platform == "RVC2" else dai.ImgFrame.Type.BGR888i

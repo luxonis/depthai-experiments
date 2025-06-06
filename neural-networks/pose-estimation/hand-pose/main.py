@@ -56,14 +56,14 @@ with dai.Pipeline(device) as pipeline:
     input_node = replay.out if args.media_path else cam_out
 
     # resize to det model input size
-    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node = pipeline.create(dai.node.ImageManip)
     resize_node.setMaxOutputFrameSize(
         det_nn_archive.getInputWidth() * det_nn_archive.getInputHeight() * 3
     )
     resize_node.initialConfig.setOutputSize(
         det_nn_archive.getInputWidth(),
         det_nn_archive.getInputHeight(),
-        mode=dai.ImageManipConfigV2.ResizeMode.STRETCH,
+        mode=dai.ImageManipConfig.ResizeMode.STRETCH,
     )
     resize_node.initialConfig.setFrameType(frame_type)
     input_node.link(resize_node.inputImage)
@@ -89,7 +89,7 @@ with dai.Pipeline(device) as pipeline:
     detections_processor.config_output.link(script.inputs["config_input"])
     detections_processor.num_configs_output.link(script.inputs["num_configs_input"])
 
-    pose_manip = pipeline.create(dai.node.ImageManipV2)
+    pose_manip = pipeline.create(dai.node.ImageManip)
     pose_manip.initialConfig.setOutputSize(
         pose_nn_archive.getInputWidth(), pose_nn_archive.getInputHeight()
     )

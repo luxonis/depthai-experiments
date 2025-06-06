@@ -36,6 +36,9 @@ def custom_snap_process(
     model: str,
 ):
     detections = det_data.detections
+    if len(detections) == 0:
+        return
+
     dets_xyxy = [(det.xmin, det.ymin, det.xmax, det.ymax) for det in detections]
     dets_labels = [det.label for det in detections]
     dets_labels_str = [label_map[det.label] for det in detections]
@@ -48,9 +51,10 @@ def custom_snap_process(
         "detection_label_str": str(dets_labels_str),
         "detection_confidence": str(dets_confs),
     }
-    producer.sendSnap(
+    if producer.sendSnap(
         name="rgb", frame=frame, data=[], tags=["demo"], extra_data=extra_data
-    )
+    ):
+        print("Snap sent!")
 
 
 with dai.Pipeline(device) as pipeline:
