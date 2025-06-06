@@ -4,7 +4,7 @@ This example shows how to blur the background and leave only people in focus. Th
 
 ## Demo
 
-![Image example](media/background_blurr.gif)
+![Image example](media/background_blur.gif)
 
 ## Usage
 
