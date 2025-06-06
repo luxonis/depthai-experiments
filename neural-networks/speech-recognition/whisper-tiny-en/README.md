@@ -3,6 +3,8 @@
 This example demonstrates how to run
 [Whisper Tiny EN Network](https://zoo-rvc4.luxonis.com/luxonis/whisper-tiny-en/0aaf1b77-761b-44d6-893c-c473ca463186) on DepthAI with OAK4 devices.
 
+**need to have libportaudio2 libportaudiocpp0 portaudio19-dev installed**
+
 > **Note:** This example only works on RVC4.
 
 ## Demo

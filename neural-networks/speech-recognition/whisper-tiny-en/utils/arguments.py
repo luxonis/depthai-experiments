@@ -21,7 +21,7 @@ def initialize_argparser():
         "--audio_file",
         type=str,
         required=False,
-        default="assets/audio_files/command_LED_yellow.mp3",
+        default=None,
         help="The path to the audio file to process",
     )
 

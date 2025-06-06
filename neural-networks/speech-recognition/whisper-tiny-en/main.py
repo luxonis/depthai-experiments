@@ -5,7 +5,9 @@ from pathlib import Path
 
 from utils.constants import Config
 from utils.arguments import initialize_argparser
-from utils.helper_nodes import EncoderHostData, DecoderHostData
+from utils.audio_encoder import AudioEncoder
+from utils.whisper_decoder import WhisperDecoder
+from utils.annotation_node import AnnotationNode
 
 # Setup logging
 logging.basicConfig(
@@ -47,33 +49,24 @@ decoder_archive_path = dai.getModelFromZoo(
 
 with dai.Pipeline(device) as pipeline:
     print("Creating pipeline...")
-
     # Encoder setup
-    enc_host_data = pipeline.create(EncoderHostData, args.audio_file)
+
+    camera = pipeline.create(dai.node.Camera).build()
+    camera_out = camera.requestOutput((1080, 720), dai.ImgFrame.Type.NV12, fps=30)
+
+    audio_encoder = pipeline.create(AudioEncoder, args.audio_file)
+
     encoder_nn = pipeline.create(dai.node.NeuralNetwork)
     encoder_nn.setNNArchive(dai.NNArchive(archivePath=encoder_archive_path))
-    encoder_nn.setBackend("snpe")
-    encoder_nn.setBackendProperties(
-        {
-            "runtime": "dsp",  # "cpu" if using unquantized model, "dsp" if using quantized model
-            "performance_profile": "default",
-        }
-    )
-    enc_host_data.out.link(encoder_nn.input)
+    audio_encoder.output.link(encoder_nn.input)
 
     # Decoder setup
-    dec_host_data = pipeline.create(DecoderHostData, Config.MEAN_DECODE_LEN)
+    dec_host_data = pipeline.create(WhisperDecoder, Config.MEAN_DECODE_LEN)
     encoder_nn.out.link(dec_host_data.input_enc)
 
     decoder_nn = pipeline.create(dai.node.NeuralNetwork)
     decoder_nn.setNNArchive(dai.NNArchive(archivePath=decoder_archive_path))
-    decoder_nn.setBackend("snpe")
-    decoder_nn.setBackendProperties(
-        {
-            "runtime": "dsp",  # "cpu" if using unquantized model, "dsp" if using quantized model
-            "performance_profile": "default",
-        }
-    )
+
     dec_host_data.out.link(decoder_nn.input)
     decoder_nn.out.link(dec_host_data.input_dec)
 
@@ -81,10 +74,15 @@ with dai.Pipeline(device) as pipeline:
     led_changer = pipeline.create(dai.node.Script)
     dec_host_data.out_color.link(led_changer.inputs["color_in"])
     led_changer.setScriptPath(Path(__file__).parent / "utils/led_changer_script.py")
-    led_changer.setLogLevel(dai.LogLevel.WARN)
+
+    text_annotation = pipeline.create(AnnotationNode)
+    camera_out.link(text_annotation.frame_intput)
+    dec_host_data.annotation_out.link(text_annotation.color_text_input)
+
+    visualizer.addTopic("Camera", text_annotation.frame_out)
 
     # Add visualizer topic
-    visualizer.addTopic("Decoded Audio Message", dec_host_data.out_text)
+    visualizer.addTopic("Decoded Audio Message", text_annotation.annotaion_out)
 
     print("Pipeline created.")
 
@@ -96,3 +94,5 @@ with dai.Pipeline(device) as pipeline:
         if key == ord("q"):
             print("Got q key. Exiting...")
             break
+        else:
+            audio_encoder.handle_key_press(key)
