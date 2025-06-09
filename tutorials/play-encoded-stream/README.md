@@ -1,6 +1,6 @@
 # Play Encoded Stream
 
-This experiment shows how you can play H264/H265/MJPEG encoded streams on the host computer. It showcases three different ways of playing the encoded stream.
+This example shows how you can play H264/H265/MJPEG encoded streams on the host computer. It showcases three different ways of playing the encoded stream.
 
 - `main.py` using Visualizer: This plays encoded stream by passing it directly to Visualizer. This is the most straightforward way of playing the encoded stream, however, it is currently not possible to play H265 encoded streams using Visualizer.
 
@@ -14,7 +14,7 @@ This experiment shows how you can play H264/H265/MJPEG encoded streams on the ho
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -55,13 +55,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the experiment with default argument values and will play the encoded stream on the host computer.
+This will run the example with default argument values and will play the encoded stream on the host computer.
 
 ```bash
 python3 pyav.py -fps 10
 ```
 
-This will run the the experiment at 10 FPS and will use PyAv to decode the encoded stream.
+This will run the the example at 10 FPS and will use PyAv to decode the encoded stream.
 
 ## Standalone Mode (RVC4 only)
 
@@ -75,4 +75,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

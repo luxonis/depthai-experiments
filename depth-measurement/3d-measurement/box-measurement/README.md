@@ -1,6 +1,6 @@
 # Box measurement
 
-This experiment showcases one possible approach for measuring the size of a box using DepthAI.
+This example showcases one possible approach for measuring the size of a box using DepthAI.
 
 ![demo](https://github.com/luxonis/oak-examples/blob/master/gen2-multiple-devices/box-measurement/img/demo.gif)
 

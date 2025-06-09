@@ -6,7 +6,7 @@ This example demonstrates how to run a 3 stage pipeline and multi input models. 
 1. The cropped face is used as input to the [Head pose model](https://zoo-rvc4.luxonis.com/luxonis/head-pose-estimation/068ac18a-de71-4a6e-9f0f-42776c0ef980) which returns the 3D vector the heads position.
 1. The cropped eyes and the 3D pose vector are fed into [ADAS gaze estimation model](https://zoo-rvc4.luxonis.com/luxonis/gaze-estimation-adas/b174ff1b-740b-4016-b8d5-b9488dbdd657) to compute the final gaze of the person.
 
-**:exclamation: ON RVC2 you can run the experiment with camera input only (`--media` flag doesnt work due to a problem with the replay node). :exclamation:**
+**:exclamation: ON RVC2 you can run the example with camera input only (`--media` flag doesnt work due to a problem with the replay node). :exclamation:**
 
 ## Demo
 
@@ -16,7 +16,7 @@ This example demonstrates how to run a 3 stage pipeline and multi input models. 
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -52,7 +52,7 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the experiment with default arguments.
+This will run the example with default arguments.
 
 ## Standalone Mode (RVC4 only)
 
@@ -66,4 +66,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

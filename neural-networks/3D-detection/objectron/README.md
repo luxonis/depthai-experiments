@@ -1,6 +1,6 @@
 # Objectron: 3D Bounding Box Detection
 
-This experiment demonstrates how to perform 3D object detection using the [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) model. The model can predict 3D bounding box of the foreground object in the image. For general object detection we use [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. The pipepile is a standard 2-stage pipeline with detection and 3D object detection models. The experiment works on both RVC2 and RVC4. [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) can predict 3D bounding boxes for chairs, cameras, cups, and shoes.
+This example demonstrates how to perform 3D object detection using the [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) model. The model can predict 3D bounding box of the foreground object in the image. For general object detection we use [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. The pipepile is a standard 2-stage pipeline with detection and 3D object detection models. The example works on both RVC2 and RVC4. [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) can predict 3D bounding boxes for chairs, cameras, cups, and shoes.
 
 ## Demo
 
@@ -10,7 +10,7 @@ This experiment demonstrates how to perform 3D object detection using the [Objec
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -23,7 +23,7 @@ Here is a list of all available parameters:
                     Path to the media file you aim to run the model on. If not set, the model will run on the camera input. (default: None)
 ```
 
-**NOTE**: The provided experiment detects chairs, but you can change the object class by changing the `VALID_LABELS` constant in `main.py` (e.g. `VALID_LABELS=[41])` where `41` is the label for cups).
+**NOTE**: The provided example detects chairs, but you can change the object class by changing the `VALID_LABELS` constant in `main.py` (e.g. `VALID_LABELS=[41])` where `41` is the label for cups).
 Camera and shoes can not be detected with general YOLOv6 detector. So, you need to provide your own detector for these objects.
 
 ## Peripheral Mode
@@ -49,13 +49,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the objectron experiment with default connected device, camera input and default fps limit based on the device.
+This will run the objectron example with default connected device, camera input and default fps limit based on the device.
 
 ```bash
 python3 main.py -d <DEVICE_IP>
 ```
 
-This will run the objectron experiment with the provided device ip, camera input and default fps limit based on the device.
+This will run the objectron example with the provided device ip, camera input and default fps limit based on the device.
 
 ## Standalone Mode (RVC4 only)
 
@@ -69,4 +69,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

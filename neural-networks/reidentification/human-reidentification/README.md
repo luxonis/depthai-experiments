@@ -1,6 +1,6 @@
 # Human Re-Identification
 
-This experiment demonstrates how to build a 2-stage DepthAI pipeline for human pose / human face reidentification.
+This example demonstrates how to build a 2-stage DepthAI pipeline for human pose / human face reidentification.
 The pipeline consists of a detection model (
 [SCRFD Person Detection](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c),
 [SCRFD Face Detection](https://zoo-rvc4.luxonis.com/luxonis/scrfd-face-detection/1f3d7546-66e4-43a8-8724-2fa27df1096f), or
@@ -21,7 +21,7 @@ Object reidentification is achieved by calculating cosine similarity between the
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -61,13 +61,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the experiment with the default device and camera input.
+This will run the example with the default device and camera input.
 
 ```bash
 python3 main.py --media <PATH_TO_VIDEO>
 ```
 
-This will run the experiment with the default device and the video file.
+This will run the example with the default device and the video file.
 
 ## Standalone Mode (RVC4 only)
 
@@ -81,4 +81,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

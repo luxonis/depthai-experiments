@@ -25,7 +25,7 @@ with dai.Pipeline(device) as pipeline:
     )
     if not depth_enabled:
         raise RuntimeError(
-            "Unable to run this experiment on device without left & right cameras! (Available cameras: {})".format(
+            "Unable to run this example on device without left & right cameras! (Available cameras: {})".format(
                 cams
             )
         )

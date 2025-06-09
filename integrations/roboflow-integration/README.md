@@ -1,6 +1,6 @@
 # Roboflow Integration
 
-This experiment shows how to create a [Roboflow](https://roboflow.com) dataset using detections from a **Luxonis device**. It uses [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model for object detection.
+This example shows how to create a [Roboflow](https://roboflow.com) dataset using detections from a **Luxonis device**. It uses [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model for object detection.
 
 ## Demo
 
@@ -10,7 +10,7 @@ https://github.com/user-attachments/assets/a07070a8-6267-4348-8342-ddf77c9ddd8b
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -58,13 +58,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py --api-key <API_KEY> --workspace <WORKSPACE_NAME> --dataset <DATASET_NAME>
 ```
 
-This will run the Roboflow Integration experiment with the default device and camera input. It will upload detections only when `space` key is pressed.
+This will run the Roboflow Integration example with the default device and camera input. It will upload detections only when `space` key is pressed.
 
 ```bash
 python3 main.py --api-key <API_KEY> --workspace <WORKSPACE_NAME> --dataset <DATASET_NAME> --auto-interval <SECONDS>
 ```
 
-This will run the Roboflow Integration experiment with the default device and camera input. It will automatically upload detections every `<SECONDS>` seconds or when `space` key is pressed.
+This will run the Roboflow Integration example with the default device and camera input. It will automatically upload detections every `<SECONDS>` seconds or when `space` key is pressed.
 
 ## Standalone Mode (RVC4 only)
 
@@ -80,4 +80,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

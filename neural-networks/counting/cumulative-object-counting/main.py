@@ -18,7 +18,7 @@ frame_type = (
 )
 
 if platform != "RVC2":
-    raise ValueError("This experiment is only supported for RVC2 platform.")
+    raise ValueError("This example is only supported for RVC2 platform.")
 
 if args.fps_limit is None:
     args.fps_limit = 25

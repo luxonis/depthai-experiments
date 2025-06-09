@@ -38,7 +38,7 @@ if args.fps_limit is None:
 available_cameras = device.getConnectedCameras()
 if len(available_cameras) < 3:
     raise ValueError(
-        "Device must have 3 cameras (color, left and right) in order to run this experiment."
+        "Device must have 3 cameras (color, left and right) in order to run this example."
     )
 
 with dai.Pipeline(device) as pipeline:

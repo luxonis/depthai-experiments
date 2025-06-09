@@ -22,7 +22,7 @@ platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
 if platform != "RVC4":
-    raise ValueError("This experiment is only supported for RVC4 platform.")
+    raise ValueError("This example is only supported for RVC4 platform.")
 
 frame_type = (
     dai.ImgFrame.Type.BGR888i if platform == "RVC4" else dai.ImgFrame.Type.BGR888p
