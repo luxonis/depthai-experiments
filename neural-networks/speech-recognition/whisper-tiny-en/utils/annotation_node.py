@@ -21,6 +21,16 @@ class AnnotationNode(dai.node.ThreadedHostNode):
         )
 
         self.annotations = AnnotationHelper()
+        self.annotations.draw_text(
+            "Press 'r' to record audio",
+            (
+                0.002,
+                0.05,
+            ),
+            size=24,
+            color=dai.Color(1, 1, 1, 1),
+            background_color=dai.Color(0, 0, 0, 0.5),
+        )
 
     def parser_text(self, text: str) -> tuple[str, str]:
         """Parses text into tuples of (str, color) and returns the new color of LED (None if not detected or multiple detected)."""
@@ -71,6 +81,16 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                     self.color_output.send(color_msg)
 
                     self.annotations = AnnotationHelper()
+                    self.annotations.draw_text(
+                        "Press 'r' to record audio",
+                        (
+                            0.002,
+                            0.05,
+                        ),
+                        size=24,
+                        color=dai.Color(1, 1, 1, 1),
+                        background_color=dai.Color(0, 0, 0, 0.5),
+                    )
                     color = np.array(color) / 255.0
                     dai_text_color = dai.Color(color[0], color[1], color[2], 1.0)
                     dai_frame_color = dai.Color(color[0], color[1], color[2], 0.2)
@@ -89,16 +109,6 @@ class AnnotationNode(dai.node.ThreadedHostNode):
                         thickness=0.0,
                     )
 
-            self.annotations.draw_text(
-                "Press 'r' to record audio",
-                (
-                    0.002,
-                    0.05,
-                ),
-                size=24,
-                color=dai.Color(1, 1, 1, 1),
-                background_color=dai.Color(0, 0, 0, 0.5),
-            )
             annotations_msg = self.annotations.build(
                 timestamp=frame_msg.getTimestamp(),
                 sequence_num=frame_msg.getSequenceNum(),
