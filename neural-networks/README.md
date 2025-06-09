@@ -231,6 +231,10 @@ LEGEND: ✅: available; ❌: not available; 🚧: work in progress
 
 ## Speech Recognition
 
+|                                        Speech Recognition                                         |
+| :-----------------------------------------------------------------------------------------------: |
+| <img src="speech-recognition/whisper-tiny-en/assets/demo.gif" alt="speech" style="height:300px;"> |
+
 | Name                                                   | HubAI Model                                                                                                  | RVC2 | RVC4 (peripheral) | RVC4 (standalone) | Gen2 | Notes                            |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ---- | ----------------- | ----------------- | ---- | -------------------------------- |
 | [whisper-tiny-en](speech-recognition/whisper-tiny-en/) | [whisper-tiny-en](https://zoo-rvc4.luxonis.com/luxonis/whisper-tiny-en/0aaf1b77-761b-44d6-893c-c473ca463186) | ❌   | ✅                | ✅                |      | Model is only available for RVC4 |
