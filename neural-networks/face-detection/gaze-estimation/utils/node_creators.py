@@ -6,7 +6,7 @@ def create_crop_node(
     pipeline: dai.Pipeline,
     input_frame: dai.Node.Output,
     configs_message: dai.Node.Output,
-) -> dai.node.ImageManipV2:
+) -> dai.node.ImageManip:
     script_path = Path(__file__).parent / "config_sender_script.py"
     with script_path.open("r") as script_file:
         script_content = script_file.read()
@@ -16,7 +16,7 @@ def create_crop_node(
     config_sender_script.inputs["frame_input"].setBlocking(True)
     config_sender_script.inputs["config_input"].setBlocking(True)
 
-    img_manip_node = pipeline.create(dai.node.ImageManipV2)
+    img_manip_node = pipeline.create(dai.node.ImageManip)
     img_manip_node.initialConfig.setReusePreviousImage(False)
     img_manip_node.inputConfig.setReusePreviousMessage(False)
     img_manip_node.inputImage.setReusePreviousMessage(False)

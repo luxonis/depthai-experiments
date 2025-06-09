@@ -35,7 +35,6 @@ class AnnotationNode(dai.node.HostNode):
         for img_detection_extended_msg, pose_msg_group in zip(
             img_detections_extended_msg.detections, pose_msg_group_list
         ):
-
             yaw_msg: Predictions = pose_msg_group["0"]
             assert isinstance(yaw_msg, Predictions)
             yaw = yaw_msg.prediction

@@ -75,7 +75,7 @@ with dai.Pipeline(device) as pipeline:
     input_node_out = replay.out if args.media_path else cam_out
 
     # resize to det model input size
-    resize_node = pipeline.create(dai.node.ImageManipV2)
+    resize_node = pipeline.create(dai.node.ImageManip)
     resize_node.setMaxOutputFrameSize(REQ_WIDTH * REQ_HEIGHT * 3)
     resize_node.initialConfig.setOutputSize(
         det_model_nn_archive.getInputWidth(), det_model_nn_archive.getInputHeight()
@@ -101,7 +101,7 @@ with dai.Pipeline(device) as pipeline:
     )
     script_node.setScript(script_content)
 
-    crop_node = pipeline.create(dai.node.ImageManipV2)
+    crop_node = pipeline.create(dai.node.ImageManip)
     crop_node.initialConfig.setOutputSize(
         rec_nn_archive.getInputWidth(), rec_nn_archive.getInputHeight()
     )

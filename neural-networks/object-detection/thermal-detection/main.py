@@ -39,7 +39,7 @@ with dai.Pipeline(device) as pipeline:
         replay.setReplayVideoFile(Path(args.media_path))
         replay.setOutFrameType(dai.ImgFrame.Type.NV12)
         replay.setLoop(True)
-        imageManip = pipeline.create(dai.node.ImageManipV2)
+        imageManip = pipeline.create(dai.node.ImageManip)
         imageManip.setMaxOutputFrameSize(det_model_w * det_model_h * 3)
         imageManip.initialConfig.setOutputSize(det_model_w, det_model_h)
         imageManip.initialConfig.setFrameType(frame_type)

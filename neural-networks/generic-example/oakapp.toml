@@ -10,4 +10,4 @@ prepare_build_container = []
 
 build_steps = ["pip3 install -r /app/requirements.txt --break-system-packages"]
 
-entrypoint = ["bash", "-c", "python3 /app/main.py --model luxonis/yolov6-nano:r2-coco-512x288"]
+entrypoint = ["bash", "-c", "python3 -u /app/main.py --model luxonis/yolov6-nano:r2-coco-512x288"]

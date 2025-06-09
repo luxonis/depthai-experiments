@@ -13,5 +13,5 @@ build_steps = ["pip3 install -r /app/requirements.txt --break-system-packages"]
 entrypoint = [
     "bash",
     "-c",
-    "python3 /app/main.py --api-key <API_KEY> --workspace <WORKSPACE_NAME> --dataset <DATASET_NAME>",
+    "python3 -u /app/main.py --api-key <API_KEY> --workspace <WORKSPACE_NAME> --dataset <DATASET_NAME>",
 ]

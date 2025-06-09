@@ -33,13 +33,13 @@ with dai.Pipeline(device) as pipeline:
     )
 
     stereo = pipeline.create(dai.node.StereoDepth).build(left=left_out, right=right_out)
-    # print(stereo.initialConfig.getConfidenceThreshold())
-    stereo.initialConfig.setConfidenceThreshold(240)
     stereo.setLeftRightCheck(True)
     stereo.setRectification(True)
     stereo.setExtendedDisparity(True)
 
     face_det_nn = pipeline.create(ParsingNeuralNetwork).build(cam, nn_archive)
+    if platform == "RVC2":
+        face_det_nn.setNNArchive(nn_archive, numShaves=7)
     depth_merger = pipeline.create(DepthMerger).build(
         face_det_nn.out, stereo.depth, device.readCalibration2()
     )

@@ -5,6 +5,7 @@ from depthai_nodes import (
     ImgDetectionsExtended,
     Predictions,
     Classifications,
+    SECONDARY_COLOR,
 )
 from depthai_nodes.utils import AnnotationHelper
 
@@ -57,7 +58,9 @@ class AnnotationNode(dai.node.HostNode):
 
             annotations.draw_text(
                 text=f"{gender_msg.classes[0][0]}; {int(age_msg.prediction * 100)}",
-                position=(xmin, ymin),
+                position=(xmin + 0.005, ymin + 0.025),
+                size=20,
+                color=SECONDARY_COLOR,
             )
 
         annotations_msg = annotations.build(
