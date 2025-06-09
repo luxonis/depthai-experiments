@@ -1,10 +1,10 @@
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==3.0.0a11
-opencv-python
-numpy==1.26.4
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-release-local/
+depthai==3.0.0rc1
+-e git+https://github.com/luxonis/depthai-nodes.git@main#egg=depthai-nodes
+opencv-python-headless~=4.10.0
+numpy>=1.22
 scipy==1.14.1
-tiktoken
-torch
 tqdm
-numba
 openai-whisper
+sounddevice 
+soundfile
