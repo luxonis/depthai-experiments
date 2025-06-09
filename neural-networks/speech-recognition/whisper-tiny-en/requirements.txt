@@ -1,5 +1,5 @@
-/
-depthai==3.0.0a11
+depthai==3.0.0rc1
+depthai-nodes==0.3.0
 opencv-python
 numpy==1.26.4
 scipy==1.14.1
