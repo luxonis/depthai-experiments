@@ -1,6 +1,6 @@
 # On Device Encoding
 
-This experiment demonstrates how to stream encoded frames from the device to the host and save them directly into a video container. **Video is encoded on the device itself** before it's sent to the host computer.
+This example demonstrates how to stream encoded frames from the device to the host and save them directly into a video container. **Video is encoded on the device itself** before it's sent to the host computer.
 
 This demo uses codecs that some video players (eg. Quicktime) might not support. We suggest using [VLC](https://www.videolan.org/vlc/) to play the video.
 
@@ -14,7 +14,7 @@ As you can see, the `video.mp4` uses the codec of the stream being saved, so the
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -51,13 +51,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the On Device Encoding experiment with the default device, camera input and H264 codec.
+This will run the On Device Encoding example with the default device, camera input and H264 codec.
 
 ```bash
 python3 main.py --codec h265 --output video_h265.mp4
 ```
 
-This will run the On Device Encoding experiment with the default device, H265 codec and `video_h265.mp4` output file.
+This will run the On Device Encoding example with the default device, H265 codec and `video_h265.mp4` output file.
 
 ## Standalone Mode (RVC4 only)
 

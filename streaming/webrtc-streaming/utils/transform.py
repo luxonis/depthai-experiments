@@ -104,7 +104,7 @@ def start_pipeline(pipeline: dai.Pipeline, options):
     print("Creating pipeline...")
 
     # The host node architecture is not preferred here as the host node runs in a loop and
-    #  we only want to get from the queues when pinged from the server in this experiment
+    #  we only want to get from the queues when pinged from the server in this example
     nn_q = None
     label_map = None
     if depth_flag:

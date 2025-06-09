@@ -1,6 +1,3 @@
-# HostSpatialsCalc implementation taken from here:
-# https://github.com/luxonis/depthai-experiments/blob/d10736715bef1663d984196f8528610a614e4b75/gen2-calc-spatials-on-host/calc.py
-
 import depthai as dai
 import numpy as np
 

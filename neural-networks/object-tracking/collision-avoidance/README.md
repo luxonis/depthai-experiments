@@ -1,6 +1,6 @@
 # Collision Avoidance
 
-This experiment's goal is to detect the objects moving towards the camera and alert the user if it can be dangerous pass. We use our [YOLOv6 nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model for detecting the desired objects. By default, it detects the class `person` but it can be easily changed to any other class like `car`, `bicycle`, etc. (just modify the variable in the `main.py` file). The app also tracks the objects and estimates their position in 3D space using our depth cameras (you need to have depth-enabled cameras connected). Dangerous pass is detected when the object is moving towards the camera, this is done by checking the direction of the object's trajectory.
+This example's goal is to detect the objects moving towards the camera and alert the user if it can be dangerous pass. We use our [YOLOv6 nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model for detecting the desired objects. By default, it detects the class `person` but it can be easily changed to any other class like `car`, `bicycle`, etc. (just modify the variable in the `main.py` file). The app also tracks the objects and estimates their position in 3D space using our depth cameras (you need to have depth-enabled cameras connected). Dangerous pass is detected when the object is moving towards the camera, this is done by checking the direction of the object's trajectory.
 
 You can see the visualization of the object's trajectory in the `Direction` topic. We also visualize the bird's eye view of the scene.
 
@@ -14,7 +14,7 @@ You can see the visualization of the object's trajectory in the `Direction` topi
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -48,7 +48,7 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the experiment with the default device.
+This will run the example with the default device.
 
 ## Standalone Mode (RVC4 only)
 

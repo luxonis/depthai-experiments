@@ -3,8 +3,7 @@ depthai==3.0.0a11
 opencv-python
 numpy==1.26.4
 scipy==1.14.1
-tiktoken
-torch
 tqdm
-numba
 openai-whisper
+sounddevice 
+soundfile

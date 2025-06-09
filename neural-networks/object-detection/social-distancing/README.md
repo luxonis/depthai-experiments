@@ -1,6 +1,6 @@
 # Social Distancing
 
-This experiment demonstates how we can use DepthAI to monitor social distancing. It uses our depth-enabled OAK camera and on-device AI processing. For detecting people we use [SCRFD Person detection model](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c) from HubAI. We merge the detections with depth information to get the 3D position of each person. We then calculate the distance between each pair of people and if the distance is less than a threshold, we display a warning.
+This example demonstates how we can use DepthAI to monitor social distancing. It uses our depth-enabled OAK camera and on-device AI processing. For detecting people we use [SCRFD Person detection model](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c) from HubAI. We merge the detections with depth information to get the 3D position of each person. We then calculate the distance between each pair of people and if the distance is less than a threshold, we display a warning.
 
 Below you can see 3 people in a scene. If they get closer than the threshold of 2 meters, the application will display `Too Close` and the distance between them.
 
@@ -14,7 +14,7 @@ Below you can see 3 people in a scene. If they get closer than the threshold of 
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -48,7 +48,7 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the experiment with default arguments.
+This will run the example with default arguments.
 
 ## Standalone Mode (RVC4 only)
 

@@ -8,7 +8,7 @@ This example demonstrates, how to stream video from the device to the host compu
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 This example contains two scripts: `host.py` and `oak.py`. `oak.py` is the script responsible for setting up the DepthAI pipeline and running it on the device and `host.py` is the script that runs on the host computer. Both scripts support two modes: `server` and `client`. When running in `server` mode the script will act as a server and wait for a connection. When running in `client` mode the script will attempt to connect to the server. The script running in `server` mode needs to be started first and then the `client` script can be run.
 

@@ -1,6 +1,6 @@
 # Crowd Counting
 
-This experiment demonstrates how to build a DepthAI pipeline for crowd counting.
+This example demonstrates how to build a DepthAI pipeline for crowd counting.
 We use [DM-Count](https://zoo-rvc4.luxonis.com/luxonis/dm-count/16d01eab-dc2b-4422-907d-2634a940b52e) model to produce a crowd density map from which the count is computed.
 
 ## Demo
@@ -13,7 +13,7 @@ We use [DM-Count](https://zoo-rvc4.luxonis.com/luxonis/dm-count/16d01eab-dc2b-44
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -51,13 +51,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the crowd counting experiment with default arguments.
+This will run the crowd counting example with default arguments.
 
 ```bash
 python3 main.py -d <DEVICE_IP>
 ```
 
-This will run the crowd counting experiment with the provided device ip, camera input and default fps limit based on the device.
+This will run the crowd counting example with the provided device ip, camera input and default fps limit based on the device.
 
 ## Standalone Mode (RVC4 only)
 

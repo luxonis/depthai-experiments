@@ -1,6 +1,6 @@
 # MJPEG Streaming
 
-This experiment demonstrates how to stream frames via HTTP server using MJPEG stream. It performs object detection using [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model.
+This example demonstrates how to stream frames via HTTP server using MJPEG stream. It performs object detection using [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model.
 
 ## Demo
 
@@ -10,7 +10,7 @@ This experiment demonstrates how to stream frames via HTTP server using MJPEG st
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -46,13 +46,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the MJPEG Streaming experiment with the default device and camera input.
+This will run the MJPEG Streaming example with the default device and camera input.
 
 ```bash
 python3 main.py --media <PATH_TO_VIDEO>
 ```
 
-This will run the MJPEG Streaming experiment with the default device and the video file.
+This will run the MJPEG Streaming example with the default device and the video file.
 
 ## Standalone Mode (RVC4 only)
 

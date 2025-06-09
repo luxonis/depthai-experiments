@@ -46,7 +46,7 @@ Attempting to connect to device: 14442C1011D6C5D600...
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software/) to setup your device if you haven't done it already.
 
-You can run the experiment using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 

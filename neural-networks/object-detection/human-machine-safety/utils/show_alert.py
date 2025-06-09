@@ -72,21 +72,6 @@ class ShowAlert(dai.node.HostNode):
             fill_color=dai.Color(1, 0, 0, 0.1),
             thickness=10,
         )
-        # img_annotations = dai.ImgAnnotations()
-        # annotation = dai.ImgAnnotation()
-        # pointsAnnotation = dai.PointsAnnotation()
-        # pointsAnnotation.type = dai.PointsAnnotationType.LINE_LOOP
-        # pointsAnnotation.outlineColor = dai.Color(1, 0, 0, 1)
-        # pointsAnnotation.thickness = 10
-        # pointsAnnotation.points = dai.VectorPoint2f(
-        #     [
-        #         dai.Point2f(0, 0, normalized=True),
-        #         dai.Point2f(1, 0, normalized=True),
-        #         dai.Point2f(1, 1, normalized=True),
-        #         dai.Point2f(0, 1, normalized=True),
-        #     ]
-        # )
-        # annotation.points.append(pointsAnnotation)
 
         annotation_helper.draw_text(
             text="Too close!",
@@ -94,17 +79,6 @@ class ShowAlert(dai.node.HostNode):
             color=dai.Color(1, 0, 0, 1),
             size=64,
         )
-
-        # text = dai.TextAnnotation()
-        # text.position = dai.Point2f(0.4, 0.5, True)
-        # text.text = "Too close!"
-        # text.fontSize = 64
-        # text.textColor = dai.Color(1, 1, 1, 1)
-        # text.backgroundColor = dai.Color(1, 0, 0, 1)
-        # annotation.texts.append(text)
-
-        # img_annotations.annotations.append(annotation)
-        # img_annotations.setTimestamp(timestamp)
 
         img_annotations = annotation_helper.build(
             timestamp=timestamp,

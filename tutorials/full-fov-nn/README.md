@@ -1,9 +1,9 @@
 # Full FOV NN inferencing
 
-This experiment demonstrates how to run NN inferencing on full FOV frames. It uses a video stream with a different aspect ratio than the NN input. [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) is used for object detection.
+This example demonstrates how to run NN inferencing on full FOV frames. It uses a video stream with a different aspect ratio than the NN input. [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) is used for object detection.
 See [Resolution Techniques for NNs](https://docs.luxonis.com/software/depthai/resolution-techniques) for more information.
 
-This experiment demonstrates how to run NN inferencing on full FOV frames. It uses a video stream with a different aspect ratio than the NN input. [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) is used for object detection.
+This example demonstrates how to run NN inferencing on full FOV frames. It uses a video stream with a different aspect ratio than the NN input. [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) is used for object detection.
 
 There are 3 options, how to match the NN input aspect ration:
 
@@ -29,7 +29,7 @@ There are 3 options, how to match the NN input aspect ration:
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -40,11 +40,11 @@ Here is a list of all available parameters:
                     FPS limit for the model runtime. (default: 30)
 ```
 
-This experiment contains 4 different scripts.
+This example contains 4 different scripts.
 
 #### `main.py`
 
-This is the main script that runs the experiment and lets you choose the resize mode during runtime by using the following keybinds:
+This is the main script that runs the example and lets you choose the resize mode during runtime by using the following keybinds:
 
 | Key | Mode         |
 | --- | ------------ |
@@ -79,13 +79,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the Full FOV NN inferencing experiment with the default device and camera input.
+This will run the Full FOV NN inferencing example with the default device and camera input.
 
 ```bash
 python3 cropping.py -fps 10
 ```
 
-This will run the Full FOV NN inferencing experiment using cropping resize mode with the default device at 10 FPS.
+This will run the Full FOV NN inferencing example using cropping resize mode with the default device at 10 FPS.
 
 ## Standalone Mode (RVC4 only)
 
