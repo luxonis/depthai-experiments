@@ -4,6 +4,10 @@ This example runs [Whisper Tiny EN Network](https://zoo-rvc4.luxonis.com/luxonis
 
 **Audio is currently recorded on the host computer.**
 
+## Demo
+
+![demo](assets/demo.gif)
+
 ## Pipeline description
 
 There are seven nodes comprising the audio processing pipeline:
@@ -23,8 +27,6 @@ If you are using Ubuntu, make sure to install the following packages:
 ```
     $ sudo apt-get install libportaudio2 libportaudiocpp0 portaudio19-dev
 ```
-
-## Demo
 
 ## Usage
 
