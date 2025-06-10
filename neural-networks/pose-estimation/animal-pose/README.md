@@ -1,6 +1,8 @@
 # Animal Detection and Pose Estimation
 
-This experiment demonstrates how to build a 2-stage DepthAI pipeline for detecting animals and estimating their poses. The pipeline consists of [WildLife MegaDetector](https://zoo-rvc4.luxonis.com/luxonis/wildlife-megadetector/07d9f651-05f3-479d-843a-8c12e6289a61) animal detector and [SuperAnimal](https://zoo-rvc4.luxonis.com/luxonis/superanimal-landmarker/894cf1a2-23fb-4c96-8944-a0d1be38a7c7) pose estimation model.
+This example demonstrates how to build a 2-stage DepthAI pipeline for detecting animals and estimating their poses. The pipeline consists of [WildLife MegaDetector](https://zoo-rvc4.luxonis.com/luxonis/wildlife-megadetector/07d9f651-05f3-479d-843a-8c12e6289a61) animal detector and [SuperAnimal](https://zoo-rvc4.luxonis.com/luxonis/superanimal-landmarker/894cf1a2-23fb-4c96-8944-a0d1be38a7c7) pose estimation model.
+
+**NOTE**: The example currently works only on RVC2 as there are some problems on RVC4.
 
 ## Demo
 
@@ -12,7 +14,7 @@ This experiment demonstrates how to build a 2-stage DepthAI pipeline for detecti
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -48,13 +50,13 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the experiment with the default device and camera input.
+This will run the example with the default device and camera input.
 
 ```bash
 python3 main.py --media <PATH_TO_VIDEO>
 ```
 
-This will run the experiment with the default device and the video file.
+This will run the example with the default device and the video file.
 
 ## Standalone Mode (RVC4 only)
 
@@ -68,4 +70,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
