@@ -12,10 +12,10 @@ from depthai_nodes.node.utils import generate_script_content
 from utils.arguments import initialize_argparser
 from utils.annotation_node import AnnotationNode
 
-DET_MODEL = "luxonis/yolov6-nano:r2-coco-512x288"
+DET_MODEL = "luxonis/wildlife-megadetector:mdv6-yolov10-c"
 POSE_MODEL = "luxonis/superanimal-landmarker:256x256"
 PADDING = 0.1
-VALID_LABELS = [0, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+VALID_LABELS = [0]
 
 _, args = initialize_argparser()
 
