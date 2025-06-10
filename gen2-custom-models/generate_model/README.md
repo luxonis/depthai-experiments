@@ -30,7 +30,7 @@ Uses [kornia.filters.Laplacian](https://kornia.readthedocs.io/en/latest/filters.
 
 #### Cosinus distance
 
-[Cosinus distance/similarity](https://en.wikipedia.org/wiki/Cosine_similarity) model that allows you to compare vectors on the device itself. Currently it's not being used anywhere (closed [PR here](https://github.com/luxonis/depthai-experiments/pull/259)), but it could be used in [Face recognition](https://github.com/luxonis/depthai-experiments/tree/master/gen2-face-recognition) / [Person reidentification](https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification) demos.
+[Cosinus distance/similarity](https://en.wikipedia.org/wiki/Cosine_similarity) model that allows you to compare vectors on the device itself. Currently it's not being used anywhere (closed [PR here](https://github.com/luxonis/oak-examples/pull/259)), but it could be used in [Face recognition](https://github.com/luxonis/oak-examples/tree/master/gen2-face-recognition) / [Person reidentification](https://github.com/luxonis/oak-examples/tree/master/gen2-pedestrian-reidentification) demos.
 
 Creating this model was a bit tricky, as some values in between calculations exceeded [FP16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format#Half_precision_examples) upper limit of 65504 (2^16). That means it calculated `inf` when some multiplication values were too large, which lead to `0` or `inf` end result.
 **Solution:** we divide values in between the calculation by 1000, so no value exceeds the FP16 upper value limit.

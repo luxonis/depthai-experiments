@@ -1,7 +1,7 @@
 ## Box measurement with point cloud fusion
 This example demonstrates box measurement on merged point clouds from different cameras.
 
-_For a single camera version check out [gen2-box_measurement](https://github.com/luxonis/depthai-experiments/tree/master/gen2-box_measurement)._
+_For a single camera version check out [gen2-box_measurement](https://github.com/luxonis/oak-examples/tree/master/gen2-box_measurement)._
 
 ![demo](img/demo.gif)
 ## Install project requirements

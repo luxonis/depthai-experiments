@@ -1,6 +1,6 @@
 # Box Measurement
 
-![box](https://github.com/luxonis/depthai-experiments/assets/18037362/e6657b48-0f10-4335-8491-47bae9b8ade5)
+![box](https://github.com/luxonis/oak-examples/assets/18037362/e6657b48-0f10-4335-8491-47bae9b8ade5)
 
 This experiment was designed for OAK-D-SR-POE (with ToF sensor). If you're using stereo camera, please see [Box Measurement API demo](./api/).
 
