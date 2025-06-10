@@ -1,6 +1,6 @@
 # (OAK 4 Only) Speech Recognition
 
-This example runs [Whisper Tiny EN Network](https://zoo-rvc4.luxonis.com/luxonis/whisper-tiny-en/0aaf1b77-761b-44d6-893c-c473ca463186) on an OAK4 device. The experiment changes the color of the LED on the OAK4 device and adds the same colored tint to the camera output. To record a clip simply press `r` in the stream window and a 5 second audio recording will be made and processed.
+This example runs [Whisper Tiny EN Network](https://zoo-rvc4.luxonis.com/luxonis/whisper-tiny-en/0aaf1b77-761b-44d6-893c-c473ca463186) on an OAK4 device. The example changes the color of the LED on the OAK4 device and adds the same colored tint to the camera output. To record a clip simply press `r` in the stream window and a 5 second audio recording will be made and processed.
 
 **Audio is currently recorded on the host computer.**
 
@@ -33,12 +33,11 @@ If you are using Ubuntu, make sure to install the following packages:
 There are two approaches to using this app:
 
 1. Using pre-recorded audio files with the flag `--audio_file`. This approach sets the color once. We provide some sample audio files in [assets/audio_files](assets/audio_files/). Later color changes can be made with approach two.
-1. Recording audio on host machine. By pressing `r` in the viewer, the experiment will record audio for 5 seconds and use it as the input to the model.
+1. Recording audio on host machine. By pressing `r` in the viewer, the example will record audio for 5 seconds and use it as the input to the model.
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software/) to setup your device if you haven't done it already.
 
-
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -46,7 +45,7 @@ Here is a list of all available parameters:
 --device_ip DEVICE
                     Optional name, DeviceID or IP of the camera to connect to. (default: None)
 --audio_file
-                    Optional mp4 audio file to use in the experiment.
+                    Optional mp4 audio file to use in the example.
 ```
 
 ## Peripheral Mode
@@ -82,7 +81,7 @@ python3 main.py --device_ip <device_ip> --audio_file <audio_file>
 
 ## Standalone Mode
 
-Standalone mode runs the entire experiment on the device. Currently, only pre-recored audio files are supported and the recording option will crash the device.
+Standalone mode runs the entire example on the device. Currently, only pre-recored audio files are supported and the recording option will crash the device.
 
 To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software/oak-apps/oakctl).The app can then be run with:
 
@@ -91,4 +90,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

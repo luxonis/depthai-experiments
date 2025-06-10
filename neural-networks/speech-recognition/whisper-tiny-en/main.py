@@ -25,7 +25,7 @@ platform = device.getPlatform().name
 print(f"Platform: {platform}")
 
 if platform != "RVC4":
-    raise ValueError("This experiment is only supported for RVC4 platform.")
+    raise ValueError("This example is only supported for RVC4 platform.")
 
 encoder_model_description = dai.NNModelDescription(
     model="whisper-tiny-en:encoder:1.0.0",

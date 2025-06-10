@@ -21,10 +21,10 @@ ENV DISPLAY=:99
 
 # Copy your project files into the container
 # NOTE: If ran inside GH workflow or with HIL --sync-workspace this is not needed
-# COPY . /tmp/depthai-experiments
+# COPY . /tmp/oak-examples
 
 # Setup Test Command
-WORKDIR /tmp/depthai-experiments
+WORKDIR /tmp/oak-examples
 
 # Define the entrypoint script
 ENTRYPOINT ["sh", "-c", "\

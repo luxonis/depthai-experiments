@@ -1,6 +1,6 @@
 # QR Code Detection with Tiling
 
-This experiment uses [QRDet](https://zoo-rvc4.luxonis.com/luxonis/qrdet/d1183a0f-e9a0-4fa2-8437-f2f5b0181739) neural network to detect QR codes. These QR codes are then decoded on the host. The experiment utilizes tiling to divide the input frame into multiple smaller frames. Each smaller frame is passed to the QR detection network and processed independently. You can modify this exepriment to detect any small object on input images.
+This example uses [QRDet](https://zoo-rvc4.luxonis.com/luxonis/qrdet/d1183a0f-e9a0-4fa2-8437-f2f5b0181739) neural network to detect QR codes. These QR codes are then decoded on the host. The example utilizes tiling to divide the input frame into multiple smaller frames. Each smaller frame is passed to the QR detection network and processed independently. You can modify this exepriment to detect any small object on input images.
 
 ## Demo
 
@@ -10,7 +10,7 @@ This experiment uses [QRDet](https://zoo-rvc4.luxonis.com/luxonis/qrdet/d1183a0f
 
 Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
-You can run the experiment fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
+You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
 Here is a list of all available parameters:
 
@@ -58,25 +58,25 @@ Running in peripheral mode requires a host computer and there will be communicat
 python3 main.py
 ```
 
-This will run the QR Code Detection with Tiling experiment with the default device and camera input.
+This will run the QR Code Detection with Tiling example with the default device and camera input.
 
 ```bash
 python3 main.py -fps 10
 ```
 
-This will run the QR Code Detection with Tiling experiment with the default device at 10 FPS.
+This will run the QR Code Detection with Tiling example with the default device at 10 FPS.
 
 ```bash
 python3 main.py -media /path/to/media.mp4
 ```
 
-This will run the QR Code Detection with Tiling experiment with the default device and the specified media file.
+This will run the QR Code Detection with Tiling example with the default device and the specified media file.
 
 ```bash
 python3 main.py -r 3 -c 3
 ```
 
-This will run the QR Code Detection with Tiling experiment with the default device and the specified grid size.
+This will run the QR Code Detection with Tiling example with the default device and the specified grid size.
 
 ## Standalone Mode (RVC4 only)
 
@@ -90,4 +90,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the experiment with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
