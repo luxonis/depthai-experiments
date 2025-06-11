@@ -1,4 +1,4 @@
-depthai==3.0.0rc1
+depthai==3.0.0rc2
 opencv-python==4.10.0.84
 numpy>=1.22
 open3d~=0.18
