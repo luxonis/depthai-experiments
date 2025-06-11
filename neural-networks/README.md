@@ -4,7 +4,7 @@ This section provides examples to help you get started with **AI model inference
 The examples utilize publicly available models from the [Model ZOO](https://models.luxonis.com) and can be run on a **Luxonis device** of choice.
 The inference is made either on camera inputs or custom media files (image or video) and the results are displayed in the browser.
 
-If not explicitly marked or specified examples can run both on RVC2 and RVC4 devices. Furthermore, RVC4 has the ability to run the experiment in the peripheral or standalone mode. Standalone refers to a mode where the whole application and data are first copied from host to device and then everything is executed on the device, without the need for a host computer. In contrast, peripheral mode requires a direct connection to a host computer and there is device-to-host (or vice versa) communication which can cause lower FPS. You can read more about the setup process and software details [here](https://docs.luxonis.com/software-v3/).
+If not explicitly marked or specified examples can run both on RVC2 and RVC4 devices. Furthermore, RVC4 has the ability to run the example in the peripheral or standalone mode. Standalone refers to a mode where the whole application and data are first copied from host to device and then everything is executed on the device, without the need for a host computer. In contrast, peripheral mode requires a direct connection to a host computer and there is device-to-host (or vice versa) communication which can cause lower FPS. You can read more about the setup process and software details [here](https://docs.luxonis.com/software-v3/).
 
 ## Table Of Contents
 
