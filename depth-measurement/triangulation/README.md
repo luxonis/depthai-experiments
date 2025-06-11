@@ -1,6 +1,6 @@
 # Triangulation - Stereo neural inference demo
 
-This DepthAI example uses stereo cameras for face detection with [YuNet](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915), calculating 3D spatial coordinates via triangulation. It visualizes bounding boxes, keypoints, and disparity in real-time. Because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
+This DepthAI example uses stereo cameras for face detection with [YuNet](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915), calculating 3D spatial coordinates via triangulation. It visualizes bounding boxes, keypoints, and disparity in real-time. Because there are often application-specific host-side filtering to be done on the stereo neural inference results, and because these calculations are lightweight (i.e. could be done on an ESP32), we leave the triangulation itself to the host.
 
 ## Demo
 

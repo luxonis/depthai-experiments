@@ -1,6 +1,6 @@
 # Thermal Person Detection
 
-This example demonstrates person detection with a thermal camera. We trained a custom YOLOv6-Nano based object detection model on a mixed dataset made from our synthetic images, [FLIR](https://www.flir.eu/oem/adas/adas-dataset-form/) dataset and some smaller datasets from [Roboflow](https://universe.roboflow.com/search?q=class%3Athermal+camera). We used [Thermal Person Detection](https://zoo-rvc4.luxonis.com/luxonis/thermal-person-detection/b1d7a62f-7020-469c-8fa9-a6d1ff3499b2) model from HubAI to detect people in the thermal image.
+This example demonstrates person detection with a thermal camera. We trained a custom YOLOv6-Nano based object detection model on a mixed dataset made from our synthetic images, [FLIR](https://www.flir.eu/oem/adas/adas-dataset-form/) dataset and some smaller datasets from [Roboflow](https://universe.roboflow.com/search?q=class%3Athermal+camera). We used [Thermal Person Detection](https://models.luxonis.com/luxonis/thermal-person-detection/b1d7a62f-7020-469c-8fa9-a6d1ff3499b2) model from HubAI to detect people in the thermal image.
 
 > **Note:** Running this example requires a **Luxonis Thermal device** connected to your computer. You can find more information about it [here](https://docs.luxonis.com/hardware/products/OAK%20Thermal).
 

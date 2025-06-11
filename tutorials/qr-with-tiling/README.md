@@ -1,6 +1,6 @@
 # QR Code Detection with Tiling
 
-This example uses [QRDet](https://zoo-rvc4.luxonis.com/luxonis/qrdet/d1183a0f-e9a0-4fa2-8437-f2f5b0181739) neural network to detect QR codes. These QR codes are then decoded on the host. The example utilizes tiling to divide the input frame into multiple smaller frames. Each smaller frame is passed to the QR detection network and processed independently. You can modify this exepriment to detect any small object on input images.
+This example uses [QRDet](https://models.luxonis.com/luxonis/qrdet/d1183a0f-e9a0-4fa2-8437-f2f5b0181739) neural network to detect QR codes. These QR codes are then decoded on the host. The example utilizes tiling to divide the input frame into multiple smaller frames. Each smaller frame is passed to the QR detection network and processed independently. You can modify this exepriment to detect any small object on input images.
 
 ## Demo
 

@@ -1,7 +1,7 @@
 # Age and Gender Recognition
 
 This example demonstrates how to run 2 stage inference with DepthAI library.
-It recognizes age and gender of all detected faces on the frame. The demo uses [YuNet](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model, crops the faces and then recognizes the age and gender of the person using [Age-Gender](https://zoo-rvc4.luxonis.com/luxonis/age-gender-recognition/20cb86d9-1a4b-49e8-91ac-30f4c0a69ce1) model.
+It recognizes age and gender of all detected faces on the frame. The demo uses [YuNet](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model, crops the faces and then recognizes the age and gender of the person using [Age-Gender](https://models.luxonis.com/luxonis/age-gender-recognition/20cb86d9-1a4b-49e8-91ac-30f4c0a69ce1) model.
 
 ## Demo
 

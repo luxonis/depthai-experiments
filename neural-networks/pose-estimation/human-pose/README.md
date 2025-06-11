@@ -1,10 +1,10 @@
 # Human Pose Estimation
 
-This example demonstrates how to build a 2-stage DepthAI pipeline for human pose estimation. The pipeline consists of [YOLOv6 nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detector and [Lite-HRNet](https://zoo-rvc4.luxonis.com/luxonis/lite-hrnet/c7c9e353-9f6d-43e1-9b45-8edeae82db70) pose estimation model. The example works on both RVC2 and RVC4. For realtime application you will need to use OAK4 cameras.
+This example demonstrates how to build a 2-stage DepthAI pipeline for human pose estimation. The pipeline consists of [YOLOv6 nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detector and [Lite-HRNet](https://models.luxonis.com/luxonis/lite-hrnet/c7c9e353-9f6d-43e1-9b45-8edeae82db70) pose estimation model. The example works on both RVC2 and RVC4. For realtime application you will need to use OAK4 cameras.
 
-As an alternative you can use the end-to-end [YOLOv8 Nano Pose Estimation](https://zoo-rvc4.luxonis.com/luxonis/yolov8-nano-pose-estimation/12acd8d7-25c0-4a07-9dff-ab8c5fcae7b1) or [YOLOv8 Large Pose Estimation](https://zoo-rvc4.luxonis.com/luxonis/yolov8-large-pose-estimation/8be178a0-e643-4f1e-b925-06512e4e15c7) models with [generic example](../../../generic-example/).
+As an alternative you can use the end-to-end [YOLOv8 Nano Pose Estimation](https://models.luxonis.com/luxonis/yolov8-nano-pose-estimation/12acd8d7-25c0-4a07-9dff-ab8c5fcae7b1) or [YOLOv8 Large Pose Estimation](https://models.luxonis.com/luxonis/yolov8-large-pose-estimation/8be178a0-e643-4f1e-b925-06512e4e15c7) models with [generic example](../../../generic-example/).
 
-There are 4 models available for the [Lite-HRNet models](https://zoo-rvc4.luxonis.com/luxonis/lite-hrnet/c7c9e353-9f6d-43e1-9b45-8edeae82db70). If you choose to use a different model please adjust `fps_limit` accordingly.
+There are 4 models available for the [Lite-HRNet models](https://models.luxonis.com/luxonis/lite-hrnet/c7c9e353-9f6d-43e1-9b45-8edeae82db70). If you choose to use a different model please adjust `fps_limit` accordingly.
 
 ## Demo
 

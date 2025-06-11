@@ -2,7 +2,7 @@
 
 This example demonstrates, how to publish MQTT messages directly from a PoE camera. Credits to [bherbruck](https://github.com/bherbruck) for porting the [paho.mqtt.python](https://github.com/eclipse/paho.mqtt.python) library to a single python file (`paho-mqtt.py`) which can be run inside the [Script node](https://docs.luxonis.com/projects/api/en/latest/components/nodes/script/).
 
-This example publishes a message containing the average number of objects detected in the last 10 seconds. It uses [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model for object detection.
+This example publishes a message containing the average number of objects detected in the last 10 seconds. It uses [YOLOv6 Nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model for object detection.
 
 By default, the messages are published to a public broker `test.mosquitto.org` on port `1883`. They are published to the topic `test_topic/detections`. This can be changed with available CLI arguments (see Usage section below).
 

@@ -1,6 +1,6 @@
 # Objectron: 3D Bounding Box Detection
 
-This example demonstrates how to perform 3D object detection using the [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) model. The model can predict 3D bounding box of the foreground object in the image. For general object detection we use [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. The pipepile is a standard 2-stage pipeline with detection and 3D object detection models. The example works on both RVC2 and RVC4. [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) can predict 3D bounding boxes for chairs, cameras, cups, and shoes.
+This example demonstrates how to perform 3D object detection using the [Objectron](https://models.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) model. The model can predict 3D bounding box of the foreground object in the image. For general object detection we use [YOLOv6](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. The pipepile is a standard 2-stage pipeline with detection and 3D object detection models. The example works on both RVC2 and RVC4. [Objectron](https://models.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) can predict 3D bounding boxes for chairs, cameras, cups, and shoes.
 
 ## Demo
 

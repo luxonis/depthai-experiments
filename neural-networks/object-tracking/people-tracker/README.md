@@ -1,7 +1,7 @@
 # People tracker
 
 This example counts how many people went up / down / left / right in the video stream, allowing you to
-receive an information about eg. how many people went into a room or went through a corridor. It uses [SCRFD Person detection](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c)
+receive an information about eg. how many people went into a room or went through a corridor. It uses [SCRFD Person detection](https://models.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c)
 
 > **Note:** This example currently only works on RVC2 devices becuase dai.ObjectTracker node is not supported on RVC4.
 

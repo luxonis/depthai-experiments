@@ -1,6 +1,6 @@
 # YOLOv6 Nano decoding on host
 
-This example shows how to run [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detection on DepthAI with decoding on host. The neural network processes the video stream on-device and sends the raw outputs to the host for decoding. The decoding of YOLO's outputs is done in the host node where final bounding boxes in form of a `ImgDetections` message are created.
+This example shows how to run [YOLOv6 Nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detection on DepthAI with decoding on host. The neural network processes the video stream on-device and sends the raw outputs to the host for decoding. The decoding of YOLO's outputs is done in the host node where final bounding boxes in form of a `ImgDetections` message are created.
 
 Alternatively, you can use fully on-device decoding with `DetectionNetwork`.
 

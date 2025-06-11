@@ -1,7 +1,7 @@
 # Cumulative Object Counting
 
 This example demonstrates how to run an inference pipeline for cummulative object counting using the DepthAI and OAK cameras.
-It utilizes an object detection model to detect objects (e.g. `people`) and counts how many pass in an upward and downward direction. By default it uses [Mobilenet-SSD](https://zoo-rvc4.luxonis.com/luxonis/mobilenet-ssd/2da6e0a5-4785-488d-8cf5-c35f7ec1a1ed) model.
+It utilizes an object detection model to detect objects (e.g. `people`) and counts how many pass in an upward and downward direction. By default it uses [Mobilenet-SSD](https://models.luxonis.com/luxonis/mobilenet-ssd/2da6e0a5-4785-488d-8cf5-c35f7ec1a1ed) model.
 
 The example is inspired by / based on:
 

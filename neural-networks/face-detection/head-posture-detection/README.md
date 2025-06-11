@@ -1,6 +1,6 @@
 # Head Posture Detection
 
-This example demonstrates calculating head poses in a video stream. This is achieved by using a two stage inference DepthAI pipeline to first detect faces and then infer the pitch, yaw and roll of each one. The demo uses [YuNet Face detection model](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) for the first stage and to infer the pose it uses [Head posture model](https://zoo-rvc4.luxonis.com/luxonis/head-pose-estimation/068ac18a-de71-4a6e-9f0f-42776c0ef980) from the Luxonis Hub.
+This example demonstrates calculating head poses in a video stream. This is achieved by using a two stage inference DepthAI pipeline to first detect faces and then infer the pitch, yaw and roll of each one. The demo uses [YuNet Face detection model](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) for the first stage and to infer the pose it uses [Head posture model](https://models.luxonis.com/luxonis/head-pose-estimation/068ac18a-de71-4a6e-9f0f-42776c0ef980) from the Luxonis Hub.
 
 **How it works?**
 

@@ -1,6 +1,6 @@
 # Hand Pose Estimation
 
-This example demonstrates how to build a 2-stage DepthAI pipeline for hand pose estimation. The pipeline consists of [MediaPipe Palm detector](https://zoo-rvc4.luxonis.com/luxonis/mediapipe-palm-detection/9531aba9-ef45-4ad3-ae03-808387d61bf3) and [MediaPipe Hand landmarker](https://zoo-rvc4.luxonis.com/luxonis/mediapipe-hand-landmarker/42815cca-deab-4860-b4a9-d44ebbe2988a). The example works on both RVC2 and RVC4. For realtime application you will need to use OAK4 cameras.
+This example demonstrates how to build a 2-stage DepthAI pipeline for hand pose estimation. The pipeline consists of [MediaPipe Palm detector](https://models.luxonis.com/luxonis/mediapipe-palm-detection/9531aba9-ef45-4ad3-ae03-808387d61bf3) and [MediaPipe Hand landmarker](https://models.luxonis.com/luxonis/mediapipe-hand-landmarker/42815cca-deab-4860-b4a9-d44ebbe2988a). The example works on both RVC2 and RVC4. For realtime application you will need to use OAK4 cameras.
 
 By default FPS limit for RVC2 is 6FPS and for RVC4 is 30FPS. You can change this value by setting the `fps_limit` parameter.
 

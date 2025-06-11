@@ -1,6 +1,6 @@
 # Blur faces
 
-This example shows an implementation of [YuNet](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model on DepthAI with additional blurring.
+This example shows an implementation of [YuNet](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model on DepthAI with additional blurring.
 
 ## Demo
 

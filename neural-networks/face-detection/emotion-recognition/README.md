@@ -1,7 +1,7 @@
 # Emotion Recognition
 
 This example demonstrates how to run 2 stage inference with the DepthAI v3 library.
-It recognizes all people in the frame and determines their emotions. There are 8 possible emotions: anger, contempt, disgust, fear, happiness, neutral, sadness, and surprise. The demo uses [YuNet](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model, crops the faces and then recognizes the emotions of the person using [Emotion recognition model](https://zoo-rvc4.luxonis.com/luxonis/emotion-recognition/3cac7277-2474-4b36-a68e-89ac977366c3).
+It recognizes all people in the frame and determines their emotions. There are 8 possible emotions: anger, contempt, disgust, fear, happiness, neutral, sadness, and surprise. The demo uses [YuNet](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model, crops the faces and then recognizes the emotions of the person using [Emotion recognition model](https://models.luxonis.com/luxonis/emotion-recognition/3cac7277-2474-4b36-a68e-89ac977366c3).
 
 ## Demo
 

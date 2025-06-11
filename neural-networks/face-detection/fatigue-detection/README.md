@@ -1,6 +1,6 @@
 # Fatigue Detections
 
-This example demonstrates how to detect if a person is fatigued and tired. Firstly, face is detected using the [YuNet](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model. It is then cropped and [MediaPipe Face Landmarker](https://zoo-rvc4.luxonis.com/luxonis/mediapipe-face-landmarker/4632304b-91cb-4fcb-b4cc-c8c414e13f56) model is used to detect all keypoints. These keypoints are then used to predict if the person is leaning forward and if their eyes are closed. If this is true for a around one second, the example prints a warning on the screen.
+This example demonstrates how to detect if a person is fatigued and tired. Firstly, face is detected using the [YuNet](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model. It is then cropped and [MediaPipe Face Landmarker](https://models.luxonis.com/luxonis/mediapipe-face-landmarker/4632304b-91cb-4fcb-b4cc-c8c414e13f56) model is used to detect all keypoints. These keypoints are then used to predict if the person is leaning forward and if their eyes are closed. If this is true for a around one second, the example prints a warning on the screen.
 
 ## Demo
 

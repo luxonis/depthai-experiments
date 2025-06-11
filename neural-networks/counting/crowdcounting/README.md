@@ -1,7 +1,7 @@
 # Crowd Counting
 
 This example demonstrates how to build a DepthAI pipeline for crowd counting.
-We use [DM-Count](https://zoo-rvc4.luxonis.com/luxonis/dm-count/16d01eab-dc2b-4422-907d-2634a940b52e) model to produce a crowd density map from which the count is computed.
+We use [DM-Count](https://models.luxonis.com/luxonis/dm-count/16d01eab-dc2b-4422-907d-2634a940b52e) model to produce a crowd density map from which the count is computed.
 
 ## Demo
 

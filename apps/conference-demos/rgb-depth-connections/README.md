@@ -1,6 +1,6 @@
 # RGB-Depth frames with detections
 
-This demo will display RGB and depth frames side-by-side and overlay bounding boxes with spatial coordinates from [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detector.
+This demo will display RGB and depth frames side-by-side and overlay bounding boxes with spatial coordinates from [YOLOv6 Nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detector.
 
 **NOTE**: This demo requires a device with color camera and stereo cameras.
 

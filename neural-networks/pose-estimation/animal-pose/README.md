@@ -1,6 +1,6 @@
 # Animal Detection and Pose Estimation
 
-This example demonstrates how to build a 2-stage DepthAI pipeline for detecting animals and estimating their poses. The pipeline consists of [YOLOv6 nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detector and [SuperAnimal](https://zoo-rvc4.luxonis.com/luxonis/superanimal-landmarker/894cf1a2-23fb-4c96-8944-a0d1be38a7c7) pose estimation model.
+This example demonstrates how to build a 2-stage DepthAI pipeline for detecting animals and estimating their poses. The pipeline consists of [YOLOv6 nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) object detector and [SuperAnimal](https://models.luxonis.com/luxonis/superanimal-landmarker/894cf1a2-23fb-4c96-8944-a0d1be38a7c7) pose estimation model.
 
 **NOTE**: The example currently works only on RVC2 as there are some problems on RVC4.
 

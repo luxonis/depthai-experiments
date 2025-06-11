@@ -1,6 +1,6 @@
 # (OAK 4 Only) Speech Recognition
 
-This example runs [Whisper Tiny EN Network](https://zoo-rvc4.luxonis.com/luxonis/whisper-tiny-en/0aaf1b77-761b-44d6-893c-c473ca463186) on an OAK4 device. The example changes the color of the LED on the OAK4 device and adds the same colored tint to the camera output. To record a clip simply press `r` in the stream window and a 5 second audio recording will be made and processed.
+This example runs [Whisper Tiny EN Network](https://models.luxonis.com/luxonis/whisper-tiny-en/0aaf1b77-761b-44d6-893c-c473ca463186) on an OAK4 device. The example changes the color of the LED on the OAK4 device and adds the same colored tint to the camera output. To record a clip simply press `r` in the stream window and a 5 second audio recording will be made and processed.
 
 **Audio is currently recorded on the host computer.**
 

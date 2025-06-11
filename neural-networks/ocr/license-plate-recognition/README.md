@@ -6,9 +6,9 @@ which tries to decode the license plates texts.
 
 It uses 3 models from our ZOO:
 
-- [YOLOv6 nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) for vehicle detection.
-- [License Plate Detection](https://zoo-rvc4.luxonis.com/luxonis/license-plate-detection/7ded2dab-25b4-4998-9462-cba2fcc6c5ef) for detecting the license plates.
-- [PaddlePaddle Rext Recognition](https://zoo-rvc4.luxonis.com/luxonis/paddle-text-recognition/9ae12b58-3551-49b1-af22-721ba4bcf269) for recognizing text on license plates.
+- [YOLOv6 nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) for vehicle detection.
+- [License Plate Detection](https://models.luxonis.com/luxonis/license-plate-detection/7ded2dab-25b4-4998-9462-cba2fcc6c5ef) for detecting the license plates.
+- [PaddlePaddle Rext Recognition](https://models.luxonis.com/luxonis/paddle-text-recognition/9ae12b58-3551-49b1-af22-721ba4bcf269) for recognizing text on license plates.
 
 **NOTE**: Due to the high computational cost, this example only works on OAK4 devices.
 

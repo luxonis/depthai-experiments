@@ -1,6 +1,6 @@
 # Text Blur
 
-This example demonstrates how to detect text on the image and then perform blurring inside the detected region. For text detection we are using [Paddle Text Detection](https://zoo-rvc4.luxonis.com/luxonis/paddle-text-detection/131d855c-60b1-4634-a14d-1269bb35dcd2) model.
+This example demonstrates how to detect text on the image and then perform blurring inside the detected region. For text detection we are using [Paddle Text Detection](https://models.luxonis.com/luxonis/paddle-text-detection/131d855c-60b1-4634-a14d-1269bb35dcd2) model.
 
 ## Demo
 

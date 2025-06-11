@@ -1,6 +1,6 @@
 # DeepSORT Tracking
 
-This example demonstrates how to perform object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime). For general object detection we use [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. Each detected object is cropped on the device and then sent to [OSNet](https://zoo-rvc4.luxonis.com/luxonis/osnet/6d853621-818b-4fa4-bd9a-d9bdcb5616e6) feature extraction model which computes its' embedding. The embeddings and detections are then passed to the [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) tracker.
+This example demonstrates how to perform object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime). For general object detection we use [YOLOv6](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. Each detected object is cropped on the device and then sent to [OSNet](https://models.luxonis.com/luxonis/osnet/6d853621-818b-4fa4-bd9a-d9bdcb5616e6) feature extraction model which computes its' embedding. The embeddings and detections are then passed to the [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) tracker.
 
 ## Demo
 

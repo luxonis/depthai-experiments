@@ -1,6 +1,6 @@
 # YOLO-P
 
-This example shows an implementation of [YOLO-P](https://zoo-rvc4.luxonis.com/luxonis/yolo-p/0a22d194-d525-46e7-a785-a267b7958a39) from our HubAI. It shows that YOLO-P can be run as a ADAS (advanced driving assistance system) on DepthAI. It can detect vehicles, segment road and lines.
+This example shows an implementation of [YOLO-P](https://models.luxonis.com/luxonis/yolo-p/0a22d194-d525-46e7-a785-a267b7958a39) from our HubAI. It shows that YOLO-P can be run as a ADAS (advanced driving assistance system) on DepthAI. It can detect vehicles, segment road and lines.
 
 Input shape of the model is 320 x 320, and we resize the input video to the required shape.
 
