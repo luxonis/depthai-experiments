@@ -1,8 +1,8 @@
 # CREStereo: Depth Estimation
 
-This example compares depth output of neural stereo matching using [CREStereo](https://zoo-rvc4.luxonis.com/luxonis/crestereo/4729a8bd-54df-467a-92ca-a8a5e70b52ab) to output of stereo disparity. The model is not yet quantized for RVC4, thus is executed on cpu and is slower. The example works on both RVC2 and RVC4.
+This example compares depth output of neural stereo matching using [CREStereo](https://models.luxonis.com/luxonis/crestereo/4729a8bd-54df-467a-92ca-a8a5e70b52ab) to output of stereo disparity. The model is not yet quantized for RVC4, thus is executed on cpu and is slower. The example works on both RVC2 and RVC4.
 
-There are 2 available model variants for the [CREStereo](https://zoo-rvc4.luxonis.com/luxonis/crestereo/4729a8bd-54df-467a-92ca-a8a5e70b52ab) model for each platform. If you choose to use a different model please adjust `fps_limit` argument accordingly.
+There are 2 available model variants for the [CREStereo](https://models.luxonis.com/luxonis/crestereo/4729a8bd-54df-467a-92ca-a8a5e70b52ab) model for each platform. If you choose to use a different model please adjust `fps_limit` argument accordingly.
 
 ## Demo
 
@@ -10,7 +10,7 @@ There are 2 available model variants for the [CREStereo](https://zoo-rvc4.luxoni
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -71,7 +71,7 @@ This will run the CREStereo example only on device who's platform is `RVC4`.
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -80,4 +80,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

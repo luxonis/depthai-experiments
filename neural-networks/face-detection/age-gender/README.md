@@ -1,7 +1,7 @@
 # Age and Gender Recognition
 
 This example demonstrates how to run 2 stage inference with DepthAI library.
-It recognizes age and gender of all detected faces on the frame. The demo uses [YuNet](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model, crops the faces and then recognizes the age and gender of the person using [Age-Gender](https://zoo-rvc4.luxonis.com/luxonis/age-gender-recognition/20cb86d9-1a4b-49e8-91ac-30f4c0a69ce1) model.
+It recognizes age and gender of all detected faces on the frame. The demo uses [YuNet](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915) face detection model, crops the faces and then recognizes the age and gender of the person using [Age-Gender](https://models.luxonis.com/luxonis/age-gender-recognition/20cb86d9-1a4b-49e8-91ac-30f4c0a69ce1) model.
 
 ## Demo
 
@@ -9,7 +9,7 @@ It recognizes age and gender of all detected faces on the frame. The demo uses [
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -52,7 +52,7 @@ This will run the example with default arguments.
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -61,4 +61,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

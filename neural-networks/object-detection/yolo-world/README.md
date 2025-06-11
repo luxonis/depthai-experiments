@@ -1,6 +1,6 @@
 # Multi-Input YOLO World Demo README
 
-This example demonstrates the implementation of multi-input [YOLO-World](https://zoo-rvc4.luxonis.com/luxonis/yolo-world-l/6684e96f-11fc-4d92-8657-12a5fd8e532a) object detection pipeline on DepthAI. It can detect objects in real-time using YOLO, has support for video files and live camera input, and is customizable with class names and confidence threshold.
+This example demonstrates the implementation of multi-input [YOLO-World](https://models.luxonis.com/luxonis/yolo-world-l/6684e96f-11fc-4d92-8657-12a5fd8e532a) object detection pipeline on DepthAI. It can detect objects in real-time using YOLO, has support for video files and live camera input, and is customizable with class names and confidence threshold.
 
 **NOTE:** This example works only on `RVC4` devices and currently only in `PERIPHERAL` mode.
 
@@ -10,7 +10,7 @@ This example demonstrates the implementation of multi-input [YOLO-World](https:/
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example only by using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 

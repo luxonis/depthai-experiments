@@ -1,6 +1,6 @@
 # DeepSORT Tracking
 
-This example demonstrates how to perform object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime). For general object detection we use [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. Each detected object is cropped on the device and then sent to [OSNet](https://zoo-rvc4.luxonis.com/luxonis/osnet/6d853621-818b-4fa4-bd9a-d9bdcb5616e6) feature extraction model which computes its' embedding. The embeddings and detections are then passed to the [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) tracker.
+This example demonstrates how to perform object tracking using [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime). For general object detection we use [YOLOv6](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. Each detected object is cropped on the device and then sent to [OSNet](https://models.luxonis.com/luxonis/osnet/6d853621-818b-4fa4-bd9a-d9bdcb5616e6) feature extraction model which computes its' embedding. The embeddings and detections are then passed to the [deep-sort-realtime](https://github.com/levan92/deep_sort_realtime) tracker.
 
 ## Demo
 
@@ -8,7 +8,7 @@ This example demonstrates how to perform object tracking using [deep-sort-realti
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -57,7 +57,7 @@ This will run the DeepSORT Tracking example with the default device and the vide
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -66,4 +66,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

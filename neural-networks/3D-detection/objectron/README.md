@@ -1,6 +1,6 @@
 # Objectron: 3D Bounding Box Detection
 
-This example demonstrates how to perform 3D object detection using the [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) model. The model can predict 3D bounding box of the foreground object in the image. For general object detection we use [YOLOv6](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. The pipepile is a standard 2-stage pipeline with detection and 3D object detection models. The example works on both RVC2 and RVC4. [Objectron](https://zoo-rvc4.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) can predict 3D bounding boxes for chairs, cameras, cups, and shoes.
+This example demonstrates how to perform 3D object detection using the [Objectron](https://models.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) model. The model can predict 3D bounding box of the foreground object in the image. For general object detection we use [YOLOv6](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) model. The pipepile is a standard 2-stage pipeline with detection and 3D object detection models. The example works on both RVC2 and RVC4. [Objectron](https://models.luxonis.com/luxonis/objectron/4c7a51db-9cbe-4aee-a4c1-b8abbbe18c11) can predict 3D bounding boxes for chairs, cameras, cups, and shoes.
 
 ## Demo
 
@@ -8,7 +8,7 @@ This example demonstrates how to perform 3D object detection using the [Objectro
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -60,7 +60,7 @@ This will run the objectron example with the provided device ip, camera input an
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -69,4 +69,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

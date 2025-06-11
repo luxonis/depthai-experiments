@@ -2,12 +2,12 @@
 
 This example demonstrates how to build a 2-stage DepthAI pipeline for human pose / human face reidentification.
 The pipeline consists of a detection model (
-[SCRFD Person Detection](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c),
-[SCRFD Face Detection](https://zoo-rvc4.luxonis.com/luxonis/scrfd-face-detection/1f3d7546-66e4-43a8-8724-2fa27df1096f), or
-[YuNet Face Detection](https://zoo-rvc4.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915)
+[SCRFD Person Detection](https://models.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c),
+[SCRFD Face Detection](https://models.luxonis.com/luxonis/scrfd-face-detection/1f3d7546-66e4-43a8-8724-2fa27df1096f), or
+[YuNet Face Detection](https://models.luxonis.com/luxonis/yunet/5d635f3c-45c0-41d2-8800-7ca3681b1915)
 ) predicting bounding boxes around the relevant objects, and a recognition model (
-[OSNet](https://zoo-rvc4.luxonis.com/luxonis/osnet/6d853621-818b-4fa4-bd9a-d9bdcb5616e6) or
-[ArcFace](https://zoo-rvc4.luxonis.com/luxonis/arcface/e24a577e-e2ff-4e4f-96b7-4afb63155eac)
+[OSNet](https://models.luxonis.com/luxonis/osnet/6d853621-818b-4fa4-bd9a-d9bdcb5616e6) or
+[ArcFace](https://models.luxonis.com/luxonis/arcface/e24a577e-e2ff-4e4f-96b7-4afb63155eac)
 ) providing embeddings for each of the detected objects.
 Object reidentification is achieved by calculating cosine similarity between the embeddings.
 
@@ -19,7 +19,7 @@ Object reidentification is achieved by calculating cosine similarity between the
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -72,7 +72,7 @@ This will run the example with the default device and the video file.
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -81,4 +81,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

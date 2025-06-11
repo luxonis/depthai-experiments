@@ -6,9 +6,9 @@ which tries to decode the license plates texts.
 
 It uses 3 models from our ZOO:
 
-- [YOLOv6 nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) for vehicle detection.
-- [License Plate Detection](https://zoo-rvc4.luxonis.com/luxonis/license-plate-detection/7ded2dab-25b4-4998-9462-cba2fcc6c5ef) for detecting the license plates.
-- [PaddlePaddle Rext Recognition](https://zoo-rvc4.luxonis.com/luxonis/paddle-text-recognition/9ae12b58-3551-49b1-af22-721ba4bcf269) for recognizing text on license plates.
+- [YOLOv6 nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) for vehicle detection.
+- [License Plate Detection](https://models.luxonis.com/luxonis/license-plate-detection/7ded2dab-25b4-4998-9462-cba2fcc6c5ef) for detecting the license plates.
+- [PaddlePaddle Rext Recognition](https://models.luxonis.com/luxonis/paddle-text-recognition/9ae12b58-3551-49b1-af22-721ba4bcf269) for recognizing text on license plates.
 
 **NOTE**: Due to the high computational cost, this example only works on OAK4 devices.
 
@@ -22,7 +22,7 @@ Take a look at [How to Train and Deploy a License Plate Detector to the Luxonis 
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -63,7 +63,7 @@ This will run the example with the default device and camera input.
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -72,4 +72,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

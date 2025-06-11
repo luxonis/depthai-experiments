@@ -1,6 +1,6 @@
 # Human-Machine Safety
 
-This example demonstrates how to detect dangerous objects and calculates distance to a human hand (palm). In our case the dangerous objects are cups and bottles. The example uses 2 detection models: [YOLOv6 Nano](https://zoo-rvc4.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) for dangerous objects detection and [MediaPipe Palm Detection](https://zoo-rvc4.luxonis.com/luxonis/mediapipe-palm-detection/9531aba9-ef45-4ad3-ae03-808387d61bf3) for palm detection. It also uses depth information from our OAK cameras and combines that information with the detections to get the spatial coordinates of the objects and the palm. This way we can calculate the distance between the detected objects and the palm and warn the user if the distance is too close.
+This example demonstrates how to detect dangerous objects and calculates distance to a human hand (palm). In our case the dangerous objects are cups and bottles. The example uses 2 detection models: [YOLOv6 Nano](https://models.luxonis.com/luxonis/yolov6-nano/face58c4-45ab-42a0-bafc-19f9fee8a034) for dangerous objects detection and [MediaPipe Palm Detection](https://models.luxonis.com/luxonis/mediapipe-palm-detection/9531aba9-ef45-4ad3-ae03-808387d61bf3) for palm detection. It also uses depth information from our OAK cameras and combines that information with the detections to get the spatial coordinates of the objects and the palm. This way we can calculate the distance between the detected objects and the palm and warn the user if the distance is too close.
 
 > **Note:** This example requires a device with at least 3 cameras (color, left and right) since it utilizes the `StereoDepth` node.
 
@@ -10,7 +10,7 @@ This example demonstrates how to detect dangerous objects and calculates distanc
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -51,7 +51,7 @@ This will run the example with default arguments.
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -60,4 +60,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

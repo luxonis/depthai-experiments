@@ -2,7 +2,7 @@
 
 This example demonstrates how to use the XFeat model from Luxonis HubAI with the DepthAI platform. XFeat has compact descriptors (64D) and simple architecture components that facilitate deployment on embedded devices. Performance is comparable to known deep local features such as SuperPoint while being significantly faster and more lightweight.
 
-The example uses [XFeat](https://zoo-rvc4.luxonis.com/luxonis/xfeat/6c2790a1-bf68-4e89-a4b3-5c9ae68183b5) model.
+The example uses [XFeat](https://models.luxonis.com/luxonis/xfeat/6c2790a1-bf68-4e89-a4b3-5c9ae68183b5) model.
 
 We offer two modes of operation: `mono` and `stereo`. In `mono` mode we use a single camera as an input and match the frames to the reference image. In `stereo` mode we use two cameras to match the frames to each other.
 In `mono` mode we visualize the matches between the frames and the reference frame which can be set by pressing `s` key in the visualizer. In `stereo` mode we visualize the matches between the frames from the left and right camera.
@@ -17,7 +17,7 @@ In `mono` mode we visualize the matches between the frames and the reference fra
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -77,7 +77,7 @@ This will run the XFeat model in stereo mode with the `luxonis/xfeat:stereo-320x
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -86,4 +86,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

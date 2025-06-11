@@ -1,6 +1,6 @@
 # Social Distancing
 
-This example demonstates how we can use DepthAI to monitor social distancing. It uses our depth-enabled OAK camera and on-device AI processing. For detecting people we use [SCRFD Person detection model](https://zoo-rvc4.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c) from HubAI. We merge the detections with depth information to get the 3D position of each person. We then calculate the distance between each pair of people and if the distance is less than a threshold, we display a warning.
+This example demonstates how we can use DepthAI to monitor social distancing. It uses our depth-enabled OAK camera and on-device AI processing. For detecting people we use [SCRFD Person detection model](https://models.luxonis.com/luxonis/scrfd-person-detection/c3830468-3178-4de6-bc09-0543bbe28b1c) from HubAI. We merge the detections with depth information to get the 3D position of each person. We then calculate the distance between each pair of people and if the distance is less than a threshold, we display a warning.
 
 Below you can see 3 people in a scene. If they get closer than the threshold of 2 meters, the application will display `Too Close` and the distance between them.
 
@@ -12,7 +12,7 @@ Below you can see 3 people in a scene. If they get closer than the threshold of 
 
 ## Usage
 
-Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://stg.docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
+Running this example requires a **Luxonis device** connected to your computer. Refer to the [documentation](https://docs.luxonis.com/software-v3/) to setup your device if you haven't done it already.
 
 You can run the example fully on device ([`STANDALONE` mode](#standalone-mode-rvc4-only)) or using your computer as host ([`PERIPHERAL` mode](#peripheral-mode)).
 
@@ -53,7 +53,7 @@ This will run the example with default arguments.
 ## Standalone Mode (RVC4 only)
 
 Running the example in the standalone mode, app runs entirely on the device.
-To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://stg.docs.luxonis.com/software-v3/oak-apps/oakctl).
+To run the example in this mode, first install the `oakctl` tool using the installation instructions [here](https://docs.luxonis.com/software-v3/oak-apps/oakctl).
 
 The app can then be run with:
 
@@ -62,4 +62,4 @@ oakctl connect <DEVICE_IP>
 oakctl app run .
 ```
 
-This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://stg.docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).
+This will run the example with default argument values. If you want to change these values you need to edit the `oakapp.toml` file (refer [here](https://docs.luxonis.com/software-v3/oak-apps/configuration/) for more information about this configuration file).

@@ -1,5 +1,4 @@
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local
-depthai==3.0.0b1.dev0+31a67eaa9e07de42b423bf9e2b427317744d2c18
-git+https://github.com/luxonis/depthai-nodes.git@main#egg=depthai-nodes
+depthai==3.0.0rc2
+depthai-nodes==0.3.0
 numpy>=1.22
 opencv-python-headless~=4.10.0
