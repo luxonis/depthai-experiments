@@ -28,7 +28,7 @@
             "reason": "Complex example, works only on RVC4",
             "platform": "rvc2"
         },
-        "neural-networks/ocr/yololicense-plate-recognition": {
+        "neural-networks/ocr/license-plate-recognition": {
             "reason": "Complex example, works only on RVC4",
             "platform": "rvc2"
         },
