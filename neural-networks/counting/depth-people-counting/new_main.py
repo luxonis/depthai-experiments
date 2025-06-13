@@ -58,14 +58,14 @@ with dai.Pipeline(device) as pipeline:
         disparity_multiplier=disparity_multiplier,
     )
 
-    # object_tracker = pipeline.create(dai.node.ObjectTracker)
-    # object_tracker.setDetectionLabelsToTrack([0])  # track only person
-    # object_tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
-    # object_tracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.UNIQUE_ID)
+    object_tracker = pipeline.create(dai.node.ObjectTracker)
+    object_tracker.setDetectionLabelsToTrack([0])  # track only person
+    object_tracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
+    object_tracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.UNIQUE_ID)
 
-    # people_detector.out.link(object_tracker.inputDetections)
-    # people_detector.out_depth_rgb.link(object_tracker.inputDetectionFrame)
-    # people_detector.out_depth_rgb.link(object_tracker.inputTrackerFrame)
+    people_detector.out.link(object_tracker.inputDetections)
+    people_detector.out_depth_rgb.link(object_tracker.inputDetectionFrame)
+    people_detector.out_depth_rgb.link(object_tracker.inputTrackerFrame)
 
     # connect_node = pipeline.create(
     #     InputsConnector
