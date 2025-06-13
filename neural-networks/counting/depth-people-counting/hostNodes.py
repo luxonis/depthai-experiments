@@ -1,5 +1,4 @@
 import depthai as dai
-import datetime
 
 
 class FrameEditor(dai.node.ThreadedHostNode):
@@ -16,11 +15,11 @@ class FrameEditor(dai.node.ThreadedHostNode):
             buffer: dai.ImgFrame = self.input.get()
 
             buffer.setInstanceNum(self.instance_num)
-            tstamp = datetime.timedelta(
-                seconds=self.timestamp // 1000, milliseconds=self.timestamp % 1000
-            )
-            buffer.setTimestamp(tstamp)
-            buffer.setTimestampDevice(tstamp)
+            # tstamp = datetime.timedelta(
+            #     seconds=self.timestamp // 1000, milliseconds=self.timestamp % 1000
+            # )
+            # buffer.setTimestamp()
+            # buffer.setTimestampDevice(tstamp)
 
             self.output.send(buffer)
             self.timestamp += self.frame_interval

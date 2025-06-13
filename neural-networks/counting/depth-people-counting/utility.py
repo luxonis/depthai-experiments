@@ -1,11 +1,17 @@
 import depthai as dai
 import cv2
 
+# DETECTION_ROI = (
+#     200,
+#     300,
+#     1000,
+#     700,
+# )  # Specific to `depth-person-counting-01` recording
 DETECTION_ROI = (
-    200,
-    300,
-    1000,
-    700,
+    100,
+    50,
+    540,
+    350,
 )  # Specific to `depth-person-counting-01` recording
 THRESH_DIST_DELTA = 0.5
 
