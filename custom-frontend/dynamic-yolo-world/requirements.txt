@@ -4,5 +4,4 @@ opencv-python-headless~=4.10.0
 numpy>=1.22
 onnxruntime
 transformers
-torch
 requests
