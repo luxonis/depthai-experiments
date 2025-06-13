@@ -4,11 +4,11 @@ import depthai as dai
 from depthai_nodes.node import (
     ParsingNeuralNetwork,
     ImgDetectionsFilter,
-    ImgDetectionsBridge,
 )
 
 from utils.helper_functions import extract_text_embeddings
 from utils.arguments import initialize_argparser
+from utils.annotation_node import AnnotationNode
 
 from frontend_server import FrontendServer
 
@@ -89,13 +89,13 @@ with dai.Pipeline(device) as pipeline:
     # filter and rename detection labels
     det_process_filter = pipeline.create(ImgDetectionsFilter).build(nn_with_parser.out)
     det_process_filter.setLabels(labels=[i for i in range(len(CLASS_NAMES))], keep=True)
-    det_process_bridge = pipeline.create(ImgDetectionsBridge).build(
+    annotation_node = pipeline.create(AnnotationNode).build(
         det_process_filter.out,
         label_encoding={k: v for k, v in enumerate(CLASS_NAMES)},
     )
 
     # visualization
-    visualizer.addTopic("Detections", det_process_bridge.out)
+    visualizer.addTopic("Detections", annotation_node.out)
     visualizer.addTopic("Video", nn_with_parser.passthroughs["images"])
 
     def class_update_service(new_classes: list[str]):
@@ -122,7 +122,7 @@ with dai.Pipeline(device) as pipeline:
         det_process_filter.setLabels(
             labels=[i for i in range(len(CLASS_NAMES))], keep=True
         )
-        det_process_bridge.setLabelEncoding({k: v for k, v in enumerate(CLASS_NAMES)})
+        annotation_node.setLabelEncoding({k: v for k, v in enumerate(CLASS_NAMES)})
         print(f"Classes set to: {CLASS_NAMES}")
 
     def conf_threshold_update_service(new_conf_threshold: float):
