@@ -1,5 +1,5 @@
 {
-    "known_failing_experiments": {
+    "known_failing_examples": {
         "tutorials/multiple-devices/multi-cam-calibration": {
             "reason": "Not ported to latest DAI yet",
             "platform": "all"

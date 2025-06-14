@@ -1,6 +1,6 @@
-# Gen3 experiments testing
+# Examples Testing
 
-We can test every experiment in a way where we verify that it is running for a certain period on a specific platform, python, and depthai version.
+We can test every example in a way where we verify that it is running for a certain period on a specific platform, python, and depthai version.
 
 ## Installation
 
@@ -18,7 +18,7 @@ If you want to run the tests locally we recommend you navigate to the root direc
 pytest -v -r a --log-cli-level=INFO --log-file=out.log --color=yes --root-dir=. tests/
 ```
 
-This will run all the experiments (i.e. folders that have `main.py` and `requiremenets.txt` present). The outputs will be seen in the CLI and will also be logged into the `out.log` file.
+This will run all the examples (i.e. folders that have `main.py` and `requiremenets.txt` present). The outputs will be seen in the CLI and will also be logged into the `out.log` file.
 
 You can also pass other custom options to the pytest command. Here is a list of all the custom ones:
 
@@ -38,7 +38,7 @@ You can also pass other custom options to the pytest command. Here is a list of 
 
 **Note:** The platform and Python values are only used for filtering examples that are known to fail on some combinations when run locally. When run through GitHub workflow on a HIL setup these are taken into account (we build an image with a specific Python version and take a device from the specified platform).
 
-If you for example want to run the test on a single experiment you can do it like this which will run it only on the `generic example`.
+If you for example want to run the test on a single example you can do it like this which will run it only on the `generic example`.
 
 ```bash
 pytest -v -r a --log-cli-level=INFO --log-file=out.log --color=yes --root-dir=neural-networks/generic-example tests/
