@@ -15,6 +15,12 @@ logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
 
 
+@pytest.fixture(autouse=True, scope="module")
+def skip_if_not_rvc4(test_args):
+    if test_args["platform"] != "rvc4":
+        pytest.skip("Skipping test_standalone.py: requires RVC4 platform")
+
+
 def test_example_runs_in_standalone(example_dir, test_args):
     """Tests if the example runs in standalone mode for at least N seconds without errors."""
     # Time that device is waiting before timing out, set for RVC4 tests
