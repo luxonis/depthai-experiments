@@ -136,6 +136,7 @@ def run_example(env_exe: Path, example_dir: Path, args: dict, max_retries: int =
     timeout = args["timeout"]
     env_vars = args["environment_variables"]
     virtual_env = args["virtual_display"]
+    device = args["device"]
     logger.debug(f"Running {example_dir} with timeout {timeout}s...")
 
     main_script = "main.py"
@@ -147,6 +148,9 @@ def run_example(env_exe: Path, example_dir: Path, args: dict, max_retries: int =
 
     if virtual_env:
         env["DISPLAY"] = ":99"
+
+    if device:
+        env["DEPTHAI_DEVICE_NAME_LIST"] = device
 
     for attempt in range(1, max_retries + 1):
         try:

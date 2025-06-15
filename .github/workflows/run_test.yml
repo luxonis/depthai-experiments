@@ -49,6 +49,15 @@ on:
           - "no"
         default: "no"
         required: false
+      subtests:
+        description: "Specify if should run only peripheral, only standalone or both"
+        type: choice
+        options:
+          - "all"
+          - "peripheral"
+          - "standalone"
+        default: "all"
+        required: false
 
 jobs:
   id:

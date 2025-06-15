@@ -8,11 +8,15 @@ import logging
 import threading
 import queue
 import re
+import json
 
 from utils import adjust_requirements, is_valid, change_and_restore_dir
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO)
+
+
+APP_ID = "00000000-0000-0000-0000-000000000000"
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -103,7 +107,7 @@ def run_example(example_dir: Path, args: dict) -> bool:
             timeout=connect_timeout,
         )
         device_info = re.sub(r"\s+", " ", result.stdout.decode().strip())
-        logger.info(f"Connected to device: {device_info}")
+        logger.debug(f"Connected to device: {device_info}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to connect to device `{args['device']}`: {e}")
         return False
@@ -134,19 +138,25 @@ def run_example(example_dir: Path, args: dict) -> bool:
 
         for line in process.stdout:
             line = line.strip()
-            logger.info(f"[app output]: {line}")
+            logger.debug(f"[app output]: {line}")
 
-            # Wait for signal to start timing
-            if not app_started and "App output:" in line:
+            # Look for build error in logs
+            if "BuilderError" in line:
+                process.terminate()
+                logger.error(f"Error during build: {line}")
+                return False
+
+            # Detect app start trigger
+            if "App output:" in line:
                 app_started = True
                 start_time = time.time()
                 logger.info("App start detected. Starting run timer.")
                 break
 
-            # Timeout waiting for app start
-            if not app_started and (time.time() - signal_start > startup_timeout):
+            # Timeout waiting for app to start
+            if time.time() - signal_start > startup_timeout:
                 process.terminate()
-                logger.error(f"Timeout on app start, took more than {startup_timeout}s")
+                logger.error(f"Timeout waiting for app start after {startup_timeout}s.")
                 return False
 
         # Setup threading to keep reading app outputs
@@ -156,19 +166,19 @@ def run_example(example_dir: Path, args: dict) -> bool:
         )
         t.start()
 
-        # When app has started, check if it exited early
         passed = True
         while True and app_started:
             try:
                 line = q.get_nowait()
-                logger.info(f"[app output]: {line.strip()}")
+                logger.debug(f"[app output]: {line.strip()}")
             except queue.Empty:
                 pass
 
-            if process.poll() is not None:
-                output, _ = process.communicate()
+            status = get_app_status(APP_ID)
+            # When app has started, check if it exited early
+            if status != "running":
                 logger.error(
-                    f"App exited early after {time.time() - start_time:.2f}s.\nOutput:\n{output}"
+                    f"App status switched to '{status}' after {time.time() - start_time:.2f}s but should run for {run_duration}s."
                 )
                 passed = False
                 break
@@ -197,6 +207,25 @@ def run_example(example_dir: Path, args: dict) -> bool:
         return False
 
 
+def get_app_status(app_id: str):
+    try:
+        result = subprocess.run(
+            ["oakctl", "app", "list", "--format=json"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        apps = json.loads(result.stdout)
+        for app in apps:
+            if app["container_id"] == app_id:
+                return app["status"]
+        return None  # App not found
+    except Exception as e:
+        logger.warning(f"Failed to query app status: {e}")
+        return None
+
+
 def teardown():
     """Cleans up everything after the test"""
     # Clean up requirements.txt
@@ -208,16 +237,15 @@ def teardown():
         logger.debug("Renamed requirements_old.txt → requirements.txt")
 
     # Delete app on device
-    app_id = "00000000-0000-0000-0000-000000000000"
     try:
         result = subprocess.run(
-            ["oakctl", "app", "delete", app_id],
+            ["oakctl", "app", "delete", APP_ID],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
-        logger.info(f"App deleted:\n{result.stdout.strip()}")
+        logger.debug(f"App deleted:\n{result.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to delete app:\n{e.stderr.strip()}")
 

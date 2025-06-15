@@ -66,9 +66,16 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--device",
-        default=None,
+        default="",
         type=str,
         help="Device to perform standalone tests on. If testing just peripheral then not required.",
+    )
+    parser.addoption(
+        "--subtests",
+        default="all",
+        type=str,
+        choices=["all", "peripheral", "standalone"],
+        help="Specify if should run only peripheral, only standalone or both.",
     )
 
 
@@ -87,6 +94,7 @@ def test_args(request):
         if request.config.getoption("--strict-mode") == "yes"
         else False,
         "device": request.config.getoption("--device"),
+        "subtests": request.config.getoption("--subtests"),
     }
 
     logger.info(f"Test arguments: {args}")
@@ -100,6 +108,19 @@ def test_args(request):
     args["examples_metadata"] = examples_metadata
 
     return args
+
+
+def pytest_runtest_setup(item):
+    subtests = item.config.getoption("--subtests")
+
+    # Get filename or class name to determine test category
+    file_path = str(item.fspath)
+
+    if subtests == "peripheral" and "standalone" in file_path:
+        pytest.skip("Skipping standalone tests because --subtests=peripheral")
+
+    if subtests == "standalone" and "peripheral" in file_path:
+        pytest.skip("Skipping peripheral tests because --subtests=standalone")
 
 
 def pytest_generate_tests(metafunc):
