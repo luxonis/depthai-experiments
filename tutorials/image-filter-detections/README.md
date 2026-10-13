@@ -73,12 +73,12 @@ the same panorama with all source-visible detections and filtered detections,
 respectively. Select the image and detection topics in each group to compare
 the overlays. Focus the Visualizer before using the keyboard controls.
 
-| Key | Action |
-| --- | --- |
-| `1` / `2` / `3` | Set duplicate handling to OFF / NMS / AVERAGE |
-| `W` / `S` | Increase / decrease overlap IoU threshold by 0.05 |
-| `+` or `=` / `-` | Increase / decrease confidence threshold by 0.05 |
-| `Q` | Quit |
+| Key              | Action                                            |
+| ---------------- | ------------------------------------------------- |
+| `1` / `2` / `3`  | Set duplicate handling to OFF / NMS / AVERAGE     |
+| `W` / `S`        | Increase / decrease overlap IoU threshold by 0.05 |
+| `+` or `=` / `-` | Increase / decrease confidence threshold by 0.05  |
+| `Q`              | Quit                                              |
 
 Current thresholds are printed to the terminal. Each change sends a fresh,
 complete config, preserving the label, area, and detection-limit settings.
