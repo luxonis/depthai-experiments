@@ -27,6 +27,39 @@ def sha256(path):
     return digest.hexdigest()
 
 
+def download(url, temporary, update=logger.info, attempts=5):
+    """Download url into temporary, resuming with HTTP Range after a broken transfer.
+
+    Args:
+        url: Source URL.
+        temporary: Destination path; an existing partial file is continued.
+        update: Callback receiving progress messages.
+        attempts: Total number of attempts before giving up.
+
+    Raises:
+        requests.RequestException: The last attempt failed or timed out.
+    """
+    for attempt in range(1, attempts + 1):
+        offset = temporary.stat().st_size if temporary.exists() else 0
+        headers = {"Range": f"bytes={offset}-"} if offset else {}
+        try:
+            with requests.get(
+                url, stream=True, timeout=(20, 120), headers=headers
+            ) as response:
+                if offset and response.status_code != 206:
+                    # Server ignored the range request: start over.
+                    offset = 0
+                response.raise_for_status()
+                with temporary.open("ab" if offset else "wb") as output:
+                    for chunk in response.iter_content(1024 * 1024):
+                        output.write(chunk)
+            return
+        except requests.RequestException as error:
+            if attempt == attempts:
+                raise
+            update(f"Download interrupted ({error}); retrying {attempt}/{attempts - 1}")
+
+
 def download_models(directory, update=logger.info):
     """Install the pinned model files during the app container build.
 
@@ -56,11 +89,7 @@ def download_models(directory, update=logger.info):
         temporary = destination.with_suffix(".part")
         try:
             url = f"https://huggingface.co/{REPOSITORY}/resolve/{REVISION}/{name}"
-            with requests.get(url, stream=True, timeout=(20, 120)) as response:
-                response.raise_for_status()
-                with temporary.open("wb") as output:
-                    for chunk in response.iter_content(1024 * 1024):
-                        output.write(chunk)
+            download(url, temporary, update)
 
             # Publish the finished file only after checksum verification.
             if sha256(temporary) != checksum:
