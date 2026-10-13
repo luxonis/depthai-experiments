@@ -236,6 +236,9 @@ def run_example(env_exe: Path, example_dir: Path, args: Dict, max_retries: int =
             try:
                 stdout, stderr = process.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
+                # communicate() also waits for descendants that inherited the
+                # pipes. The example may already have exited before the timeout.
+                early_exit_code = process.poll()
                 stop_process_tree(process)
                 try:
                     stdout, stderr = process.communicate(timeout=30)
@@ -244,6 +247,16 @@ def run_example(env_exe: Path, example_dir: Path, args: Dict, max_retries: int =
                         f"{example_dir}: output pipes still open after kill, output discarded."
                     )
                     stdout, stderr = "", ""
+
+                if early_exit_code is not None:
+                    logger.error(
+                        f"{example_dir} exited before {timeout} seconds "
+                        f"(exit code {early_exit_code}); a child kept its output pipes open."
+                    )
+                    for line in deque(stdout.splitlines() + stderr.splitlines(), maxlen=10):
+                        logger.error(f"  {line}")
+                    return False
+
                 logger.info(f"{example_dir} ran for {timeout} seconds before timeout.")
 
                 if args["strict_mode"]:
