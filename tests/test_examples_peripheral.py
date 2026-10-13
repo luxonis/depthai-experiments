@@ -253,7 +253,9 @@ def run_example(env_exe: Path, example_dir: Path, args: Dict, max_retries: int =
                         f"{example_dir} exited before {timeout} seconds "
                         f"(exit code {early_exit_code}); a child kept its output pipes open."
                     )
-                    for line in deque(stdout.splitlines() + stderr.splitlines(), maxlen=10):
+                    for line in deque(
+                        stdout.splitlines() + stderr.splitlines(), maxlen=10
+                    ):
                         logger.error(f"  {line}")
                     return False
 
