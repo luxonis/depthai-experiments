@@ -9,6 +9,14 @@ thresholds, a detection limit, and duplicate handling between cameras. `NMS`
 keeps one box from overlapping detections of the same class; `AVERAGE` combines
 their boxes using confidence weights. `OFF` preserves duplicates.
 
+**Turning filtering on and off:**
+
+![Panorama detections as filtering is turned on and off](media/filter-toggle.gif)
+
+**A person walking with filtering enabled:**
+
+![A person walking through the panorama with detection filtering enabled](media/walking-filtered.gif)
+
 ## Setup
 
 This is a host-only example for RVC2 and RVC4. The default stereo mode requires
